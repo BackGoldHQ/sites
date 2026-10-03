@@ -11,7 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // src/builtin-types.ts augments this package by its own name; tsc and
+    // tsup's declaration build resolve that name to the source, not dist/.
+    "paths": { "@backgold/content": ["./src/index.ts"] }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "dist-test", "src/**/*.test.ts"]
