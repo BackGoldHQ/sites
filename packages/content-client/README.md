@@ -36,8 +36,10 @@ The key comes from the site's **Developer** page in BackGold.
 | Publishable | `bg_site_pk_` | Anywhere, a browser included | Published content |
 | Secret | `bg_site_sk_` | Your server only | Published content, drafts and previews |
 
-`createClient` throws a `TypeError` for anything that is not a site key, and
-`SecretKeyInBrowserError` for a secret key in a runtime that has a `document`.
+`createClient` throws a `TypeError` for anything that is not a site key as
+BackGold mints it (the prefix, then letters and digits; the message never
+repeats the key), and `SecretKeyInBrowserError` for a secret key in a browser
+page or a browser worker. Cloudflare Workers are servers and may hold one.
 
 Options:
 
@@ -47,15 +49,18 @@ Options:
 | `apiOrigin` | `https://api.backgold.com` | Where the API lives. The key is sent nowhere else. |
 | `cache` | `memoryCache()` | Where reads and the content version are kept. See [Caching](#caching). |
 | `maxVersionAgeSeconds` | `60` | How long a known content version is trusted before `/site` is checked again. `0` checks on every read. |
-| `cacheTtlSeconds` | `3600` | How long a stored read may live. |
+| `cacheTtlSeconds` | `3600` | How long a stored read may live. A value under 1 is raised to 1; each store keeps its own floor (KV's is 60). |
 | `fetch` | `globalThis.fetch` | The fetch to use. |
 
 ## Reading content
 
-Each method is one endpoint. A single resource that does not exist (or is not
-published) is `null`. Any other error throws a `BackgoldApiError` with the
-HTTP `status` and the API's `code` (`INVALID_KEY`, `BAD_CURSOR`,
-`SECRET_KEY_REQUIRED`, …; `HTTP_<status>` when the answer had no code).
+Each method is one endpoint. A 404 for the thing you named (a page, entry,
+menu, … that does not exist or is not published) is `null`. A 404 for the site
+itself (removed, or its headless access switched off) throws, as does any
+other error: a `BackgoldApiError` with the HTTP `status` and the API's `code`
+(`INVALID_KEY`, `BAD_CURSOR`, `SECRET_KEY_REQUIRED`, `NOT_FOUND`, …;
+`HTTP_<status>` when the answer had no code). A path argument that is `.` or
+`..` throws a `TypeError` before any request.
 
 **`site()`**: the site's name, brand, social links, SEO defaults, the legal
 line every page must show, and the content version.
@@ -156,7 +161,9 @@ const draft = await bg.preview(token)
 ```
 
 **`raw(path, query?, { preview? })`**: any `GET` under `/api/content/v1` this
-client does not name yet, cached and versioned like the rest. `null` on 404.
+client does not name yet, cached and versioned like the rest. `null` on a 404
+for the thing named. A `preview=1` query or a path under `/preview/` makes it a
+preview read: secret key only, never cached.
 
 ```ts
 const page = await bg.raw<{ page: { title: string } }>('/pages/about')
@@ -185,16 +192,23 @@ How the client knows the version:
   which costs nothing. Concurrent reads share that one check. So without a
   webhook, a site is at most a minute behind.
 - **`setVersion(n)`** trusts `n` straight away. A webhook receiver calls it.
-  It never goes backwards: a version lower than the one known (in memory or
-  in the store) is ignored, because webhooks can arrive out of order. Call
-  `bust()` first to go back.
+  It never goes backwards: it re-reads the store's record every time and
+  ignores a version lower than the larger of memory and the store, because
+  webhooks can arrive out of order, and writes only a version newer than the
+  store's. Two processes writing at the same moment can still race (KV has no
+  compare-and-swap). Call `bust()` first to go back.
 - The version is kept in memory and in the store, so a store shared between
-  processes (KV, the filesystem) shares it too.
+  processes (KV, the filesystem) shares it too. The record is rewritten when
+  the version changes or its last confirmation is more than five seconds old,
+  not on every fetch (KV takes one write per key per second).
 
 `bg.version()` returns the version the client trusts (`null` before the first
-read). `bg.bust()` forgets it, so the next read checks `/site` again.
+read). `bg.bust()` forgets the version, in memory and in the store; the next
+read re-learns it (another process sharing the store may already have written
+a newer one).
 
-A read the store already holds makes no request at all.
+While the version is trusted, a read the store already holds makes no request
+at all.
 
 ### Stores
 
@@ -222,14 +236,16 @@ A store is any object with `get`, `set`, `delete` and `clear` (the
 `CacheStore` type). `clear()` on the Cache API and KV stores removes only the
 keys that store wrote in the current process, because neither can list its
 entries cheaply; anything older expires under its ttl. A store that fails
-makes the client read from the network instead.
+makes a read go to the network instead; `setVersion` and `bust` surface the
+store's error.
 
 ## Webhooks
 
 BackGold can POST five content events to your endpoint: `site.published`,
 `content.published`, `content.unpublished`, `menu.updated` and
 `redirects.updated`. Each one carries the site's new `content_version`.
-Calling `setVersion` with it makes the next read fetch fresh content.
+Calling `setVersion` with it makes the next read fetch fresh content. It
+ignores a version older than the one it knows, so call it for every event.
 
 ```ts
 import { createClient, kvStore, parseContentEvent, verifyBackgoldWebhook } from '@backgold/content'
@@ -246,7 +262,7 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
   const event = parseContentEvent(rawBody)
   if (event && event.data.site_domain_id === env.BACKGOLD_SITE_ID) {
     const bg = createClient({ key: env.BACKGOLD_SITE_KEY, cache: kvStore(env.BACKGOLD_CACHE) })
-    if (event.data.content_version > (bg.version() ?? -1)) await bg.setVersion(event.data.content_version)
+    await bg.setVersion(event.data.content_version)
   }
   return new Response(null, { status: 204 })
 }
@@ -255,10 +271,10 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
 - `verifyBackgoldWebhook` checks `X-BackGold-Signature` (`t=<unix
   seconds>,v1=<hex>`): HMAC-SHA256 over `<t>.<rawBody>` with your signing
   secret, compared in constant time. It rejects a timestamp more than
-  `toleranceSeconds` (300) old or in the future, and answers `false`, never
-  throws, for anything malformed.
-- `parseContentEvent` returns the event for the five content events and
-  `null` for anything else. It copies only `id`, `type`, `created_at` and
+  `toleranceSeconds` (300) from now in either direction, old or in the
+  future, and answers `false`, never throws, for anything malformed.
+- `parseContentEvent` returns the event for the five content events (with a
+  whole-number `content_version` of 0 or more) and `null` for anything else. It copies only `id`, `type`, `created_at` and
   `data.site_domain_id`, `content_version`, `page_id`, `content_item_id`,
   `menu_key`.
 - One endpoint serves every site of an organization, so compare
@@ -269,8 +285,9 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
 ## Preview
 
 "Preview on your site" sends an editor to your preview route with
-`?bg_preview=<token>&path=<the page's path>`. Read it with a secret key, on
-the server, and never cache the answer.
+`?bg_preview=<token>&path=<the page's path>`, and the Developer page's
+**Send a test preview** calls it the same way for the home page. Read it with
+a secret key, on the server, and never cache the answer.
 
 ```ts
 import { createClient, previewFromRequest } from '@backgold/content'
@@ -289,14 +306,15 @@ export async function previewRoute(request: Request): Promise<Response> {
 ```
 
 `previewFromRequest` returns `null` when there is no token. Its `path` is `/`
-when the link has none (the Developer page's test preview sends none) or when
-it is not a safe path on your own site (not starting with `/`, starting with
-`//`, holding a `\` or a `..` segment).
+when the link has none or when it is not a safe path on your own site (holding
+a control character or space, not starting with `/`, starting with `//`,
+holding a `\` or a `..` segment).
 
 `page(slug, { preview: true })`, `entry(type, slug, { preview: true })` and
-`entries(type, { preview: true })` read drafts the same way. Every preview
-read needs a secret key: with a publishable key the client throws
-`BackgoldApiError` 403 `SECRET_KEY_REQUIRED` without making a request.
+`entries(type, { preview: true })` read drafts the same way, as does `raw`
+with a `preview=1` query or a `/preview/` path. Every preview read needs a
+secret key: with a publishable key the client throws `BackgoldApiError` 403
+`SECRET_KEY_REQUIRED` without making a request.
 
 ## Typed fields
 
@@ -307,12 +325,19 @@ The six built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
 declares each type's fields:
 
 ```bash
-npx backgold-content types --out src/backgold-types.d.ts --key "$BACKGOLD_SITE_KEY"
+BACKGOLD_SITE_KEY=bg_site_pk_… npx backgold-content types --out src/backgold-types.d.ts
 ```
+
+The key is read from `BACKGOLD_SITE_KEY` (`--key` also works, but a command
+line is visible to other processes on the machine). `--generated-at
+<YYYY-MM-DD>` fixes the date in the header: the same types and the same date
+give the same bytes, which keeps a checked-in file stable in CI.
 
 With that file in your project, `bg.entry('endorsement', slug)` returns
 `fields` typed as `{ quote: string; tier: 'Gold' | 'Silver' | null }`. Run it
-again after the organization changes its content types. You can also write
+again after the organization changes its content types. A field without
+`| null` is one the type requires, which holds for published entries; a
+preview read of a draft may answer `null` for any field. You can also write
 the declaration by hand:
 
 ```ts

@@ -126,3 +126,81 @@ test('cli: --key wins over BACKGOLD_SITE_KEY and the count is plural', async () 
   assert.deepEqual(written, ['out.ts'])
   assert.equal(calls[0]!.headers.authorization, 'Bearer bg_site_sk_flag')
 })
+
+test('cli: no message ever prints a site key', async () => {
+  const SECRET = 'bg_site_sk_SECRET123'
+  const cases: Array<[string[], Record<string, string>]> = [
+    [['types', '--out', 'x.ts', SECRET], {}],
+    [[SECRET, '--out', 'x.ts'], {}],
+    [['types', '--out', 'x.ts', `${SECRET}=1`], {}],
+    [['types', '--out', 'x.ts', '--key', `${SECRET}\n`], {}],
+    [['types', '--out', 'x.ts', '--key', 'bg_site_sk_SECRET-123'], {}],
+    [['types', '--out', 'x.ts'], { BACKGOLD_SITE_KEY: 'bg_site_sk_SECRET 123' }],
+  ]
+  for (const [argv, env] of cases) {
+    const r = await run(argv, { fetch: noFetch, env, writeFile: noWrite })
+    assert.equal(r.code, 2, argv.join(' '))
+    assert.ok(!r.stderr.includes('SECRET'), `${argv.join(' ')} → ${r.stderr.split('\n')[0]}`)
+  }
+  const { fetch } = fakeFetch(200, typesExample)
+  const failed = await run(['types', '--out', `/nowhere/${SECRET}.ts`, '--key', KEY], {
+    fetch,
+    env: {},
+    writeFile: async (path) => {
+      throw new Error(`EACCES: ${path}`)
+    },
+  })
+  assert.equal(failed.code, 1)
+  assert.ok(!failed.stderr.includes('SECRET'), failed.stderr)
+})
+
+test('cli: never follows a redirect and keeps a path in --api-origin', async () => {
+  const inits: Array<{ url: string; init: RequestInit | undefined }> = []
+  const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    inits.push({ url: String(input), init })
+    return Response.json(typesExample)
+  }) as typeof globalThis.fetch
+  const r = await run(['types', '--out', 'x.ts', '--api-origin', 'https://proxy.example.test/base/'], {
+    fetch,
+    env: { BACKGOLD_SITE_KEY: KEY },
+    writeFile: async () => undefined,
+  })
+  assert.equal(r.code, 0)
+  assert.equal(inits[0]!.url, 'https://proxy.example.test/base/api/content/v1/types')
+  assert.equal(inits[0]!.init?.redirect, 'manual')
+})
+
+test('cli: a /types answer that is not the contract shape exits 1 with a message', async () => {
+  const field = { key: 'quote', label: 'Quote', kind: 'long_text', required: true }
+  const bad: unknown[] = [
+    { types: [null] },
+    { types: [{ key: 7, fields: [] }] },
+    { types: [{ key: 'x' }] },
+    { types: [{ key: 'x', fields: [{ ...field, key: 1 }] }] },
+    { types: [{ key: 'x', fields: [{ ...field, label: null }] }] },
+    { types: [{ key: 'x', fields: [{ ...field, kind: undefined }] }] },
+    { types: [{ key: 'x', fields: [{ ...field, required: 'yes' }] }] },
+    { types: [{ key: 'x', fields: [{ ...field, choices: 'Gold' }] }] },
+    { types: [{ key: 'x', fields: [{ ...field, choices: ['Gold', 2] }] }] },
+  ]
+  for (const body of bad) {
+    const { fetch } = fakeFetch(200, body)
+    const r = await run(['types', '--out', 'x.ts', '--key', KEY], { fetch, env: {}, writeFile: noWrite })
+    assert.equal(r.code, 1, JSON.stringify(body))
+    assert.match(r.stderr, /^backgold-content: https:\/\/api\.backgold\.com\/api\/content\/v1\/types (did not answer|answered)/)
+    assert.ok(!r.stderr.includes('    at '), 'no stack trace')
+  }
+})
+
+test('cli: --generated-at reaches the header, and only as YYYY-MM-DD', async () => {
+  let text = ''
+  const { fetch } = fakeFetch(200, typesExample)
+  const r = await run(['types', '--out', 'x.ts', '--key', KEY, '--generated-at', '2026-01-02'], {
+    fetch,
+    env: {},
+    writeFile: async (_path, t) => void (text = t),
+  })
+  assert.equal(r.code, 0)
+  assert.equal(text, generateTypes(typesExample.types, { generatedAt: '2026-01-02' }))
+  await usageCase(['types', '--out', 'x.ts', '--key', KEY, '--generated-at', 'today'], {}, /--generated-at must be a date/)
+})

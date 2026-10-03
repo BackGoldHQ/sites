@@ -21,8 +21,8 @@ import { memoryCache } from './cache.js'
 import type { CacheStore, ClientOptions, Entry } from './contract.js'
 import { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 
-const PK = 'bg_site_pk_test_publishable_0001'
-const SK = 'bg_site_sk_test_secret_0001'
+const PK = 'bg_site_pk_testPublishable0001'
+const SK = 'bg_site_sk_testSecret0001'
 const scopeOf = (key: string) => createHash('sha256').update(key).digest('hex').slice(0, 16)
 
 // ── A fake Content API ───────────────────────────────────────────────────────
@@ -68,6 +68,8 @@ const ROUTES: Record<string, Handler> = {
 function fakeApi(version = 184) {
   const api = {
     version,
+    /** Answer a 304 without X-Content-Version (to prove the client keys the copy by its ETag). */
+    bare304: false,
     calls: [] as Call[],
     routes: { ...ROUTES } as Record<string, Handler>,
     fetch: (async (input: string | URL | Request, init?: RequestInit) => {
@@ -82,7 +84,7 @@ function fakeApi(version = 184) {
       }
       const published: Record<string, string> = preview ? {} : { ETag: `"v${api.version}"` }
       if (!preview && headers.get('If-None-Match') === `"v${api.version}"`) {
-        return new Response(null, { status: 304, headers: { ...common, ...published } })
+        return new Response(null, { status: 304, headers: api.bare304 ? published : { ...common, ...published } })
       }
       const answer = (api.routes[path] ?? (() => notFound))(url)
       return Response.json(answer.body ?? null, { status: answer.status, headers: { ...common, ...published } })
@@ -346,7 +348,7 @@ describe('createClient: the cache', () => {
     const api = fakeApi()
     const shared = memoryCache()
     const a = createClient({ key: PK, fetch: api.fetch, cache: shared })
-    const b = createClient({ key: 'bg_site_pk_another_site_0002', fetch: api.fetch, cache: shared })
+    const b = createClient({ key: 'bg_site_pk_anotherSite0002', fetch: api.fetch, cache: shared })
     await a.pages()
     const before = api.calls.length
     await b.pages()
@@ -519,5 +521,197 @@ describe('createClient: keys', () => {
   it('refuses an apiOrigin that is not http(s)', () => {
     assert.throws(() => createClient({ key: PK, apiOrigin: 'ftp://api.example.test' }), TypeError)
     assert.throws(() => createClient({ key: PK, apiOrigin: 'not a url' }), TypeError)
+  })
+
+  it('keeps a path in apiOrigin', async () => {
+    const { api, client } = setup({ apiOrigin: 'https://proxy.example.test/base/' })
+    await client.site().catch(() => undefined) // the fake answers only under /api/content/v1
+    assert.equal(api.calls[0]!.url.href, 'https://proxy.example.test/base/api/content/v1/site')
+  })
+
+  it('accepts only the prefix and base62, and never repeats the key', () => {
+    for (const bad of ['bg_site_pk_SECRET\n', 'bg_site_sk_SECRET-1', 'bg_site_sk_SECRET 1', 'bg_site_xx_SECRET', 'SECRET']) {
+      assert.throws(
+        () => createClient({ key: bad }),
+        (err: unknown) => err instanceof TypeError && !err.message.includes('SECRET'),
+        JSON.stringify(bad),
+      )
+    }
+    assert.throws(() => createClient({ key: 'bg_site_pk_' }), TypeError)
+  })
+})
+
+// ── Audit fixes ──────────────────────────────────────────────────────────────
+
+describe('createClient: preview reads however they are asked for', () => {
+  it('routes raw /preview/ paths and preview=1 queries through the secret-key check and never stores them', async () => {
+    const secret = setup({ key: SK })
+    assert.deepEqual(await secret.client.raw('/preview/tok_good'), pageExample)
+    assert.deepEqual(await secret.client.raw('/pages/home', { preview: '1' }), pageExample)
+    assert.equal(secret.rec.ops.length, 0, 'the store is never touched')
+    assert.equal(secret.api.callsTo('/site').length, 0)
+    assert.equal(secret.api.callsTo('/pages/home')[0]!.url.search, '?preview=1')
+
+    const publishable = setup()
+    await assert.rejects(publishable.client.raw('/preview/tok_good'), { status: 403, code: 'SECRET_KEY_REQUIRED' })
+    await assert.rejects(publishable.client.raw('/pages/home', { preview: '1' }), { status: 403, code: 'SECRET_KEY_REQUIRED' })
+    assert.equal(publishable.api.calls.length, 0)
+    assert.equal(publishable.rec.ops.length, 0)
+  })
+})
+
+describe('createClient: browser workers', () => {
+  const g = globalThis as Record<string, unknown>
+  const withWorkerScope = (userAgent: string, body: () => void) => {
+    class WorkerGlobalScope {}
+    const navigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+    g.WorkerGlobalScope = WorkerGlobalScope
+    g.self = new WorkerGlobalScope()
+    Object.defineProperty(globalThis, 'navigator', { value: { userAgent }, configurable: true, writable: true })
+    try {
+      body()
+    } finally {
+      delete g.WorkerGlobalScope
+      delete g.self
+      if (navigator) Object.defineProperty(globalThis, 'navigator', navigator)
+      else delete g.navigator
+    }
+  }
+
+  it('refuses a secret key in a browser worker', () => {
+    withWorkerScope('Mozilla/5.0', () => {
+      assert.throws(() => createClient({ key: SK }), SecretKeyInBrowserError)
+      assert.doesNotThrow(() => createClient({ key: PK }))
+    })
+    assert.doesNotThrow(() => createClient({ key: SK }))
+  })
+
+  it('allows a secret key on Cloudflare Workers', () => {
+    withWorkerScope('Cloudflare-Workers', () => {
+      assert.doesNotThrow(() => createClient({ key: SK }))
+    })
+  })
+})
+
+describe('createClient: a 404 for the site itself', () => {
+  it('throws instead of answering null when the 404 carries no X-Content-Version', async () => {
+    // The key's site is gone: the api's key middleware answers before any route, with no version header.
+    const gone = (async () => Response.json({ error: 'Not found', code: 'NOT_FOUND' }, { status: 404 })) as typeof fetch
+    const client = createClient({ key: SK, fetch: gone, cache: memoryCache() })
+    await client.setVersion(184) // trusted, so a read goes straight to its route
+    await assert.rejects(client.page('home'), { status: 404, code: 'NOT_FOUND' })
+    await assert.rejects(client.raw('/pages/x'), { status: 404, code: 'NOT_FOUND' })
+    await assert.rejects(client.page('x', { preview: true }), { status: 404 })
+    await assert.rejects(client.preview('tok'), { status: 404 })
+    await assert.rejects(
+      (async () => {
+        for await (const entry of client.allEntries('post')) void entry
+      })(),
+      { status: 404 },
+    )
+  })
+})
+
+describe('createClient: revalidating a previous copy', () => {
+  it('stores a 304 copy under the version its ETag names, not the version the client believed', async () => {
+    const { api, rec, client } = setup()
+    await client.pages()
+    await client.setVersion(186) // a webhook, while the api is still at 184
+    api.bare304 = true
+    assert.deepEqual(await client.pages(), pagesExample)
+    assert.equal(api.calls.at(-1)!.headers.get('If-None-Match'), '"v184"')
+    const scope = scopeOf(PK)
+    assert.ok(rec.keys.has(`${scope}:v184:/pages?`))
+    assert.ok(!rec.keys.has(`${scope}:v186:/pages?`))
+  })
+
+  it('does not offer a corrupt previous copy', async () => {
+    const { api, rec, client } = setup()
+    await client.pages()
+    const scope = scopeOf(PK)
+    await rec.inner.set(`${scope}:v184:/pages?`, JSON.stringify({ body: '{not json', etag: '"v184"', fetched_at: 1 }), 60)
+    await client.setVersion(185)
+    assert.deepEqual(await client.pages(), pagesExample)
+    assert.equal(api.calls.at(-1)!.headers.get('If-None-Match'), null)
+  })
+})
+
+describe('createClient: dot segments', () => {
+  it('refuses . and .. in a raw path or any path argument, literal or encoded, before any request', async () => {
+    const { api, client } = setup()
+    await assert.rejects(client.raw('/pages/..'), TypeError)
+    await assert.rejects(client.raw('/pages/%2e%2e'), TypeError)
+    await assert.rejects(client.raw('/./site'), TypeError)
+    await assert.rejects(client.raw('/pages/%2E'), TypeError)
+    await assert.rejects(client.entry('post', '..'), TypeError)
+    await assert.rejects(client.page('.'), TypeError)
+    await assert.rejects(client.terms('..'), TypeError)
+    assert.equal(api.calls.length, 0)
+    assert.equal(await client.page('v1.2'), null, 'a dot inside a segment is fine')
+  })
+})
+
+describe('createClient: setVersion against the store', () => {
+  it('compares with a newer version another process stored, and writes only a newer one', async () => {
+    const api = fakeApi()
+    const shared = recordingStore()
+    const receiver = createClient({ key: PK, fetch: api.fetch, cache: shared.store })
+    await receiver.setVersion(190)
+    // Another process moves the shared record to 195.
+    await createClient({ key: PK, fetch: api.fetch, cache: shared.store }).setVersion(195)
+    const writes = () => shared.ops.filter((o) => o.op === 'set' && o.key === `${scopeOf(PK)}:version`).length
+    const before = writes()
+    await receiver.setVersion(192)
+    assert.equal(receiver.version(), 195, 'the stored 195 wins over the incoming 192')
+    await receiver.setVersion(195)
+    assert.equal(writes(), before, 'nothing older or equal is written')
+    await receiver.setVersion(196)
+    assert.equal(writes(), before + 1)
+    assert.equal(receiver.version(), 196)
+  })
+})
+
+describe('createClient: the version record', () => {
+  it('is rewritten on a new version or a confirmation over five seconds old, not on every miss', async () => {
+    let now = 5_000_000
+    Date.now = () => now
+    const { rec, client } = setup()
+    const writes = () => rec.ops.filter((o) => o.op === 'set' && o.key === `${scopeOf(PK)}:version`).length
+    await client.pages()
+    await client.types()
+    await client.authors()
+    await client.page('home')
+    assert.equal(writes(), 1)
+    now += 6_000
+    await client.redirects()
+    assert.equal(writes(), 2)
+  })
+})
+
+describe('createClient: allEntries cycle guard', () => {
+  it('stops on any cursor seen before', async () => {
+    const { api, client } = setup()
+    const base = entriesExample.entries[0]!
+    const pages: Record<string, { entries: Entry[]; next_cursor: string | null }> = {
+      '': { entries: [{ ...base, id: 'e1' }], next_cursor: 'c1' },
+      c1: { entries: [{ ...base, id: 'e2' }], next_cursor: 'c2' },
+      c2: { entries: [{ ...base, id: 'e3' }], next_cursor: 'c1' },
+    }
+    api.routes['/entries/post'] = (url) => ok(pages[url.searchParams.get('cursor') ?? '']!)
+    const ids: string[] = []
+    for await (const entry of client.allEntries('post')) ids.push(entry.id)
+    assert.deepEqual(ids, ['e1', 'e2', 'e3'])
+    assert.equal(api.callsTo('/entries/post').length, 3)
+  })
+})
+
+describe('createClient: cacheTtlSeconds', () => {
+  it('raises a ttl under 1 second to 1', async () => {
+    for (const cacheTtlSeconds of [0, -5, 0.2]) {
+      const { rec, client } = setup({ cacheTtlSeconds })
+      await client.pages()
+      const ttls = rec.ops.filter((o) => o.op === 'set').map((o) => o.ttl)
+      assert.ok(ttls.length > 0 && ttls.every((t) => t === 1), `${cacheTtlSeconds} → ${ttls.join(',')}`)
+    }
   })
 })

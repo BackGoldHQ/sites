@@ -47,6 +47,13 @@ describe('previewFromRequest', () => {
     }
   })
 
+  it('answers / for a path with a control character, DEL or space', () => {
+    // A URL parser drops a tab or newline: `/\t/evil.example` would resolve to https://evil.example/.
+    for (const raw of ['%2F%09%2Fevil.example', '%2F%0A%2Fevil.example', '%2F%0D%2Fevil.example', '%2Fa%20b', '%2Fa%7F', '%2F%00']) {
+      assert.deepEqual(previewFromRequest(`https://example.org/p?bg_preview=tok&path=${raw}`), { token: 'tok', path: '/' }, raw)
+    }
+  })
+
   it('keeps a safe path with dots that are not a parent segment', () => {
     assert.deepEqual(previewFromRequest('https://example.org/p?bg_preview=tok&path=%2Fv1.2%2F..notes'), {
       token: 'tok',

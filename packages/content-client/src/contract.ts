@@ -59,6 +59,7 @@ export type {
   SectionLinkTarget,
   SectionMedia,
   SectionsResponse,
+  SiteMenuKey,
   SiteResponse,
   SitemapResponse,
   TermsResponse,
@@ -113,7 +114,7 @@ export interface ClientOptions {
    * on every read. A webhook calling `setVersion` makes the check moot.
    */
   maxVersionAgeSeconds?: number
-  /** How long a stored read may live under its version. Default 3600. */
+  /** How long a stored read may live under its version. Default 3600; a value under 1 is raised to 1 (each store keeps its own floor). */
   cacheTtlSeconds?: number
   /** The fetch to use. Default `globalThis.fetch`. Tests pass their own. */
   fetch?: typeof fetch
@@ -189,7 +190,10 @@ export interface BackgoldContent {
    * Any `GET` under the api, for an endpoint this client does not name yet.
    * Cached and versioned like every other read. `query` values are
    * normalized the way the api's cache key normalizes them (sorted by name,
-   * undefined dropped). Throws on any non-2xx other than 404 (→ null).
+   * undefined and empty dropped); a `preview=1` query or a path under
+   * `/preview/` is a preview read, never cached. A 404 for the thing named →
+   * null; a 404 for the site itself (no X-Content-Version) throws, as does
+   * any other non-2xx.
    */
   raw<T = unknown>(path: string, query?: Record<string, string | undefined>, opts?: ReadOptions): Promise<T | null>
 
@@ -197,16 +201,19 @@ export interface BackgoldContent {
   version(): number | null
   /**
    * Trust `version` from now on (what a webhook receiver calls); persisted to
-   * the store. Monotonic: a version lower than the one currently known (in
-   * memory or in the store) is ignored, because webhooks can arrive out of
-   * order. To go backwards, call `bust()` first.
+   * the store. Monotonic: the store's record is re-read on every call and a
+   * version lower than the larger of memory and the store is ignored, because
+   * webhooks can arrive out of order; it is written only when newer than the
+   * store's. Two processes writing at once can still race (KV has no
+   * compare-and-swap). To go backwards, call `bust()` first. Surfaces the
+   * store's error.
    */
   setVersion(version: number): Promise<void>
-  /** Forget the version so the next read re-learns it from the api. */
+  /** Forget the version, in memory and the store; the next read re-learns it (another process sharing the store may already have written a newer one). Surfaces the store's error. */
   bust(): Promise<void>
 }
 
-/** Build a client. Throws `SecretKeyInBrowserError` for a secret key where `document` exists. */
+/** Build a client. Throws a TypeError for anything but a site key, and `SecretKeyInBrowserError` for a secret key in a browser page or browser worker. */
 export type CreateClient = (opts: ClientOptions) => BackgoldContent
 
 // ── Errors ───────────────────────────────────────────────────────────────────
@@ -251,13 +258,13 @@ export interface VerifyWebhookInput {
   signature: string | null | undefined
   /** The endpoint's signing secret (`whsec_…`), shown once when the endpoint was created. */
   secret: string
-  /** Reject a timestamp older than this. Default 300 (what BackGold's own verifier uses). */
+  /** Reject a timestamp more than this many seconds from `now`, in either direction. Default 300 (BackGold's own verifier's window). */
   toleranceSeconds?: number
   /** Unix seconds "now"; tests pass their own. */
   now?: number
 }
 
-/** HMAC-SHA256 over `<t>.<rawBody>`, constant-time compared; false on any malformed input. Never throws. */
+/** HMAC-SHA256 over `<t>.<rawBody>`, constant-time compared, with `t` within the tolerance either side of now; false on any malformed input. Never throws. */
 export type VerifyBackgoldWebhook = (input: VerifyWebhookInput) => Promise<boolean>
 
 /** The event when `rawBody` is one of the five content events in the house envelope; null otherwise. Never throws. */
@@ -268,7 +275,7 @@ export type ParseContentEvent = (rawBody: string) => ContentEvent | null
 /** What BackGold's "Preview on your site" link carries to the partner's preview route. */
 export interface PreviewRequest {
   token: string
-  /** The page's path on the site, path-absolute; `/` when absent or unsafe. */
+  /** The page's path on the site, path-absolute; `/` when absent or unsafe (a control character, space, backslash, `//` or `..`). */
   path: string
 }
 
@@ -292,6 +299,9 @@ export interface GenerateTypesOptions {
  * the union of its choices; choices → that union as an array; list →
  * `string[]`; reference → `{ kind: 'entry'; label: string; slug: string } |
  * { kind: string; label: string; url?: string }`. A field that is not
- * `required` is `| null`. Deterministic: the same types give the same text.
+ * `required` is `| null`; `required` holds for published entries, while a
+ * preview read of a draft may answer null for any field. Deterministic: the
+ * same types and the same `generatedAt` (the CLI's `--generated-at`) give the
+ * same bytes.
  */
 export type GenerateTypes = (types: readonly ContentTypeSummary[], opts?: GenerateTypesOptions) => string

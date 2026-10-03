@@ -78,7 +78,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * The event when `rawBody` is one of the five content events in the house
  * envelope `{ id, type, created_at, data }` with `data.site_domain_id` and a
- * finite `data.content_version`; null for any other event, malformed JSON or
+ * non-negative integer `data.content_version`; null for any other event, malformed JSON or
  * a missing field. Only the documented fields are copied. Never throws.
  */
 export const parseContentEvent: ParseContentEvent = (rawBody) => {
@@ -94,7 +94,7 @@ export const parseContentEvent: ParseContentEvent = (rawBody) => {
   if (typeof type !== 'string' || !(CONTENT_EVENT_TYPES as readonly string[]).includes(type)) return null
   const siteDomainId = data.site_domain_id
   const version = data.content_version
-  if (typeof siteDomainId !== 'string' || typeof version !== 'number' || !Number.isFinite(version)) return null
+  if (typeof siteDomainId !== 'string' || typeof version !== 'number' || !Number.isInteger(version) || version < 0) return null
 
   const event: ContentEvent = {
     id,

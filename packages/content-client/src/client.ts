@@ -11,8 +11,9 @@
 //     errors carry it too), from a conditional GET /site when the known one is
 //     older than maxVersionAgeSeconds, or from setVersion (a webhook). It is
 //     kept in memory and in the store under `${scope}:version`.
-//   - Preview reads need a secret key, are refused locally without one, and
-//     never read or write the store.
+//   - A preview read — `{ preview: true }`, a `preview=1` query, or a path
+//     under /preview/ — needs a secret key, is refused locally without one,
+//     and never reads or writes the store.
 //   - Requests carry only Authorization, Accept and If-None-Match (the api's
 //     CORS allows no other request header) and go only to apiOrigin.
 
@@ -42,11 +43,12 @@ import type {
 import { memoryCache } from './cache.js'
 import { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 import { sha256Hex } from './hash.js'
+import { DEFAULT_API_ORIGIN, SITE_KEY_PATTERN, contentApiBase } from './request.js'
 
-const DEFAULT_API_ORIGIN = 'https://api.backgold.com'
-const CONTENT_API_PREFIX = '/api/content/v1'
 const DEFAULT_MAX_VERSION_AGE_SECONDS = 60
 const DEFAULT_CACHE_TTL_SECONDS = 3600
+/** The version record is rewritten for a new version, or when its confirmation is older than this. */
+const VERSION_WRITE_INTERVAL_MS = 5000
 
 /** The key prefixes, held equal to the api's SITE_KEY_PREFIXES by the type check. */
 const KEY_PREFIXES = { publishable: 'bg_site_pk_', secret: 'bg_site_sk_' } as const satisfies typeof SITE_KEY_PREFIXES
@@ -55,15 +57,14 @@ const KEY_PREFIXES = { publishable: 'bg_site_pk_', secret: 'bg_site_sk_' } as co
 const secretKeyRequired = () => new BackgoldApiError(403, 'SECRET_KEY_REQUIRED', 'Preview needs a secret site key')
 
 type Query = Record<string, string | undefined>
-/** What a 404 becomes: `null` for a single-resource read, an error for a list or the site. */
+/** What a 404 for the named resource becomes: `null` for a single-resource read, an error for a list or the site. */
 type OnMissing = 'null' | 'throw'
 
-/** The query string of a read: the route's parameters sorted by name, undefined and empty values dropped. */
-function queryString(query: Query): string {
-  const params = Object.entries(query)
+/** The route's parameters sorted by name, undefined and empty values dropped. */
+function normalizeQuery(query: Query): Array<[string, string]> {
+  return Object.entries(query)
     .filter((entry): entry is [string, string] => entry[1] !== undefined && entry[1] !== '')
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-  return new URLSearchParams(params).toString()
 }
 
 /** The version an answer reflects, from X-Content-Version; null when absent or not a whole number. */
@@ -73,6 +74,12 @@ function answeredVersion(res: Response): number | null {
 }
 
 const etagOf = (version: number) => `"v${version}"`
+
+/** The version an ETag names (`"v184"`, `W/"v184"`); null for any other tag. */
+function etagVersion(etag: string): number | null {
+  const match = /^(?:W\/)?"v(\d{1,15})"$/.exec(etag.trim())
+  return match ? Number(match[1]) : null
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -89,6 +96,15 @@ function parseCachedRead(raw: string | null): CachedRead | null {
     // Not a stored read.
   }
   return null
+}
+
+/** The body of a stored read, parsed; undefined when it is not JSON (a corrupt copy is a miss). */
+function parsedBody(read: CachedRead): { value: unknown } | undefined {
+  try {
+    return { value: JSON.parse(read.body) }
+  } catch {
+    return undefined
+  }
 }
 
 /** The version record stored under `${scope}:version`. */
@@ -136,47 +152,73 @@ async function apiError(res: Response): Promise<BackgoldApiError> {
   return new BackgoldApiError(res.status, `HTTP_${res.status}`, `The BackGold Content API answered ${res.status}`)
 }
 
-/** A path under the mount `raw` accepts: path-absolute, with no query or fragment of its own. */
+/** A `.` or `..` segment, literal or percent-encoded, which a URL parser would collapse. */
+function isDotSegment(segment: string): boolean {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(segment)
+  } catch {
+    return true
+  }
+  return decoded === '.' || decoded === '..'
+}
+
+/**
+ * A path under the mount: path-absolute, with no query or fragment of its own
+ * and no `.`/`..` segment (literal or `%2e`), so it cannot climb out of
+ * /api/content/v1 or name the same resource under two cache keys.
+ */
 function checkPath(path: string): void {
   if (typeof path !== 'string' || !path.startsWith('/') || path.includes('?') || path.includes('#')) {
     throw new TypeError(`A Content API path starts with "/" and carries no query string or fragment (got ${JSON.stringify(path)})`)
   }
-}
-
-function parseApiOrigin(raw: string): { base: string; origin: string } {
-  const trimmed = raw.replace(/\/+$/, '')
-  let url: URL
-  try {
-    url = new URL(trimmed)
-  } catch {
-    throw new TypeError(`apiOrigin is not a URL: ${JSON.stringify(raw)}`)
+  if (path.split('/').some(isDotSegment)) {
+    throw new TypeError(`A Content API path has no "." or ".." segment (got ${JSON.stringify(path)})`)
   }
-  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.search || url.hash) {
-    throw new TypeError(`apiOrigin must be an http(s) origin with no query or fragment: ${JSON.stringify(raw)}`)
-  }
-  return { base: trimmed + CONTENT_API_PREFIX, origin: url.origin }
 }
 
 /**
- * Builds a client. Throws a TypeError for anything that is not a site key,
- * and SecretKeyInBrowserError for a secret key where `document` exists.
+ * True in a browser page (`document`) or a browser worker (a
+ * WorkerGlobalScope), where a secret key would be readable by anyone.
+ * Cloudflare's runtime is a WorkerGlobalScope too and is a server, so it is
+ * told apart by its navigator.userAgent.
+ */
+function inBrowser(): boolean {
+  const g = globalThis as {
+    document?: unknown
+    WorkerGlobalScope?: unknown
+    self?: unknown
+    navigator?: { userAgent?: unknown }
+  }
+  if (typeof g.document !== 'undefined') return true
+  if (typeof g.WorkerGlobalScope !== 'function' || typeof g.self === 'undefined') return false
+  try {
+    if (!(g.self instanceof (g.WorkerGlobalScope as abstract new () => unknown))) return false
+  } catch {
+    return false
+  }
+  return g.navigator?.userAgent !== 'Cloudflare-Workers'
+}
+
+/**
+ * Builds a client. Throws a TypeError for anything that is not a site key as
+ * the api mints it (the message never repeats the key), and
+ * SecretKeyInBrowserError for a secret key in a browser page or worker.
  */
 export const createClient: CreateClient = (opts) => {
   const key = opts?.key
-  const kind = typeof key === 'string' ? siteKeyKind(key) : null
+  const kind = typeof key === 'string' && SITE_KEY_PATTERN.test(key) ? siteKeyKind(key) : null
   if (!kind || typeof key !== 'string') {
     throw new TypeError(
-      `createClient needs a site key: ${KEY_PREFIXES.publishable}… (publishable) or ${KEY_PREFIXES.secret}… (secret), from the site's Developer page`,
+      `createClient needs a site key: ${KEY_PREFIXES.publishable}… (publishable) or ${KEY_PREFIXES.secret}… (secret) followed by letters and digits, from the site's Developer page`,
     )
   }
-  if (kind === 'secret' && typeof (globalThis as { document?: unknown }).document !== 'undefined') {
-    throw new SecretKeyInBrowserError()
-  }
+  if (kind === 'secret' && inBrowser()) throw new SecretKeyInBrowserError()
 
-  const api = parseApiOrigin(opts.apiOrigin ?? DEFAULT_API_ORIGIN)
+  const api = contentApiBase(opts.apiOrigin ?? DEFAULT_API_ORIGIN)
   const store = opts.cache ?? memoryCache()
   const maxVersionAgeMs = Math.max(0, opts.maxVersionAgeSeconds ?? DEFAULT_MAX_VERSION_AGE_SECONDS) * 1000
-  const ttl = opts.cacheTtlSeconds ?? DEFAULT_CACHE_TTL_SECONDS
+  const ttl = Number.isFinite(opts.cacheTtlSeconds) ? Math.max(1, opts.cacheTtlSeconds!) : DEFAULT_CACHE_TTL_SECONDS
   const doFetch: typeof fetch = opts.fetch ?? ((input, init) => globalThis.fetch(input, init))
 
   let scopePromise: Promise<string> | null = null
@@ -185,11 +227,13 @@ export const createClient: CreateClient = (opts) => {
   const readKey = async (version: number, path: string, qs: string) => `${await scope()}:v${version}:${path}?${qs}`
 
   // The version this client trusts, when it was last confirmed, the one
-  // before it (whose stored reads can revalidate with If-None-Match), and the
-  // in-flight version check every concurrent read shares.
+  // before it (whose stored reads can revalidate with If-None-Match), the
+  // record last written to the store, and the in-flight version check every
+  // concurrent read shares.
   let known: number | null = null
   let confirmedAt = 0
   let previous: number | null = null
+  let persisted: StoredVersion | null = null
   let versionCheck: Promise<number> | null = null
 
   // A broken store degrades a read to a network read; it never fails one.
@@ -208,16 +252,35 @@ export const createClient: CreateClient = (opts) => {
     }
   }
 
-  const trust = (version: number) => {
+  const trust = (version: number, at = Date.now()) => {
     if (known !== null && known !== version) previous = known
     known = version
-    confirmedAt = Date.now()
+    confirmedAt = at
   }
-  const storedVersion = (version: number) => JSON.stringify({ version, confirmed_at: confirmedAt } satisfies StoredVersion)
-  /** Trusts an answer's version; a published answer also persists it. */
+  /** Writes the version record (setVersion's write lets the store's error through). */
+  const writeVersion = async (strict: boolean) => {
+    const record: StoredVersion = { version: known!, confirmed_at: confirmedAt }
+    const k = await versionKey()
+    if (strict) await store.set(k, JSON.stringify(record), ttl)
+    else await storeSet(k, JSON.stringify(record))
+    persisted = record
+  }
+  /**
+   * Trusts an answer's version. A published answer also persists it, but only
+   * when the version changed or the stored confirmation is more than five
+   * seconds old: KV takes one write per key per second.
+   */
   const learn = async (version: number, persist: boolean) => {
     trust(version)
-    if (persist) await storeSet(await versionKey(), storedVersion(version))
+    if (!persist) return
+    if (persisted?.version === version && confirmedAt - persisted.confirmed_at <= VERSION_WRITE_INTERVAL_MS) return
+    await writeVersion(false)
+  }
+
+  /** Adopts a stored version record that is newer than the one in memory (another process may have written it). */
+  const adopt = (stored: StoredVersion | null) => {
+    persisted = stored
+    if (stored && (known === null || stored.version > known)) trust(stored.version, stored.confirmed_at)
   }
 
   const fresh = () => known !== null && maxVersionAgeMs > 0 && Date.now() - confirmedAt < maxVersionAgeMs
@@ -252,20 +315,10 @@ export const createClient: CreateClient = (opts) => {
   }
 
   /** The version to key a published read on: the trusted one while fresh, else one shared check. */
-  /** With no version in memory, adopts the one in the store (another process may have written it). */
-  const loadStoredVersion = async () => {
-    if (known !== null) return
-    const stored = parseStoredVersion(await storeGet(await versionKey()))
-    if (stored && known === null) {
-      known = stored.version
-      confirmedAt = stored.confirmed_at
-    }
-  }
-
   const ensureVersion = (): Promise<number> => {
     if (fresh()) return Promise.resolve(known!)
     versionCheck ??= (async () => {
-      await loadStoredVersion()
+      if (known === null) adopt(parseStoredVersion(await storeGet(await versionKey())))
       return fresh() ? known! : checkSite()
     })().finally(() => {
       versionCheck = null
@@ -273,51 +326,65 @@ export const createClient: CreateClient = (opts) => {
     return versionCheck
   }
 
+  /**
+   * A 404 names a missing resource only when the answer carries the site's
+   * X-Content-Version; without it the site itself is gone (tombstoned, the
+   * headless grant revoked), which is never a null.
+   */
+  const missing = (res: Response, onMissing: OnMissing) =>
+    res.status === 404 && onMissing === 'null' && answeredVersion(res) !== null
+
   const previewRead = async <T>(path: string, qs: string, onMissing: OnMissing): Promise<T | null> => {
     if (kind !== 'secret') throw secretKeyRequired()
     const res = await send(path, qs)
     const answered = answeredVersion(res)
     if (answered !== null) await learn(answered, false)
     if (res.ok) return JSON.parse(await res.text()) as T
-    if (res.status === 404 && onMissing === 'null') return null
+    if (missing(res, onMissing)) return null
     throw await apiError(res)
   }
 
   const read = async <T>(path: string, query: Query, opts: ReadOptions | undefined, onMissing: OnMissing): Promise<T | null> => {
     checkPath(path)
-    if (opts?.preview) return previewRead<T>(path, queryString({ ...query, preview: '1' }), onMissing)
+    const params = normalizeQuery(opts?.preview ? { ...query, preview: '1' } : query)
+    const qs = new URLSearchParams(params).toString()
+    // A draft never reaches the store, however the caller asked for it.
+    const preview = params.some(([name, value]) => name === 'preview' && value === '1') || path.startsWith('/preview/')
+    if (preview) return previewRead<T>(path, qs, onMissing)
 
-    const qs = queryString(query)
     const version = await ensureVersion()
     const key = await readKey(version, path, qs)
     const hit = parseCachedRead(await storeGet(key))
-    if (hit) {
-      try {
-        return JSON.parse(hit.body) as T
-      } catch {
-        // A corrupt copy is a miss.
-      }
-    }
+    const hitBody = hit ? parsedBody(hit) : undefined
+    if (hitBody) return hitBody.value as T
 
-    const prior =
-      previous !== null && previous !== version ? parseCachedRead(await storeGet(await readKey(previous, path, qs))) : null
-    const res = await send(path, qs, prior?.etag)
+    // A copy from the previous version can revalidate: a 304 means the api is
+    // still at the version its ETag names. A corrupt copy, or one under a tag
+    // that names no version, is not offered.
+    let prior: { read: CachedRead; version: number; body: unknown } | null = null
+    if (previous !== null && previous !== version) {
+      const read = parseCachedRead(await storeGet(await readKey(previous, path, qs)))
+      const body = read ? parsedBody(read) : undefined
+      const tagged = read ? etagVersion(read.etag) : null
+      if (read && body && tagged !== null) prior = { read, version: tagged, body: body.value }
+    }
+    const res = await send(path, qs, prior?.read.etag)
     const answered = answeredVersion(res)
     if (answered !== null) await learn(answered, true)
-    const at = answered ?? version
 
     if (res.status === 304 && prior) {
-      await storeSet(await readKey(at, path, qs), JSON.stringify(prior))
-      return JSON.parse(prior.body) as T
+      await storeSet(await readKey(prior.version, path, qs), JSON.stringify(prior.read))
+      return prior.body as T
     }
     if (res.ok) {
+      const at = answered ?? version
       const text = await res.text()
       const body = JSON.parse(text) as T
       const read: CachedRead = { body: text, etag: res.headers.get('ETag') ?? etagOf(at), fetched_at: Date.now() }
       await storeSet(await readKey(at, path, qs), JSON.stringify(read))
       return body
     }
-    if (res.status === 404 && onMissing === 'null') return null
+    if (missing(res, onMissing)) return null
     throw await apiError(res)
   }
 
@@ -336,12 +403,15 @@ export const createClient: CreateClient = (opts) => {
     type: K,
     opts: Parameters<BackgoldContent['allEntries']>[1] = {},
   ): AsyncGenerator<Entry, void, undefined> {
+    const seen = new Set<string>()
     let cursor: string | undefined
     for (;;) {
       const page = await entries(type, { ...opts, cursor })
       if (!page) return
       yield* page.entries
-      if (!page.next_cursor || page.next_cursor === cursor) return
+      // A cursor seen before would walk the same pages again.
+      if (!page.next_cursor || seen.has(page.next_cursor)) return
+      seen.add(page.next_cursor)
       cursor = page.next_cursor
     }
   }
@@ -362,23 +432,28 @@ export const createClient: CreateClient = (opts) => {
     author: (slug) => read<AuthorResponse>(`/authors/${seg(slug)}`, {}, undefined, 'null'),
     redirects: () => must<RedirectsResponse>('/redirects'),
     sitemap: () => must<SitemapResponse>('/sitemap'),
-    preview: (token) => previewRead<PreviewResponse>(`/preview/${seg(token)}`, '', 'null'),
+    preview: (token) => read<PreviewResponse>(`/preview/${seg(token)}`, {}, undefined, 'null'),
     raw: <T = unknown>(path: string, query: Query = {}, opts?: ReadOptions) => read<T>(path, query, opts, 'null'),
 
     version: () => known,
     async setVersion(version) {
       if (!Number.isInteger(version) || version < 0) throw new TypeError(`A content version is a whole number ≥ 0 (got ${version})`)
-      // Monotonic: webhooks can arrive out of order, so an older version than
-      // the one known (in memory or the store) is ignored; bust() first to go back.
-      await loadStoredVersion()
+      // Monotonic: webhooks arrive out of order, so the incoming version is
+      // compared with the larger of memory and the store, re-read every time
+      // (another process may have written a newer one), and written only when
+      // it is newer than the store's. Two concurrent writers can still race:
+      // KV has no compare-and-swap.
+      const stored = parseStoredVersion(await store.get(await versionKey()))
+      adopt(stored)
       if (known !== null && version < known) return
       trust(version)
-      await store.set(await versionKey(), storedVersion(version), ttl)
+      if (!stored || version > stored.version) await writeVersion(true)
     },
     async bust() {
       if (known !== null) previous = known
       known = null
       confirmedAt = 0
+      persisted = null
       await store.delete(await versionKey())
     },
   }
