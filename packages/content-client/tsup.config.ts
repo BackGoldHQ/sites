@@ -16,7 +16,14 @@ export default defineConfig({
   noExternal: ['@givegold/shared', '@givegold/shared/content-api'],
   target: 'es2022',
   platform: 'neutral',
-  sourcemap: true,
+  // Keep `node:` on the fs and cli entries' imports: Workers (nodejs_compat),
+  // Deno and Bun resolve the prefixed form. A neutral build would otherwise
+  // try to bundle them, so they are external.
+  removeNodeProtocol: false,
+  external: [/^node:/],
+  // No source maps: a map's sourcesContent would carry every shared module the
+  // bundle touches in full, private code included. The output is unminified.
+  sourcemap: false,
   clean: true,
   treeshake: true,
 })

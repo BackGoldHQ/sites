@@ -195,7 +195,12 @@ export interface BackgoldContent {
 
   /** The content version this client currently trusts; null before the first read. */
   version(): number | null
-  /** Trust `version` from now on (what a webhook receiver calls); persisted to the store. */
+  /**
+   * Trust `version` from now on (what a webhook receiver calls); persisted to
+   * the store. Monotonic: a version lower than the one currently known (in
+   * memory or in the store) is ignored, because webhooks can arrive out of
+   * order. To go backwards, call `bust()` first.
+   */
   setVersion(version: number): Promise<void>
   /** Forget the version so the next read re-learns it from the api. */
   bust(): Promise<void>
