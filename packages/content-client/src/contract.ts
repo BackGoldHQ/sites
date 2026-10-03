@@ -22,13 +22,12 @@ import type {
   PagesResponse,
   RedirectsResponse,
   SectionsResponse,
+  SiteMenuKey,
   SiteResponse,
   SitemapResponse,
   TermsResponse,
   TypesResponse,
 } from '@givegold/shared/content-api'
-// Type-only: the menu keys live in shared's constants, not the contract module.
-import type { SiteMenuKey } from '@givegold/shared'
 
 export type {
   Author,

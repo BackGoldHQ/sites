@@ -10,7 +10,9 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
   entry: { index: 'src/index.ts', fs: 'src/fs.ts', codegen: 'src/codegen.ts', cli: 'src/cli.ts' },
   format: ['esm'],
-  dts: { resolve: true },
+  // Only the contract module is resolved into the declarations; resolving
+  // everything would drag zod's source in through shared's main index.
+  dts: { resolve: ['@givegold/shared/content-api', '@givegold/shared/content-api-examples'] },
   noExternal: ['@givegold/shared', '@givegold/shared/content-api'],
   target: 'es2022',
   platform: 'neutral',
