@@ -14,7 +14,11 @@
     "rootDir": "./src",
     // src/builtin-types.ts augments this package by its own name; tsc and
     // tsup's declaration build resolve that name to the source, not dist/.
-    "paths": { "@backgold/content": ["./src/index.ts"] }
+    "paths": {
+      "@backgold/content": ["./src/index.ts"],
+      "@givegold/shared/content-api": ["../shared/dist/content-api.d.ts"],
+      "@givegold/shared/content-api-examples": ["../shared/dist/content-api-examples.d.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "dist-test", "src/**/*.test.ts"]
