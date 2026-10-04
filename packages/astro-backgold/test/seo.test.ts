@@ -233,6 +233,17 @@ describe('llmsFullTxt', () => {
         '',
         'Fund the fight for lower taxes',
         '',
+        // The Map and CandidateRoster sections: their copy (the Map's heading
+        // and legend labels, the roster's heading). Section data rows — the
+        // regions and the candidates — are not page copy and are not written.
+        'Where we are organized',
+        '',
+        'Chartered',
+        '',
+        'Not yet',
+        '',
+        'Our candidates',
+        '',
         '---',
         '',
         '### The levy, explained',
