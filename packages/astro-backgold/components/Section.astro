@@ -1,0 +1,20 @@
+---
+// Renders `components[section.type]` when the site passes one, else
+// DefaultSection. With a `variant` (a feature flag's pick, say),
+// `components['<type>:<variant>']` is tried first, so a flag can swap one
+// section's component without touching the page.
+import type { Section as SectionData } from '@backgold/content'
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
+import DefaultSection from './DefaultSection.astro'
+
+interface Props {
+  section: SectionData
+  components?: Record<string, AstroComponentFactory>
+  variant?: string
+}
+
+const { section, components = {}, variant } = Astro.props
+const own = (key: string) => (Object.hasOwn(components, key) ? components[key] : undefined)
+const Override = (variant ? own(`${section.type}:${variant}`) : undefined) ?? own(section.type)
+---
+{Override ? <Override section={section} variant={variant} /> : <DefaultSection section={section} />}

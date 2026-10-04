@@ -1,0 +1,45 @@
+---
+// Collection: entries the organization picked, as cards. `variant` is the
+// layout chosen in BackGold ('list' stacks them; anything else is a grid).
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import EntryCard from '../EntryCard.astro'
+import { nested, rows, type Card } from '../../lib/section'
+import { listOf, text } from '../../lib/format'
+import { safeHref, safeSrc } from '@backgold/astro/server'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const cards: Card[] = rows(section).flatMap((row) => {
+  const title = text(row.title)
+  if (!title) return []
+  const image = safeSrc(row.image_url)
+  const authors = nested(row, 'authors').map((a) => text(a.name)).filter((n): n is string => n !== null)
+  const terms = nested(row, 'terms').map((t) => text(t.label)).filter((n): n is string => n !== null)
+  return [
+    {
+      title,
+      href: safeHref(row.url, { anchors: true }),
+      summary: text(row.summary),
+      image: image ? { url: image, alt: '' } : null,
+      date: text(row.publish_at),
+      meta: [terms.join(' · '), authors.length > 0 ? `By ${listOf(authors)}` : ''].filter(Boolean).join(' — ') || null,
+    },
+  ]
+})
+---
+<Band section={section} class="entries">
+  {heading && <h2>{heading}</h2>}
+  {cards.length > 0 ? (
+    <div class:list={['grid', section.variant === 'list' ? 'grid-1' : 'grid-3']}>
+      {cards.map((card) => <EntryCard card={card} level={heading ? 3 : 2} />)}
+    </div>
+  ) : (
+    <p class="empty">Nothing here yet.</p>
+  )}
+</Band>

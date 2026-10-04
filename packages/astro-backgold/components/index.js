@@ -1,0 +1,9 @@
+// `@backgold/astro/components`: shipped as source; Astro compiles them in the site's build.
+export { default as Section } from './Section.astro'
+export { default as DefaultSection } from './DefaultSection.astro'
+export { default as Embed } from './Embed.astro'
+export { default as Menu } from './Menu.astro'
+export { default as Disclaimer } from './Disclaimer.astro'
+export { default as Seo } from './Seo.astro'
+export { default as Analytics } from './Analytics.astro'
+export { default as PreviewBar } from './PreviewBar.astro'

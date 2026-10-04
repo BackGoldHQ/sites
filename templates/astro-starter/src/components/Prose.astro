@@ -1,0 +1,18 @@
+---
+// A copy value from BackGold: sanitized rich text, or plain paragraphs.
+import { prose } from '../lib/format'
+
+interface Props {
+  value: unknown
+  class?: string
+}
+
+const { value, class: className } = Astro.props
+const body = prose(value)
+---
+{body && 'html' in body && <div class:list={['prose', className]} set:html={body.html} />}
+{body && 'paragraphs' in body && (
+  <div class:list={['prose', className]}>
+    {body.paragraphs.map((p) => <p>{p}</p>)}
+  </div>
+)}

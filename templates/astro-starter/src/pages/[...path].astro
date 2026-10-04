@@ -1,0 +1,125 @@
+---
+// Every address on the site. resolveRoute reads what the path is from
+// BackGold (a page, a type's list, an entry, an author, a term, a feed), so
+// a content type the organization adds gets its pages with no change here.
+// Redirects were already answered by the middleware.
+import { atomFeed, jsonLdFor, relFor, resolveRoute, safeHref, safeSrc, type ResolvedType } from '@backgold/astro/server'
+import Site from '../layouts/Site.astro'
+import EntryArticle from '../components/EntryArticle.astro'
+import EntryCard from '../components/EntryCard.astro'
+import NotFound from '../components/NotFound.astro'
+import PageSections from '../components/PageSections.astro'
+import { entryCard } from '../lib/section'
+
+const bg = Astro.locals.backgold
+if (bg.setup !== null) return new Response(null, { status: 503 })
+
+const { client, site, siteUrl } = bg
+const siteName = site.name ?? site.domain
+const pathname = Astro.url.pathname
+const resolved = await resolveRoute(client, pathname)
+
+if (resolved.kind === 'feed') {
+  return new Response(await atomFeed(client, siteUrl, resolved.type), {
+    headers: { 'Content-Type': 'application/atom+xml; charset=utf-8' },
+  })
+}
+if (resolved.kind === 'not_found') Astro.response.status = 404
+
+const typeName = (type: ResolvedType) => (type === 'blog' ? 'Blog' : type.plural_label)
+
+let head: { title?: string; description?: string; image?: string; canonicalPath: string; noindex?: boolean; jsonLd?: object[] }
+switch (resolved.kind) {
+  case 'page': {
+    const { page, sections } = resolved.page
+    const firstImage = sections.flatMap((s) => Object.values(s.media ?? {})).map((m) => safeSrc(m.url)).find((u) => u !== null)
+    head = {
+      title: page.meta.title ?? page.title ?? undefined,
+      description: page.meta.description ?? undefined,
+      image: safeSrc(page.meta.image_url) ?? firstImage ?? undefined,
+      canonicalPath: page.url,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'page', page }),
+    }
+    break
+  }
+  case 'index':
+    head = { title: `${typeName(resolved.type)} · ${siteName}`, canonicalPath: pathname, jsonLd: jsonLdFor({ site, siteUrl, kind: 'index', type: resolved.type }) }
+    break
+  case 'entry': {
+    const { entry, type } = resolved
+    head = {
+      title: entry.title,
+      description: entry.summary ?? undefined,
+      image: entry.hero ? (safeSrc(entry.hero.url) ?? undefined) : undefined,
+      canonicalPath: entry.url ?? pathname,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'entry', type, entry }),
+    }
+    break
+  }
+  case 'author':
+    head = {
+      title: `${resolved.author.display_name} · ${siteName}`,
+      description: resolved.author.bio ?? undefined,
+      canonicalPath: pathname,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'author', author: resolved.author }),
+    }
+    break
+  case 'term':
+    head = {
+      title: `${resolved.term.label} · ${siteName}`,
+      canonicalPath: pathname,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'term', type: resolved.type, taxonomy: resolved.taxonomy, term: resolved.term }),
+    }
+    break
+  default:
+    head = { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
+}
+const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
+const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
+---
+<Site {...head}>
+  {resolved.kind === 'page' && <PageSections page={resolved.page} siteName={siteName} />}
+
+  {resolved.kind === 'index' && (
+    <div class="listing">
+      <header class="page-header"><h1>{typeName(resolved.type)}</h1></header>
+      {resolved.entries.length > 0 ? (
+        <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
+      ) : (
+        <p class="empty">Nothing published yet.</p>
+      )}
+    </div>
+  )}
+
+  {resolved.kind === 'entry' && <EntryArticle entry={resolved.entry} type={resolved.type} />}
+
+  {resolved.kind === 'author' && (
+    <div class="listing">
+      <header class="page-header author">
+        {avatar && <img class="author-avatar" src={avatar} alt="" />}
+        <h1>{resolved.author.display_name}</h1>
+        {resolved.author.bio && <p class="lede">{resolved.author.bio}</p>}
+        {authorLink && <p><a href={authorLink} rel={relFor(authorLink)}>More about {resolved.author.display_name}</a></p>}
+      </header>
+      {resolved.entries.length > 0 && (
+        <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
+      )}
+    </div>
+  )}
+
+  {resolved.kind === 'term' && (
+    <div class="listing">
+      <header class="page-header">
+        <p class="kicker">{resolved.taxonomy.label}</p>
+        <h1>{resolved.term.label}</h1>
+      </header>
+      {resolved.entries.length > 0 ? (
+        <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
+      ) : (
+        <p class="empty">Nothing published here yet.</p>
+      )}
+    </div>
+  )}
+
+  {resolved.kind === 'not_found' && <NotFound />}
+</Site>

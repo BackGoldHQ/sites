@@ -1,0 +1,228 @@
+> **This repository is synced from BackGold's source, and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
+
+# BackGold starter for Astro
+
+A complete website for a BackGold site, built by you and hosted on your own
+Cloudflare account. The organization keeps writing its pages, menus, posts and
+its own content types in BackGold; this site reads them through BackGold's
+Content API and renders them with components you own. It runs on Cloudflare
+Workers with [Astro](https://astro.build), keeps every page cached at the edge
+until the content changes, and comes with a sitemap, `robots.txt`, `llms.txt`,
+Atom feeds and structured data already in place.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://gitlab.com/backgold/backgold-starter)
+
+It is built on two packages: [`@backgold/content`](https://www.npmjs.com/package/@backgold/content),
+the typed client for the Content API, and [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro),
+the plumbing (routing, caching, the webhook, preview, the SEO routes). This
+repository is the thin layer on top that you restyle.
+
+## Connect it in four steps
+
+You need the site's **Developer** page in BackGold: open **Sites**, choose the
+site, then **Developer**. The site must be in headless mode.
+
+1. **Deploy to Cloudflare.** Press the button above. Cloudflare copies this
+   repository into your own GitHub or GitLab account, creates a KV namespace,
+   and asks for a few values:
+   - `BACKGOLD_SITE_KEY`: the **publishable key** under **Keys** on the
+     Developer page (it starts with `bg_site_pk_`).
+   - `SITE_URL`: the address the site will live at, for example
+     `https://www.example.org`.
+   - `BACKGOLD_SECRET_KEY` and `BACKGOLD_WEBHOOK_SECRET`: leave these blank for
+     now; steps 2 and 3 create them.
+
+   About a minute later the site is live at
+   `https://<worker name>.<your account>.workers.dev`. Then, in your new
+   repository, put the same `BACKGOLD_SITE_KEY` and `SITE_URL` in
+   `wrangler.jsonc` under `vars` and commit them (the key is publishable, so
+   that is safe): Wrangler applies the file's `vars` on every deploy, so a
+   value set only in the dashboard is reset by the next push.
+2. **Tell BackGold where it is.** On the Developer page, enter
+   `https://<your site>/preview` as the **preview address** and press **Send a
+   test preview**. Create a **secret key** under **Keys** (it is shown once) and
+   set it on the Worker as `BACKGOLD_SECRET_KEY`, either in the Cloudflare
+   dashboard (**Workers & Pages → your Worker → Settings → Variables and
+   Secrets**, type *Secret*) or with `npx wrangler secret put BACKGOLD_SECRET_KEY`.
+   The editor's **Preview on your site** now opens drafts here.
+3. **Turn on the webhook.** Under **Webhooks**, add the endpoint
+   `https://<your site>/api/backgold/webhook`, copy the signing secret it shows
+   once, set it on the Worker as `BACKGOLD_WEBHOOK_SECRET`, and turn on all five
+   content events. A publish in BackGold now reaches the Worker that
+   receives the webhook at once, and every other copy of it within about a
+   minute.
+4. **Point your domain.** In Cloudflare, add the site's domain to the Worker
+   (**Settings → Domains & Routes**). The edge cache, which makes pages fast,
+   only works on a custom domain.
+
+Until `BACKGOLD_SITE_KEY` is set, every page shows a short setup page naming
+what is missing. The secrets can come later: without them the site still shows
+everything that is published.
+
+## Settings
+
+| Name | Kind | Needed | What it is |
+| --- | --- | --- | --- |
+| `BACKGOLD_SITE_KEY` | variable | yes | The site's publishable key, `bg_site_pk_…`, from **Developer → Keys**. It only reads what the public site shows. |
+| `SITE_URL` | variable | set it in production | The site's public address. Used for canonical links, the sitemap and feeds. Blank means the address each request arrives on, as the visitor's `Host` header names it, so the same page can be cached and indexed under several addresses. |
+| `BACKGOLD_API_ORIGIN` | variable | no | Where the Content API lives. Keep `https://api.backgold.com`. |
+| `BACKGOLD_CACHE` | KV namespace | no (created by the Deploy button) | Where the site keeps its BackGold reads and the last content version, shared by every copy of the Worker. Without it each copy keeps them in memory only: a new copy reads everything from BackGold again, and the webhook's version reaches only the copy that received it until the others re-check. |
+| `BACKGOLD_SECRET_KEY` | secret | for previews | A secret key, `bg_site_sk_…`, from **Developer → Keys**. Only the `/preview` page uses it; it never reaches a page or the cache. |
+| `BACKGOLD_WEBHOOK_SECRET` | secret | for the webhook | The webhook endpoint's signing secret, `whsec_…`, from **Developer → Webhooks**. |
+| `BACKGOLD_REBUILD_HOOK_URL` | secret | no | A URL to POST after each content change, for a site you rebuild statically. Usually blank. |
+
+Variables live in `wrangler.jsonc`; secrets are set with
+`npx wrangler secret put <NAME>` or in the dashboard, never committed.
+
+## How the content stays current
+
+- Every change in BackGold moves the site's **content version**. Each page this
+  site renders is cached at the edge under that version, so a new version
+  makes every old copy unreachable. Nothing is purged and nothing is
+  rebuilt; the next visitor gets a fresh page.
+- The **webhook** (step 3) tells the site the new version when something is
+  published. Cloudflare runs several copies of the Worker; the one that
+  receives the webhook moves at once, and every other one within about a
+  minute (each re-checks its version at most once a minute). Without the
+  webhook every copy is within about a minute.
+- To force a fresh read from your own tooling, POST to
+  `/api/backgold/revalidate` with the webhook secret:
+
+  ```bash
+  curl -X POST https://<your site>/api/backgold/revalidate \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $BACKGOLD_WEBHOOK_SECRET"
+  ```
+
+  (Astro refuses a POST without a JSON content type from outside the site.)
+- The **edge cache works only on a custom domain**. On a `workers.dev` address
+  every request renders; BackGold's answers still come from the KV namespace,
+  so it stays quick.
+
+## Restyle it
+
+Everything you see is in `src/`, and none of it is generated:
+
+```
+src/
+  layouts/Site.astro           the head, header, menus, footer and legal line
+  pages/[...path].astro        every address: pages, lists, entries, authors, tags, feeds
+  pages/preview.astro          drafts, opened from BackGold's "Preview on your site"
+  pages/404.astro              the not-found page
+  pages/backgold-setup.astro   shown until the site key is set
+  components/sections/         one component per section type, and index.ts
+  components/EntryArticle.astro, EntryCard.astro, FieldValue.astro, PageSections.astro
+  styles/site.css              the whole look
+  lib/brand.ts                 the brand colours and the five band grounds
+```
+
+- **Sections.** A page in BackGold is an ordered list of sections, each with a
+  `type` (Hero, About, Issues, …). `src/components/sections/index.ts` maps
+  each type to its component; replace a component, or point a type at your
+  own. A type you do not list (including one BackGold adds later) renders
+  through the package's `DefaultSection`, so nothing goes missing.
+- **Bands.** Each section has a `band`, the ground it sits on (`plain`,
+  `tint`, `panel`, `wash`, `contrast`), and a `bleed` (`full` edge to edge, or
+  `contained` as a card). They arrive as the classes `bg-band-<band>` and
+  `bg-bleed-<bleed>`; `site.css` maps them to grounds.
+- **Colours.** `src/lib/brand.ts` turns the brand colours set in BackGold into
+  CSS custom properties: `--bg-brand-primary`, `--bg-brand-secondary`,
+  `--bg-brand-accent`, and for each band `--band-<band>` with its `-ink`,
+  `-muted`, `-link`, `-button` and `-button-ink`. It picks each text colour so
+  it meets WCAG AA contrast on its ground, whatever the brand colours are.
+  Inside a section, use the short names `--ink`, `--muted`, `--link`,
+  `--button` and `--button-ink`.
+- **Type.** The system font stack and a fluid type scale, set at the top of
+  `site.css`. Add a web font there if the design calls for one.
+
+Every link and image address that reaches a page goes through `safeHref` or
+`safeSrc` from `@backgold/astro/server` (the rule the package's own components
+follow), and BackGold's rich text through its sanitizer. Keep that when you
+write your own components.
+
+## Your own content types
+
+The organization can add content types in BackGold (endorsements, press
+releases, anything). Each one with pages gets its list at `/<url base>`, its
+entries at `/<url base>/<slug>`, tag pages and an Atom feed at
+`/<url base>/feed.xml`, with no change here. `FieldValue.astro` renders each
+custom field by its kind (text, rich text, image, PDF, link, date, yes/no,
+choices, list, reference).
+
+To have TypeScript know each type's fields:
+
+```bash
+BACKGOLD_SITE_KEY=bg_site_pk_… npm run types
+```
+
+This writes `src/backgold.d.ts` from the site's types. Run it again whenever
+the organization changes a content type.
+
+## Donations, forms and petitions are embeds
+
+**Money and consent never pass through partner code.** Donate, form, petition
+and RSVP modules arrive as an embed, never as fields to rebuild. They always
+render from BackGold, so contribution limits, receipts and text-message
+consent stay on BackGold's side.
+
+That is why there is no `Donate.astro`, `FormBlock.astro` or `Petition.astro`
+in `src/components/sections/`: those sections (and the store, events,
+calendar, polls and advocacy modules) render through the package's `Embed`,
+which places BackGold's own frame and sizes it. Style the section around it
+(its heading, its band, its spacing) but never cover, restyle or imitate what
+is inside the frame, and never collect donations, signatures, RSVPs or consent
+in a form of your own. Links to the organization's own donate, events and
+store pages are followed exactly as BackGold gives them.
+
+## The legal line
+
+The footer shows the site's disclaimer ("Paid for by …") on every page. It is
+**required by law**, and BackGold checks the live home page for it every hour
+and warns the organization when it cannot find it. Restyle it as you like, but
+keep it on every page, as text in the HTML the server sends (a disclaimer
+added by client-side script is not found).
+
+## Analytics
+
+There is no analytics setting in this repository. Whether the site shares its
+page views with BackGold is the organization's choice, made in BackGold; when
+it does, the layout's `<Analytics />` loads a small script once the page is
+idle (no session recording) and BackGold shows the traffic beside its other
+sites. When it does not, `<Analytics />` renders nothing. Add your own
+analytics as you would on any site.
+
+## Ready for experiments
+
+Nothing here runs an A/B test, but the three things one needs are in place:
+
+1. The edge cache key has a **variant** slot (empty today), so a variant is one
+   more cached copy, not a new cache.
+2. A first-party **`bg_vid`** cookie (a random id, no personal data) names the
+   visitor, for a server-side pick and for analytics alike.
+3. `<Section>` takes a **`variant`** prop: add a component to the sections map
+   as `'<Type>:<variant>'` (say `'Hero:b'`) and pass `variant="b"` to show it.
+
+## Develop locally
+
+Requires Node 22.12 or later.
+
+```bash
+npm install
+cp .dev.vars.example .dev.vars   # optional: the secrets, for previews and the webhook
+```
+
+With the publishable key in `wrangler.jsonc` under `vars`:
+
+| Command | |
+| --- | --- |
+| `npm run dev` | Astro's dev server on workerd, reloading as you edit. No edge cache. |
+| `npm run preview` | Build, then serve the built Worker with `wrangler dev`, as Cloudflare will run it. |
+| `npm run deploy` | Build and deploy with `wrangler deploy`. |
+| `npm run check` | Type-check the project with `astro check`. |
+| `npm run types` | Write `src/backgold.d.ts` from the site's content types. |
+
+A deploy from the Deploy button rebuilds on every push to your repository.
+
+## License
+
+MIT. Once you clone it, it is yours.

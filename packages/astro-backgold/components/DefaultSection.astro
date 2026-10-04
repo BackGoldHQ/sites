@@ -1,0 +1,95 @@
+---
+// One shape-driven renderer for any section, so a block type BackGold adds
+// after the site was built still renders: the heading, the copy, the media,
+// the links, the data rows and the embed. Never an `<h1>`; the page has one.
+// Rich copy is the sanitizer's output; everything else is text Astro escapes.
+import type { Section } from '@backgold/content'
+import { copyOf, dataRowsOf, linksOf, mediaOf } from '../dist/render.js'
+import Embed from './Embed.astro'
+
+interface Props {
+  section: Section
+}
+
+const { section } = Astro.props
+const { heading, blocks } = copyOf(section)
+const media = mediaOf(section)
+const links = linksOf(section)
+const rows = dataRowsOf(section)
+const embedTitle = heading ?? undefined
+---
+<section
+  class:list={['bg-section', `bg-band-${section.band}`, `bg-bleed-${section.bleed}`]}
+  data-type={section.type}
+  data-band={section.band}
+  data-bleed={section.bleed}
+>
+  <div class="bg-section-inner">
+    {heading && <h2>{heading}</h2>}
+    {blocks.map((block) =>
+      'html' in block ? (
+        <div class="bg-copy" data-copy={block.key} set:html={block.html} />
+      ) : (
+        block.paragraphs.map((p) => <p data-copy={block.key}>{p}</p>)
+      ),
+    )}
+    {media.map((m) =>
+      m.kind === 'image' ? (
+        <img src={m.url} alt={m.alt} loading="lazy" data-media={m.key} />
+      ) : (
+        <p data-media={m.key}>
+          <a href={m.url}>{m.kind === 'pdf' ? 'Open the PDF' : 'Watch the video'}</a>
+        </p>
+      ),
+    )}
+    {rows.length > 0 && (
+      <ul class="bg-rows" data-source={section.data?.source}>
+        {rows.map((row) => (
+          <li>
+            {row.image && <img src={row.image} alt="" loading="lazy" />}
+            {row.title && (row.href ? <a href={row.href} rel={row.rel}>{row.title}</a> : <strong>{row.title}</strong>)}
+            {row.date && <time datetime={row.date.iso}>{row.date.label}</time>}
+            {row.text && <p>{row.text}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {links.length > 0 && (
+      <p class="bg-links">
+        {links.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+    {section.embed && <Embed embed={section.embed} title={embedTitle} />}
+  </div>
+</section>
+
+<style>
+  .bg-section {
+    padding: var(--bg-section-padding, 3rem 1rem);
+    background: var(--bg-band-background, transparent);
+    color: var(--bg-band-color, inherit);
+  }
+  .bg-section-inner {
+    max-width: var(--bg-content-width, 72rem);
+    margin: 0 auto;
+  }
+  .bg-rows {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .bg-rows img,
+  .bg-section-inner > img {
+    max-width: 100%;
+    height: auto;
+  }
+  .bg-rows time {
+    display: block;
+  }
+  .bg-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+</style>

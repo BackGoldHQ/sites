@@ -1,0 +1,75 @@
+---
+// An entry's page: its title, summary, byline and date, the hero image, a
+// podcast's or video's media, the body, then the type's own fields.
+import type { ContentTypeSummary, EntryDetail } from '@backgold/content'
+import { relFor, renderMarkdown, safeSrc } from '@backgold/astro/server'
+import FieldValue from './FieldValue.astro'
+import { formatDay } from '../lib/format'
+
+interface Props {
+  entry: EntryDetail
+  /** The entry's type from GET /types; without it the custom fields are left out. */
+  type: ContentTypeSummary | undefined
+}
+
+const { entry, type } = Astro.props
+const day = formatDay(entry.publish_at)
+const hero = entry.hero ? safeSrc(entry.hero.url) : null
+const media = safeSrc(entry.media_url)
+const base = type ? (type.built_in ? 'blog' : type.url_base) : null
+
+type EntryAuthor = EntryDetail['authors'][number]
+const roles = new Map<string, EntryAuthor[]>()
+for (const author of entry.authors) roles.set(author.role, [...(roles.get(author.role) ?? []), author])
+
+const isEmpty = (value: unknown) =>
+  value === null || value === undefined || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)
+const fields = (type?.fields ?? []).filter((field) => !isEmpty(entry.fields?.[field.key]))
+const body = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+---
+<article class="entry">
+  <header class="entry-header">
+    {base && entry.terms.length > 0 && (
+      <p class="kicker">
+        {entry.terms.map((term, i) => (
+          <>{i > 0 && ' · '}<a href={`/${encodeURIComponent(base)}/${encodeURIComponent(term.taxonomy)}/${encodeURIComponent(term.slug)}`}>{term.label}</a></>
+        ))}
+      </p>
+    )}
+    <h1>{entry.title}</h1>
+    {entry.summary && <p class="lede">{entry.summary}</p>}
+    {(roles.size > 0 || day) && (
+      <p class="byline">
+        {[...roles].map(([role, people], i) => (
+          <>
+            {i > 0 && ' · '}
+            {role}{' '}
+            {people.map((person, j) => (
+              <>
+                {j > 0 && (j === people.length - 1 ? ' and ' : ', ')}
+                <a href={`/authors/${encodeURIComponent(person.slug)}`}>{person.display_name}</a>
+              </>
+            ))}
+          </>
+        ))}
+        {roles.size > 0 && day && ' · '}
+        {day && entry.publish_at && <time datetime={entry.publish_at}>{day}</time>}
+      </p>
+    )}
+  </header>
+  {hero && <img class="entry-hero" src={hero} alt="" decoding="async" fetchpriority="high" />}
+  {media && entry.type === 'podcast' && <audio class="entry-media" src={media} controls preload="none"></audio>}
+  {media && entry.type === 'video' && <video class="entry-media" src={media} controls preload="none" playsinline></video>}
+  {media && entry.type !== 'podcast' && entry.type !== 'video' && <p><a href={media} rel={relFor(media)}>Open the media file</a></p>}
+  {body && <div class="prose entry-body" set:html={body} />}
+  {fields.length > 0 && (
+    <dl class="fields">
+      {fields.map((field) => (
+        <div class="field">
+          <dt>{field.label}</dt>
+          <dd><FieldValue field={field} value={entry.fields[field.key]} /></dd>
+        </div>
+      ))}
+    </dl>
+  )}
+</article>

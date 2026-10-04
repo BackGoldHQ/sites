@@ -1,0 +1,32 @@
+---
+// The head tags: title, description, canonical on SITE_URL, Open Graph,
+// the Twitter card (which reads the og: tags), robots, favicon, the blog feed, JSON-LD. Site-level values
+// from `/site` fill in what the props leave out.
+import options from 'virtual:backgold/options'
+import { seoHead, serializeJsonLd } from '../dist/server.js'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  canonicalPath: string
+  noindex?: boolean
+  jsonLd?: object[]
+}
+
+const head = seoHead(Astro.props, Astro.locals.backgold, options.feeds)
+---
+{head.title && <title>{head.title}</title>}
+{head.description && <meta name="description" content={head.description} />}
+<link rel="canonical" href={head.canonical} />
+{head.noindex && <meta name="robots" content="noindex" />}
+{head.favicon && <link rel="icon" href={head.favicon} />}
+{head.feed && <link rel="alternate" type="application/atom+xml" title={head.feed.title} href={head.feed.href} />}
+{head.title && <meta property="og:title" content={head.title} />}
+{head.description && <meta property="og:description" content={head.description} />}
+<meta property="og:url" content={head.canonical} />
+{head.siteName && <meta property="og:site_name" content={head.siteName} />}
+<meta property="og:type" content={head.ogType} />
+{head.image && <meta property="og:image" content={head.image} />}
+<meta name="twitter:card" content={head.twitterCard} />
+{head.jsonLd && <script is:inline type="application/ld+json" set:html={serializeJsonLd(head.jsonLd)} />}

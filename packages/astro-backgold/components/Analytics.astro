@@ -1,0 +1,72 @@
+---
+// BackGold's analytics for this site, present only while the `/site` answer
+// carries the analytics block: the switch is the organization's, in
+// BackGold, and nothing here turns it on or off. Without the block this
+// renders nothing at all, and on the preview page it never renders (a draft,
+// and a signed token in the address). With it, posthog-js loads after the page is idle,
+// with no session replay, and names the visitor by the `bg_vid` cookie.
+import { analyticsPayload } from '../dist/render.js'
+
+const payload = analyticsPayload(Astro.locals.backgold, Astro.url.pathname)
+---
+{payload !== null && <div hidden data-backgold-analytics={payload}></div>}
+{payload !== null && (
+  <script>
+    interface Settings {
+      key: string
+      ingest: string
+      organization: string
+      site_domain_id: string
+      environment: string
+      cookie: string
+    }
+
+    const holder = document.querySelector<HTMLElement>('[data-backgold-analytics]')
+    const raw = holder?.dataset.backgoldAnalytics
+
+    function visitorId(name: string): string | undefined {
+      for (const part of document.cookie.split(';')) {
+        const [key, ...rest] = part.trim().split('=')
+        if (key === name) {
+          const value = rest.join('=')
+          return /^[A-Za-z0-9-]{16,64}$/.test(value) ? value : undefined
+        }
+      }
+      return undefined
+    }
+
+    async function start(settings: Settings): Promise<void> {
+      const { default: posthog } = await import('posthog-js')
+      const distinctID = visitorId(settings.cookie)
+      posthog.init(settings.key, {
+        api_host: settings.ingest,
+        person_profiles: 'identified_only',
+        autocapture: true,
+        capture_exceptions: false,
+        capture_heatmaps: false,
+        disable_session_recording: true,
+        advanced_disable_feature_flags_on_first_load: false,
+        capture_pageview: false,
+        capture_pageleave: true,
+        persistence: 'localStorage+cookie',
+        ...(distinctID ? { bootstrap: { distinctID } } : {}),
+      })
+      posthog.group('organization', settings.organization)
+      posthog.register({ surface: 'headless', site_domain_id: settings.site_domain_id, environment: settings.environment })
+      posthog.capture('$pageview')
+    }
+
+    function whenIdle(run: () => void): void {
+      const idle = (window as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback
+      if (idle) idle(run, { timeout: 4000 })
+      else setTimeout(run, 1)
+    }
+
+    if (raw) {
+      const settings = JSON.parse(raw) as Settings
+      const go = () => whenIdle(() => void start(settings).catch(() => undefined))
+      if (document.readyState === 'complete') go()
+      else addEventListener('load', go, { once: true })
+    }
+  </script>
+)}
