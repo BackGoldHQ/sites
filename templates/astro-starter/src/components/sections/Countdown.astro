@@ -1,0 +1,42 @@
+---
+// Countdown: a heading and the time left until the deadline. Pages are
+// cached until content changes, so the server writes the deadline itself and
+// a few lines of script count the days in the visitor's browser; without
+// script the deadline still reads plainly.
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import { rows } from '../../lib/section'
+import { formatWhen, text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const deadline = text(rows(section)[0]?.deadline)
+const when = formatWhen(deadline)
+---
+{deadline && when && (
+  <Band section={section} class="countdown">
+    {heading && <h2>{heading}</h2>}
+    <p class="countdown-left" data-countdown={deadline}>Until <time datetime={deadline}>{when}</time></p>
+    <script is:inline>
+      (function (el) {
+        var end = Date.parse(el.getAttribute('data-countdown'))
+        if (isNaN(end)) return
+        var ms = end - Date.now()
+        if (ms <= 0) return
+        var days = Math.floor(ms / 86400000)
+        var hours = Math.floor((ms % 86400000) / 3600000)
+        var left = days > 0 ? days + (days === 1 ? ' day' : ' days') : hours + (hours === 1 ? ' hour' : ' hours')
+        var strong = document.createElement('strong')
+        strong.className = 'countdown-number'
+        strong.textContent = left
+        el.firstChild.textContent = ' left, until '
+        el.prepend(strong)
+      })(document.currentScript.previousElementSibling)
+    </script>
+  </Band>
+)}

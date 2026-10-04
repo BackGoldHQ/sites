@@ -1,0 +1,27 @@
+// The Worker that serves the site. The Deploy to Cloudflare button asks for
+// each `vars` value and creates the KV namespace below. Keep the `vars` here
+// filled in: every deploy applies them, replacing what the dashboard holds.
+// Secrets are listed in .dev.vars.example; set them with
+// `npx wrangler secret put <NAME>` or in the dashboard (Worker → Settings →
+// Variables and Secrets). A deploy never removes a secret.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "backgold-starter",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "vars": {
+    "BACKGOLD_SITE_KEY": "",
+    "SITE_URL": "",
+    "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
+  },
+  // No id: Cloudflare creates the namespace on the first deploy.
+  "kv_namespaces": [{ "binding": "BACKGOLD_CACHE" }],
+  "observability": {
+    "enabled": true
+  }
+}

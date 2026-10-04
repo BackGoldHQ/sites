@@ -1,0 +1,11 @@
+---
+import type { SectionEmbed } from '@backgold/content'
+import Embed from '../../components/Embed.astro'
+
+interface Props {
+  embeds: SectionEmbed[]
+}
+
+const { embeds } = Astro.props
+---
+{embeds.map((embed) => <Embed embed={embed} title="Donate" />)}

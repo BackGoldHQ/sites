@@ -1,0 +1,26 @@
+---
+// PdfEmbed: a document, as a title, a caption and a link that opens it.
+// Browsers on phones do not show a PDF inside a page, so a link is what
+// every visitor can use.
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import { media } from '../../lib/section'
+import { text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const title = text(section.copy.title)
+const caption = text(section.copy.caption)
+const pdf = media(section, 'pdfUrl')
+---
+{pdf && (
+  <Band section={section} class="document">
+    {title && <h2>{title}</h2>}
+    {caption && <p class="lede">{caption}</p>}
+    <p class="actions"><a class="button button-quiet" href={pdf.url} rel="noopener">Open the PDF{title && <span class="visually-hidden">: {title}</span>}</a></p>
+  </Band>
+)}

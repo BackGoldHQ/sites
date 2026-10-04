@@ -1,0 +1,30 @@
+---
+// A menu from `/menus/:key`: nested lists, the current page marked, unsafe
+// addresses dropped (the label stays). No item opens a new tab.
+import type { MenuItem } from '@backgold/content'
+import { menuOf, type MenuNode } from '../dist/render.js'
+
+interface Props {
+  items: MenuItem[]
+  label: string
+}
+
+const { items, label } = Astro.props
+const nodes: MenuNode[] = menuOf(items, Astro.url.pathname)
+---
+<nav aria-label={label} class="bg-menu">
+  <ul>
+    {nodes.map(function item(node: MenuNode): unknown {
+      return (
+        <li>
+          {node.href ? (
+            <a href={node.href} rel={node.rel} aria-current={node.current ? 'page' : undefined}>{node.label}</a>
+          ) : (
+            <span>{node.label}</span>
+          )}
+          {node.children.length > 0 && <ul>{node.children.map(item)}</ul>}
+        </li>
+      )
+    })}
+  </ul>
+</nav>

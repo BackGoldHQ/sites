@@ -1,0 +1,85 @@
+---
+// Every page's frame: the head, the header with the primary menu, the page,
+// and the footer with the footer menu, social links and the legal line.
+// Each page renders its own single <h1> inside the <main>.
+import { Analytics, Disclaimer, Menu, Seo } from '@backgold/astro/components'
+import { relFor, safeHref, safeSrc } from '@backgold/astro/server'
+import { brandCss } from '../lib/brand'
+import '../styles/site.css'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  canonicalPath: string
+  noindex?: boolean
+  jsonLd?: object[]
+}
+
+const bg = Astro.locals.backgold
+if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
+
+const { site, legal, client } = bg
+const [primary, footer] = await Promise.all([client.menu('primary'), client.menu('footer')])
+const name = site.name ?? site.domain
+const logo = safeSrc(site.brand.logo_url)
+const social = site.social.flatMap(({ platform, url }) => {
+  const href = safeHref(url)
+  return href ? [{ label: platform.charAt(0).toUpperCase() + platform.slice(1), href, rel: relFor(href) }] : []
+})
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <Seo {...Astro.props} />
+    <style is:inline set:html={brandCss(site.brand)}></style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-name" href="/">
+          {logo ? <img src={logo} alt={name} class="site-logo" /> : name}
+        </a>
+        {primary && primary.items.length > 0 && (
+          <>
+            <div class="nav-wide"><Menu items={primary.items} label="Primary" /></div>
+            <details class="nav-narrow">
+              <summary>Menu</summary>
+              <Menu items={primary.items} label="Primary" />
+            </details>
+          </>
+        )}
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <p class="site-footer-name">{name}</p>
+        {footer && footer.items.length > 0 && <Menu items={footer.items} label="Footer" />}
+        {social.length > 0 && (
+          <ul class="social" aria-label="Social media">
+            {social.map((s) => <li><a href={s.href} rel={s.rel}>{s.label}</a></li>)}
+          </ul>
+        )}
+        {/*
+          The legal line ("Paid for by …") must appear on every page, as text in
+          the HTML the server sends. It is required by law, and BackGold checks
+          the live home page for it every hour and warns the organization when
+          it is missing. Restyle it freely; do not remove it or render it with
+          client-side script.
+        */}
+        <div class="disclaimer">
+          <Disclaimer legal={legal} />
+        </div>
+      </div>
+    </footer>
+    <Analytics />
+  </body>
+</html>

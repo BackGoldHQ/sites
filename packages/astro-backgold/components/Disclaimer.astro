@@ -1,0 +1,18 @@
+---
+// The legal line every page must show, verbatim and as text (never markup).
+// Without one in BackGold it renders nothing and warns once per render.
+import type { ContentApiLegal } from '@backgold/content'
+
+interface Props {
+  legal: ContentApiLegal
+}
+
+const { legal } = Astro.props
+const text = legal?.disclaimer ?? null
+// Nothing is ever made up in its place; the Worker log says why it is missing.
+if (text === null) {
+  const siteId = (Astro.locals as { backgold?: { site?: { id?: string } | null } }).backgold?.site?.id ?? 'unknown'
+  console.warn(`@backgold/astro: site ${siteId} has no disclaimer set in BackGold, so this page shows no "Paid for by" line. Set one for the organization in BackGold.`)
+}
+---
+{text !== null && <p data-backgold-disclaimer>{text}</p>}

@@ -1,0 +1,25 @@
+// `@backgold/astro/server`: framework-free handlers and helpers. Each handler
+// is `(request, deps) => Response` (the preview handler answers the draft for
+// the site's `/preview` page to render), so a site that wires its own routes
+// can reuse them.
+import './locals.js'
+
+export { getBackgold } from './server/context.js'
+export type { BackgoldContextLike, BackgoldLocals, BackgoldReady, BackgoldSetup } from './server/context.js'
+export type { BackgoldEnv } from './server/env.js'
+export { SETUP_PATH } from './server/setup.js'
+export { handleWebhook } from './server/webhook.js'
+export type { WebhookDeps } from './server/webhook.js'
+export { handleRevalidate } from './server/revalidate.js'
+export type { RevalidateDeps } from './server/revalidate.js'
+export { PREVIEW_HEADERS, handlePreview, loadPreview } from './server/preview.js'
+export type { PreviewDeps, PreviewResult } from './server/preview.js'
+export { resolveRoute } from './server/resolve.js'
+export type { Resolved, ResolvedType } from './server/resolve.js'
+export type { BackgoldAnalytics } from './server/analytics.js'
+export { renderMarkdown, sanitizeRichText } from './server/markdown.js'
+export { relFor, safeHref, safeSrc } from './server/urls.js'
+export { jsonLdFor, robotsTxt, seoHead, serializeJsonLd, sitemapXml } from './server/seo.js'
+export type { JsonLdInput, SeoHead, SeoProps } from './server/seo.js'
+export { llmsFullTxt, llmsTxt } from './server/llms.js'
+export { atomFeed } from './server/feeds.js'

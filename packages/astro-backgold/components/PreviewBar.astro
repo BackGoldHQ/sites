@@ -1,0 +1,17 @@
+---
+// The bar across every preview render: a draft, not the published page.
+---
+<div data-backgold-preview-bar role="status" class="bg-preview-bar">Preview — not published</div>
+
+<style>
+  .bg-preview-bar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 2147483647;
+    padding: 0.375rem 1rem;
+    font: 600 0.875rem/1.4 system-ui, sans-serif;
+    text-align: center;
+    background: var(--bg-preview-background, #1f2937);
+    color: var(--bg-preview-color, #ffffff);
+  }
+</style>

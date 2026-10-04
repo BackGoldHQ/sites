@@ -1,0 +1,20 @@
+{
+  // Typechecks src/ and test/ (`pnpm lint`); tsup builds src/ only. The
+  // `.astro` components are typechecked by the consuming project's Astro
+  // tooling, not here.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "tsup.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

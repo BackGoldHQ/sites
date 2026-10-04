@@ -1,0 +1,57 @@
+---
+// A compliance module (donate, forms, petitions, …) as BackGold serves it:
+// the module's own frame, sized by the height it reports, or for a
+// script-only module (Advocacy) the container its script fills. Addresses
+// must be https, or http on localhost or 127.0.0.1 (a local api), or nothing
+// renders.
+// `allow="payment"` because checkout happens inside the donate and event
+// frames; no `sandbox`, which would break the checkout and the frames'
+// height messages; no `referrerpolicy`, because some frames address their
+// height message to the referrer's origin.
+import type { SectionEmbed } from '@backgold/content'
+import { embedPlan, firstOnPage } from '../dist/render.js'
+
+interface Props {
+  embed: SectionEmbed
+  title?: string
+}
+
+const { embed, title = 'Embedded form' } = Astro.props
+const plan = embedPlan(embed)
+const resizeScript = plan?.kind === 'iframe' && firstOnPage(Astro.request, 'backgold:resize')
+const moduleScript = plan?.kind === 'mount' && firstOnPage(Astro.request, `backgold:script:${plan.script}`)
+---
+{plan?.kind === 'iframe' && (
+  <iframe data-bg-embed class="bg-embed" src={plan.src} title={title} loading="lazy" allow="payment"></iframe>
+)}
+{plan?.kind === 'mount' && <div class="bg-embed-mount" {...plan.attributes}></div>}
+{moduleScript && plan?.kind === 'mount' && <script is:inline src={plan.script} async></script>}
+{resizeScript && (
+  <script is:inline>
+    addEventListener('message', function (event) {
+      var data = event.data
+      if (!data || typeof data !== 'object' || data.type !== 'givegold:resize') return
+      var height = Number(data.height)
+      if (!isFinite(height)) return
+      var frames = document.querySelectorAll('iframe[data-bg-embed]')
+      for (var i = 0; i < frames.length; i++) {
+        var frame = frames[i]
+        if (event.source !== frame.contentWindow) continue
+        var origin
+        try { origin = new URL(frame.src).origin } catch (e) { return }
+        if (event.origin !== origin) return
+        frame.style.height = Math.min(20000, Math.max(100, Math.round(height))) + 'px'
+        return
+      }
+    })
+  </script>
+)}
+
+<style>
+  .bg-embed {
+    display: block;
+    width: 100%;
+    height: var(--bg-embed-height, 600px);
+    border: 0;
+  }
+</style>

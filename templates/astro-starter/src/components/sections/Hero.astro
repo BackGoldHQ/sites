@@ -1,0 +1,42 @@
+---
+// Hero: the headline, a line under it, one call to action and a picture.
+// When the page opens with a Hero, its headline is the page's <h1> (the
+// catch-all page passes `level={1}`); any other Hero uses an <h2>.
+// `variant` is the layout chosen in BackGold ('split' puts the picture beside
+// the words; anything else stacks them).
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import { links, media } from '../../lib/section'
+import { text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+  level?: 1 | 2
+}
+
+const { section, level = 2 } = Astro.props
+const Heading = level === 1 ? 'h1' : 'h2'
+const headline = text(section.copy.headline)
+const subheadline = text(section.copy.subheadline)
+const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const [cta] = links(section)
+const split = section.variant === 'split' && picture !== null
+---
+<Band section={section} class:list={['hero', split && 'hero-split']}>
+  <div class="hero-words">
+    {headline && <Heading class="hero-headline">{headline}</Heading>}
+    {subheadline && <p class="hero-lede">{subheadline}</p>}
+    {cta && <p class="actions"><a class="button" href={cta.href} rel={cta.rel}>{cta.label}</a></p>}
+  </div>
+  {picture && (
+    <img
+      class="hero-image"
+      src={picture.url}
+      alt={picture.alt}
+      loading={level === 1 ? 'eager' : 'lazy'}
+      fetchpriority={level === 1 ? 'high' : undefined}
+      decoding="async"
+    />
+  )}
+</Band>

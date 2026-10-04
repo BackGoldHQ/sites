@@ -1,0 +1,49 @@
+---
+// Map: the places the organization is organized ("lit") and the ones still
+// open, as two lists with a count, plus the section's links. BackGold's own
+// renderer draws these on a map; draw one here if you like, from the same rows
+// (`region`, `status` 'lit' or anything else, an optional `url`).
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import { links, linkOf, rows } from '../../lib/section'
+import { text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const litLabel = text(section.copy.litLabel) ?? 'Organized'
+const darkLabel = text(section.copy.darkLabel) ?? 'Still open'
+const regions = rows(section)
+  .map((row) => ({ name: text(row.region), lit: row.status === 'lit', link: linkOf(row.region, row.url) }))
+  .filter((r): r is { name: string; lit: boolean; link: ReturnType<typeof linkOf> } => r.name !== null)
+const lit = regions.filter((r) => r.lit)
+const dark = regions.filter((r) => !r.lit)
+const actions = links(section)
+---
+<Band section={section} class="regions">
+  {heading && <h2>{heading}</h2>}
+  {regions.length > 0 && <p class="lede">{lit.length} of {regions.length} {litLabel.toLowerCase()}</p>}
+  {regions.length > 0 && (
+    <div class="grid grid-2">
+      {[{ label: litLabel, list: lit }, { label: darkLabel, list: dark }].map(({ label, list }) =>
+        list.length > 0 && (
+          <div>
+            <h3>{label}</h3>
+            <ul class:list={['region-list', list.length > 8 && 'region-list-long']}>
+              {list.map((r) => <li>{r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : r.name}</li>)}
+            </ul>
+          </div>
+        ),
+      )}
+    </div>
+  )}
+  {actions.length > 0 && (
+    <p class="actions">
+      {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>

@@ -1,0 +1,11 @@
+---
+import type { Section } from '@backgold/content'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+---
+<div data-override="hero" data-variant={variant}>{section.copy.headline}</div>

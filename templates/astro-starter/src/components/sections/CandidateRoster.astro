@@ -1,0 +1,55 @@
+---
+// CandidateRoster: the candidates the organization backs, each with the
+// office, the place, the issues, and links to their site and their donate
+// page in BackGold (follow it as given; never take a donation here).
+import type { Section } from '@backgold/content'
+import Band from './Band.astro'
+import { linkOf, rows } from '../../lib/section'
+import { text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const candidates = rows(section).flatMap((row) => {
+  const name = text(row.name)
+  if (!name) return []
+  const issues = Array.isArray(row.issues) ? row.issues.filter((i): i is string => typeof i === 'string' && i.trim() !== '') : []
+  return [
+    {
+      name,
+      office: [text(row.office), text(row.region)].filter(Boolean).join(' · '),
+      status: text(row.status),
+      issues,
+      site: linkOf('Website', row.web_url),
+      donate: linkOf('Donate', row.donate_url),
+    },
+  ]
+})
+---
+<Band section={section} class="roster">
+  {heading && <h2>{heading}</h2>}
+  {candidates.length > 0 ? (
+    <ul class="grid grid-3" role="list">
+      {candidates.map((c) => (
+        <li class="tile">
+          {c.status && <p class="badge">{c.status}</p>}
+          <h3>{c.name}</h3>
+          {c.office && <p class="muted">{c.office}</p>}
+          {c.issues.length > 0 && <p class="fine">{c.issues.join(' · ')}</p>}
+          {(c.site || c.donate) && (
+            <p class="tile-links">
+              {c.site && <a href={c.site.href} rel={c.site.rel}>{c.site.label}<span class="visually-hidden">: {c.name}</span></a>}
+              {c.donate && <a href={c.donate.href} rel={c.donate.rel}>{c.donate.label}<span class="visually-hidden"> to {c.name}</span></a>}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="empty">No candidates listed yet.</p>
+  )}
+</Band>

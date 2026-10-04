@@ -1,0 +1,103 @@
+import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { describe, expect, it } from 'vitest'
+import { PREVIEW_HEADERS, handlePreview, loadPreview } from '../src/server/preview.js'
+import { API_ORIGIN, PK, SK, fakeApi } from './fixtures.js'
+
+const link = (query: string) => new Request(`https://pinevalleyliberty.org/preview?${query}`)
+
+describe('handlePreview', () => {
+  it('answers 503 in the Developer page’s words with no secret key', async () => {
+    const api = fakeApi()
+    const result = await handlePreview(link('bg_preview=tok_good&path=%2F'), { secretKey: undefined, apiOrigin: API_ORIGIN, fetch: api.fetch })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(503)
+    expect(await result.response.json()).toEqual({
+      error: 'No secret keys yet. A server that renders previews or reads drafts needs one; a browser never does.',
+      code: 'PREVIEW_NOT_CONFIGURED',
+    })
+    expect(result.response.headers.get('Cache-Control')).toContain('no-store')
+    expect(api.calls).toHaveLength(0)
+  })
+
+  it('treats a publishable key in BACKGOLD_SECRET_KEY as not configured', async () => {
+    const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: PK, apiOrigin: API_ORIGIN, fetch: fakeApi().fetch })
+    expect(result.ok ? 200 : result.response.status).toBe(503)
+  })
+
+  it('answers 400 BAD_PREVIEW_TOKEN for a bad or missing token', async () => {
+    for (const query of ['bg_preview=tok_forged&path=%2F', 'path=%2F']) {
+      const result = await handlePreview(link(query), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: fakeApi().fetch })
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.response.status).toBe(400)
+      expect((await result.response.json()).code).toBe('BAD_PREVIEW_TOKEN')
+      expect(result.response.headers.get('X-Robots-Tag')).toContain('noindex')
+    }
+  })
+
+  it('answers 400 for an empty, `.` or `..` token without asking the api', async () => {
+    const api = fakeApi()
+    for (const query of ['bg_preview=', 'bg_preview=.', 'bg_preview=..', 'bg_preview=..&path=%2F']) {
+      const result = await handlePreview(link(query), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: api.fetch })
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.response.status).toBe(400)
+      expect((await result.response.json()).code).toBe('BAD_PREVIEW_TOKEN')
+      for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
+    }
+    expect(api.calls).toHaveLength(0)
+  })
+
+  it('answers 502 for a network error and 504 for a timeout, with the preview headers and nothing internal', async () => {
+    const cases: Array<[typeof fetch, number]> = [
+      [async () => Promise.reject(new TypeError('fetch failed: connect ECONNREFUSED 10.0.0.7:443')), 502],
+      [async () => Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError')), 504],
+      [async () => new Response('upstream exploded', { status: 500 }), 502],
+    ]
+    for (const [fetch, status] of cases) {
+      const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch })
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.response.status).toBe(status)
+      for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
+      const body = await result.response.text()
+      expect(JSON.parse(body).code).toBe('PREVIEW_UNAVAILABLE')
+      for (const secret of ['ECONNREFUSED', '10.0.0.7', 'exploded', SK, API_ORIGIN]) expect(body).not.toContain(secret)
+    }
+  })
+
+  it('answers 404 for a token naming a page that is gone', async () => {
+    const result = await handlePreview(link('bg_preview=tok_gone'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: fakeApi().fetch })
+    expect(result.ok ? 200 : result.response.status).toBe(404)
+  })
+
+  it('returns the draft and its path, read with the secret key from the configured api only', async () => {
+    const api = fakeApi()
+    const result = await handlePreview(link('bg_preview=tok_good&path=%2Fissues'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: api.fetch })
+    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues' })
+    expect(api.calls.map((u) => u.origin)).toEqual([API_ORIGIN])
+  })
+
+  it('falls back to / for an unsafe path', async () => {
+    const result = await handlePreview(link('bg_preview=tok_good&path=%2F%2Fevil.example'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: fakeApi().fetch })
+    expect(result.ok && result.path).toBe('/')
+  })
+
+  it('is never cached: every read goes to the api', async () => {
+    const api = fakeApi()
+    for (let i = 0; i < 3; i++) {
+      await handlePreview(link('bg_preview=tok_good'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: api.fetch })
+    }
+    expect(api.calls.filter((u) => u.pathname.endsWith('/preview/tok_good'))).toHaveLength(3)
+  })
+})
+
+describe('loadPreview', () => {
+  it('reads the Worker’s own environment: none here, so 503 in the Developer page’s words', async () => {
+    const result = await loadPreview(link('bg_preview=tok_good&path=%2F'))
+    expect(result.ok ? 200 : result.response.status).toBe(503)
+    if (result.ok) return
+    expect((await result.response.json()).code).toBe('PREVIEW_NOT_CONFIGURED')
+  })
+})
