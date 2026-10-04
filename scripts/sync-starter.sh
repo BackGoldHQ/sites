@@ -220,7 +220,18 @@ if [ -z "$KEY" ] || [ ! -f "$KEY" ] || [ ! -r "$KEY" ]; then
   echo "FAIL: STARTER_SYNC_KEY must name a readable file holding the deploy key's private half." >&2
   exit 1
 fi
-chmod 600 "$KEY"
+# A key pasted into a CI file variable often arrives without its final newline
+# or with CRLF line endings, and ssh then refuses it ("error in libcrypto").
+# The job uses a private copy with LF endings and a trailing newline; the
+# variable's own file is left alone.
+KEY_FILE="$WORK_ROOT/deploy_key"
+(umask 077 && tr -d '\r' < "$KEY" > "$KEY_FILE" && printf '\n' >> "$KEY_FILE")
+chmod 600 "$KEY_FILE"
+if ! ssh-keygen -y -f "$KEY_FILE" > /dev/null 2>&1; then
+  echo "FAIL: STARTER_SYNC_KEY is not a usable private key (it must be the whole unencrypted private key, from the BEGIN line to the END line)." >&2
+  exit 1
+fi
+KEY="$KEY_FILE"
 KNOWN_HOSTS_FILE="$WORK_ROOT/known_hosts"
 printf '%s\n' "$KNOWN_HOSTS" > "$KNOWN_HOSTS_FILE"
 # -F /dev/null: no ssh config file can add identities or loosen the checks.
