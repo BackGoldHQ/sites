@@ -33,22 +33,13 @@
         "description": "The site's **publishable key** (`bg_site_pk_…`). In BackGold, open **Sites → your site → Developer**; it is under **Keys**. Safe to show: it only reads what the public site already shows."
       },
       "SITE_URL": {
-        "description": "The address this site will live at, for example `https://www.example.org`. Used for canonical links, the sitemap and feeds. Leave it blank to use the address each request arrives on."
+        "description": "The address this site will live at, for example `https://www.example.org`. Used for canonical links, the sitemap and feeds. If the domain is not connected yet, enter the address you plan to use; you can change it later in `wrangler.jsonc`."
       },
       "BACKGOLD_API_ORIGIN": {
         "description": "Where BackGold's Content API lives. Keep `https://api.backgold.com` unless BackGold tells you otherwise."
       },
       "BACKGOLD_CACHE": {
         "description": "A KV namespace the site keeps its BackGold reads and content version in. Cloudflare creates it for you."
-      },
-      "BACKGOLD_SECRET_KEY": {
-        "description": "Optional now, needed for **Preview on your site**. A **secret key** (`bg_site_sk_…`) from **Developer → Keys → New secret key**. It is shown once; it stays on this Worker and never reaches a page."
-      },
-      "BACKGOLD_WEBHOOK_SECRET": {
-        "description": "Optional now, needed for the webhook. The **signing secret** (`whsec_…`) BackGold shows once when you add this site's webhook endpoint under **Developer → Webhooks**. With it a publish reaches the copy of the Worker that receives the webhook at once and the rest within about a minute; without it, every copy within about a minute."
-      },
-      "BACKGOLD_REBUILD_HOOK_URL": {
-        "description": "Optional, and usually left blank. A URL to POST after each content change, for a site you rebuild statically (a pipeline trigger)."
       }
     }
   }
