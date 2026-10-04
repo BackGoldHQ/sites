@@ -22,7 +22,7 @@
     }
   },
   "bin": {
-    "backgold-content": "./bin/backgold-content.js"
+    "backgold-content": "bin/backgold-content.js"
   },
   "files": [
     "dist",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/polyneural/backgold.git",
+    "url": "git+https://gitlab.com/polyneural/backgold.git",
     "directory": "packages/content-client"
   },
   "keywords": [
