@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest'
 
 // The published build stands alone: the private workspace package never
 // reaches dist/ or the shipped components, and the only bare imports are the
-// declared dependencies, the peer, and the two runtime-only modules. Skips
+// declared dependencies, the peer, the two runtime-only modules, and the
+// integration's Node file access (index.js only: it runs in `astro build`,
+// never in the Worker). Skips
 // (and says so) until `pnpm build` has run; CI builds first.
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const DIST = `${ROOT}dist/`
@@ -44,7 +46,8 @@ describe.skipIf(!BUILT)('dist', () => {
     for (const file of shipped) {
       for (const spec of specifiers(await readFile(file, 'utf8'))) {
         expect(spec.startsWith('@givegold/'), `${file} imports ${spec}`).toBe(false)
-        if (!spec.startsWith('.')) expect(ALLOWED_BARE.some((re) => re.test(spec)), `${file} imports ${spec}`).toBe(true)
+        const allowed = ALLOWED_BARE.some((re) => re.test(spec)) || (file === `${DIST}index.js` && spec === 'node:fs/promises')
+        if (!spec.startsWith('.')) expect(allowed, `${file} imports ${spec}`).toBe(true)
       }
     }
   })

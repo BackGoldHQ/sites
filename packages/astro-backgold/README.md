@@ -46,6 +46,12 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
 
+A Cloudflare preview deployment (a pull request's or a branch's address) reads
+only the `previews` block of the Worker's config, never the top-level `vars`.
+Each `astro build` copies `BACKGOLD_SITE_KEY` and `BACKGOLD_API_ORIGIN` into
+`previews.vars` of the config the adapter writes, unless the site set its own
+there, so previews show the site.
+
 Until `BACKGOLD_SITE_KEY` is set to a publishable key (or while
 `BACKGOLD_API_ORIGIN` is not an http(s) URL), every HTML path renders the
 site's setup page at `/backgold-setup` (`SETUP_PATH` from

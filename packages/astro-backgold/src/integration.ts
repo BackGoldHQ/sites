@@ -1,4 +1,5 @@
 import type { AstroIntegration } from 'astro'
+import { fillPreviewVars } from './preview-vars.js'
 import { DEV_BUILD_ID, mintBuildId, resolveOptions, type BackgoldOptions, type RuntimeBackgoldOptions } from './options.js'
 
 const PACKAGE = '@backgold/astro'
@@ -13,9 +14,11 @@ const route = (file: string) => new URL(file, import.meta.url)
  * The BackGold integration: the middleware (setup check, `bg_vid`, redirects,
  * edge cache) and the routes — webhook, revalidate, and the text routes each
  * option can turn off. `/preview` is the site's own page (`loadPreview`).
+ * A build also gives Cloudflare's preview deployments the site key.
  */
 export function backgold(options: BackgoldOptions = {}): AstroIntegration {
   const resolved = resolveOptions(options)
+  let serverDir: URL | undefined
   return {
     name: PACKAGE,
     hooks: {
@@ -48,8 +51,13 @@ export function backgold(options: BackgoldOptions = {}): AstroIntegration {
         }
         if (resolved.feeds) injectRoute({ pattern: '/feed.xml', entrypoint: route('./routes/feed.js'), prerender: false })
       },
-      'astro:config:done': ({ injectTypes }) => {
+      'astro:config:done': ({ config, injectTypes }) => {
+        serverDir = config.build.server
         injectTypes({ filename: 'types.d.ts', content: `/// <reference types="${PACKAGE}" />\n` })
+      },
+      // The Cloudflare adapter writes the deployed Worker's config beside the server build.
+      'astro:build:done': async () => {
+        if (serverDir) await fillPreviewVars(new URL('wrangler.json', serverDir))
       },
     },
   }

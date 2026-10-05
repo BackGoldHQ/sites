@@ -1,3 +1,7 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { AstroIntegration } from 'astro'
 import { describe, expect, it, vi } from 'vitest'
 import { backgold } from '../src/integration.js'
@@ -67,7 +71,22 @@ describe('backgold()', () => {
   it('injects the Astro.locals.backgold types', () => {
     const injectTypes = vi.fn()
     const done = backgold().hooks['astro:config:done'] as (o: unknown) => void
-    done({ injectTypes })
+    done({ injectTypes, config: { build: { server: new URL('file:///site/dist/server/') } } })
     expect(injectTypes).toHaveBeenCalledWith({ filename: 'types.d.ts', content: '/// <reference types="@backgold/astro" />\n' })
+  })
+
+  it('after a build, gives the Worker config’s previews block the site key', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'backgold-astro-'))
+    const file = join(dir, 'wrangler.json')
+    writeFileSync(file, JSON.stringify({ name: 'site', vars: { BACKGOLD_SITE_KEY: 'bg_site_pk_abc' }, previews: {} }))
+    const integration = backgold()
+    const done = integration.hooks['astro:config:done'] as (o: unknown) => void
+    done({ injectTypes: vi.fn(), config: { build: { server: pathToFileURL(`${dir}/`) } } })
+    await (integration.hooks['astro:build:done'] as () => Promise<void>)()
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+      name: 'site',
+      vars: { BACKGOLD_SITE_KEY: 'bg_site_pk_abc' },
+      previews: { vars: { BACKGOLD_SITE_KEY: 'bg_site_pk_abc' } },
+    })
   })
 })
