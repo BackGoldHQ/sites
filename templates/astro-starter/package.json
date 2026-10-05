@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.3",
-    "@backgold/astro": "^0.1.0",
+    "@backgold/astro": "^0.1.1",
     "@backgold/content": "^0.1.0",
     "astro": "^7.3.5"
   },

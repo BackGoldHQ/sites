@@ -106,6 +106,14 @@ A secret takes effect as soon as it is deployed; nothing needs rebuilding.
 Variables live in `wrangler.jsonc`; secrets are set with
 `npx wrangler secret put <NAME>` or in the dashboard, never committed.
 
+A **preview deployment** (the address Cloudflare builds for a pull request or
+a branch) reads only what `wrangler.jsonc` lists under `previews`, never the
+top-level `vars`. You do not need to write that block: each build copies
+`BACKGOLD_SITE_KEY` and `BACKGOLD_API_ORIGIN` into it, so a preview shows the
+site. A value you set under `previews` → `vars` yourself is kept. A preview
+has no KV namespace, so it keeps its reads in memory, and no secrets unless
+you add them with `npx wrangler preview secret put <NAME>`.
+
 ## How the content stays current
 
 - Every change in BackGold moves the site's **content version**. Each page this
