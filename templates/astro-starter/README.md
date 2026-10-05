@@ -17,22 +17,23 @@ the typed client for the Content API, and [`@backgold/astro`](https://www.npmjs.
 the plumbing (routing, caching, the webhook, preview, the SEO routes). This
 repository is the thin layer on top that you restyle.
 
-## Connect it in four steps
+## Connect it in five steps
 
 You need the site's **Developer** page in BackGold: open **Sites**, choose the
-site, then **Developer**. The site must be in headless mode.
+site, then **Developer**. The site must be in headless mode. The page lists
+the same five steps, in the same order, with each step's fields in it.
 
 1. **Deploy to Cloudflare.** Press the button above. Cloudflare copies this
    repository into your own GitHub or GitLab account, creates a KV namespace,
    and asks for two values:
-   - `BACKGOLD_SITE_KEY`: the **publishable key** under **Keys** on the
+   - `BACKGOLD_SITE_KEY`: the **publishable key**, shown in step 1 on the
      Developer page (it starts with `bg_site_pk_`).
    - `SITE_URL`: the address the site will live at, for example
      `https://www.example.org`. If the domain is not connected yet, enter the
      address you plan to use.
 
    Leave `BACKGOLD_API_ORIGIN` as it is. The form asks for no secrets: the two
-   the site uses are created in steps 2 and 3, once the Worker exists.
+   the site uses are created in steps 2 and 4, once the Worker exists.
 
    About a minute later the site is live at
    `https://<worker name>.<your account>.workers.dev`. Then, in your new
@@ -40,17 +41,20 @@ site, then **Developer**. The site must be in headless mode.
    `wrangler.jsonc` under `vars` and commit them (the key is publishable, so
    that is safe): Wrangler applies the file's `vars` on every deploy, so a
    value set only in the dashboard is reset by the next push.
-2. **Tell BackGold where it is.** On the Developer page, press **New secret
+2. **Give the site a secret key.** On the Developer page, press **New secret
    key**, name it, and copy the key (it starts with `bg_site_sk_` and is shown
    once). Add it to the Worker as a secret named `BACKGOLD_SECRET_KEY` (see
-   [Adding a secret](#adding-a-secret-to-the-worker)). Then enter
-   `https://<your site>/preview` under **Preview on your site** and press
-   **Send a test preview**; `<your site>` is the `workers.dev` address
-   Cloudflare showed when the deploy finished, or your own domain once step 4
-   is done. The editor's **Preview on your site** now opens drafts here.
-3. **Turn on the webhook.** The webhook is how BackGold tells this site that
+   [Adding a secret](#adding-a-secret-to-the-worker)). This is not the
+   webhook's signing secret; that one comes in step 4.
+3. **Test a preview.** In step 3 on the Developer page, enter
+   `https://<your site>/preview` and press **Send a test preview**;
+   `<your site>` is the `workers.dev` address Cloudflare showed when the
+   deploy finished, or your own domain once step 5 is done. If the test does
+   not pass, the page says what its answer means. The editor's **Preview on
+   your site** now opens drafts here.
+4. **Turn on the webhook.** The webhook is how BackGold tells this site that
    something was published.
-   1. On the Developer page, under **Webhooks**, enter
+   1. In step 4 on the Developer page, enter
       `https://<your site>/api/backgold/webhook` as the **Endpoint address**
       and press **Add endpoint**.
    2. BackGold shows a **signing secret** (it starts with `whsec_`) once. Copy
@@ -58,15 +62,15 @@ site, then **Developer**. The site must be in headless mode.
    3. Add it to the Worker as a secret named `BACKGOLD_WEBHOOK_SECRET` (see
       [Adding a secret](#adding-a-secret-to-the-worker)).
    4. Back on the Developer page, turn on all five content events. Every one
-      is off until you do.
+      is off until you do; **Turn on all five** does it in one press.
 
    A publish in BackGold now reaches the Worker that receives the webhook at
    once, and every other copy of it within about a minute. If the site does
    not update, the Worker's logs (**Workers & Pages → your Worker → Logs**)
    say why each delivery was refused: `BACKGOLD_WEBHOOK_SECRET is not set`
-   means step 3 was skipped or not deployed; `signature does not match` means
+   means that secret was never added or not deployed; `signature does not match` means
    the secret on the Worker is not this endpoint's.
-4. **Point your domain.** In Cloudflare, add the site's domain to the Worker
+5. **Point your domain.** In Cloudflare, add the site's domain to the Worker
    (**Settings → Domains & Routes**). The edge cache, which makes pages fast,
    only works on a custom domain.
 
@@ -108,7 +112,7 @@ Variables live in `wrangler.jsonc`; secrets are set with
   site renders is cached at the edge under that version, so a new version
   makes every old copy unreachable. Nothing is purged and nothing is
   rebuilt; the next visitor gets a fresh page.
-- The **webhook** (step 3) tells the site the new version when something is
+- The **webhook** (step 4) tells the site the new version when something is
   published. Cloudflare runs several copies of the Worker; the one that
   receives the webhook moves at once, and every other one within about a
   minute (each re-checks its version at most once a minute). Without the
