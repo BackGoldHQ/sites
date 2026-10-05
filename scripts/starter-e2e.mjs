@@ -170,7 +170,11 @@ function kitchenSinkDocument() {
         imageUrl: asset('hero.webp'),
         ctaText: 'Chip in',
         donateHref: '/donate',
-        showSignup: false,
+        // The capture on: the bake gives the hero the served page's id, and
+        // the projection frames its form as the section's embed.
+        showSignup: true,
+        signupButtonText: 'Count me in',
+        pageId: 'lp_ks',
       }),
       block('About', {
         heading: 'About the committee',
@@ -330,7 +334,7 @@ function kitchenSinkDocument() {
       block('Store', { heading: 'Gear', maxProducts: 6 }),
       block('Event', { eventSlug: 'budget-night', heading: 'Come to budget night', showDescription: true, eventName: 'Budget night', startsAt: '2026-10-15T23:00:00.000Z' }),
       block('Calendar', { heading: 'Calendar', opensOn: 'month', actions: 'link', orgSlug: 'pine-valley', pageId: 'lp_ks', events: [] }),
-      block('SignupCapture', { heading: 'Stay in touch', subtext: 'News once a week.', buttonText: 'Join' }),
+      block('SignupCapture', { heading: 'Stay in touch', subtext: 'News once a week.', buttonText: 'Join', pageId: 'lp_ks' }),
       block('SocialFrame', { heading: 'Add a frame to your photo', family: 'ring', collectContact: 'optional' }),
       block('Advocacy', { heading: 'Call your legislators', setSlug: 'levy-bills', level: 'state', buttonText: 'Find mine', orgSlug: 'pine-valley' }),
     ],
@@ -1122,6 +1126,16 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
         failures.push(`${type}: has no embed but renders an iframe`)
       }
       continue
+    }
+
+    // A Hero with its capture on frames BackGold's form below its words.
+    if (type === 'Hero') {
+      const frames = tags(markup, 'iframe')
+      const want = section.embed?.iframe ? 1 : 0
+      if (frames.length !== want || (want && !frames[0].includes(`src="${section.embed.iframe}"`))) {
+        failures.push(`Hero: expected ${want} iframe(s)${want ? ` of ${section.embed.iframe}` : ''}, found ${frames.length}`)
+      }
+      if (!want) failures.push('Hero: the kitchen sink hero has its capture on, so it must carry an embed')
     }
 
     const rowText = ROW_TEXT[type]
