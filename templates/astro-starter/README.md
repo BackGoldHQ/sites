@@ -69,7 +69,9 @@ the same five steps, in the same order, with each step's fields in it.
    not update, the Worker's logs (**Workers & Pages → your Worker → Logs**)
    say why each delivery was refused: `BACKGOLD_WEBHOOK_SECRET is not set`
    means that secret was never added or not deployed; `signature does not match` means
-   the secret on the Worker is not this endpoint's.
+   the secret on the Worker is not this endpoint's. If you no longer have the
+   signing secret, press **New signing secret** in step 4 on the Developer
+   page and replace `BACKGOLD_WEBHOOK_SECRET` on the Worker with the new one.
 5. **Point your domain.** In Cloudflare, add the site's domain to the Worker
    (**Settings → Domains & Routes**). The edge cache, which makes pages fast,
    only works on a custom domain.
