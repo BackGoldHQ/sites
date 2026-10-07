@@ -39,7 +39,7 @@ const endorsement = entry({
   ],
 })
 const elsewhere = entry({ id: 'ci_e2', slug: 'mayor', type: 'endorsement', url: '/endorsements/mayor', terms: [{ taxonomy: 'category', slug: 'taxes', label: 'Taxes' }] })
-const detail = (e: Entry): EntryResponse => ({ entry: { ...e, body: { markdown: '' }, fields: {} } })
+const detail = (e: Entry): EntryResponse => ({ entry: { ...e, body: { markdown: '' }, fields: {} }, areas: {} })
 
 function api() {
   const calls: string[] = []
