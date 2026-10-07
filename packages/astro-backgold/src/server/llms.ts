@@ -123,9 +123,15 @@ export async function llmsFullTxt(bg: BackgoldContent, siteUrl: string): Promise
     const head = [`### ${markdownLine(title)}`, 'Type: Page']
     const url = absoluteUrl(read.page.url, siteUrl)
     if (url) head.push(`URL: ${url}`)
-    const copy = read.sections.flatMap((section) =>
-      Object.values(section.copy).flatMap((text) => htmlToTextLines(text).map((line) => markdownLine(line, HEADER_LABELS))),
-    )
+    // A section's prose only: a copy value that is one of its links' labels
+    // (a button's words, which the Content API also carries as copy) is not a
+    // paragraph of the page.
+    const copy = read.sections.flatMap((section) => {
+      const labels = new Set(section.links.map((l) => l.label))
+      return Object.values(section.copy)
+        .filter((text) => !labels.has(text))
+        .flatMap((text) => htmlToTextLines(text).map((line) => markdownLine(line, HEADER_LABELS)))
+    })
     open = add(head, copy.join('\n\n'))
   }
 
