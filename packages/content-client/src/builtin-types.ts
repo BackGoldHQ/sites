@@ -1,5 +1,5 @@
 /* eslint-disable */
-// The six built-in content types, so their fields are typed without running the CLI.
+// The seven built-in content types, so their fields are typed without running the CLI.
 // A generated file's own members override these. Do not edit by hand: regenerate with
 // UPDATE_BUILTIN_TYPES=1 pnpm --filter @backgold/content test
 export interface BackgoldFields {
@@ -18,6 +18,9 @@ export interface BackgoldFields {
   open_role: {
     department: string | null; // Department
     link: string | null; // Link
+  };
+  newsletter: {
+    issue: string | null; // Issue
   };
 }
 
