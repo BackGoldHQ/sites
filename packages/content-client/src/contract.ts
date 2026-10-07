@@ -48,6 +48,8 @@ export type {
   EntryTerm,
   MenuItem,
   MenuResponse,
+  MenuShowsOn,
+  MenuShowsOnPage,
   MenuTarget,
   PageResponse,
   PageSummary,
