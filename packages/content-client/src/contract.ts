@@ -30,6 +30,9 @@ import type {
 } from '@givegold/shared/content-api'
 
 export type {
+  AreaItem,
+  Areas,
+  AreasResponse,
   Author,
   AuthorResponse,
   AuthorsResponse,
@@ -59,6 +62,7 @@ export type {
   SectionLinkTarget,
   SectionMedia,
   SectionsResponse,
+  SiteArea,
   SiteMenuKey,
   SiteResponse,
   SitemapResponse,
