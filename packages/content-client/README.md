@@ -41,12 +41,31 @@ BackGold mints it (the prefix, then letters and digits; the message never
 repeats the key), and `SecretKeyInBrowserError` for a secret key in a browser
 page or a browser worker. Cloudflare Workers are servers and may hold one.
 
+**First-party reads.** A site Worker running inside BackGold's own namespace
+reads without a key: pass the service binding to the API as `fetch` and the
+site's id as `firstParty`. Every request names the site with an
+`X-BackGold-Site` header and carries no `Authorization`; the reads are
+secret-level (drafts and previews included), so `createClient` refuses them in
+a browser with `SecretKeyInBrowserError` too. This only works through
+BackGold's binding; a site built elsewhere always uses a key.
+
+```ts
+const bg = createClient({
+  firstParty: { siteId: env.BACKGOLD_SITE_ID },
+  fetch: (input, init) => env.BACKGOLD_API.fetch(input, init),
+})
+```
+
+Give exactly one of `key` and `firstParty`; anything else is a `TypeError`. A
+site id is 1–64 letters, digits, `_` or `-`.
+
 Options:
 
 | Option | Default | |
 | --- | --- | --- |
-| `key` | (required) | The site key. |
-| `apiOrigin` | `https://api.backgold.com` | Where the API lives. The key is sent nowhere else. |
+| `key` | | The site key. Exactly one of `key` and `firstParty`. |
+| `firstParty` | | `{ siteId }`, for a site Worker inside BackGold's namespace (above). Exactly one of `key` and `firstParty`. |
+| `apiOrigin` | `https://api.backgold.com` | Where the API lives. The key (or site id) is sent nowhere else. |
 | `cache` | `memoryCache()` | Where reads and the content version are kept. See [Caching](#caching). |
 | `maxVersionAgeSeconds` | `60` | How long a known content version is trusted before `/site` is checked again. `0` checks on every read. |
 | `cacheTtlSeconds` | `3600` | How long a stored read may live. A value under 1 is raised to 1; each store keeps its own floor (KV's is 60). |
@@ -119,11 +138,12 @@ for await (const entry of bg.allEntries('post')) console.log(entry.title, entry.
 ```
 
 **`entry(type, slug, { preview? })`**: one entry with its body and field
-values.
+values, and the `areas` of the page it is shown on.
 
 ```ts
 const post = await bg.entry('post', 'levy-explained')
 const markdown = post?.entry.body.markdown
+const sidebar = post?.areas.sidebar ?? []
 ```
 
 **`terms(taxonomy)`**: a taxonomy's terms.
@@ -152,6 +172,45 @@ const rule = redirects.find((r) => r.source === pathname)
 ```ts
 const { urls } = await bg.sitemap()
 ```
+
+**`areas({ holds })`**: the areas for a route of yours that has no BackGold
+page behind it (a donate page you drew around the donate embed, say),
+described by the modules it holds: module kinds (`donation_form`, `form`,
+`signup`, `petition`, `poll`, `event`, `store`, `advocacy`) and
+`form:<form id>` for one form, at least one entry. Cached and versioned like
+every read. An empty list, or an entry that is neither, throws a `TypeError`
+before any request.
+
+```ts
+const { areas } = await bg.areas({ holds: ['form:frm_vol', 'signup'] }) // GET /areas?holds=form:frm_vol,signup
+```
+
+Pages, entries and entry lists carry the same `areas` object: every area of
+the site by its key, each an ordered list of items whose `sections` you draw
+there.
+
+**`visibleNow(item, now?)`**: whether an area item shows at `now` (Unix
+milliseconds, default `Date.now()`): its `from` is unset or has come, and its
+`until` is unset or still ahead. The API sends items whose `from` is ahead, so
+check every item when the page is viewed. An instant that does not parse
+counts as unset, so a malformed string never hides content. It is a plain
+function, exported beside `createClient`.
+
+```tsx
+import { visibleNow, type Areas } from '@backgold/content'
+
+export function Area({ areas, name }: { areas: Areas; name: string }) {
+  const items = (areas[name] ?? []).filter((item) => visibleNow(item))
+  if (items.length === 0) return null
+  return items.map((item) => (
+    <aside key={item.key} aria-label={item.label}>
+      {item.sections.map((s) => <Section key={s.id} section={s} />)}
+    </aside>
+  ))
+}
+```
+
+A site that caches its HTML runs the same check in the browser too.
 
 **`preview(token)`**: the draft a preview link names. Secret key only. See
 [Preview](#preview).
@@ -314,7 +373,9 @@ holding a `\` or a `..` segment).
 `entries(type, { preview: true })` read drafts the same way, as does `raw`
 with a `preview=1` query or a `/preview/` path. Every preview read needs a
 secret key: with a publishable key the client throws `BackgoldApiError` 403
-`SECRET_KEY_REQUIRED` without making a request.
+`SECRET_KEY_REQUIRED` without making a request. A first-party client (see
+[Create a client](#create-a-client)) reads drafts and previews without a secret
+key.
 
 ## Typed fields
 
@@ -355,4 +416,5 @@ declare module '@backgold/content' {
   redirects.
 - It never stores a preview or draft read, and never reads one from the store.
 - It never sends a header other than `Authorization`, `Accept` and
-  `If-None-Match`.
+  `If-None-Match` (a first-party client sends `X-BackGold-Site` in place of
+  `Authorization`).

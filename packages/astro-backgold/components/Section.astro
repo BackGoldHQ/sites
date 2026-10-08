@@ -1,10 +1,14 @@
 ---
-// Renders `components[section.type]` when the site passes one, else
-// DefaultSection. With a `variant` (a feature flag's pick, say),
-// `components['<type>:<variant>']` is tried first, so a flag can swap one
-// section's component without touching the page.
+// Renders a section through the site's components:
+// `components['<type>:<variant>']` first, where the variant is the `variant`
+// prop (a feature flag's pick, say) or else the section's stored layout
+// (`section.variant`); then `components[type]`; then DefaultSection. The
+// chosen variant is passed to the site's component. On the preview page an
+// empty marker (`#bg-section-<id>`) goes before the section so the BackGold
+// editor can scroll to it; published pages carry none.
 import type { Section as SectionData } from '@backgold/content'
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
+import { isPreviewPath, sectionMarkerId } from '../dist/render.js'
 import DefaultSection from './DefaultSection.astro'
 
 interface Props {
@@ -13,8 +17,11 @@ interface Props {
   variant?: string
 }
 
-const { section, components = {}, variant } = Astro.props
+const { section, components = {}, variant: pick } = Astro.props
+const variant = pick ?? section.variant ?? undefined
 const own = (key: string) => (Object.hasOwn(components, key) ? components[key] : undefined)
 const Override = (variant ? own(`${section.type}:${variant}`) : undefined) ?? own(section.type)
+const marker = isPreviewPath(Astro.url.pathname) ? sectionMarkerId(section.id) : null
 ---
+{marker && <span id={marker} data-bg-section hidden></span>}
 {Override ? <Override section={section} variant={variant} /> : <DefaultSection section={section} />}

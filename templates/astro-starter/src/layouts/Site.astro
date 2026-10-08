@@ -1,9 +1,18 @@
 ---
-// Every page's frame: the head, the header with the primary menu, the page,
-// and the footer with the footer menu, social links and the legal line.
-// Each page renders its own single <h1> inside the <main>.
-import { Analytics, Disclaimer, Menu, Seo } from '@backgold/astro/components'
-import { relFor, safeHref, safeSrc } from '@backgold/astro/server'
+// Every page's frame: the head, the header with the primary menu and its
+// button, the Top banner area, the page, the Above the footer area, and the
+// footer with the footer menu, social links and the legal line. Each page
+// renders its own single <h1> inside the <main>.
+//
+// `page` is the BackGold page being drawn as `{ id, takes_donations }`, or
+// null on a route with no BackGold page (a list, an entry, an author, a
+// tag, the 404); the menus apply each link's Shows on rule against it.
+// Every route here passes it: left out, every link and the button show.
+// `areas` is the response's `areas`; null draws no area.
+import type { Areas } from '@backgold/content'
+import { Analytics, Area, Disclaimer, Menu, MenuButton, Seo } from '@backgold/astro/components'
+import { relFor, safeHref, safeSrc, type MenuPage } from '@backgold/astro/server'
+import { sections } from '../components/sections'
 import { brandCss } from '../lib/brand'
 import '../styles/site.css'
 
@@ -14,12 +23,15 @@ interface Props {
   canonicalPath: string
   noindex?: boolean
   jsonLd?: object[]
+  page?: MenuPage | null
+  areas?: Areas | null
 }
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
 
 const { site, legal, client } = bg
+const { page, areas = null, ...head } = Astro.props
 const [primary, footer] = await Promise.all([client.menu('primary'), client.menu('footer')])
 const name = site.name ?? site.domain
 const logo = safeSrc(site.brand.logo_url)
@@ -33,7 +45,7 @@ const social = site.social.flatMap(({ platform, url }) => {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <Seo {...Astro.props} />
+    <Seo {...head} />
     <style is:inline set:html={brandCss(site.brand)}></style>
   </head>
   <body>
@@ -45,24 +57,27 @@ const social = site.social.flatMap(({ platform, url }) => {
         </a>
         {primary && primary.items.length > 0 && (
           <>
-            <div class="nav-wide"><Menu items={primary.items} label="Primary" /></div>
+            <div class="nav-wide"><Menu items={primary.items} label="Primary" page={page} /></div>
             <details class="nav-narrow">
               <summary>Menu</summary>
-              <Menu items={primary.items} label="Primary" />
+              <Menu items={primary.items} label="Primary" page={page} />
             </details>
+            <MenuButton items={primary.items} page={page} class="button" />
           </>
         )}
       </div>
     </header>
+    <Area name="top_banner" areas={areas} components={sections} />
 
     <main id="main" tabindex="-1">
       <slot />
     </main>
 
+    <Area name="above_footer" areas={areas} components={sections} />
     <footer class="site-footer">
       <div class="site-footer-inner">
         <p class="site-footer-name">{name}</p>
-        {footer && footer.items.length > 0 && <Menu items={footer.items} label="Footer" />}
+        {footer && footer.items.length > 0 && <Menu items={footer.items} label="Footer" page={page} />}
         {social.length > 0 && (
           <ul class="social" aria-label="Social media">
             {social.map((s) => <li><a href={s.href} rel={s.rel}>{s.label}</a></li>)}

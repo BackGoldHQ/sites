@@ -1,5 +1,5 @@
 import { createClient, memoryCache } from '@backgold/content'
-import type { ContentTypeSummary, EntriesResponse, Entry, EntryResponse } from '@backgold/content'
+import type { Areas, ContentTypeSummary, EntriesResponse, Entry, EntryResponse } from '@backgold/content'
 import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
 import { describe, expect, it } from 'vitest'
 import { resolveRoute } from '../src/server/resolve.js'
@@ -39,7 +39,9 @@ const endorsement = entry({
   ],
 })
 const elsewhere = entry({ id: 'ci_e2', slug: 'mayor', type: 'endorsement', url: '/endorsements/mayor', terms: [{ taxonomy: 'category', slug: 'taxes', label: 'Taxes' }] })
-const detail = (e: Entry): EntryResponse => ({ entry: { ...e, body: { markdown: '' }, fields: {} }, areas: {} })
+/** Areas that name where they came from, so a test can tell which response's areas a route carries. */
+const areasFrom = (from: string): Areas => ({ sidebar: [{ key: from, label: from, from: null, until: null, sections: [] }], top_banner: [] })
+const detail = (e: Entry): EntryResponse => ({ entry: { ...e, body: { markdown: '' }, fields: {} }, areas: areasFrom(`entry:${e.slug}`) })
 
 function api() {
   const calls: string[] = []
@@ -49,12 +51,12 @@ function api() {
     '/pages/home': CONTENT_API_EXAMPLES.PageResponse,
     '/pages/issues': { ...(CONTENT_API_EXAMPLES.PageResponse as object), page: { ...(CONTENT_API_EXAMPLES.PageResponse as { page: object }).page, slug: 'issues', url: '/issues', is_home: false } },
     '/types': { types: TYPES },
-    '/entries/post?limit=50': { entries: [post], next_cursor: 'cursor-post' },
-    '/entries/podcast?limit=50': { entries: [episode], next_cursor: null },
-    '/entries/endorsement?limit=50': { entries: [endorsement], next_cursor: 'cursor-endorsement' },
-    '/entries/endorsement?limit=50&term=taxes': { entries: [endorsement, elsewhere], next_cursor: null },
-    '/entries/post?limit=50&term=taxes': { entries: [post], next_cursor: null },
-    '/entries/podcast?limit=50&term=taxes': { entries: [], next_cursor: null },
+    '/entries/post?limit=50': { entries: [post], next_cursor: 'cursor-post', areas: areasFrom('list:post') },
+    '/entries/podcast?limit=50': { entries: [episode], next_cursor: null, areas: areasFrom('list:podcast') },
+    '/entries/endorsement?limit=50': { entries: [endorsement], next_cursor: 'cursor-endorsement', areas: areasFrom('list:endorsement') },
+    '/entries/endorsement?limit=50&term=taxes': { entries: [endorsement, elsewhere], next_cursor: null, areas: areasFrom('list:endorsement') },
+    '/entries/post?limit=50&term=taxes': { entries: [post], next_cursor: null, areas: areasFrom('list:post') },
+    '/entries/podcast?limit=50&term=taxes': { entries: [], next_cursor: null, areas: areasFrom('list:podcast') },
     '/entries/post/levy-explained': detail(post),
     '/entries/podcast/episode-one': detail(episode),
     '/entries/endorsement/sheriff': detail(endorsement),
@@ -93,13 +95,13 @@ describe('resolveRoute', () => {
   it('resolves /blog to the built-in types merged, newest first', async () => {
     const { client } = api()
     const resolved = await resolveRoute(client, '/blog')
-    expect(resolved).toEqual({ kind: 'index', type: 'blog', entries: [episode, post], next_cursor: null })
+    expect(resolved).toEqual({ kind: 'index', type: 'blog', entries: [episode, post], next_cursor: null, areas: areasFrom('list:post') })
   })
 
   it('resolves a custom type index at its url_base, first page with its cursor', async () => {
     const { client, calls } = api()
     const resolved = await resolveRoute(client, '/endorsements')
-    expect(resolved).toEqual({ kind: 'index', type: TYPES[3], entries: [endorsement], next_cursor: 'cursor-endorsement' })
+    expect(resolved).toEqual({ kind: 'index', type: TYPES[3], entries: [endorsement], next_cursor: 'cursor-endorsement', areas: areasFrom('list:endorsement') })
     expect(calls.sort()).toEqual(['/entries/endorsement?limit=50', '/pages', '/types'])
   })
 
@@ -107,6 +109,17 @@ describe('resolveRoute', () => {
     const { client } = api()
     expect(await resolveRoute(client, '/blog/levy-explained')).toMatchObject({ kind: 'entry', type: TYPES[0], entry: { slug: 'levy-explained' } })
     expect(await resolveRoute(client, '/blog/episode-one/')).toMatchObject({ kind: 'entry', type: TYPES[1], entry: { slug: 'episode-one' } })
+  })
+
+  it('carries the entry response’s areas on an entry', async () => {
+    const { client } = api()
+    expect(await resolveRoute(client, '/blog/episode-one')).toMatchObject({ kind: 'entry', areas: areasFrom('entry:episode-one') })
+    expect(await resolveRoute(client, '/endorsements/sheriff')).toMatchObject({ kind: 'entry', areas: areasFrom('entry:sheriff') })
+  })
+
+  it('carries no areas on an author', async () => {
+    const { client } = api()
+    expect(await resolveRoute(client, '/authors/dana-k')).not.toHaveProperty('areas')
   })
 
   it('resolves a custom type entry with one read past the directory', async () => {
@@ -135,8 +148,9 @@ describe('resolveRoute', () => {
       taxonomy: { key: 'tag', label: 'Tags', hierarchical: false },
       term: { id: 'term_1', slug: 'taxes', label: 'Taxes', parent_id: null, position: 0 },
       entries: [endorsement],
+      areas: areasFrom('list:endorsement'),
     })
-    expect(await resolveRoute(client, '/blog/tag/taxes')).toMatchObject({ kind: 'term', type: 'blog', entries: [post] })
+    expect(await resolveRoute(client, '/blog/tag/taxes')).toMatchObject({ kind: 'term', type: 'blog', entries: [post], areas: areasFrom('list:post') })
   })
 
   it('answers not_found for an unknown taxonomy or term without listing entries', async () => {

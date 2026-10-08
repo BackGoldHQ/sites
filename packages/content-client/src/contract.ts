@@ -10,6 +10,9 @@
  * consumer never sees the private package.
  */
 import type {
+  AreaItem,
+  Areas,
+  AreasResponse,
   AuthorResponse,
   AuthorsResponse,
   ContentTypeSummary,
@@ -108,8 +111,20 @@ export interface KvLike {
 // ── Client ───────────────────────────────────────────────────────────────────
 
 export interface ClientOptions {
-  /** A site key: `bg_site_pk_…` (publishable, published reads) or `bg_site_sk_…` (secret, drafts too; never in a browser). */
-  key: string
+  /**
+   * A site key: `bg_site_pk_…` (publishable, published reads) or `bg_site_sk_…` (secret, drafts too; never in a browser).
+   * Exactly one of `key` and `firstParty` is given.
+   */
+  key?: string
+  /**
+   * First-party reads, for a site Worker inside BackGold's own namespace only:
+   * pass the service binding to the api as `fetch` and the site's id here.
+   * Every request names the site with `X-BackGold-Site` and carries no
+   * Authorization; reads are secret-level (drafts too; never in a browser).
+   * A site built elsewhere uses `key`. Exactly one of `key` and `firstParty`
+   * is given.
+   */
+  firstParty?: FirstPartyOptions
   /** The api worker origin. Default `https://api.backgold.com`. */
   apiOrigin?: string
   /** Default `memoryCache()`. */
@@ -124,6 +139,22 @@ export interface ClientOptions {
   cacheTtlSeconds?: number
   /** The fetch to use. Default `globalThis.fetch`. Tests pass their own. */
   fetch?: typeof fetch
+}
+
+export interface FirstPartyOptions {
+  /** The site's id: letters, digits, `_` and `-`, 1–64 characters. */
+  siteId: string
+}
+
+/** What `areas()` takes. */
+export interface AreasOptions {
+  /**
+   * The modules the route holds: module kinds (`donation_form`, `form`,
+   * `signup`, `petition`, `poll`, `event`, `store`, `advocacy`) and
+   * `form:<form id>` for a particular form; at least one entry. Sent as
+   * `?holds=` joined by commas.
+   */
+  holds: string[]
 }
 
 /** Options a list read takes. */
@@ -156,7 +187,7 @@ export interface BackgoldTypeMap {}
 export type FieldsOf<K extends string> = K extends keyof BackgoldTypeMap ? BackgoldTypeMap[K] : Record<string, unknown>
 
 export type TypedEntryDetail<K extends string> = Omit<EntryDetail, 'fields'> & { fields: FieldsOf<K> }
-export type TypedEntryResponse<K extends string> = { entry: TypedEntryDetail<K> }
+export type TypedEntryResponse<K extends string> = { entry: TypedEntryDetail<K>; areas: Areas }
 
 /** What `preview(token)` answers: a draft page or a draft entry, by the token's kind. */
 export type PreviewResponse = PageResponse | EntryResponse
@@ -190,6 +221,13 @@ export interface BackgoldContent {
   redirects(): Promise<RedirectsResponse>
   /** `GET /sitemap`. */
   sitemap(): Promise<SitemapResponse>
+  /**
+   * `GET /areas?holds=`: the areas for a route of yours with no BackGold page
+   * behind it, described by the modules it holds. Cached and versioned like
+   * every other published read. Throws a TypeError, before any request, for
+   * an empty list or an entry that is not a module kind or `form:<id>`.
+   */
+  areas(opts: AreasOptions): Promise<AreasResponse>
   /** `GET /preview/:token` — a secret key; never cached. Throws BAD_PREVIEW_TOKEN on a bad or expired token. */
   preview(token: string): Promise<PreviewResponse | null>
   /**
@@ -219,8 +257,22 @@ export interface BackgoldContent {
   bust(): Promise<void>
 }
 
-/** Build a client. Throws a TypeError for anything but a site key, and `SecretKeyInBrowserError` for a secret key in a browser page or browser worker. */
+/**
+ * Build a client. Throws a TypeError unless exactly one of `key` (a site key)
+ * and `firstParty` (a valid site id) is given, and `SecretKeyInBrowserError`
+ * for a secret key or first-party reads in a browser page or browser worker.
+ */
 export type CreateClient = (opts: ClientOptions) => BackgoldContent
+
+// ── Areas ────────────────────────────────────────────────────────────────────
+
+/**
+ * True when an area item shows at `now` (Unix milliseconds, default
+ * `Date.now()`): its `from` is unset or at or before `now`, and its `until` is
+ * unset or after `now`. An instant `Date.parse` cannot read counts as unset,
+ * so a malformed string never hides content.
+ */
+export type VisibleNow = (item: Pick<AreaItem, 'from' | 'until'>, now?: number) => boolean
 
 // ── Errors ───────────────────────────────────────────────────────────────────
 

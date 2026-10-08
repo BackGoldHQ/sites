@@ -1,8 +1,10 @@
 ---
 // The head tags: title, description, canonical on SITE_URL, Open Graph,
 // the Twitter card (which reads the og: tags), robots, favicon, the blog feed, JSON-LD. Site-level values
-// from `/site` fill in what the props leave out.
+// from `/site` fill in what the props leave out. On the preview page it also
+// tells the BackGold editor the page carries section markers.
 import options from 'virtual:backgold/options'
+import { isPreviewPath } from '../dist/render.js'
 import { seoHead, serializeJsonLd } from '../dist/server.js'
 
 interface Props {
@@ -15,7 +17,9 @@ interface Props {
 }
 
 const head = seoHead(Astro.props, Astro.locals.backgold, options.feeds)
+const preview = isPreviewPath(Astro.url.pathname)
 ---
+{preview && <meta name="backgold-preview" content="sections" />}
 {head.title && <title>{head.title}</title>}
 {head.description && <meta name="description" content={head.description} />}
 <link rel="canonical" href={head.canonical} />

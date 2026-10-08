@@ -1,16 +1,20 @@
 import { isBlogType } from './format.js'
-import type { Author, BackgoldContent, ContentTypeSummary, EntriesResponse, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
+import type { Areas, Author, BackgoldContent, ContentTypeSummary, EntriesResponse, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
 
 /** A routable type, or `'blog'`: the built-in types that share `/blog`. */
 export type ResolvedType = ContentTypeSummary | 'blog'
 
-/** What a path on the site is (plan D7, the brief's §6 order). */
+/**
+ * What a path on the site is (plan D7, the brief's §6 order). An entry, an
+ * index and a term carry the areas their response named (a page carries its
+ * own inside `page`); an author and not_found carry none.
+ */
 export type Resolved =
   | { kind: 'page'; page: PageResponse }
-  | { kind: 'index'; type: ResolvedType; entries: Entry[]; next_cursor: string | null }
-  | { kind: 'entry'; type: ContentTypeSummary; entry: EntryDetail }
+  | { kind: 'index'; type: ResolvedType; entries: Entry[]; next_cursor: string | null; areas: Areas }
+  | { kind: 'entry'; type: ContentTypeSummary; entry: EntryDetail; areas: Areas }
   | { kind: 'author'; author: Author; entries: Entry[] }
-  | { kind: 'term'; type: ResolvedType; taxonomy: TermsResponse['taxonomy']; term: TermsResponse['terms'][number]; entries: Entry[] }
+  | { kind: 'term'; type: ResolvedType; taxonomy: TermsResponse['taxonomy']; term: TermsResponse['terms'][number]; entries: Entry[]; areas: Areas }
   | { kind: 'feed'; type: ResolvedType }
   | { kind: 'not_found' }
 
@@ -57,13 +61,20 @@ function newestFirst(a: Entry, b: Entry): number {
  * The first page of a type's entries. `/blog` merges the built-in types'
  * first pages; its `next_cursor` is the one type's when only one built-in
  * type is routable, and null otherwise (a cursor names one type's list).
+ * The areas are the first answering type's: the rules that place a section
+ * on a list are per site, so every type's list answers the same areas.
  */
-async function firstPage(bg: BackgoldContent, types: ContentTypeSummary[], term?: string): Promise<{ entries: Entry[]; next_cursor: string | null }> {
+async function firstPage(
+  bg: BackgoldContent,
+  types: ContentTypeSummary[],
+  term?: string,
+): Promise<{ entries: Entry[]; next_cursor: string | null; areas: Areas }> {
   const pages = (await Promise.all(types.map((t) => bg.entries(t.key, { limit: INDEX_LIMIT, term })))).filter(
     (p): p is EntriesResponse => p !== null,
   )
-  if (pages.length === 1) return { entries: pages[0]!.entries, next_cursor: pages[0]!.next_cursor }
-  return { entries: pages.flatMap((p) => p.entries).sort(newestFirst).slice(0, INDEX_LIMIT), next_cursor: null }
+  const areas = pages[0]?.areas ?? {}
+  if (pages.length === 1) return { entries: pages[0]!.entries, next_cursor: pages[0]!.next_cursor, areas }
+  return { entries: pages.flatMap((p) => p.entries).sort(newestFirst).slice(0, INDEX_LIMIT), next_cursor: null, areas }
 }
 
 /**
@@ -120,7 +131,7 @@ export async function resolveRoute(bg: BackgoldContent, pathname: string): Promi
     if (second === FEED_FILE) return { kind: 'feed', type }
     for (const member of members) {
       const found = await bg.entry(member.key, second)
-      if (found) return { kind: 'entry', type: member, entry: found.entry as EntryDetail }
+      if (found) return { kind: 'entry', type: member, entry: found.entry as EntryDetail, areas: found.areas }
     }
     return NOT_FOUND
   }
@@ -131,5 +142,5 @@ export async function resolveRoute(bg: BackgoldContent, pathname: string): Promi
   const listing = await firstPage(bg, members, term.slug)
   // `?term=` matches the slug in any taxonomy; the page names one.
   const entries = listing.entries.filter((e) => e.terms.some((t) => t.taxonomy === terms.taxonomy.key && t.slug === term.slug))
-  return { kind: 'term', type, taxonomy: terms.taxonomy, term, entries }
+  return { kind: 'term', type, taxonomy: terms.taxonomy, term, entries, areas: listing.areas }
 }

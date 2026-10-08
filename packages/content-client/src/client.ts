@@ -5,21 +5,25 @@
 //
 //   - A published read is stored under `${scope}:v${version}:${path}?${query}`,
 //     the api's own key rule (packages/api/src/lib/content-api/cache.ts) with
-//     `scope` = 16 hex of SHA-256 of the key, so no key material reaches a
-//     store. A version bump is a miss by construction; nothing is purged.
+//     `scope` = 16 hex of SHA-256 of the key (of `first-party:<site id>` for
+//     a first-party client), so no key material reaches a store. A version bump is a miss by construction; nothing is purged.
 //   - The version is learned from every answer's X-Content-Version (304s and
 //     errors carry it too), from a conditional GET /site when the known one is
 //     older than maxVersionAgeSeconds, or from setVersion (a webhook). It is
 //     kept in memory and in the store under `${scope}:version`.
 //   - A preview read — `{ preview: true }`, a `preview=1` query, or a path
-//     under /preview/ — needs a secret key, is refused locally without one,
-//     and never reads or writes the store.
+//     under /preview/ — needs a secret key or first-party reads, is refused
+//     locally without one, and never reads or writes the store.
 //   - Requests carry only Authorization, Accept and If-None-Match (the api's
-//     CORS allows no other request header) and go only to apiOrigin.
+//     CORS allows no other request header) and go only to apiOrigin. A
+//     first-party client (a site Worker in BackGold's namespace, reaching the
+//     api through a service binding, where CORS does not apply) sends
+//     X-BackGold-Site in place of Authorization.
 
 import type { SITE_KEY_PREFIXES } from '@givegold/shared'
 import { siteKeyKind } from '@givegold/shared/content-api'
 import type {
+  AreasResponse,
   AuthorResponse,
   AuthorsResponse,
   BackgoldContent,
@@ -40,10 +44,16 @@ import type {
   TypedEntryResponse,
   TypesResponse,
 } from './contract.js'
+import { holdsQuery } from './areas.js'
 import { memoryCache } from './cache.js'
 import { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 import { sha256Hex } from './hash.js'
 import { DEFAULT_API_ORIGIN, SITE_KEY_PATTERN, contentApiBase } from './request.js'
+
+/** The header a first-party request names its site with (the api's SITE_HEADER, middleware/site-content-key.ts). */
+const SITE_HEADER = 'X-BackGold-Site'
+/** A site id as a first-party client accepts it. */
+const SITE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 const DEFAULT_MAX_VERSION_AGE_SECONDS = 60
 const DEFAULT_CACHE_TTL_SECONDS = 3600
@@ -200,19 +210,49 @@ function inBrowser(): boolean {
   return g.navigator?.userAgent !== 'Cloudflare-Workers'
 }
 
+/** How a client names itself to the api: the headers it sends, what its store scope hashes, and what it may read. */
+interface Credential {
+  kind: 'publishable' | 'secret'
+  headers: Record<string, string>
+  scopeSeed: string
+}
+
 /**
- * Builds a client. Throws a TypeError for anything that is not a site key as
- * the api mints it (the message never repeats the key), and
- * SecretKeyInBrowserError for a secret key in a browser page or worker.
+ * Exactly one of `key` (a site key as the api mints it; the message never
+ * repeats the key) and `firstParty` (a site id), else a TypeError.
+ * First-party reads are secret-level.
  */
-export const createClient: CreateClient = (opts) => {
+function credentialOf(opts: Parameters<CreateClient>[0] | undefined): Credential {
   const key = opts?.key
+  const firstParty = opts?.firstParty
+  if ((key == null) === (firstParty == null)) {
+    throw new TypeError(
+      'createClient needs exactly one of `key` (a site key from the site\'s Developer page) or `firstParty` ({ siteId }, for a site Worker inside BackGold\'s namespace)',
+    )
+  }
+  if (firstParty != null) {
+    const siteId: unknown = firstParty.siteId
+    if (typeof siteId !== 'string' || !SITE_ID_PATTERN.test(siteId)) {
+      throw new TypeError('firstParty.siteId is a site id: 1–64 letters, digits, "_" or "-"')
+    }
+    return { kind: 'secret', headers: { [SITE_HEADER]: siteId }, scopeSeed: `first-party:${siteId}` }
+  }
   const kind = typeof key === 'string' && SITE_KEY_PATTERN.test(key) ? siteKeyKind(key) : null
   if (!kind || typeof key !== 'string') {
     throw new TypeError(
       `createClient needs a site key: ${KEY_PREFIXES.publishable}… (publishable) or ${KEY_PREFIXES.secret}… (secret) followed by letters and digits, from the site's Developer page`,
     )
   }
+  return { kind, headers: { Authorization: `Bearer ${key}` }, scopeSeed: key }
+}
+
+/**
+ * Builds a client. Throws a TypeError unless exactly one of a site key and a
+ * first-party site id is given, and SecretKeyInBrowserError for a secret key
+ * or first-party reads in a browser page or worker.
+ */
+export const createClient: CreateClient = (opts) => {
+  const { kind, headers: credentialHeaders, scopeSeed } = credentialOf(opts)
   if (kind === 'secret' && inBrowser()) throw new SecretKeyInBrowserError()
 
   const api = contentApiBase(opts.apiOrigin ?? DEFAULT_API_ORIGIN)
@@ -222,7 +262,7 @@ export const createClient: CreateClient = (opts) => {
   const doFetch: typeof fetch = opts.fetch ?? ((input, init) => globalThis.fetch(input, init))
 
   let scopePromise: Promise<string> | null = null
-  const scope = () => (scopePromise ??= sha256Hex(key).then((hex) => hex.slice(0, 16)))
+  const scope = () => (scopePromise ??= sha256Hex(scopeSeed).then((hex) => hex.slice(0, 16)))
   const versionKey = async () => `${await scope()}:version`
   const readKey = async (version: number, path: string, qs: string) => `${await scope()}:v${version}:${path}?${qs}`
 
@@ -287,10 +327,10 @@ export const createClient: CreateClient = (opts) => {
 
   const send = (path: string, qs: string, ifNoneMatch?: string) => {
     const url = `${api.base}${path}${qs ? `?${qs}` : ''}`
-    if (new URL(url).origin !== api.origin) throw new TypeError(`Refusing to send the site key outside ${api.origin}`)
-    const headers: Record<string, string> = { Authorization: `Bearer ${key}`, Accept: 'application/json' }
+    if (new URL(url).origin !== api.origin) throw new TypeError(`Refusing to send a request outside ${api.origin}`)
+    const headers: Record<string, string> = { ...credentialHeaders, Accept: 'application/json' }
     if (ifNoneMatch) headers['If-None-Match'] = ifNoneMatch
-    // A redirect is never followed: the key goes to apiOrigin and nowhere else.
+    // A redirect is never followed: the credential goes to apiOrigin and nowhere else.
     return doFetch(url, { method: 'GET', headers, redirect: 'manual' })
   }
 
@@ -432,6 +472,10 @@ export const createClient: CreateClient = (opts) => {
     author: (slug) => read<AuthorResponse>(`/authors/${seg(slug)}`, {}, undefined, 'null'),
     redirects: () => must<RedirectsResponse>('/redirects'),
     sitemap: () => must<SitemapResponse>('/sitemap'),
+    areas: async (areasOpts) => {
+      const holds = holdsQuery(areasOpts?.holds)
+      return (await read<AreasResponse>('/areas', { holds }, undefined, 'throw'))!
+    },
     preview: (token) => read<PreviewResponse>(`/preview/${seg(token)}`, {}, undefined, 'null'),
     raw: <T = unknown>(path: string, query: Query = {}, opts?: ReadOptions) => read<T>(path, query, opts, 'null'),
 

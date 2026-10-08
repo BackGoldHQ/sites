@@ -1,16 +1,20 @@
 ---
 // A menu from `/menus/:key`: nested lists, the current page marked, unsafe
-// addresses dropped (the label stays). No item opens a new tab.
+// addresses dropped (the label stays). No item opens a new tab. With `page`
+// (the page's `{ id, takes_donations }`, or null on a route with no BackGold
+// page) each link's Shows on rule applies and the header button is left out
+// for <MenuButton> to draw; without it every link shows.
 import type { MenuItem } from '@backgold/content'
-import { menuOf, type MenuNode } from '../dist/render.js'
+import { menuOf, type MenuNode, type MenuPage } from '../dist/render.js'
 
 interface Props {
   items: MenuItem[]
   label: string
+  page?: MenuPage | null
 }
 
-const { items, label } = Astro.props
-const nodes: MenuNode[] = menuOf(items, Astro.url.pathname)
+const { items, label, page } = Astro.props
+const nodes: MenuNode[] = menuOf(items, Astro.url.pathname, page)
 ---
 <nav aria-label={label} class="bg-menu">
   <ul>

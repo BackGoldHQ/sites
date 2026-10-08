@@ -45,6 +45,13 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_SECRET_KEY` | secret | for preview | A secret key, `bg_site_sk_…`. Only `loadPreview` (your `/preview` page) reads it; it never reaches a page or a cache. |
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
+| `BACKGOLD_SITE_ID` | var | first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
+| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint. `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. |
+
+First-party mode is for a site Worker inside BackGold's own namespace, and
+BackGold sets both names up for it. A site built elsewhere never sets them: it
+reads with its site keys. `Astro.locals.backgold.firstParty` says which mode
+the request ran in.
 
 A Cloudflare preview deployment (a pull request's or a branch's address) reads
 only the `previews` block of the Worker's config, never the top-level `vars`.
@@ -52,8 +59,9 @@ Each `astro build` copies `BACKGOLD_SITE_KEY` and `BACKGOLD_API_ORIGIN` into
 `previews.vars` of the config the adapter writes, unless the site set its own
 there, so previews show the site.
 
-Until `BACKGOLD_SITE_KEY` is set to a publishable key (or while
-`BACKGOLD_API_ORIGIN` is not an http(s) URL), every HTML path renders the
+Until `BACKGOLD_SITE_KEY` is set to a publishable key (in first-party mode,
+until `BACKGOLD_API` is a binding), or while `BACKGOLD_API_ORIGIN` is not an
+http(s) URL, every HTML path renders the
 site's setup page at `/backgold-setup` (`SETUP_PATH` from
 `@backgold/astro/server`), uncached and noindex, and
 `Astro.locals.backgold.setup.missing` names what to fix. Once configured, that
@@ -98,7 +106,7 @@ outside the site that has no content type or a form one.
 `/preview` is a page of the site's own, `src/pages/preview.astro`, so a draft
 renders in the site's layout. It is BackGold's "Preview on your site" link
 (`?bg_preview=<token>&path=<path>`). `loadPreview` reads the draft with the
-secret key. Every answer on the path, the draft or any error, carries
+secret key (in first-party mode, through `BACKGOLD_API`). Every answer on the path, the draft or any error, carries
 `Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow` (the
 middleware adds them to whatever the page answers) and is never cached. No
 secret key: `503 PREVIEW_NOT_CONFIGURED`. A missing, malformed (`.`, `..`),
@@ -133,7 +141,7 @@ the `bg_vid` cookie, the site's redirects (301/302/307/308, and 410 for a
 rule with no destination; a rule whose destination is neither an http(s) URL
 nor a path on the site is ignored), then the edge cache. `Astro.locals.backgold` holds
 `{ client, site, legal, version, siteUrl, variant, visitorId, analytics?,
-setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
+firstParty, setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
 
 ## SEO and AI search
 
@@ -321,7 +329,8 @@ needs, in place from the start:
    never stored with a page. `locals.backgold.visitorId` has it during a
    render.
 3. **A `variant` prop on `<Section>`**, so a feature flag can swap one
-   section's component without touching the page.
+   section's component without touching the page; it takes precedence over
+   the section's stored layout.
 
 ## Routing a page
 
@@ -331,28 +340,72 @@ catch-all `src/pages/[...path].astro` switches on `kind`:
 
 | Path | `kind` |
 | --- | --- |
-| `/`, or a published page's `url` | `page` |
-| `/blog` (every built-in blog type, merged), `/<url_base>` | `index`: the first 50 entries and `next_cursor` |
-| `/blog/<slug>`, `/<url_base>/<slug>` | `entry` |
-| `/authors/<slug>` | `author`; `entries` is empty (the Content API lists entries by type and term only) |
-| `/blog/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term` |
+| `/`, or a published page's `url` | `page`: the page response, its `areas` inside it |
+| `/blog` (every built-in blog type, merged), `/<url_base>` | `index`: the first 50 entries, `next_cursor` and the list's `areas` |
+| `/blog/<slug>`, `/<url_base>/<slug>` | `entry`: the entry and its `areas` |
+| `/authors/<slug>` | `author`; `entries` is empty (the Content API lists entries by type and term only); no `areas` |
+| `/blog/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries and the list's `areas` |
 | `/blog/feed.xml`, `/<url_base>/feed.xml` | `feed` |
 | anything else, or a malformed path | `not_found` |
 
 An index shows its first page: the edge cache drops query strings, so there
 is no `?cursor=` page, and `/blog`'s `next_cursor` is null when more than one
-built-in type is routable. Redirects are the middleware's, before this runs.
+built-in type is routable. `/blog`'s `areas` are the first built-in type's:
+the rules that place a section on a list are per site, so every type's list
+answers the same areas. Pass them to `<Area>` as you would a page's.
+Redirects are the middleware's, before this runs.
 
 ## Rendering
 
-- `<Section section={s} components={sections} variant={flag} />` renders
-  `components[s.type]` (or `components['<type>:<variant>']` first, when a
-  `variant` is given), else `<DefaultSection>`: one shape-driven renderer for
-  any block type, so a type BackGold adds later still renders. It emits a
+- `<Section section={s} components={sections} variant={flag} />` looks up,
+  in order: `components['<type>:<variant>']`, where the variant is the
+  `variant` prop when given, else the section's stored layout
+  (`s.variant`, when it has one); then `components[s.type]`; then
+  `<DefaultSection>`. The chosen variant is passed to your component as its
+  `variant` prop. `<DefaultSection>` is one shape-driven renderer for any
+  block type, so a type BackGold adds later still renders. It emits a
   `<section class="bg-section bg-band-<band> bg-bleed-<bleed>">` with
-  `data-type`, `data-band` and `data-bleed`, the heading as an `<h2>` (never
-  an `<h1>`: the page has one), copy, media, links, the data rows and the
-  embed. Restyle it through the `--bg-*` custom properties or the classes.
+  `data-type`, `data-band` and `data-bleed`, the heading (`heading`, else
+  `title`, else `headline`) as an `<h2>` (never an `<h1>`: the page has
+  one), copy, media, links, the data rows and the embed. Restyle it through
+  the `--bg-*` custom properties or the classes.
+- On the preview page only (`/preview` and below), `<Section>` writes an
+  empty marker before each section, `<span id="bg-section-<section id>"
+  data-bg-section hidden></span>` (every character of the id outside
+  `[A-Za-z0-9_-]` written as `-`), and `<Seo>` writes `<meta
+  name="backgold-preview" content="sections">`. Published pages carry
+  neither.
+- `<Area name="sidebar" areas={page.areas} components={sections} class="rail" />`
+  draws one area of a page, entry or list (`areas` from the response, or
+  from `client.areas({ holds })` on a route with no BackGold page). An empty
+  area renders nothing. Otherwise each item whose `until` has not passed is
+  an `<aside class="bg-area bg-area-<name> <class>" data-bg-area
+  data-bg-area-item aria-label="<label>">` holding its sections through
+  `<Section>`. An item with a `from` or an `until` carries them as
+  `data-from` and `data-until` and, when either is a date (a malformed value
+  counts as unset), starts `hidden`; one inline script per
+  page shows it while its window holds and re-checks at the next moment, so
+  with scripts off a dated item never shows. `visibleNow` (re-exported from
+  `@backgold/astro/server`) is the same rule for code of your own.
+- `<Menu items={menu.items} label="Primary" page={menuPage} />` and
+  `<MenuButton items={menu.items} page={menuPage} class="…" />`. `page` is
+  the page being drawn as `{ id, takes_donations }` (from
+  `PageResponse.page`), or `null` on a route with no BackGold page (an
+  index, an entry, an author, a term). With it, each link's Shows on rule
+  applies: `every_page` shows; `only_pages` shows on the pages it lists;
+  `except_pages` shows everywhere but the pages it lists (non-page routes
+  included); `donation_pages` shows where `takes_donations` is true. A group
+  shows the children that show, and goes when none does. The header button
+  leaves the menu and `<MenuButton>` draws it, as `<a class="bg-menu-button"
+  data-bg-button>` (plus `data-bg-donate` on a Donate link), on the pages
+  its rule names; when it does not show, or has no address, nothing takes
+  its place. Without `page`, `<Menu>` draws every link (the header button
+  among them) and `<MenuButton>` draws the button everywhere. `menuOf` and
+  `headerButtonOf` in `@backgold/astro/server` return the same as data.
+- `<Disclaimer legal={legal} />`
+  (verbatim, as text, on every page; when the organization has none set in
+  BackGold it renders nothing, never a made-up line, and logs a warning
+  naming the site), `<PreviewBar />` ("Preview, not published").
 - `<Embed embed={s.embed} title="Donate" />` places a money or consent module
   as BackGold serves it: the frame (lazy, `allow="payment"`, no `sandbox`),
   sized from its `givegold:resize` message by one script per page that
@@ -360,10 +413,6 @@ built-in type is routable. Redirects are the middleware's, before this runs.
   script-only module, the `mount` container and its script once. An address
   that is not https renders nothing, except plain http on `localhost` or
   `127.0.0.1`, for an api running on your own machine.
-- `<Menu items={menu.items} label="Primary" />`, `<Disclaimer legal={legal} />`
-  (verbatim, as text, on every page; when the organization has none set in
-  BackGold it renders nothing, never a made-up line, and logs a warning
-  naming the site), `<PreviewBar />`.
 - `<Analytics />` takes no props. It renders nothing unless the site's
   `/site` answer carries BackGold's analytics block; with it, posthog-js
   loads once the page is idle, without session replay, named by the
@@ -377,13 +426,24 @@ built-in type is routable. Redirects are the middleware's, before this runs.
   a site path). Everything else is dropped and its text kept; scripts,
   styles, frames, forms' fields, SVG and MathML go with their contents.
 
+### Section markers
+
+The BackGold editor shows your preview page in a frame and scrolls it to the
+section being edited, by the `#bg-section-<id>` marker; the
+`backgold-preview` meta tells it the page carries them. If you draw sections
+with a loop of your own instead of `<Section>`, write the same empty
+`<span id="bg-section-<id>" data-bg-section hidden></span>` before each
+section on the preview page, and keep `<Seo>` (or write the meta yourself),
+so the editor can still scroll to a section. Without them the preview works,
+it just opens at the top.
+
 ## Entry points
 
 | Import | |
 | --- | --- |
 | `@backgold/astro` | `backgold(options)` and the types. |
-| `@backgold/astro/server` | `getBackgold(context)`, the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
-| `@backgold/astro/components` | `Section`, `DefaultSection`, `Embed`, `Menu`, `Disclaimer`, `Seo`, `Analytics`, `PreviewBar` (Astro source). |
+| `@backgold/astro/server` | `getBackgold(context)`, `menuOf`, `headerButtonOf` and their `MenuPage` and `MenuNode` types, `areaEntriesOf(areas, name)` (the items `<Area>` would draw, each with `needsWindow`, so a layout can tell whether an area has anything to draw) and its `AreaEntry` type, `visibleNow` (from `@backgold/content`), the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
+| `@backgold/astro/components` | `Section`, `DefaultSection`, `Embed`, `Menu`, `MenuButton`, `Area`, `Disclaimer`, `Seo`, `Analytics`, `PreviewBar` (Astro source). |
 | `@backgold/astro/middleware` | `onRequest`. |
 
 ## License

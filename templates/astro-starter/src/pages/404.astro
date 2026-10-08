@@ -8,6 +8,6 @@ Astro.response.status = 404
 const bg = Astro.locals.backgold
 const siteName = bg.setup === null ? (bg.site.name ?? bg.site.domain) : ''
 ---
-<Site title={`Page not found · ${siteName}`} canonicalPath={Astro.url.pathname} noindex>
+<Site title={`Page not found · ${siteName}`} canonicalPath={Astro.url.pathname} noindex page={null}>
   <NotFound />
 </Site>

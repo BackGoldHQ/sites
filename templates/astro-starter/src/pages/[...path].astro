@@ -3,12 +3,21 @@
 // BackGold (a page, a type's list, an entry, an author, a term, a feed), so
 // a content type the organization adds gets its pages with no change here.
 // Redirects were already answered by the middleware.
-import { atomFeed, jsonLdFor, relFor, resolveRoute, safeHref, safeSrc, type ResolvedType } from '@backgold/astro/server'
+//
+// A page passes itself to the layout as `{ id, takes_donations }`, so the
+// menus apply each link's Shows on rule; every other route passes null. A
+// page, an entry, a list and a tag pass their areas to the layout (Top banner
+// and Above the footer); a page and an entry also draw their Sidebar beside
+// the main column when it has an item, and are one column when it has none.
+import type { Areas } from '@backgold/content'
+import { Area } from '@backgold/astro/components'
+import { areaEntriesOf, atomFeed, jsonLdFor, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryArticle from '../components/EntryArticle.astro'
 import EntryCard from '../components/EntryCard.astro'
 import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
+import { sections } from '../components/sections'
 import { entryCard } from '../lib/section'
 
 const bg = Astro.locals.backgold
@@ -74,11 +83,25 @@ switch (resolved.kind) {
   default:
     head = { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
 }
+const menuPage: MenuPage | null =
+  resolved.kind === 'page' ? { id: resolved.page.page.id, takes_donations: resolved.page.page.takes_donations } : null
+const areas: Areas | null =
+  resolved.kind === 'page'
+    ? resolved.page.areas
+    : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term'
+      ? resolved.areas
+      : null
+const sidebar = (resolved.kind === 'page' || resolved.kind === 'entry') && areaEntriesOf(areas, 'sidebar').length > 0
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
-<Site {...head}>
-  {resolved.kind === 'page' && <PageSections page={resolved.page} siteName={siteName} />}
+<Site {...head} page={menuPage} areas={areas}>
+  {resolved.kind === 'page' && (
+    <div class:list={['layout', sidebar && 'layout-split']}>
+      <div class="layout-main"><PageSections page={resolved.page} siteName={siteName} /></div>
+      {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}
+    </div>
+  )}
 
   {resolved.kind === 'index' && (
     <div class="listing">
@@ -91,7 +114,12 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'entry' && <EntryArticle entry={resolved.entry} type={resolved.type} />}
+  {resolved.kind === 'entry' && (
+    <div class:list={['layout', sidebar && 'layout-split']}>
+      <div class="layout-main"><EntryArticle entry={resolved.entry} type={resolved.type} /></div>
+      {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}
+    </div>
+  )}
 
   {resolved.kind === 'author' && (
     <div class="listing">

@@ -1,12 +1,15 @@
 ---
 // BackGold's "Preview on your site" link: /preview?bg_preview=<token>&path=<path>.
 // The draft is read with BACKGOLD_SECRET_KEY (it never reaches the page) and
-// rendered with the same layout and components as the published site, under
-// a "Preview — not published" bar. Never cached, never indexed. Without a
-// secret key this answers 503; with a bad or expired link, 400.
-import { PREVIEW_HEADERS, loadPreview } from '@backgold/astro/server'
-import { PreviewBar } from '@backgold/astro/components'
+// rendered with the same layout, menus, areas and components as the
+// published site, under a "Preview, not published" bar. Here each section
+// carries the marker the BackGold editor scrolls to. Never cached, never
+// indexed. Without a secret key this answers 503; with a bad or expired
+// link, 400.
+import { PREVIEW_HEADERS, areaEntriesOf, loadPreview, type MenuPage } from '@backgold/astro/server'
+import { Area, PreviewBar } from '@backgold/astro/components'
 import Site from '../layouts/Site.astro'
+import { sections } from '../components/sections'
 import EntryArticle from '../components/EntryArticle.astro'
 import PageSections from '../components/PageSections.astro'
 
@@ -20,9 +23,17 @@ const draft = result.preview
 const siteName = bg.site.name ?? bg.site.domain
 const type = 'entry' in draft ? (await bg.client.types()).types.find((t) => t.key === draft.entry.type) : undefined
 const title = 'page' in draft ? (draft.page.title ?? siteName) : draft.entry.title
+const menuPage: MenuPage | null = 'page' in draft ? { id: draft.page.id, takes_donations: draft.page.takes_donations } : null
+const areas = draft.areas ?? null
+const sidebar = areaEntriesOf(areas, 'sidebar').length > 0
 ---
-<Site title={`Preview: ${title}`} canonicalPath={result.path} noindex>
+<Site title={`Preview: ${title}`} canonicalPath={result.path} noindex page={menuPage} areas={areas}>
   <PreviewBar />
-  {'page' in draft && <PageSections page={draft} siteName={siteName} />}
-  {'entry' in draft && <EntryArticle entry={draft.entry} type={type} />}
+  <div class:list={['layout', sidebar && 'layout-split']}>
+    <div class="layout-main">
+      {'page' in draft && <PageSections page={draft} siteName={siteName} />}
+      {'entry' in draft && <EntryArticle entry={draft.entry} type={type} />}
+    </div>
+    {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}
+  </div>
 </Site>

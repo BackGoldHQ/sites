@@ -8,8 +8,15 @@ import type { KvLike } from '@backgold/content'
 
 /** Every name the package reads. There is no analytics variable: its switch lives in BackGold. */
 export interface BackgoldEnv {
-  /** Publishable site key, `bg_site_pk_…` (a var). */
+  /** Publishable site key, `bg_site_pk_…` (a var). Not read in first-party mode. */
   BACKGOLD_SITE_KEY?: string
+  /**
+   * The site's id (a var), set only on a site Worker inside BackGold's
+   * namespace: with it the site is first-party and reads through `BACKGOLD_API`.
+   */
+  BACKGOLD_SITE_ID?: string
+  /** First-party mode's service binding to the api's `FirstParty` entrypoint. */
+  BACKGOLD_API?: { fetch: typeof fetch }
   /** The api origin (a var). Default `https://api.backgold.com`. */
   BACKGOLD_API_ORIGIN?: string
   /** The site's public origin (a var), for canonicals, the sitemap and feeds. Default: the request's origin. */
@@ -48,6 +55,22 @@ export function text(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
   const trimmed = value.trim()
   return trimmed === '' ? undefined : trimmed
+}
+
+/** A service binding when `value` has a `fetch` function. */
+export function serviceBinding(value: unknown): { fetch: typeof fetch } | undefined {
+  const binding = value as { fetch?: unknown } | null | undefined
+  return binding && typeof binding.fetch === 'function' ? (binding as { fetch: typeof fetch }) : undefined
+}
+
+/**
+ * First-party mode's site id and the binding's fetch, when `BACKGOLD_SITE_ID`
+ * is set and `BACKGOLD_API` is a binding; undefined otherwise.
+ */
+export function firstPartyOf(env: BackgoldEnv): { siteId: string; binding: { fetch: typeof fetch } } | undefined {
+  const siteId = text(env.BACKGOLD_SITE_ID)
+  const binding = serviceBinding(env.BACKGOLD_API)
+  return siteId !== undefined && binding ? { siteId, binding } : undefined
 }
 
 /** A KV binding when `value` has the three methods the store calls. */

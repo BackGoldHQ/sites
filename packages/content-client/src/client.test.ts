@@ -2,6 +2,8 @@ import { strict as assert } from 'node:assert'
 import { createHash } from 'node:crypto'
 import { afterEach, describe, it } from 'node:test'
 import {
+  areasExample,
+  areasResponseExample,
   authorExample,
   authorsExample,
   entriesExample,
@@ -61,6 +63,10 @@ const ROUTES: Record<string, Handler> = {
   '/authors/dana-k': () => ok(authorExample),
   '/redirects': () => ok(redirectsExample),
   '/sitemap': () => ok(sitemapExample),
+  '/areas': (url) =>
+    url.searchParams.has('holds')
+      ? ok(areasResponseExample)
+      : { status: 400, body: { error: 'holds must list module kinds or form:<id>, separated by commas', code: 'BAD_HOLDS' } },
   '/preview/tok_good': () => ok(pageExample),
   '/preview/tok_bad': () => ({ status: 400, body: { error: 'This preview link is not valid or has expired', code: 'BAD_PREVIEW_TOKEN' } }),
 }
@@ -79,7 +85,8 @@ function fakeApi(version = 184) {
       api.calls.push({ url, path, headers, init })
       const common = { 'X-Content-Version': String(api.version) }
       const preview = url.searchParams.get('preview') === '1' || path.startsWith('/preview/')
-      if (preview && !headers.get('Authorization')?.startsWith('Bearer bg_site_sk_')) {
+      const secretLevel = headers.get('Authorization')?.startsWith('Bearer bg_site_sk_') || headers.has('X-BackGold-Site')
+      if (preview && !secretLevel) {
         return Response.json({ error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' }, { status: 403, headers: common })
       }
       const published: Record<string, string> = preview ? {} : { ETag: `"v${api.version}"` }
@@ -140,6 +147,13 @@ describe('createClient: every named method', () => {
     assert.deepEqual(await client.redirects(), redirectsExample)
     assert.deepEqual(await client.sitemap(), sitemapExample)
     assert.deepEqual(await client.raw('/pages/home'), pageExample)
+  })
+
+  it('returns an entry with its areas', async () => {
+    const { client } = setup()
+    const post = await client.entry('post', 'levy-explained')
+    assert.deepEqual(post?.areas, areasExample)
+    assert.deepEqual(post?.entry, entryExample.entry)
   })
 
   it('reads the preview link with a secret key', async () => {
@@ -713,5 +727,138 @@ describe('createClient: cacheTtlSeconds', () => {
       const ttls = rec.ops.filter((o) => o.op === 'set').map((o) => o.ttl)
       assert.ok(ttls.length > 0 && ttls.every((t) => t === 1), `${cacheTtlSeconds} → ${ttls.join(',')}`)
     }
+  })
+})
+
+// ── areas() ──────────────────────────────────────────────────────────────────
+
+describe('createClient: areas()', () => {
+  it('sends GET /areas with holds joined by commas, in the order given', async () => {
+    const { api, client } = setup()
+    assert.deepEqual(await client.areas({ holds: ['form:frm_vol', 'signup'] }), areasResponseExample)
+    const call = api.callsTo('/areas')[0]!
+    assert.equal(call.url.searchParams.get('holds'), 'form:frm_vol,signup')
+    assert.equal(call.url.search, '?holds=form%3Afrm_vol%2Csignup')
+    await client.areas({ holds: ['donation_form'] })
+    assert.equal(api.callsTo('/areas')[1]!.url.search, '?holds=donation_form')
+  })
+
+  it('accepts every module kind and form:<id>', async () => {
+    const { client } = setup()
+    const kinds = ['donation_form', 'form', 'signup', 'petition', 'poll', 'event', 'store', 'advocacy', 'form:frm_A-1']
+    assert.deepEqual(await client.areas({ holds: kinds }), areasResponseExample)
+  })
+
+  it('refuses an empty list before any request', async () => {
+    const { api, client } = setup()
+    await assert.rejects(client.areas({ holds: [] }), (err: unknown) => err instanceof TypeError && /at least one/.test(err.message))
+    assert.equal(api.calls.length, 0)
+  })
+
+  it('refuses an entry the api would not read, naming it, before any request', async () => {
+    const { api, client } = setup()
+    for (const bad of ['donate', 'form:', 'form:bad id', `form:${'x'.repeat(65)}`, ' signup', 'signup,poll', 'Signup', 'poll:p1']) {
+      await assert.rejects(
+        client.areas({ holds: ['signup', bad] }),
+        (err: unknown) => err instanceof TypeError && err.message.includes(JSON.stringify(bad)),
+        bad,
+      )
+    }
+    await assert.rejects(client.areas({ holds: [42 as unknown as string] }), TypeError)
+    await assert.rejects(client.areas({} as { holds: string[] }), TypeError)
+    assert.equal(api.calls.length, 0)
+  })
+
+  it('is cached under the content version like any published read', async () => {
+    const { api, rec, client } = setup()
+    await client.areas({ holds: ['donation_form'] })
+    await client.areas({ holds: ['donation_form'] })
+    assert.equal(api.callsTo('/areas').length, 1)
+    assert.ok(rec.keys.has(`${scopeOf(PK)}:v184:/areas?holds=donation_form`))
+    api.version = 185
+    await client.setVersion(185)
+    await client.areas({ holds: ['donation_form'] })
+    assert.equal(api.callsTo('/areas').length, 2)
+    assert.ok(rec.keys.has(`${scopeOf(PK)}:v185:/areas?holds=donation_form`))
+  })
+})
+
+// ── First-party ──────────────────────────────────────────────────────────────
+
+describe('createClient: first-party reads', () => {
+  const SITE = 'cd_site_0001'
+
+  it('sends X-BackGold-Site on every request and no Authorization', async () => {
+    const { api, client } = setup({ key: undefined, firstParty: { siteId: SITE } })
+    await client.page('home')
+    await client.areas({ holds: ['signup'] })
+    assert.ok(api.calls.length >= 2)
+    for (const call of api.calls) {
+      assert.equal(call.headers.get('X-BackGold-Site'), SITE)
+      assert.equal(call.headers.has('Authorization'), false)
+      assert.equal(call.headers.get('Accept'), 'application/json')
+      assert.equal(call.init?.redirect, 'manual')
+    }
+  })
+
+  it('needs exactly one of key and firstParty, naming both', () => {
+    const namesBoth = (err: unknown) => err instanceof TypeError && /`key`/.test(err.message) && /`firstParty`/.test(err.message)
+    assert.throws(() => createClient({}), namesBoth)
+    assert.throws(() => createClient({ key: PK, firstParty: { siteId: SITE } }), namesBoth)
+    assert.throws(() => createClient(undefined as unknown as ClientOptions), namesBoth)
+  })
+
+  it('accepts only a site id of 1–64 letters, digits, _ and -', () => {
+    for (const bad of ['', 'a b', 'a/b', 'a\n', 'x'.repeat(65), 'ü']) {
+      assert.throws(() => createClient({ firstParty: { siteId: bad } }), TypeError, JSON.stringify(bad))
+    }
+    assert.throws(() => createClient({ firstParty: {} as { siteId: string } }), TypeError)
+    assert.doesNotThrow(() => createClient({ firstParty: { siteId: 'A-z_09' } }))
+    assert.doesNotThrow(() => createClient({ firstParty: { siteId: 'x'.repeat(64) } }))
+  })
+
+  it('is refused in a browser like a secret key', () => {
+    const g = globalThis as { document?: unknown }
+    g.document = {}
+    try {
+      assert.throws(() => createClient({ firstParty: { siteId: SITE } }), SecretKeyInBrowserError)
+    } finally {
+      delete g.document
+    }
+  })
+
+  it('reads previews, never from or into the store', async () => {
+    const { api, rec, client } = setup({ key: undefined, firstParty: { siteId: SITE } })
+    assert.deepEqual(await client.page('home', { preview: true }), pageExample)
+    assert.deepEqual(await client.preview('tok_good'), pageExample)
+    assert.equal(rec.ops.length, 0)
+    assert.equal(api.callsTo('/pages/home')[0]!.url.search, '?preview=1')
+  })
+
+  it('caches under its own scope with the same version rules as a key client', async () => {
+    const api = fakeApi()
+    const rec = recordingStore()
+    const firstParty = createClient({ firstParty: { siteId: SITE }, fetch: api.fetch, cache: rec.store })
+    await firstParty.page('home')
+    await firstParty.page('home')
+    assert.equal(api.callsTo('/pages/home').length, 1)
+    const scope = createHash('sha256').update(`first-party:${SITE}`).digest('hex').slice(0, 16)
+    assert.ok(rec.keys.has(`${scope}:v184:/pages/home?`))
+    assert.equal(firstParty.version(), 184)
+
+    // The previous version's copy revalidates with If-None-Match; a 304 re-uses it.
+    api.version = 185
+    await firstParty.setVersion(185)
+    api.version = 184
+    assert.deepEqual(await firstParty.page('home'), pageExample)
+    const last = api.callsTo('/pages/home').at(-1)!
+    assert.equal(last.headers.get('If-None-Match'), '"v184"')
+
+    await firstParty.bust()
+    assert.equal(firstParty.version(), null)
+
+    const keyed = createClient({ key: PK, fetch: api.fetch, cache: rec.store })
+    await keyed.page('home')
+    assert.ok(rec.keys.has(`${scopeOf(PK)}:v184:/pages/home?`))
   })
 })

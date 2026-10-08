@@ -8,6 +8,8 @@
 
   Sections carry `bg-section bg-band-<band> bg-bleed-<bleed>` and
   `data-type="<Type>"`; style a type with [data-type='Hero'] and the like.
+  An area's items are `<aside class="bg-area bg-area-<name>">`; the header
+  button is `.bg-menu-button` (with the starter's `.button`).
   The brand's colours are the site's own, so there is no dark-mode inversion.
 */
 
@@ -211,10 +213,10 @@ main:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 .site-name {
+  min-width: 0;
   color: var(--ink);
   font-weight: 800;
   font-size: var(--text-lg);
@@ -224,6 +226,7 @@ main:focus {
 .site-logo {
   display: block;
   max-height: 2.75rem;
+  max-width: 100%;
   width: auto;
 }
 
@@ -248,6 +251,18 @@ main:focus {
 
 .nav-wide {
   display: none;
+}
+/* The menu sits at the right of the header, the header button after it; on a
+   narrow screen the site's name gives way before either wraps. */
+.nav-wide,
+.nav-narrow {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.site-header .bg-menu-button {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  white-space: nowrap;
 }
 .nav-narrow summary {
   cursor: pointer;
@@ -295,6 +310,10 @@ main:focus {
 }
 
 @media (min-width: 48rem) {
+  .site-header-inner {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
   .nav-wide {
     display: block;
   }
@@ -328,6 +347,42 @@ main:focus {
   .nav-wide .bg-menu li:has(> ul) > span::after {
     content: ' ▾';
     font-size: 0.75em;
+  }
+}
+
+/* ── Areas and the sidebar ── */
+
+/*
+  Top banner sits under the header and Above the footer over the footer, each
+  item full width. A page or an entry is a `.layout`: its main column and,
+  when its Sidebar has an item (`.layout-split`), the `.layout-rail` beside
+  it, after it on a narrow screen.
+*/
+.layout-rail {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+  padding: 0 var(--gutter) var(--space);
+}
+.rail {
+  --bg-section-padding: 1.5rem;
+}
+.rail .bg-section {
+  border-radius: var(--radius);
+}
+.rail h2 {
+  font-size: var(--h3);
+}
+@media (min-width: 48rem) {
+  .layout-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+    gap: 2rem;
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+  }
+  .layout-split .layout-rail {
+    padding: var(--space) var(--gutter) var(--space) 0;
   }
 }
 
@@ -682,6 +737,26 @@ main:focus {
   font-weight: 600;
 }
 .event-where {
+  color: var(--muted);
+}
+
+/* Events: the 'buttons' choice */
+.event p.event-action {
+  margin-top: 0.75rem;
+}
+
+/* Takeover banner (Top banner) */
+.takeover {
+  --bg-section-padding: 1.25rem var(--gutter);
+  text-align: center;
+}
+.takeover .takeover-headline {
+  font-size: var(--h3);
+  margin: 0;
+  max-width: none;
+}
+.takeover .takeover-pitch {
+  margin: 0.25rem 0 0;
   color: var(--muted);
 }
 

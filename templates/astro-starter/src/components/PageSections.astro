@@ -2,10 +2,11 @@
 // A page's sections, in BackGold's order. A page has one <h1>: when it opens
 // with a Hero that has a headline, that headline is it; otherwise the page's
 // title (the site's name on the home page) is shown as the <h1> above the
-// sections.
+// sections. Every section, the leading Hero included, goes through
+// <Section>, which writes the preview marker the BackGold editor scrolls to.
 import type { PageResponse } from '@backgold/content'
 import { Section } from '@backgold/astro/components'
-import Hero from './sections/Hero.astro'
+import LeadingHero from './LeadingHero.astro'
 import { sections } from './sections'
 import { text } from '../lib/format'
 
@@ -19,7 +20,7 @@ const [first, ...rest] = page.sections
 const heroLeads = first?.type === 'Hero' && text(first.copy.headline) !== null
 const title = (page.page.is_home ? siteName : text(page.page.title)) ?? siteName
 ---
-{heroLeads && first ? <Hero section={first} level={1} /> : (
+{heroLeads && first ? <Section section={first} components={{ Hero: LeadingHero }} /> : (
   <header class="page-header">
     <h1>{title}</h1>
   </header>

@@ -25,26 +25,41 @@ const ROUTES: Record<string, string> = {
   '/authors': 'AuthorsResponse',
   '/redirects': 'RedirectsResponse',
   '/sitemap': 'SitemapResponse',
+  '/areas': 'AreasResponse',
 }
+
+/** A site id as a first-party read names it. */
+export const SITE_ID = 'cd_8f2a'
 
 export interface FakeApi {
   version: number
   calls: URL[]
+  /** The headers of each call, in order. */
+  headers: Headers[]
   fetch: typeof fetch
 }
 
+/**
+ * Reads are answered for any caller; a preview needs secret-level reads: a
+ * secret key, or a first-party `X-BackGold-Site` (what the api's FirstParty
+ * entrypoint lets through) with no Authorization.
+ */
 export function fakeApi(version = 184): FakeApi {
   const api: FakeApi = {
     version,
     calls: [],
+    headers: [],
     fetch: (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(input instanceof Request ? input.url : String(input))
       api.calls.push(url)
       const headers = new Headers(input instanceof Request ? input.headers : init?.headers)
+      api.headers.push(headers)
       const path = url.pathname.replace(/^\/api\/content\/v1/, '')
       const common = { 'X-Content-Version': String(api.version) }
       if (path.startsWith('/preview/')) {
-        if (!headers.get('Authorization')?.startsWith('Bearer bg_site_sk_')) {
+        const secretKey = headers.get('Authorization')?.startsWith('Bearer bg_site_sk_') === true
+        const firstParty = headers.get('X-BackGold-Site') === SITE_ID && !headers.has('Authorization')
+        if (!secretKey && !firstParty) {
           return Response.json({ error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' }, { status: 403, headers: common })
         }
         const token = path.slice('/preview/'.length)

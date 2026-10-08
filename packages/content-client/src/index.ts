@@ -7,6 +7,7 @@ import './builtin-types.js'
 // imports.
 export * from './contract.js'
 export { createClient } from './client.js'
+export { visibleNow } from './areas.js'
 export { cacheApiStore, kvStore, memoryCache } from './cache.js'
 export type { CacheApiStoreOptions, CacheLike, KvStoreOptions, MemoryCacheOptions } from './cache.js'
 export { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'

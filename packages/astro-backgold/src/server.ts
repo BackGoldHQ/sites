@@ -23,3 +23,6 @@ export { jsonLdFor, robotsTxt, seoHead, serializeJsonLd, sitemapXml } from './se
 export type { JsonLdInput, SeoHead, SeoProps } from './server/seo.js'
 export { llmsFullTxt, llmsTxt } from './server/llms.js'
 export { atomFeed } from './server/feeds.js'
+export { areaEntriesOf, headerButtonOf, menuOf } from './server/render.js'
+export type { AreaEntry, MenuNode, MenuPage } from './server/render.js'
+export { visibleNow } from '@backgold/content'

@@ -4,7 +4,7 @@
 // authored string reaches the page either as text Astro escapes or as the
 // output of the allowlist sanitizer.
 
-import type { MenuItem, Section, SectionEmbed } from '@backgold/content'
+import type { AreaItem, Areas, MenuItem, Section, SectionEmbed } from '@backgold/content'
 import type { BackgoldLocals } from './context.js'
 import { isPreviewPath } from './edge-cache.js'
 import { sanitizeRichText } from './markdown.js'
@@ -22,10 +22,12 @@ const RICH_PROSE = /^\s*<\s*(p|br|strong|em|a)[\s/>]/i
 
 export type CopyBlock = { key: string; html: string } | { key: string; paragraphs: string[] }
 
-/** The section's heading (`heading`, else `title`) and every other copy value in order. */
+const HEADING_KEYS = ['heading', 'title', 'headline'] as const
+
+/** The section's heading (`heading`, else `title`, else `headline`) and every other copy value in order. */
 export function copyOf(section: Section): { heading: string | null; blocks: CopyBlock[] } {
   const copy = section.copy ?? {}
-  const headingKey = typeof copy.heading === 'string' && copy.heading.trim() ? 'heading' : typeof copy.title === 'string' && copy.title.trim() ? 'title' : null
+  const headingKey = HEADING_KEYS.find((key) => typeof copy[key] === 'string' && copy[key].trim() !== '') ?? null
   const blocks: CopyBlock[] = []
   for (const [key, value] of Object.entries(copy)) {
     if (key === headingKey || typeof value !== 'string' || !value.trim()) continue
@@ -182,8 +184,15 @@ export function firstOnPage(request: Request, key: string): boolean {
 
 // ── Menus ────────────────────────────────────────────────────────────────────
 
+/** What a menu's Shows on rules read about the page being drawn: its id and whether it takes donations. */
+export interface MenuPage {
+  id: string
+  takes_donations: boolean
+}
+
 export interface MenuNode {
   label: string
+  kind: MenuItem['kind']
   href: string | null
   rel: 'noopener' | undefined
   current: boolean
@@ -194,19 +203,109 @@ function trimSlash(path: string): string {
   return path.length > 1 ? path.replace(/\/+$/, '') : path
 }
 
-/** The menu with safe addresses, the current page marked. An item whose address is unsafe keeps its label and children. */
-export function menuOf(items: readonly MenuItem[], pathname: string): MenuNode[] {
-  const here = trimSlash(pathname)
-  return items.map((item) => {
-    const link = item.url === null ? null : linkOf(item.label, item.url, item.external)
-    return {
-      label: item.label,
-      href: link?.href ?? null,
-      rel: link?.rel,
-      current: link !== null && link.href.startsWith('/') && trimSlash(link.href) === here,
-      children: menuOf(item.children ?? [], pathname),
+/**
+ * Whether an item's own Shows on rule shows it on `page` (null: a route with
+ * no BackGold page). A rule this version does not know shows the item.
+ */
+function ruleShows(item: MenuItem, page: MenuPage | null): boolean {
+  const showsOn = item.shows_on
+  switch (showsOn?.rule) {
+    case 'only_pages':
+      return page !== null && showsOn.pages.some((p) => p.id === page.id)
+    case 'except_pages':
+      return page === null || !showsOn.pages.some((p) => p.id === page.id)
+    case 'donation_pages':
+      return page?.takes_donations === true
+    default:
+      return true
+  }
+}
+
+function nodeOf(item: MenuItem, here: string, children: MenuNode[]): MenuNode {
+  const link = item.url === null ? null : linkOf(item.label, item.url, item.external)
+  return {
+    label: item.label,
+    kind: item.kind,
+    href: link?.href ?? null,
+    rel: link?.rel,
+    current: link !== null && link.href.startsWith('/') && trimSlash(link.href) === here,
+    children,
+  }
+}
+
+function nodesOf(items: readonly MenuItem[], here: string, page: MenuPage | null | undefined): MenuNode[] {
+  const out: MenuNode[] = []
+  for (const item of items) {
+    const children = nodesOf(item.children ?? [], here, page)
+    if (page !== undefined) {
+      if (item.header_button) continue
+      if (item.kind === 'group' ? children.length === 0 : !ruleShows(item, page)) continue
     }
-  })
+    out.push(nodeOf(item, here, children))
+  }
+  return out
+}
+
+/**
+ * The menu with safe addresses, the current page marked. An item whose
+ * address is unsafe keeps its label and children. With `page` (a page, or
+ * null on a route with no BackGold page) each item's Shows on rule applies,
+ * a group keeps the children that show and is left out when none does, and
+ * the header button is left out (`headerButtonOf` answers it). Without
+ * `page` every item is kept.
+ */
+export function menuOf(items: readonly MenuItem[], pathname: string, page?: MenuPage | null): MenuNode[] {
+  return nodesOf(items, trimSlash(pathname), page)
+}
+
+/**
+ * The top-level header button when it shows on `page` (always, without
+ * `page`) and its address is safe; otherwise null, and nothing takes its place.
+ */
+export function headerButtonOf(items: readonly MenuItem[], pathname: string, page?: MenuPage | null): MenuNode | null {
+  const item = items.find((i) => i.header_button)
+  if (!item || (page !== undefined && !ruleShows(item, page))) return null
+  const node = nodeOf(item, trimSlash(pathname), [])
+  return node.href === null ? null : node
+}
+
+// ── Areas ────────────────────────────────────────────────────────────────────
+
+export interface AreaEntry {
+  item: AreaItem
+  /**
+   * True when the item has a `from` or an `until` that is a date (a malformed
+   * one counts as unset, as `visibleNow` reads it): it starts hidden and the
+   * page's script reveals it.
+   */
+  needsWindow: boolean
+}
+
+/** An instant as Unix milliseconds; null when unset or not a date `Date.parse` reads (as `visibleNow` reads it). */
+function instant(value: string | null | undefined): number | null {
+  if (value === null || value === undefined) return null
+  const ms = Date.parse(value)
+  return Number.isNaN(ms) ? null : ms
+}
+
+/** The area's items whose `until` has not passed, in order; an item whose `from` is ahead is kept. */
+export function areaEntriesOf(areas: Areas | null | undefined, name: string, now: number = Date.now()): AreaEntry[] {
+  const items = areas && Object.hasOwn(areas, name) ? (areas[name] ?? []) : []
+  return items
+    .filter((item) => {
+      const until = instant(item.until)
+      return until === null || until > now
+    })
+    .map((item) => ({ item, needsWindow: instant(item.from) !== null || instant(item.until) !== null }))
+}
+
+// ── Preview markers ──────────────────────────────────────────────────────────
+
+export { isPreviewPath }
+
+/** A section's preview marker id: `bg-section-` and the section id, each character outside `[A-Za-z0-9_-]` as `-`. */
+export function sectionMarkerId(sectionId: string): string {
+  return `bg-section-${sectionId.replace(/[^A-Za-z0-9_-]/g, '-')}`
 }
 
 // ── Analytics ────────────────────────────────────────────────────────────────

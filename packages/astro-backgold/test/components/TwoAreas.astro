@@ -1,0 +1,13 @@
+---
+import type { Areas } from '@backgold/content'
+import Area from '../../components/Area.astro'
+
+interface Props {
+  areas: Areas
+}
+
+const { areas } = Astro.props
+---
+<Area name="top_banner" areas={areas} />
+<main></main>
+<Area name="above_footer" areas={areas} />

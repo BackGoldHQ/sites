@@ -1,7 +1,7 @@
 import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
 import { describe, expect, it } from 'vitest'
 import { PREVIEW_HEADERS, handlePreview, loadPreview } from '../src/server/preview.js'
-import { API_ORIGIN, PK, SK, fakeApi } from './fixtures.js'
+import { API_ORIGIN, PK, SITE_ID, SK, fakeApi } from './fixtures.js'
 
 const link = (query: string) => new Request(`https://pinevalleyliberty.org/preview?${query}`)
 
@@ -90,6 +90,38 @@ describe('handlePreview', () => {
       await handlePreview(link('bg_preview=tok_good'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: api.fetch })
     }
     expect(api.calls.filter((u) => u.pathname.endsWith('/preview/tok_good'))).toHaveLength(3)
+  })
+})
+
+describe('handlePreview in first-party mode', () => {
+  it('reads the draft through the binding as the site, with no secret key', async () => {
+    const api = fakeApi()
+    const result = await handlePreview(link('bg_preview=tok_good&path=%2Fissues'), {
+      secretKey: undefined,
+      apiOrigin: API_ORIGIN,
+      firstParty: { siteId: SITE_ID, fetch: api.fetch },
+    })
+    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues' })
+    expect(api.headers).toHaveLength(1)
+    expect(api.headers[0]!.get('X-BackGold-Site')).toBe(SITE_ID)
+    expect(api.headers[0]!.has('Authorization')).toBe(false)
+  })
+
+  it('takes precedence over a secret key and the public fetch', async () => {
+    const binding = fakeApi()
+    const pub = fakeApi()
+    const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: pub.fetch, firstParty: { siteId: SITE_ID, fetch: binding.fetch } })
+    expect(result.ok).toBe(true)
+    expect(pub.calls).toHaveLength(0)
+    expect(binding.headers[0]!.has('Authorization')).toBe(false)
+  })
+
+  it('answers the same errors', async () => {
+    const result = await handlePreview(link('bg_preview=tok_forged'), { secretKey: undefined, apiOrigin: API_ORIGIN, firstParty: { siteId: SITE_ID, fetch: fakeApi().fetch } })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(400)
+    for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
   })
 })
 

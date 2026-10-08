@@ -1,6 +1,6 @@
 {
   "name": "@backgold/astro",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Astro on Cloudflare Workers for a BackGold headless site: edge cache keyed by content version, webhook, preview, redirects, SEO routes and components",
   "license": "MIT",
   "type": "module",

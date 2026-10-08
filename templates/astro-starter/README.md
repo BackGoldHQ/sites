@@ -147,13 +147,16 @@ Everything you see is in `src/`, and none of it is generated:
 
 ```
 src/
-  layouts/Site.astro           the head, header, menus, footer and legal line
-  pages/[...path].astro        every address: pages, lists, entries, authors, tags, feeds
+  layouts/Site.astro           the head, header, menus and header button, Top banner,
+                               Above the footer, footer and legal line
+  pages/[...path].astro        every address: pages, lists, entries, authors, tags, feeds;
+                               the Sidebar beside a page or an entry
   pages/preview.astro          drafts, opened from BackGold's "Preview on your site"
   pages/404.astro              the not-found page
   pages/backgold-setup.astro   shown until the site key is set
   components/sections/         one component per section type, and index.ts
-  components/EntryArticle.astro, EntryCard.astro, FieldValue.astro, PageSections.astro
+  components/EntryArticle.astro, EntryCard.astro, FieldValue.astro, PageSections.astro,
+             LeadingHero.astro
   styles/site.css              the whole look
   lib/brand.ts                 the brand colours and the five band grounds
 ```
@@ -163,6 +166,11 @@ src/
   each type to its component; replace a component, or point a type at your
   own. A type you do not list (including one BackGold adds later) renders
   through the package's `DefaultSection`, so nothing goes missing.
+- **Layouts.** A section's `variant` is the Layout chosen for it in BackGold.
+  `<Section>` looks it up as `'<Type>:<layout>'` first, then `'<Type>'`, so
+  you can give one layout a component of its own (`'Hero:split'` in
+  `index.ts`) and leave the rest to the type's component, which also gets
+  the layout as its `variant` prop.
 - **Bands.** Each section has a `band`, the ground it sits on (`plain`,
   `tint`, `panel`, `wash`, `contrast`), and a `bleed` (`full` edge to edge, or
   `contained` as a card). They arrive as the classes `bg-band-<band>` and
@@ -176,11 +184,68 @@ src/
   `--button` and `--button-ink`.
 - **Type.** The system font stack and a fluid type scale, set at the top of
   `site.css`. Add a web font there if the design calls for one.
+- **Areas and the header button.** An area's items are
+  `<aside class="bg-area bg-area-<name>">` (the Sidebar's also `rail`), and
+  the header button is `<a class="bg-menu-button button">`; `site.css`
+  styles both, and `.layout-split` (a page or an entry whose Sidebar has an
+  item) sets the Sidebar beside the main column.
 
 Every link and image address that reaches a page goes through `safeHref` or
 `safeSrc` from `@backgold/astro/server` (the rule the package's own components
 follow), and BackGold's rich text through its sanitizer. Keep that when you
 write your own components.
+
+## Menus and the header button
+
+The organization edits one header menu and one footer menu in BackGold;
+`Site.astro` reads both and draws them with the package's `<Menu>`. Each link
+has a **Shows on** rule (every page, only some pages, every page but some, or
+only pages that take donations), and the package applies it against the page
+being drawn: every route passes the layout `page`, the BackGold page as
+`{ id, takes_donations }` or `null` on a list, an entry, an author, a tag or
+the 404. The link marked as the header button leaves the menu and
+`<MenuButton>` draws it at the right of the header on the pages its rule
+names, with the starter's `.button` look; where it does not show, nothing
+takes its place.
+
+To move the button, move the `<MenuButton>` line in `Site.astro`. To ignore
+the rules, leave out `page` on `<Menu>` and `<MenuButton>`: every link shows,
+and the button is drawn on every page.
+
+## Areas
+
+An area is a place on the site that holds the same sections on many pages: a
+countdown banner, a sign-up in the sidebar. The organization fills areas in
+BackGold, and each page, entry or list arrives with its `areas`. The starter
+draws three, each with the package's `<Area>`:
+
+- **Top banner** (`top_banner`), under the header, in `Site.astro`;
+- **Sidebar** (`sidebar`), beside the main column of a page or an entry (after
+  it on a narrow screen), in `[...path].astro`; with nothing in it, the page
+  keeps one column;
+- **Above the footer** (`above_footer`), over the footer, in `Site.astro`.
+
+To draw another area, add one line where it should go, with the area's key
+(the Content API's `GET /site` lists every area with its key):
+
+```astro
+<Area name="<the area's key>" areas={areas} components={sections} />
+```
+
+An item with a start or an end date is sent hidden and shown in the browser
+while its dates hold, so a cached page still shows and hides it on time; with
+scripts off, a dated item does not show. An area with nothing in it draws
+nothing.
+
+## Section markers
+
+On the `/preview` page every section is preceded by an empty, hidden marker
+(`<span id="bg-section-<id>" data-bg-section hidden>`) and the head carries
+`<meta name="backgold-preview" content="sections">`, so the BackGold editor
+can scroll the preview to the section being edited. Published pages carry
+neither. Keep drawing sections with the package's `<Section>` and the markers
+come with it; if you write your own loop, write the same marker before each
+section and keep the package's `<Seo>` (or the meta) in the head.
 
 ## Your own content types
 
@@ -243,6 +308,7 @@ Nothing here runs an A/B test, but the three things one needs are in place:
    visitor, for a server-side pick and for analytics alike.
 3. `<Section>` takes a **`variant`** prop: add a component to the sections map
    as `'<Type>:<variant>'` (say `'Hero:b'`) and pass `variant="b"` to show it.
+   The prop wins over the section's stored layout.
 
 ## Develop locally
 

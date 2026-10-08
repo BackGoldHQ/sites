@@ -14,10 +14,10 @@ const site = (CONTENT_API_EXAMPLES.SiteResponse as SiteResponse).site
 const ready = (): BackgoldLocals =>
   ({ client: null, site, legal: { disclaimer: null, required: true }, version: 1, siteUrl: SITE_URL, variant: '', visitorId: null, setup: null }) as unknown as BackgoldLocals
 
-async function render(props: Record<string, unknown>, backgold: BackgoldLocals = ready()): Promise<string> {
+async function render(props: Record<string, unknown>, backgold: BackgoldLocals = ready(), url?: string): Promise<string> {
   const { default: Seo } = await import('../components/Seo.astro')
   const container = await AstroContainer.create()
-  return container.renderToString(Seo, { props, locals: { backgold } })
+  return container.renderToString(Seo, { props, locals: { backgold }, ...(url ? { request: new Request(url) } : {}) })
 }
 
 describe.skipIf(!BUILT)('<Seo> (container API; needs `pnpm build`)', () => {
@@ -55,6 +55,16 @@ describe.skipIf(!BUILT)('<Seo> (container API; needs `pnpm build`)', () => {
     expect(html).toContain('<script type="application/ld+json">{"@type":"BlogPosting","headline":"\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e"}</script>')
     expect(html.match(/<\/script>/g)).toHaveLength(1)
     expect(html).toContain('<meta property="og:type" content="article">')
+  })
+
+  it('tells the BackGold editor about the section markers on the preview page only', async () => {
+    const meta = '<meta name="backgold-preview" content="sections">'
+    expect(await render({ canonicalPath: '/' }, ready(), `${SITE_URL}/preview?bg_preview=tok_good&path=%2F`)).toContain(meta)
+    expect(await render({ canonicalPath: '/' }, ready(), `${SITE_URL}/preview/x`)).toContain(meta)
+    for (const url of [`${SITE_URL}/`, `${SITE_URL}/previews`, `${SITE_URL}/issues?bg_preview=tok_good`]) {
+      expect(await render({ canonicalPath: '/' }, ready(), url), url).not.toContain('backgold-preview')
+    }
+    expect(await render({ canonicalPath: '/' })).not.toContain('backgold-preview')
   })
 
   it('renders the canonical alone while the site is in setup', async () => {

@@ -1,0 +1,73 @@
+---
+// One area of the page (`page.areas`, `entry.areas`, a list's or `/areas`'
+// `areas`): nothing when it is empty, otherwise one `<aside>` per item whose
+// `until` has not passed, its sections drawn through <Section>. An item with
+// a `from` or an `until` that is a date (a malformed one counts as unset, as
+// in `visibleNow`) is `hidden` in the HTML and shown by the page's one
+// inline script while its window holds (a timer re-checks at the next
+// moment), so with scripts off a dated item never shows. The script is
+// static: the moments reach it only through the attributes Astro escapes.
+import type { Areas } from '@backgold/content'
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
+import { areaEntriesOf, firstOnPage } from '../dist/render.js'
+import Section from './Section.astro'
+
+interface Props {
+  name: string
+  areas: Areas | null | undefined
+  components?: Record<string, AstroComponentFactory>
+  class?: string
+}
+
+const { name, areas, components, class: className } = Astro.props
+const entries = areaEntriesOf(areas, name)
+const windowScript = entries.some((e) => e.needsWindow) && firstOnPage(Astro.request, 'backgold:areas')
+---
+{entries.map(({ item, needsWindow }) => (
+  <aside
+    class:list={['bg-area', `bg-area-${name}`, className]}
+    data-bg-area={name}
+    data-bg-area-item={item.key}
+    aria-label={item.label}
+    data-from={item.from ?? undefined}
+    data-until={item.until ?? undefined}
+    hidden={needsWindow}
+  >
+    {item.sections.map((section) => <Section section={section} components={components} />)}
+  </aside>
+))}
+{windowScript && (
+  <script is:inline>
+    (function () {
+      var timer
+      function at(el, name) {
+        var value = el.getAttribute(name)
+        if (value === null) return null
+        var ms = Date.parse(value)
+        return isNaN(ms) ? null : ms
+      }
+      function run() {
+        var now = Date.now()
+        var next = Infinity
+        var items = document.querySelectorAll('[data-bg-area-item][data-from], [data-bg-area-item][data-until]')
+        for (var i = 0; i < items.length; i++) {
+          var from = at(items[i], 'data-from')
+          var until = at(items[i], 'data-until')
+          items[i].hidden = !((from === null || from <= now) && (until === null || until > now))
+          if (from !== null && from > now && from < next) next = from
+          if (until !== null && until > now && until < next) next = until
+        }
+        clearTimeout(timer)
+        if (next !== Infinity) timer = setTimeout(run, Math.min(next - now, 2147483647))
+      }
+      run()
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run)
+    })()
+  </script>
+)}
+
+<style>
+  .bg-area[hidden] {
+    display: none;
+  }
+</style>

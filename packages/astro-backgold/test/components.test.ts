@@ -72,7 +72,8 @@ describe('DefaultSection', () => {
   it('marks the section by type, band and bleed', async () => {
     const html = await render(DefaultSection, { props: { section: hero } })
     expect(html).toMatch(/<section class="bg-section bg-band-contrast bg-bleed-full" data-type="Hero" data-band="contrast" data-bleed="full"/)
-    expect(html).toContain('<p data-copy="headline" data-astro-cid-')
+    expect(html).toMatch(/<h2[^>]*>Keep more of what you earn\.<\/h2>/)
+    expect(html).not.toContain('data-copy="headline"')
     expect(html).toContain('Keep more of what you earn.')
     expect(html).toMatch(/<img src="https:\/\/api\.backgold\.com\/api\/lp-assets\/a1\/hero\.webp" alt loading="lazy"/)
     expect(html).toMatch(/<a href="\/get-involved"[^>]*>Get involved<\/a>/)
@@ -281,7 +282,7 @@ describe('Disclaimer', () => {
 
 describe('PreviewBar', () => {
   it('says the page is a draft', async () => {
-    expect(await render(PreviewBar)).toMatch(/<div data-backgold-preview-bar role="status" class="bg-preview-bar"[^>]*>Preview — not published<\/div>/)
+    expect(await render(PreviewBar)).toMatch(/<div data-backgold-preview-bar role="status" class="bg-preview-bar"[^>]*>Preview, not published<\/div>/)
   })
 })
 

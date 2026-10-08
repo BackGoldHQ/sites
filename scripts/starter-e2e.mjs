@@ -46,6 +46,9 @@ const PREVIEW_TOKEN = 'tok_e2e_draft'
 // whole `import.meta.env` and mentions the variable's name (PATH is in
 // SETUP_PATH), so a build-time secret could end up in the bundle.
 const BUILD_CANARY = `bg-build-env-canary-${process.pid}`
+// The example's Top banner item ends on a fixed day; the fixture moves its
+// `until` a month past the run so the item is always still current.
+const BANNER_UNTIL = new Date(Date.now() + 30 * 86400000).toISOString()
 
 const children = new Set()
 const servers = new Set()
@@ -134,7 +137,7 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // @backgold/astro depends on @backgold/content ^0.1.0; the override makes
+  // @backgold/astro depends on @backgold/content ^0.2.0; the override makes
   // that the tarball too, never the copy on npm.
   pkg.overrides = { '@backgold/content': content }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
@@ -353,7 +356,7 @@ async function kitchenSink() {
     orgSlug: 'pine-valley',
     embedUrls: shared.contentApiEmbedUrls(origins),
   })
-  return { blocks: shared.CONTENT_API_BLOCKS, doc, sections }
+  return { blocks: shared.CONTENT_API_BLOCKS, areaBlocks: shared.CONTENT_API_AREA_BLOCKS, doc, sections }
 }
 
 
@@ -367,6 +370,59 @@ function fixtureData(ex, kitchenSections) {
   const site = ex.SiteResponse.site
   const hero = ex.PageResponse.sections[0]
   const donate = ex.PageResponse.sections[1]
+  const homeAreas = structuredClone(ex.PageResponse.areas)
+  homeAreas.top_banner[0].until = BANNER_UNTIL
+  // An entry's areas: the example's (its dated Top banner moved like home's)
+  // with one undated item in the Sidebar.
+  const entryAreas = structuredClone(ex.EntryResponse.areas)
+  entryAreas.top_banner[0].until = BANNER_UNTIL
+  entryAreas.sidebar = [
+    {
+      key: 'read-the-budget',
+      label: 'Read the budget',
+      from: null,
+      until: null,
+      sections: [
+        {
+          id: 'Cta-entry-rail',
+          type: 'Cta',
+          band: 'panel',
+          bleed: 'full',
+          variant: null,
+          copy: { heading: 'Read the whole budget' },
+          media: {},
+          links: [{ label: 'Open it', target: { kind: 'page', slug: 'budget' }, url: '/budget' }],
+          options: {},
+        },
+      ],
+    },
+  ]
+  // The Issues page has one undated item in its Sidebar, and nothing else.
+  const issuesAreas = {
+    top_banner: [],
+    sidebar: [
+      {
+        key: 'saturday-walk',
+        label: 'Saturday walk',
+        from: null,
+        until: null,
+        sections: [
+          {
+            id: 'Cta-rail',
+            type: 'Cta',
+            band: 'panel',
+            bleed: 'full',
+            variant: null,
+            copy: { heading: 'Walk with us Saturday' },
+            media: {},
+            links: [{ label: 'Sign up', target: { kind: 'page', slug: 'volunteer' }, url: '/volunteer' }],
+            options: {},
+          },
+        ],
+      },
+    ],
+    above_footer: [],
+  }
 
   const types = [
     { key: 'post', singular_label: 'Post', plural_label: 'Posts', routable: true, url_base: null, built_in: true, fields: [] },
@@ -585,11 +641,12 @@ function fixtureData(ex, kitchenSections) {
     ],
     page: (slug, headline) =>
       slug === 'home'
-        ? { ...ex.PageResponse, sections: homeSections(headline) }
+        ? { ...ex.PageResponse, sections: homeSections(headline), areas: homeAreas }
         : slug === 'issues'
           ? {
               page: { ...ex.PageResponse.page, id: 'lp_issues', slug: 'issues', title: 'Issues', url: '/issues', is_home: false, meta: { title: null, description: 'What we will do.', image_url: null } },
               sections: issuesSections,
+              areas: issuesAreas,
               legal,
             }
           : slug === 'kitchen-sink'
@@ -599,6 +656,7 @@ function fixtureData(ex, kitchenSections) {
                 legal,
               }
             : null,
+    entryAreas,
     entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary] },
     entry: { post: { [post.slug]: post, [secondPost.slug]: secondPost }, endorsement: { [endorsement.slug]: endorsement } },
     terms: { tag: ex.TermsResponse },
@@ -696,7 +754,7 @@ function startFixture(examples, kitchenSections) {
         if (!list) break
         if (parts[2] !== undefined) {
           const entry = data.entry[parts[1]]?.[parts[2]]
-          body = entry ? { entry } : undefined
+          body = entry ? { entry, areas: data.entryAreas } : undefined
           break
         }
         const term = url.searchParams.get('term')
@@ -725,6 +783,7 @@ function startFixture(examples, kitchenSections) {
       servers.add(server)
       state.origin = `http://127.0.0.1:${server.address().port}`
       resolveServer({
+        data,
         origin: `http://127.0.0.1:${server.address().port}`,
         port: server.address().port,
         state,
@@ -851,13 +910,47 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(!html.includes('auto:total'), 'a live (auto:) stat is not printed')
   assertNoSecrets(html, 'home')
 
+  const banner = fixture.data.page('home', '').areas.top_banner[0]
+  const bannerTag = /<aside\b[^>]*data-bg-area="top_banner"[^>]*>/.exec(html)?.[0] ?? ''
+  check(bannerTag !== '', 'home draws its Top banner area item (data-bg-area="top_banner")')
+  check(
+    bannerTag.includes(`data-until="${banner.until}"`) && /\shidden(?=[\s>=])/.test(bannerTag),
+    'the dated Top banner item carries its data-until and starts hidden',
+  )
+  check(html.includes(banner.sections[0].copy.headline) && html.includes(banner.sections[0].copy.pitch), "the Top banner's TakeoverBanner shows its headline and pitch")
+  check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'published home carries no section markers and no preview meta')
+  check(html.indexOf('data-bg-area="top_banner"') < html.indexOf('<main'), 'the Top banner sits above the main column')
+  check(html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('<footer'), 'Above the footer sits between the main column and the footer')
+  const windowScripts = html.split('[data-bg-area-item][data-from]').length - 1
+  check(windowScripts === 1, `the areas' window script is on the page once (found ${windowScripts})`)
+  check(/<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html), 'home (it takes donations) shows the Donate header button')
+  check(!/<nav\b[^>]*>(?:(?!<\/nav>)[\s\S])*>Donate<\/a>/.test(html), 'the header button is not also a menu link')
+  check(!html.includes('href="/issues"'), "home leaves out Issues (Shows on: only the Issues page)")
+  check(!html.includes('href="/#volunteer"'), 'home leaves out Volunteer (Shows on: every page except home)')
+  check(!html.includes('layout-rail') && !html.includes('layout-split'), 'home, with nothing in its Sidebar, is one column with no rail markup')
+
   res = await get(origin, '/blog/levy-explained')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>The levy, explained<\/h1>/.test(html), 'an entry page renders its title as the <h1>')
   check(/<time datetime="2026-09-29T12:00:00.000Z">/.test(html), 'the entry date is a <time datetime>')
   check(html.includes(disclaimer), 'the entry page shows the disclaimer')
-  const scripts = tags(html, 'script')
-  check(scripts.every((s) => /type="application\/ld\+json"/.test(s)), `a page with no embed loads no script (${scripts.length} script tag(s), all JSON-LD)`)
+  check(!html.includes('data-bg-donate'), 'an entry page (no BackGold page) shows no Donate header button')
+  check(html.includes('href="/#volunteer"') && !html.includes('href="/issues"'), 'an entry page shows Volunteer and leaves out Issues')
+  check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published entry carries no section markers and no preview meta')
+  // An entry with no embed loads no script but JSON-LD and, because its areas
+  // hold a dated item, the areas' one window script.
+  const dated = Object.values(fixture.data.entryAreas).flat().some((item) => item.from !== null || item.until !== null)
+  const scripts = tags(html, 'script').filter((s) => !/type="application\/ld\+json"/.test(s))
+  const entryWindowScripts = html.split('[data-bg-area-item][data-from]').length - 1
+  check(
+    scripts.length === entryWindowScripts && entryWindowScripts === (dated ? 1 : 0),
+    `an entry with no embed loads only JSON-LD${dated ? " and the areas' window script once" : ''} (${scripts.length} other script tag(s))`,
+  )
+  const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
+  check(
+    entryRail.includes('data-bg-area="sidebar"') && html.includes(fixture.data.entryAreas.sidebar[0].sections[0].copy.heading) && /class="layout layout-split"/.test(html),
+    "an entry page draws its Sidebar item from the EntryResponse's areas beside the article",
+  )
   assertNoSecrets(html, 'entry')
 
   res = await get(origin, '/endorsements')
@@ -902,13 +995,31 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(/no-store/.test(res.headers.get('cache-control') ?? '') && !res.headers.has('x-backgold-cache'), '/preview is no-store and never goes through the edge cache')
   res = await get(origin, `/preview?bg_preview=${PREVIEW_TOKEN}&path=/`)
   html = await res.text()
-  check(res.status === 200 && html.includes('Preview — not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
+  check(res.status === 200 && html.includes('Preview, not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
   check(/<meta name="robots" content="noindex"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'the preview is noindex and no-store')
+  check(html.includes('<meta name="backgold-preview" content="sections">'), 'the preview carries <meta name="backgold-preview" content="sections">')
+  const draft = fixture.data.page('home', '')
+  const draftIds = [...draft.sections, ...Object.values(draft.areas).flat().flatMap((item) => item.sections)].map((s) => s.id)
+  const markers = [...html.matchAll(/<span\b[^>]*data-bg-section[^>]*>/g)].map((m) => /id="([^"]*)"/.exec(m[0])?.[1])
+  check(
+    markers.length === draftIds.length && draftIds.every((id) => markers.includes(`bg-section-${id.replace(/[^A-Za-z0-9_-]/g, '-')}`)),
+    `the preview has one data-bg-section marker per section of the draft, areas included (${markers.length} for ${draftIds.length})`,
+  )
+  check(/data-bg-donate/.test(html), 'a draft page that takes donations shows the Donate header button')
   assertNoSecrets(html, 'preview')
 
   res = await get(origin, '/issues')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>Issues<\/h1>/.test(html), 'a page without a leading Hero shows its title as the <h1>')
+  check(/<a href="\/issues"[^>]*aria-current="page"[^>]*>Issues<\/a>/.test(html), 'the Issues page shows its Issues link (Shows on: only this page), marked current')
+  check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published page carries no section markers and no preview meta')
+  const rail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
+  check(
+    rail.includes('data-bg-area="sidebar"') && /class="[^"]*\brail\b/.test(rail) && !/\shidden(?=[\s>=])/.test(rail) && html.includes('Walk with us Saturday'),
+    "the Issues page's undated Sidebar item is a .rail beside the main column, shown",
+  )
+  check(html.indexOf('layout-main') < html.indexOf('data-bg-area="sidebar"'), 'the Sidebar comes after the main column in the HTML')
+  check(!html.includes('[data-bg-area-item][data-from]'), 'a page whose areas carry no dates has no window script')
   check(html.includes('Avery Lin') && html.includes('Come to a meeting') && !html.includes('Top chapters'), 'data sections render their rows; an empty Leaderboard renders nothing')
 
   log('\nCaching')
@@ -1151,8 +1262,13 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
   check(rendered.length === types.length - ALWAYS_EMPTY.length, `no section renders twice or unasked (${rendered.length} sections)`)
 }
 
-/** Every non-chrome, non-compliance block type has a component of its own in the template. */
-function checkSectionsMap(blocks) {
+/**
+ * Every non-chrome, non-compliance block type has a component of its own in
+ * the template. A block the api projects only inside an area (areaBlocks)
+ * counts with its area role.
+ */
+function checkSectionsMap(chromeBlocks, areaBlocks) {
+  const blocks = { ...chromeBlocks, ...areaBlocks }
   const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
@@ -1186,7 +1302,7 @@ async function main() {
   const examples = await loadExamples()
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
-  checkSectionsMap(kitchen.blocks)
+  checkSectionsMap(kitchen.blocks, kitchen.areaBlocks)
   const fixture = await startFixture(examples, kitchen.sections)
   log(`Fixture Content API: ${fixture.origin}`)
   writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)

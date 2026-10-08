@@ -1,7 +1,8 @@
 // GET /preview — BackGold's "Preview on your site" link and the Developer
 // page's test preview: `?bg_preview=<token>&path=<path>`. The page is the
 // site's own (so a draft renders in its layout); it calls `loadPreview`.
-// The draft is read with the secret key by a client made for this request
+// The draft is read with the secret key, or in first-party mode as the site
+// through the `BACKGOLD_API` binding, by a client made for this request
 // alone (its store is a fresh memory map, and the client never stores a
 // preview read anyway).
 // Every answer, draft or error, carries PREVIEW_HEADERS (private, no-store;
@@ -11,7 +12,7 @@
 
 import { BackgoldApiError, createClient, memoryCache, previewFromRequest } from '@backgold/content'
 import type { PreviewResponse } from '@backgold/content'
-import { DEFAULT_API_ORIGIN, text, workerEnv } from './env.js'
+import { DEFAULT_API_ORIGIN, firstPartyOf, text, workerEnv } from './env.js'
 import { errorResponse } from './respond.js'
 import { isApiTimeout, withTimeout } from './timeout.js'
 
@@ -29,6 +30,11 @@ export interface PreviewDeps {
   apiOrigin: string
   /** Default `globalThis.fetch`. */
   fetch?: typeof fetch
+  /**
+   * First-party mode: the site id and the `BACKGOLD_API` binding's fetch.
+   * When given the draft is read through it, and `secretKey` and `fetch` are not used.
+   */
+  firstParty?: { siteId: string; fetch: typeof fetch }
 }
 
 export type PreviewResult =
@@ -43,7 +49,7 @@ const fail = (status: number, code: string, error: string): PreviewResult => ({
 /** The draft a preview link names, or the response to send instead. */
 export async function handlePreview(request: Request, deps: PreviewDeps): Promise<PreviewResult> {
   const notConfigured = fail(503, 'PREVIEW_NOT_CONFIGURED', NO_SECRET_KEY)
-  if (!deps.secretKey) return notConfigured
+  if (!deps.firstParty && !deps.secretKey) return notConfigured
   const asked = previewFromRequest(request.url)
   if (!asked) return fail(400, 'BAD_PREVIEW_TOKEN', 'This preview link has no bg_preview token.')
   // `.` and `..` would name a path outside /preview/; the client refuses them, and no token BackGold mints is one.
@@ -51,7 +57,10 @@ export async function handlePreview(request: Request, deps: PreviewDeps): Promis
 
   let client
   try {
-    client = createClient({ key: deps.secretKey, apiOrigin: deps.apiOrigin, cache: memoryCache({ max: 1 }), fetch: withTimeout(deps.fetch) })
+    const cache = memoryCache({ max: 1 })
+    client = deps.firstParty
+      ? createClient({ firstParty: { siteId: deps.firstParty.siteId }, apiOrigin: deps.apiOrigin, cache, fetch: withTimeout(deps.firstParty.fetch) })
+      : createClient({ key: deps.secretKey, apiOrigin: deps.apiOrigin, cache, fetch: withTimeout(deps.fetch) })
   } catch {
     return notConfigured
   }
@@ -69,11 +78,17 @@ export async function handlePreview(request: Request, deps: PreviewDeps): Promis
   }
 }
 
-/** `handlePreview` with the Worker's own `BACKGOLD_SECRET_KEY` and `BACKGOLD_API_ORIGIN`: what a site's `/preview` page calls. */
+/**
+ * `handlePreview` with the Worker's own environment: `BACKGOLD_SECRET_KEY`,
+ * or in first-party mode `BACKGOLD_SITE_ID` and the `BACKGOLD_API` binding,
+ * and `BACKGOLD_API_ORIGIN`. What a site's `/preview` page calls.
+ */
 export async function loadPreview(request: Request): Promise<PreviewResult> {
   const env = await workerEnv()
+  const firstParty = firstPartyOf(env)
   return handlePreview(request, {
     secretKey: text(env.BACKGOLD_SECRET_KEY),
     apiOrigin: text(env.BACKGOLD_API_ORIGIN) ?? DEFAULT_API_ORIGIN,
+    ...(firstParty ? { firstParty: { siteId: firstParty.siteId, fetch: (input, init) => firstParty.binding.fetch(input, init) } } : {}),
   })
 }

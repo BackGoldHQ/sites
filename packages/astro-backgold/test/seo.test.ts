@@ -122,6 +122,7 @@ describe('llmsTxt', () => {
         '- Get involved',
         `  - [Volunteer](${SITE_URL}/#volunteer)`,
         '  - [Our chapter](https://chapter.example.org/)',
+        '- [Donate](https://pine-valley.backgold.com/donate)',
         '',
         '## Posts',
         '',
