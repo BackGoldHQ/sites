@@ -7,6 +7,14 @@ export function errorResponse(status: number, code: string, error: string, heade
 export const siteNotConfigured = (): Response =>
   errorResponse(503, 'SITE_NOT_CONFIGURED', 'BACKGOLD_SITE_KEY is not set on this Worker.')
 
+/**
+ * A dispatched request that names no site (no well-formed `X-BackGold-Site`):
+ * a plain 404, never the setup page (nothing is misconfigured) and never a
+ * render; no cache keeps it.
+ */
+export const noSite = (): Response =>
+  new Response('No site.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+
 /** A 204 that no cache keeps. */
 export const noContent = (): Response => new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } })
 

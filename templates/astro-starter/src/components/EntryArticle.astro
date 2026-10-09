@@ -16,7 +16,8 @@ const { entry, type } = Astro.props
 const day = formatDay(entry.publish_at)
 const hero = entry.hero ? safeSrc(entry.hero.url) : null
 const media = safeSrc(entry.media_url)
-const base = type ? (type.built_in ? 'blog' : type.url_base) : null
+// The address the type's entries live under, as /types reports it (`blog` for post, podcast and video).
+const base = type ? (type.url_base ?? (type.built_in ? 'blog' : null)) : null
 
 type EntryAuthor = EntryDetail['authors'][number]
 const roles = new Map<string, EntryAuthor[]>()

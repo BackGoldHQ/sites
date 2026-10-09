@@ -30,6 +30,8 @@ const ROUTES: Record<string, string> = {
 
 /** A site id as a first-party read names it. */
 export const SITE_ID = 'cd_8f2a'
+/** A second site on the same template's shared Worker. */
+export const OTHER_SITE_ID = 'cd_9b1c'
 
 export interface FakeApi {
   version: number
@@ -58,7 +60,7 @@ export function fakeApi(version = 184): FakeApi {
       const common = { 'X-Content-Version': String(api.version) }
       if (path.startsWith('/preview/')) {
         const secretKey = headers.get('Authorization')?.startsWith('Bearer bg_site_sk_') === true
-        const firstParty = headers.get('X-BackGold-Site') === SITE_ID && !headers.has('Authorization')
+        const firstParty = [SITE_ID, OTHER_SITE_ID].includes(headers.get('X-BackGold-Site') ?? '') && !headers.has('Authorization')
         if (!secretKey && !firstParty) {
           return Response.json({ error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' }, { status: 403, headers: common })
         }
@@ -117,13 +119,16 @@ export interface FakeContext extends MiddlewareContextLike {
   setCookies: Array<{ name: string; value: string; options: unknown }>
 }
 
-export function fakeContext(path: string, opts: { method?: string; cookies?: Record<string, string>; origin?: string } = {}): FakeContext {
+export function fakeContext(
+  path: string,
+  opts: { method?: string; cookies?: Record<string, string>; origin?: string; headers?: Record<string, string> } = {},
+): FakeContext {
   const url = new URL(path, opts.origin ?? 'https://pinevalleyliberty.org')
   const setCookies: FakeContext['setCookies'] = []
   const incoming = opts.cookies ?? {}
   return {
     url,
-    request: new Request(url, { method: opts.method ?? 'GET' }),
+    request: new Request(url, { method: opts.method ?? 'GET', headers: opts.headers ?? {} }),
     locals: {},
     setCookies,
     cookies: {

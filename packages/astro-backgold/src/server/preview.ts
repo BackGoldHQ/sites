@@ -2,7 +2,8 @@
 // page's test preview: `?bg_preview=<token>&path=<path>`. The page is the
 // site's own (so a draft renders in its layout); it calls `loadPreview`.
 // The draft is read with the secret key, or in first-party mode as the site
-// through the `BACKGOLD_API` binding, by a client made for this request
+// (`BACKGOLD_SITE_ID`, or in the dispatched form the request's
+// `X-BackGold-Site`) through the `BACKGOLD_API` binding, by a client made for this request
 // alone (its store is a fresh memory map, and the client never stores a
 // preview read anyway).
 // Every answer, draft or error, carries PREVIEW_HEADERS (private, no-store;
@@ -80,12 +81,14 @@ export async function handlePreview(request: Request, deps: PreviewDeps): Promis
 
 /**
  * `handlePreview` with the Worker's own environment: `BACKGOLD_SECRET_KEY`,
- * or in first-party mode `BACKGOLD_SITE_ID` and the `BACKGOLD_API` binding,
- * and `BACKGOLD_API_ORIGIN`. What a site's `/preview` page calls.
+ * or in first-party mode the `BACKGOLD_API` binding and the site
+ * (`BACKGOLD_SITE_ID`, or in the dispatched form the request's
+ * `X-BackGold-Site`), and `BACKGOLD_API_ORIGIN`. What a site's `/preview`
+ * page calls.
  */
 export async function loadPreview(request: Request): Promise<PreviewResult> {
   const env = await workerEnv()
-  const firstParty = firstPartyOf(env)
+  const firstParty = firstPartyOf(env, request.headers)
   return handlePreview(request, {
     secretKey: text(env.BACKGOLD_SECRET_KEY),
     apiOrigin: text(env.BACKGOLD_API_ORIGIN) ?? DEFAULT_API_ORIGIN,

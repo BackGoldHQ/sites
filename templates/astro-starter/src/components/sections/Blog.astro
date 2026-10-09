@@ -1,7 +1,8 @@
 ---
 // Blog: the newest posts. The section carries no rows of its own, so it reads
-// the newest entries of the blog types (posts, podcasts, videos: every
-// built-in type with pages) and links to the full list at /blog.
+// the newest entries of the blog types (posts, podcasts, videos: the
+// built-in types /types reports at `blog`) and links to the full list at
+// /blog. A built-in with an address of its own, the newsletter, is not one.
 import type { Entry, Section } from '@backgold/content'
 import Band from './Band.astro'
 import EntryCard from '../EntryCard.astro'
@@ -21,7 +22,7 @@ const bg = Astro.locals.backgold
 let entries: Entry[] = []
 if (bg.setup === null) {
   const { types } = await bg.client.types()
-  const blogTypes = types.filter((t) => t.built_in && t.routable)
+  const blogTypes = types.filter((t) => t.built_in && t.routable && (t.url_base ?? 'blog') === 'blog')
   const lists = await Promise.all(blogTypes.map((t) => bg.client.entries(t.key, { limit: SHOWN })))
   entries = lists
     .flatMap((list) => list?.entries ?? [])

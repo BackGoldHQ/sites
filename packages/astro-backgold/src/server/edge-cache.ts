@@ -10,14 +10,21 @@ export interface EdgeCache {
   put(request: Request, response: Response): Promise<void>
 }
 
+import { CURSOR_PARAM, validCursor } from './cursor.js'
+
 const KEY_ORIGIN = 'https://backgold.cache'
 
 /**
- * Query names that enter the key. Empty: a query string never mints an
- * entry, so `/?x=1` and `/` share one. A name added here must be one the
- * renderer reads, or visitors can fill the cache with copies.
+ * Query names that enter the key, each with the check its value must pass:
+ * `cursor`, a list page past the first, when it is a cursor the api would
+ * accept. Every other name, and a value that fails its check, never mints an
+ * entry, so `/?x=1` and `/` share one and so do `/blog?cursor=junk` and
+ * `/blog`. A name added here must be one the renderer reads, or visitors can
+ * fill the cache with copies.
  */
-const CACHE_QUERY_ALLOWLIST: readonly string[] = []
+const CACHE_QUERY_ALLOWLIST: Readonly<Record<string, (value: string) => boolean>> = {
+  [CURSOR_PARAM]: (value) => validCursor(value) !== null,
+}
 
 /** How long an entry may live at the edge; a version bump retires it sooner. */
 const EDGE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
@@ -42,10 +49,16 @@ export function isUncachedPath(pathname: string, setupPath: string): boolean {
   )
 }
 
-/** The allowlisted query, sorted by name then value; empty when nothing is allowlisted. */
+/**
+ * Each allowlisted name's first value (the one the renderer reads) when it
+ * passes its check, sorted by name; empty when none does.
+ */
 function normalizedQuery(url: URL): string {
-  const kept = [...url.searchParams].filter(([name, value]) => CACHE_QUERY_ALLOWLIST.includes(name) && value !== '')
-  kept.sort(([a, x], [b, y]) => (a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0))
+  const kept: [string, string][] = []
+  for (const name of Object.keys(CACHE_QUERY_ALLOWLIST).sort()) {
+    const value = url.searchParams.get(name)
+    if (value && CACHE_QUERY_ALLOWLIST[name]!(value)) kept.push([name, value])
+  }
   return new URLSearchParams(kept).toString()
 }
 

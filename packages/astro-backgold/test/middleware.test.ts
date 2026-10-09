@@ -1,10 +1,11 @@
+import { encodeEntryCursor } from '@givegold/shared/content-api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor } from '../src/server/context.js'
 import { cacheKey } from '../src/server/edge-cache.js'
 import type { BackgoldEnv } from '../src/server/env.js'
 import { SETUP_PATH } from '../src/server/setup.js'
-import { API_ORIGIN, PK, SK, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
+import { API_ORIGIN, OTHER_SITE_ID, PK, SITE_ID, SK, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
 
 let api: FakeApi
 
@@ -179,6 +180,27 @@ describe('edge cache', () => {
     expect([...d.cache.stored.keys()]).toEqual(['https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/?'])
   })
 
+  it('keys a list page by its cursor, and only by a cursor the api would accept', async () => {
+    const page2 = encodeEntryCursor({ publish_at: '2026-09-01T00:00:00.000Z', id: 'ci_e1' })
+    const d = deps()
+    for (const path of ['/podcast', `/podcast?cursor=${page2}`, `/podcast?utm_source=x&cursor=${page2}&cursor=junk`, '/podcast?utm_source=x', '/podcast?cursor=abc', `/podcast?cursor=${'x'.repeat(600)}`]) {
+      await runMiddleware(fakeContext(path), html(), d)
+    }
+    expect([...d.cache.stored.keys()]).toEqual([
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/podcast?',
+      `https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/podcast?cursor=${page2}`,
+    ])
+    const hit = await runMiddleware(fakeContext(`/podcast?cursor=${page2}&utm_source=y`), html(), d)
+    expect(hit.headers.get('X-Backgold-Cache')).toBe('HIT')
+  })
+
+  it('keys a cursor’s page by the content version too', async () => {
+    const page2 = encodeEntryCursor({ publish_at: '2026-09-01T00:00:00.000Z', id: 'ci_e1' })
+    const at = (version: number) => cacheKey({ siteId: 'cd_8f2a', buildId: 'b1', siteUrl: 'https://pinevalleyliberty.org', version, variant: '', url: new URL(`https://pinevalleyliberty.org/blog?cursor=${page2}`) })
+    expect(at(184)).toBe(`https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?cursor=${page2}`)
+    expect(at(185)).not.toBe(at(184))
+  })
+
   it('keeps the render’s own Cache-Control for the visitor and a long one for the edge', async () => {
     const d = deps()
     await runMiddleware(fakeContext('/'), html({ headers: { 'Cache-Control': 'public, max-age=60' } }), d)
@@ -298,5 +320,81 @@ describe('the preview page', () => {
 
   it('leaves a thrown error on any other page to the page', async () => {
     await expect(runMiddleware(fakeContext('/issues'), vi.fn(async () => Promise.reject(new Error('boom'))), deps())).rejects.toThrow('boom')
+  })
+})
+
+describe('the dispatched form (a template’s shared Worker)', () => {
+  /** A template Worker in the namespace: the binding, no BACKGOLD_SITE_ID, no site key, no SITE_URL. */
+  const dispatched = (cache = fakeCache()): MiddlewareDeps & { cache: ReturnType<typeof fakeCache> } => ({
+    env: { BACKGOLD_API: { fetch: vi.fn(api.fetch) }, BACKGOLD_API_ORIGIN: API_ORIGIN, BACKGOLD_CACHE: fakeKv() },
+    cache,
+    buildId: 'b1',
+  })
+  const asSite = (siteId: string | undefined, path = '/', origin?: string) =>
+    fakeContext(path, { ...(siteId === undefined ? {} : { headers: { 'X-BackGold-Site': siteId } }), ...(origin ? { origin } : {}) })
+
+  it('answers a plain 404 "No site." to a request with no or a malformed X-BackGold-Site: no setup page, no render, no read', async () => {
+    for (const siteId of [undefined, '', 'cd 8f2a', 'x'.repeat(65), '../cd_8f2a', 'cd_8f2a,cd_9b1c']) {
+      for (const path of ['/', '/issues', SETUP_PATH, '/api/backgold/webhook', '/sitemap.xml']) {
+        const d = dispatched()
+        const ctx = asSite(siteId, path)
+        const next = html()
+        const res = await runMiddleware(ctx, next, d)
+        expect(res.status).toBe(404)
+        expect(res.headers.get('Content-Type')).toBe('text/plain; charset=utf-8')
+        expect(res.headers.get('Cache-Control')).toBe('no-store')
+        expect(await res.text()).toBe('No site.')
+        expect(next).not.toHaveBeenCalled()
+        expect(d.cache.stored.size).toBe(0)
+        expect(ctx.setCookies).toEqual([])
+        expect((ctx.locals as { backgold?: unknown }).backgold).toBeUndefined()
+      }
+    }
+    expect(api.calls).toHaveLength(0)
+  })
+
+  it('renders the site the header names, keyed in the edge cache by that site and the request’s origin', async () => {
+    const d = dispatched()
+    const ctxA = asSite(SITE_ID, '/', 'https://pinevalleyliberty.org')
+    const a = await runMiddleware(ctxA, html(), d)
+    const ctxB = asSite(OTHER_SITE_ID, '/', 'https://westmark.example')
+    const b = await runMiddleware(ctxB, html(), d)
+    expect(a.headers.get('X-Backgold-Cache')).toBe('MISS')
+    expect(b.headers.get('X-Backgold-Cache')).toBe('MISS')
+    expect((ctxA.locals as { backgold: { siteId: string } }).backgold.siteId).toBe(SITE_ID)
+    expect((ctxB.locals as { backgold: { siteId: string } }).backgold.siteId).toBe(OTHER_SITE_ID)
+    expect([...d.cache.stored.keys()]).toEqual([
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/?',
+      'https://backgold.cache/cd_9b1c/b1/184//https%3A%2F%2Fwestmark.example/?',
+    ])
+    expect(api.headers.every((h) => !h.has('Authorization'))).toBe(true)
+  })
+
+  it('never serves one site’s stored page to another on the same host', async () => {
+    const d = dispatched()
+    await runMiddleware(asSite(SITE_ID, '/issues'), html(), d)
+    const next = html()
+    const other = await runMiddleware(asSite(OTHER_SITE_ID, '/issues'), next, d)
+    expect(other.headers.get('X-Backgold-Cache')).toBe('MISS')
+    expect(next).toHaveBeenCalled()
+    expect(d.cache.stored.size).toBe(2)
+    const again = await runMiddleware(asSite(SITE_ID, '/issues'), html(), d)
+    expect(again.headers.get('X-Backgold-Cache')).toBe('HIT')
+  })
+
+  it('answers No site only in the dispatched form: a single-site first-party Worker and a key-mode site render without the header', async () => {
+    const single = await runMiddleware(fakeContext('/'), html(), { ...dispatched(), env: { BACKGOLD_SITE_ID: SITE_ID, BACKGOLD_API: { fetch: api.fetch }, BACKGOLD_API_ORIGIN: API_ORIGIN } })
+    expect(single.status).toBe(200)
+    const key = await runMiddleware(fakeContext('/'), html(), deps())
+    expect(key.status).toBe(200)
+  })
+
+  it('ignores a client-sent X-BackGold-Site on a key-mode site', async () => {
+    const d = deps()
+    const ctx = asSite(OTHER_SITE_ID)
+    await runMiddleware(ctx, html(), d)
+    expect((ctx.locals as { backgold: { siteId: string } }).backgold.siteId).toBe('cd_8f2a')
+    expect([...d.cache.stored.keys()]).toEqual(['https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/?'])
+    expect(api.headers.every((h) => !h.has('X-BackGold-Site'))).toBe(true)
   })
 })

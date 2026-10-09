@@ -1,4 +1,5 @@
-// The request pipeline, in order: (a) setup check, (b) the `bg_vid` visitor
+// The request pipeline, in order: a dispatched request that names no site
+// answers 404, then (a) setup check, (b) the `bg_vid` visitor
 // cookie, (c) the site's redirects, (d) the edge cache. Registered by the
 // integration; `@backgold/astro/middleware` exports `onRequest` for a site
 // that composes its own middleware with `sequence()`.
@@ -8,10 +9,10 @@ import type { MiddlewareHandler } from 'astro'
 import options from 'virtual:backgold/options'
 import { backgoldFor, type BackgoldContextLike } from './server/context.js'
 import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, toStore, type EdgeCache } from './server/edge-cache.js'
-import { waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
+import { namesNoSite, waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
 import { PREVIEW_HEADERS } from './server/preview.js'
 import { redirectFor } from './server/redirects.js'
-import { errorResponse } from './server/respond.js'
+import { errorResponse, noSite } from './server/respond.js'
 import { SETUP_PATH } from './server/setup.js'
 import { apiUnavailable, isApiTimeout } from './server/timeout.js'
 import { VISITOR_COOKIE, VISITOR_COOKIE_OPTIONS, mintVisitorId } from './server/visitor.js'
@@ -72,6 +73,8 @@ export async function runMiddleware(context: MiddlewareContextLike, next: Middle
 async function pipeline(context: MiddlewareContextLike, next: MiddlewareNext, deps: MiddlewareDeps): Promise<Response> {
   const { pathname } = context.url
   const method = context.request.method
+  // A template's shared Worker with no site named: nothing to render, nothing to set up.
+  if (namesNoSite(deps.env, context.request.headers)) return noSite()
   const bg = await backgoldFor(deps.env, context)
 
   // (a) Setup: until the site key is set, the template's setup page answers every HTML path.
@@ -104,7 +107,7 @@ async function pipeline(context: MiddlewareContextLike, next: MiddlewareNext, de
 
   // (d) The edge cache.
   if (method !== 'GET' || uncached || !deps.cache) return finish(await next())
-  const key = new Request(cacheKey({ siteId: bg.site.id, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant: bg.variant, url: context.url }))
+  const key = new Request(cacheKey({ siteId: bg.siteId, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant: bg.variant, url: context.url }))
   const hit = await deps.cache.match(key).catch(() => undefined)
   if (hit) return finish(fromCache(hit))
 

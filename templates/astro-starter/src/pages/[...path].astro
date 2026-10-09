@@ -9,9 +9,12 @@
 // page, an entry, a list and a tag pass their areas to the layout (Top banner
 // and Above the footer); a page and an entry also draw their Sidebar beside
 // the main column when it has an item, and are one column when it has none.
+// A list and a tag draw 50 entries a page: "Older" goes on to the next page,
+// and "Newest" back to the first from any later one (the api names no
+// previous page, so there is no "Newer").
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
-import { areaEntriesOf, atomFeed, jsonLdFor, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
+import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryArticle from '../components/EntryArticle.astro'
 import EntryCard from '../components/EntryCard.astro'
@@ -26,7 +29,8 @@ if (bg.setup !== null) return new Response(null, { status: 503 })
 const { client, site, siteUrl } = bg
 const siteName = site.name ?? site.domain
 const pathname = Astro.url.pathname
-const resolved = await resolveRoute(client, pathname)
+// The URL, not just the path: a list's `?cursor=` asks for a later page.
+const resolved = await resolveRoute(client, Astro.url)
 
 if (resolved.kind === 'feed') {
   return new Response(await atomFeed(client, siteUrl, resolved.type), {
@@ -92,6 +96,7 @@ const areas: Areas | null =
       ? resolved.areas
       : null
 const sidebar = (resolved.kind === 'page' || resolved.kind === 'entry') && areaEntriesOf(areas, 'sidebar').length > 0
+const pager = pagerOf(resolved, pathname)
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
@@ -110,6 +115,12 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
         <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
       ) : (
         <p class="empty">Nothing published yet.</p>
+      )}
+      {(pager.newest || pager.older) && (
+        <nav class="pager" aria-label="Pages">
+          {pager.newest && <a href={pager.newest}>Newest</a>}
+          {pager.older && <a href={pager.older}>Older</a>}
+        </nav>
       )}
     </div>
   )}
@@ -145,6 +156,12 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
         <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
       ) : (
         <p class="empty">Nothing published here yet.</p>
+      )}
+      {(pager.newest || pager.older) && (
+        <nav class="pager" aria-label="Pages">
+          {pager.newest && <a href={pager.newest}>Newest</a>}
+          {pager.older && <a href={pager.older}>Older</a>}
+        </nav>
       )}
     </div>
   )}
