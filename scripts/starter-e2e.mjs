@@ -425,7 +425,9 @@ function fixtureData(ex, kitchenSections) {
   }
 
   const types = [
-    { key: 'post', singular_label: 'Post', plural_label: 'Posts', routable: true, url_base: null, built_in: true, fields: [] },
+    // As GET /types reports them: post at `blog`, the newsletter at its own base.
+    { key: 'post', singular_label: 'Post', plural_label: 'Posts', routable: true, url_base: 'blog', built_in: true, fields: [] },
+    { key: 'newsletter', singular_label: 'Newsletter', plural_label: 'Newsletters', routable: true, url_base: 'newsletters', built_in: true, fields: [{ key: 'issue', label: 'Issue', kind: 'short_text', required: false }] },
     {
       ...ex.TypesResponse.types[0],
       fields: [
@@ -480,9 +482,40 @@ function fixtureData(ex, kitchenSections) {
       renewing: false,
     },
   }
+  // A second, older endorsement; the fixture answers the type one entry a
+  // page (pageSize), so its list has an Older page to walk to.
+  const quarryRoad = {
+    ...endorsement,
+    id: 'ci_e02',
+    slug: 'quarry-road-association',
+    title: 'Quarry Road Association',
+    summary: 'Homeowners sign on.',
+    url: '/endorsements/quarry-road-association',
+    publish_at: '2026-09-18T10:00:00.000Z',
+    updated_at: '2026-09-18T10:00:00.000Z',
+    body: { markdown: 'The association signed on in September.' },
+    fields: { quote: 'We are in.' },
+  }
+  const issue = {
+    ...post,
+    id: 'ci_n01',
+    slug: 'october-letter',
+    type: 'newsletter',
+    title: 'The October letter',
+    summary: 'What the board did this month.',
+    url: '/newsletters/october-letter',
+    hero: null,
+    publish_at: '2026-10-01T09:00:00.000Z',
+    updated_at: '2026-10-01T09:00:00.000Z',
+    terms: [],
+    body: { markdown: 'The board met twice in October.' },
+    fields: { issue: 'No. 12' },
+  }
   const { body: _b1, fields: _f1, ...postSummary } = post
   const { body: _b2, fields: _f2, ...secondSummary } = secondPost
   const { body: _b3, fields: _f3, ...endorsementSummary } = endorsement
+  const { body: _b4, fields: _f4, ...quarryRoadSummary } = quarryRoad
+  const { body: _b5, fields: _f5, ...issueSummary } = issue
 
   const homeSections = (headline) => [
     { ...hero, band: 'plain', copy: { ...hero.copy, headline } },
@@ -657,8 +690,9 @@ function fixtureData(ex, kitchenSections) {
               }
             : null,
     entryAreas,
-    entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary] },
-    entry: { post: { [post.slug]: post, [secondPost.slug]: secondPost }, endorsement: { [endorsement.slug]: endorsement } },
+    entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary, quarryRoadSummary], newsletter: [issueSummary] },
+    pageSize: { endorsement: 1 },
+    entry: { post: { [post.slug]: post, [secondPost.slug]: secondPost }, endorsement: { [endorsement.slug]: endorsement, [quarryRoad.slug]: quarryRoad }, newsletter: { [issue.slug]: issue } },
     terms: { tag: ex.TermsResponse },
     authors: ex.AuthorsResponse,
     author: { [ex.AuthorResponse.author.slug]: ex.AuthorResponse },
@@ -757,9 +791,21 @@ function startFixture(examples, kitchenSections) {
           body = entry ? { entry, areas: data.entryAreas } : undefined
           break
         }
+        // Newest first by (publish_at, id), keyset-paged as the api pages:
+        // the cursor is base64url of `<publish_at>|<id>` of the last entry shown.
         const term = url.searchParams.get('term')
-        const limit = Number(url.searchParams.get('limit') ?? 20)
-        body = { entries: list.filter((e) => !term || e.terms.some((t) => t.slug === term)).slice(0, limit), next_cursor: null }
+        const limit = Math.min(Number(url.searchParams.get('limit') ?? 20), data.pageSize[parts[1]] ?? Infinity)
+        const rawCursor = url.searchParams.get('cursor')
+        const after = rawCursor ? /^([^|]+)\|([^|]+)$/.exec(Buffer.from(rawCursor, 'base64url').toString('utf8')) : null
+        if (rawCursor && (!after || Number.isNaN(Date.parse(after[1])))) return send(400, { error: 'cursor is not one this API returned', code: 'BAD_CURSOR' })
+        const key = (e) => `${e.publish_at}|${e.id}`
+        const matching = list
+          .filter((e) => !term || e.terms.some((t) => t.slug === term))
+          .sort((a, b) => (key(a) < key(b) ? 1 : -1))
+          .filter((e) => !after || key(e) < `${after[1]}|${after[2]}`)
+        const shown = matching.slice(0, limit)
+        const last = shown[shown.length - 1]
+        body = { entries: shown, next_cursor: matching.length > limit ? Buffer.from(key(last)).toString('base64url') : null }
         break
       }
       case 'terms':
@@ -956,6 +1002,48 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/endorsements')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>Endorsements<\/h1>/.test(html) && html.includes('Maple Hollow Neighbors Council'), 'a custom type index lists its entries')
+  const pagerOn = (page) => /<nav class="pager"[^>]*>([\s\S]*?)<\/nav>/.exec(page)?.[1] ?? ''
+  const olderHref = /<a href="([^"]*)"[^>]*>Older<\/a>/.exec(pagerOn(html))?.[1]?.replace(/&amp;/g, '&') ?? ''
+  check(
+    /^\/endorsements\?cursor=[A-Za-z0-9_-]+$/.test(olderHref) && !pagerOn(html).includes('>Newest<') && !html.includes('Quarry Road Association'),
+    `the first page of a list (one entry a page in the fixture) links Older at ?cursor= and has no Newest link (${olderHref})`,
+  )
+  res = await get(origin, olderHref)
+  html = await res.text()
+  check(
+    res.status === 200 && html.includes('Quarry Road Association') && !html.includes('Maple Hollow Neighbors Council'),
+    `Older reads the next page of the list from the api (got ${res.status})`,
+  )
+  check(
+    /<a href="\/endorsements"[^>]*>Newest<\/a>/.test(pagerOn(html)) && !pagerOn(html).includes('>Older<'),
+    'the last page links Newest back to the bare path and has no Older link',
+  )
+  res = await get(origin, '/endorsements?cursor=not-a-cursor')
+  html = await res.text()
+  check(
+    res.status === 200 && html.includes('Maple Hollow Neighbors Council') && !pagerOn(html).includes('>Newest<'),
+    `a cursor the api would not accept shows the first page (got ${res.status})`,
+  )
+  // The newsletter is a built-in that reports its own base: its own list,
+  // entries and feed at /newsletters, and never in the /blog merge.
+  res = await get(origin, '/newsletters')
+  html = await res.text()
+  check(res.status === 200 && /<h1[^>]*>Newsletters<\/h1>/.test(html) && html.includes('The October letter'), 'the newsletter (url_base newsletters) lists its entries at /newsletters')
+  res = await get(origin, '/newsletters/october-letter')
+  html = await res.text()
+  check(res.status === 200 && /<h1[^>]*>The October letter<\/h1>/.test(html) && html.includes('No. 12'), 'a newsletter entry renders at its own address, /newsletters/<slug>')
+  res = await get(origin, '/blog')
+  html = await res.text()
+  check(res.status === 200 && html.includes('The levy, explained') && !html.includes('The October letter'), '/blog lists the posts and leaves the newsletter out')
+  res = await get(origin, '/blog/october-letter')
+  check(res.status === 404, `a newsletter entry is not under /blog (got ${res.status})`)
+  res = await get(origin, '/newsletters/feed.xml')
+  const newsletterFeed = await res.text()
+  check(
+    res.status === 200 && wellFormedXml(newsletterFeed) && newsletterFeed.includes('/newsletters/october-letter'),
+    "the newsletter's feed is Atom at /newsletters/feed.xml with its entry",
+  )
+
   res = await get(origin, '/endorsements/maple-hollow-neighbors')
   html = await res.text()
   check(res.status === 200 && html.includes('Endorsement statement.pdf') && html.includes('<dt>Topics</dt>'), 'a custom-type entry renders its fields by kind')
@@ -975,6 +1063,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/feed.xml')
   const feed = await res.text()
   check(res.status === 200 && (res.headers.get('content-type') ?? '').includes('atom') && wellFormedXml(feed) && feed.includes('<feed'), '/feed.xml is a well-formed Atom feed')
+  check(feed.includes('/blog/levy-explained') && !feed.includes('/newsletters/october-letter'), "/feed.xml carries the blog built-ins' entries and not the newsletter's")
   res = await get(origin, '/endorsements/feed.xml')
   const typeFeed = await res.text()
   check(res.status === 200 && (res.headers.get('content-type') ?? '').includes('application/atom+xml') && wellFormedXml(typeFeed), "a custom type's feed is Atom from the catch-all")
@@ -1028,6 +1117,26 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/')
   html = await res.text()
   check(res.status === 200 && fixture.count() === before, `a second read of home makes zero Content API requests (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`)
+
+  // A list page keys the edge cache by its cursor; any other query, and a
+  // cursor the api would not accept, share the bare path's entry.
+  await get(origin, olderHref).then((r) => r.text())
+  const beforePages = fixture.count()
+  res = await get(origin, `${olderHref}&utm_source=newsletter`)
+  html = await res.text()
+  check(
+    res.headers.get('x-backgold-cache') === 'HIT' && fixture.count() === beforePages && html.includes('Quarry Road Association'),
+    `the Older page is its own edge-cache entry, served again with another query beside the cursor (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`,
+  )
+  await get(origin, '/endorsements').then((r) => r.text())
+  for (const path of ['/endorsements?utm_source=newsletter', '/endorsements?cursor=not-a-cursor']) {
+    res = await get(origin, path)
+    html = await res.text()
+    check(
+      res.headers.get('x-backgold-cache') === 'HIT' && html.includes('Maple Hollow Neighbors Council') && !html.includes('Quarry Road Association'),
+      `${path} is served the bare list's cached first page (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`,
+    )
+  }
 
   const bad = await get(origin, '/api/backgold/webhook', {
     method: 'POST',

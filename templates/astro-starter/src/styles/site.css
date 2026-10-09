@@ -931,6 +931,12 @@ details summary {
 .page-header h1 {
   max-width: 24ch;
 }
+.pager {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  font-weight: 600;
+}
 .not-found {
   padding-bottom: var(--space);
 }

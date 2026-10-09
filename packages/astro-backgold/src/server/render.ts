@@ -6,8 +6,10 @@
 
 import type { AreaItem, Areas, MenuItem, Section, SectionEmbed } from '@backgold/content'
 import type { BackgoldLocals } from './context.js'
+import { CURSOR_PARAM } from './cursor.js'
 import { isPreviewPath } from './edge-cache.js'
 import { sanitizeRichText } from './markdown.js'
+import type { Resolved } from './resolve.js'
 import { relFor, safeEmbedUrl, safeHref, safeSrc } from './urls.js'
 import { VISITOR_COOKIE } from './visitor.js'
 
@@ -297,6 +299,30 @@ export function areaEntriesOf(areas: Areas | null | undefined, name: string, now
       return until === null || until > now
     })
     .map((item) => ({ item, needsWindow: instant(item.from) !== null || instant(item.until) !== null }))
+}
+
+// ── Pager ────────────────────────────────────────────────────────────────────
+
+/** The two links under a list: back to its first page, and on to its next. */
+export interface Pager {
+  /** The bare path, when the list was reached by a cursor; null on the first page. */
+  newest: string | null
+  /** The path at `?cursor=<next_cursor>`, when there is a next page. */
+  older: string | null
+}
+
+/**
+ * The pager of an index or a term (`resolved` from `resolveRoute`) drawn at
+ * `pathname`; both null for every other kind. There is no "newer" link: the
+ * api answers a page with the next page's cursor only.
+ */
+export function pagerOf(resolved: Resolved, pathname: string): Pager {
+  if (resolved.kind !== 'index' && resolved.kind !== 'term') return { newest: null, older: null }
+  const path = pathname.replace(/[?#].*$/s, '')
+  return {
+    newest: resolved.cursor === null ? null : path,
+    older: resolved.next_cursor === null ? null : `${path}?${new URLSearchParams({ [CURSOR_PARAM]: resolved.next_cursor })}`,
+  }
 }
 
 // ── Preview markers ──────────────────────────────────────────────────────────

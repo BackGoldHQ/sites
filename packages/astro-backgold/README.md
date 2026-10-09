@@ -45,13 +45,51 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_SECRET_KEY` | secret | for preview | A secret key, `bg_site_sk_…`. Only `loadPreview` (your `/preview` page) reads it; it never reaches a page or a cache. |
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
-| `BACKGOLD_SITE_ID` | var | first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
-| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint. `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. |
+| `BACKGOLD_SITE_ID` | var | single-site first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
+| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint. `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. Without `BACKGOLD_SITE_ID` it makes the Worker a template's shared Worker (below). |
 
 First-party mode is for a site Worker inside BackGold's own namespace, and
-BackGold sets both names up for it. A site built elsewhere never sets them: it
-reads with its site keys. `Astro.locals.backgold.firstParty` says which mode
-the request ran in.
+BackGold sets these names up for it. A site built elsewhere never sets them: it
+reads with its site keys, and an `X-BackGold-Site` header a visitor sends it
+is ignored. `Astro.locals.backgold.firstParty` says which mode the request
+ran in, and `Astro.locals.backgold.siteId` which site it rendered.
+
+### A template's shared Worker (the dispatched form)
+
+One of BackGold's templates runs as one Worker in BackGold's dispatch
+namespace serving every site on that template, so no var can name the site.
+The Worker has the `BACKGOLD_API` binding and no `BACKGOLD_SITE_ID`; the api
+routes each request for a site's domain to the template's Worker and names
+the site in the `X-BackGold-Site: <site id>` request header, which it
+overwrites on every request. A namespace Worker has no routes and no
+`workers.dev` address, so the api's dispatch is the only way in and the
+header is trusted.
+
+- **The site.** `BACKGOLD_SITE_ID` wins when it is set (a single-site
+  Worker); otherwise the header names the site. A request whose header is
+  missing or is not a site id (1–64 letters, digits, `_` or `-`) answers
+  `404` `text/plain` `No site.` with `Cache-Control: no-store`: never the
+  setup page (nothing is misconfigured) and never a render, and nothing is
+  read from BackGold. The setup page lists `BACKGOLD_API` only for a Worker
+  with `BACKGOLD_SITE_ID` and no binding.
+- **One client per site.** Each isolate keeps a client per site it has
+  served, up to 32, dropping the least recently used. Every client keys its
+  `BACKGOLD_CACHE` (or memory) entries under its own scope, a hash of
+  `first-party:<site id>`, so the sites sharing one KV namespace never read
+  each other's values.
+- **The edge cache** keys every page by the request's site id and origin
+  (see [Caching](#caching)), so one site's page is never served to another.
+- **`SITE_URL` is not read**: every site's origin is the one its request
+  arrived on, the site's own domain.
+- **Previews.** `loadPreview` reads the draft as the site the request names.
+- **The webhook and revalidate routes are unreachable**: the api keeps
+  `/api/*` on every domain it routes, so `/api/backgold/webhook` and
+  `/api/backgold/revalidate` never reach the Worker, and BackGold purges
+  nothing through them. A publish reaches the site the way it does a site
+  with no webhook: each client re-checks its site's content version with a
+  conditional `GET /site` once its known version is more than 60 seconds
+  old, and stores the answer in `BACKGOLD_CACHE` for the next isolate, so a
+  publish shows within about a minute.
 
 A Cloudflare preview deployment (a pull request's or a branch's address) reads
 only the `previews` block of the Worker's config, never the top-level `vars`.
@@ -59,8 +97,8 @@ Each `astro build` copies `BACKGOLD_SITE_KEY` and `BACKGOLD_API_ORIGIN` into
 `previews.vars` of the config the adapter writes, unless the site set its own
 there, so previews show the site.
 
-Until `BACKGOLD_SITE_KEY` is set to a publishable key (in first-party mode,
-until `BACKGOLD_API` is a binding), or while `BACKGOLD_API_ORIGIN` is not an
+Until `BACKGOLD_SITE_KEY` is set to a publishable key (with `BACKGOLD_SITE_ID`
+set, until `BACKGOLD_API` is a binding), or while `BACKGOLD_API_ORIGIN` is not an
 http(s) URL, every HTML path renders the
 site's setup page at `/backgold-setup` (`SETUP_PATH` from
 `@backgold/astro/server`), uncached and noindex, and
@@ -140,8 +178,11 @@ id from the integration, so `backgold()` stays in the config): the setup check,
 the `bg_vid` cookie, the site's redirects (301/302/307/308, and 410 for a
 rule with no destination; a rule whose destination is neither an http(s) URL
 nor a path on the site is ignored), then the edge cache. `Astro.locals.backgold` holds
-`{ client, site, legal, version, siteUrl, variant, visitorId, analytics?,
+`{ client, siteId, site, legal, version, siteUrl, variant, visitorId, analytics?,
 firstParty, setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
+`siteId` is the site the request renders: `BACKGOLD_SITE_ID`, the dispatched
+request's `X-BackGold-Site`, or with a site key the `/site` answer's
+`site.id`; null while the setup page shows.
 
 ## SEO and AI search
 
@@ -210,7 +251,8 @@ cap is reached the file ends with one more block after a final `---` line:
 Each entry it writes is one read of the Content API (cached like every other
 read).
 
-**Per-type feeds.** A routable type of your own has its feed at
+**Per-type feeds.** Every routable type outside `/blog` (a type of your
+own, the newsletter) has its feed at
 `/<url_base>/feed.xml`: `resolveRoute` answers that path with
 `{ kind: 'feed', type }`, and the template's catch-all page answers it with
 `atomFeed(client, siteUrl, type)`. Feeds carry the entry's title, summary,
@@ -276,8 +318,10 @@ Every `GET` that renders a 200 is stored in the Workers Cache API under
 https://backgold.cache/<site id>/<build id>/<content version>/<variant>/<site origin>/<path>?<query>
 ```
 
-`<site origin>` is `SITE_URL`, or without it the origin the request arrived
-on: a page names that origin in its canonical, Open Graph and feed links, so
+`<site id>` is `Astro.locals.backgold.siteId`, on a template's shared Worker
+the one the request's `X-BackGold-Site` names. `<site origin>` is `SITE_URL`,
+or without it (and always on a template's shared Worker) the origin the
+request arrived on: a page names that origin in its canonical, Open Graph and feed links, so
 a render for one `Host` is never served to another.
 
 A publish in BackGold sends the webhook and the version moves: the Worker
@@ -290,9 +334,14 @@ characters, nothing about the machine; `dev` under `astro dev`), so pages the
 previous deploy rendered, and the asset addresses in them, are never served
 by the new one. Without a webhook every isolate re-checks the version with
 BackGold at most every 60 seconds, so a publish shows within about a minute
-everywhere. Query strings are dropped from the key (no query name is allowed in
-it today), so `?utm_source=…` and every other parameter share the one entry
-and cannot fill the cache with copies.
+everywhere. One query parameter enters the key: `cursor`, a list's later page
+(see [Lists and paging](#lists-and-paging)), and only when its value is a
+cursor the Content API would accept (base64url of a date and an id, at most
+512 characters; the first `cursor` when there are several). Every other
+parameter, and a cursor that fails that check, is dropped from the key, so
+`?utm_source=…` and `?cursor=junk` share the bare path's entry and cannot fill
+the cache with copies. A cursor's page is keyed by the content version like
+every other page, so a publish retires it too.
 
 Never stored: `/preview` (your page), `/api/backgold/*`, the setup page,
 anything but a 200, a render that sets a cookie, and one whose
@@ -334,26 +383,70 @@ needs, in place from the start:
 
 ## Routing a page
 
-`resolveRoute(client, pathname)` says what a path is, from `/types`, so a
-type an operator adds in BackGold gets its pages with no code change. A
-catch-all `src/pages/[...path].astro` switches on `kind`:
+`resolveRoute(client, Astro.url)` says what a path is, from `/types`, so a
+type an operator adds in BackGold gets its pages with no code change. It
+takes the request's URL (or a pathname, with or without its query): the
+`?cursor=` in it asks a list for a later page. A catch-all
+`src/pages/[...path].astro` switches on `kind`:
 
 | Path | `kind` |
 | --- | --- |
 | `/`, or a published page's `url` | `page`: the page response, its `areas` inside it |
-| `/blog` (every built-in blog type, merged), `/<url_base>` | `index`: the first 50 entries, `next_cursor` and the list's `areas` |
+| `/blog` (the blog built-ins, merged), `/<url_base>` | `index`: up to 50 entries, `cursor`, `next_cursor` and the list's `areas` |
 | `/blog/<slug>`, `/<url_base>/<slug>` | `entry`: the entry and its `areas` |
 | `/authors/<slug>` | `author`; `entries` is empty (the Content API lists entries by type and term only); no `areas` |
-| `/blog/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries and the list's `areas` |
+| `/blog/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries, `cursor`, `next_cursor` and the list's `areas` |
 | `/blog/feed.xml`, `/<url_base>/feed.xml` | `feed` |
 | anything else, or a malformed path | `not_found` |
 
-An index shows its first page: the edge cache drops query strings, so there
-is no `?cursor=` page, and `/blog`'s `next_cursor` is null when more than one
-built-in type is routable. `/blog`'s `areas` are the first built-in type's:
-the rules that place a section on a list are per site, so every type's list
-answers the same areas. Pass them to `<Area>` as you would a page's.
-Redirects are the middleware's, before this runs.
+A type's address is the `url_base` `/types` reports for it. `/blog` merges
+the three blog built-ins, post, podcast and video, which all report `blog`;
+their entries live at `/blog/<slug>`. Every other routable type has its own
+list, entries, terms and feed at the base it reports, a custom type and the
+built-in newsletter (`/newsletters`) alike: a type that reports a base of its
+own is listed there, never under `/blog`.
+
+`/blog`'s `areas` are the first built-in type's: the rules that place a
+section on a list are per site, so every type's list answers the same areas.
+Pass them to `<Area>` as you would a page's. Redirects are the middleware's,
+before this runs.
+
+### Lists and paging
+
+An index or a term shows one page of up to 50 entries, newest first.
+`cursor` is the cursor the page was read at (null on the first page) and
+`next_cursor` the next page's (null on the last). `?cursor=<next_cursor>` on
+the same path reads the next page; a cursor the Content API would not accept
+(malformed, too long, or refused by the api) reads the first page, with
+`cursor` null.
+
+A cursor names one type's list, so `/blog` with more than one built-in type
+merges their first pages and reads no cursor: its `cursor` and `next_cursor`
+are both null. A site that wants a paged list links to a type's own address.
+
+`pagerOf(resolved, Astro.url.pathname)` from `@backgold/astro/server` gives
+the two links a list draws under it, as `{ newest, older }`: `older` is the
+path at `?cursor=<next_cursor>` when there is a next page, and `newest` is
+the bare path when the page was reached by a cursor; each is null otherwise,
+and both are null for anything that is not an index or a term. There is no
+"newer" link: the Content API answers a page with the next page's cursor
+only, never the previous one.
+
+```astro
+---
+import { pagerOf, resolveRoute } from '@backgold/astro/server'
+const resolved = await resolveRoute(Astro.locals.backgold.client, Astro.url)
+const pager = pagerOf(resolved, Astro.url.pathname)
+---
+{(pager.newest || pager.older) && (
+  <nav class="pager" aria-label="Pages">
+    {pager.newest && <a href={pager.newest}>Newest</a>}
+    {pager.older && <a href={pager.older}>Older</a>}
+  </nav>
+)}
+```
+
+Each page is its own edge-cache entry (see [Caching](#caching)).
 
 ## Rendering
 
@@ -442,7 +535,7 @@ it just opens at the top.
 | Import | |
 | --- | --- |
 | `@backgold/astro` | `backgold(options)` and the types. |
-| `@backgold/astro/server` | `getBackgold(context)`, `menuOf`, `headerButtonOf` and their `MenuPage` and `MenuNode` types, `areaEntriesOf(areas, name)` (the items `<Area>` would draw, each with `needsWindow`, so a layout can tell whether an area has anything to draw) and its `AreaEntry` type, `visibleNow` (from `@backgold/content`), the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
+| `@backgold/astro/server` | `getBackgold(context)`, `menuOf`, `headerButtonOf` and their `MenuPage` and `MenuNode` types, `pagerOf` and its `Pager` type, `areaEntriesOf(areas, name)` (the items `<Area>` would draw, each with `needsWindow`, so a layout can tell whether an area has anything to draw) and its `AreaEntry` type, `visibleNow` (from `@backgold/content`), the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
 | `@backgold/astro/components` | `Section`, `DefaultSection`, `Embed`, `Menu`, `MenuButton`, `Area`, `Disclaimer`, `Seo`, `Analytics`, `PreviewBar` (Astro source). |
 | `@backgold/astro/middleware` | `onRequest`. |
 

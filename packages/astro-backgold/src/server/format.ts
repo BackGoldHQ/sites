@@ -90,8 +90,13 @@ export function isoDate(raw: string | null | undefined): string | null {
   return Number.isNaN(time) ? null : new Date(time).toISOString()
 }
 
-/** Whether a type's entries live under `/blog` (the routable built-ins). */
-export const isBlogType = (type: ContentTypeSummary): boolean => type.built_in && type.routable
+/**
+ * Whether a type's entries live under `/blog`: a routable built-in that
+ * reports `blog` as its url_base (post, podcast and video), or none. A
+ * built-in that reports a base of its own (the newsletter, at `newsletters`)
+ * lives there, like a custom type.
+ */
+export const isBlogType = (type: ContentTypeSummary): boolean => type.built_in && type.routable && (type.url_base ?? 'blog') === 'blog'
 
 /** A routable type's index path, or null when the type has no pages of its own. */
 export function typeIndexPath(type: ContentTypeSummary | 'blog'): string | null {
