@@ -14,6 +14,7 @@ export interface BackgoldFields {
     group: 'Leadership' | 'Staff'; // Group
     department: string | null; // Department
     link: string | null; // Link
+    seat: { kind: 'entry'; label: string; slug: string } | { kind: string; label: string; url?: string } | null; // Seat
   };
   open_role: {
     department: string | null; // Department
