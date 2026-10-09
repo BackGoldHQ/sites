@@ -334,14 +334,16 @@ characters, nothing about the machine; `dev` under `astro dev`), so pages the
 previous deploy rendered, and the asset addresses in them, are never served
 by the new one. Without a webhook every isolate re-checks the version with
 BackGold at most every 60 seconds, so a publish shows within about a minute
-everywhere. One query parameter enters the key: `cursor`, a list's later page
-(see [Lists and paging](#lists-and-paging)), and only when its value is a
+everywhere. Two query parameters enter the key: `cursor`, a list's later page
+(see [Lists and paging](#lists-and-paging)), only when its value is a
 cursor the Content API would accept (base64url of a date and an id, at most
-512 characters; the first `cursor` when there are several). Every other
-parameter, and a cursor that fails that check, is dropped from the key, so
-`?utm_source=…` and `?cursor=junk` share the bare path's entry and cannot fill
-the cache with copies. A cursor's page is keyed by the content version like
-every other page, so a publish retires it too.
+512 characters; the first `cursor` when there are several); and `q`, a
+list's search term, only when it is 2–80 characters after trim, matching the
+Content API's own check. Every other parameter, and a value that fails its
+check, is dropped from the key, so `?utm_source=…`, `?cursor=junk` and
+`?q=x` share the bare path's entry and cannot fill the cache with copies. A
+cursor's or search's page is keyed by the content version like every other
+page, so a publish retires it too.
 
 Never stored: `/preview` (your page), `/api/backgold/*`, the setup page,
 anything but a 200, a render that sets a cookie, and one whose

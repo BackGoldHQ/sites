@@ -201,6 +201,42 @@ describe('edge cache', () => {
     expect(at(185)).not.toBe(at(184))
   })
 
+  it('keys a search by its term, and only by a term the api would accept', async () => {
+    const d = deps()
+    for (const path of ['/blog', '/blog?q=levy', '/blog?utm_source=x&q=levy&q=a', '/blog?utm_source=x', '/blog?q=a', `/blog?q=${'x'.repeat(81)}`]) {
+      await runMiddleware(fakeContext(path), html(), d)
+    }
+    expect([...d.cache.stored.keys()]).toEqual([
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?',
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?q=levy',
+    ])
+    const hit = await runMiddleware(fakeContext('/blog?q=levy&utm_source=y'), html(), d)
+    expect(hit.headers.get('X-Backgold-Cache')).toBe('HIT')
+  })
+
+  it('keys two different search terms apart', async () => {
+    const d = deps()
+    await runMiddleware(fakeContext('/blog?q=levy'), html(), d)
+    await runMiddleware(fakeContext('/blog?q=tax'), html(), d)
+    expect([...d.cache.stored.keys()]).toEqual([
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?q=levy',
+      'https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?q=tax',
+    ])
+  })
+
+  it('combines cursor and search in one key, sorted by name', async () => {
+    const page2 = encodeEntryCursor({ publish_at: '2026-09-01T00:00:00.000Z', id: 'ci_e1' })
+    const key = cacheKey({
+      siteId: 'cd_8f2a',
+      buildId: 'b1',
+      siteUrl: 'https://pinevalleyliberty.org',
+      version: 184,
+      variant: '',
+      url: new URL(`https://pinevalleyliberty.org/blog?q=levy&cursor=${page2}`),
+    })
+    expect(key).toBe(`https://backgold.cache/cd_8f2a/b1/184//https%3A%2F%2Fpinevalleyliberty.org/blog?cursor=${page2}&q=levy`)
+  })
+
   it('keeps the render’s own Cache-Control for the visitor and a long one for the edge', async () => {
     const d = deps()
     await runMiddleware(fakeContext('/'), html({ headers: { 'Cache-Control': 'public, max-age=60' } }), d)

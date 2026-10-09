@@ -11,19 +11,22 @@ export interface EdgeCache {
 }
 
 import { CURSOR_PARAM, validCursor } from './cursor.js'
+import { SEARCH_PARAM, validSearch } from './search.js'
 
 const KEY_ORIGIN = 'https://backgold.cache'
 
 /**
  * Query names that enter the key, each with the check its value must pass:
  * `cursor`, a list page past the first, when it is a cursor the api would
- * accept. Every other name, and a value that fails its check, never mints an
- * entry, so `/?x=1` and `/` share one and so do `/blog?cursor=junk` and
- * `/blog`. A name added here must be one the renderer reads, or visitors can
- * fill the cache with copies.
+ * accept; `q`, a list's search term, when it is 2–80 characters after trim,
+ * matching the api's own check. Every other name, and a value that fails its
+ * check, never mints an entry, so `/?x=1` and `/` share one and so do
+ * `/blog?cursor=junk` and `/blog`. A name added here must be one the
+ * renderer reads, or visitors can fill the cache with copies.
  */
 const CACHE_QUERY_ALLOWLIST: Readonly<Record<string, (value: string) => boolean>> = {
   [CURSOR_PARAM]: (value) => validCursor(value) !== null,
+  [SEARCH_PARAM]: (value) => validSearch(value) !== null,
 }
 
 /** How long an entry may live at the edge; a version bump retires it sooner. */
