@@ -20,6 +20,7 @@ import type {
   Entry,
   EntryDetail,
   EntryResponse,
+  EventsResponse,
   MenuResponse,
   PageResponse,
   PagesResponse,
@@ -49,6 +50,11 @@ export type {
   EntryDetail,
   EntryResponse,
   EntryTerm,
+  EventLiveCounts,
+  EventsListRow,
+  EventsLiveResponse,
+  EventsResponse,
+  EventTypeSummary,
   MenuItem,
   MenuResponse,
   MenuShowsOn,
@@ -161,12 +167,28 @@ export interface AreasOptions {
 export interface EntriesOptions {
   /** A term slug (`?term=`). */
   term?: string
-  /** 1–50; the api's default when omitted. */
+  /**
+   * Search titles and summaries (`?q=`), ignoring case: 2–80 characters once
+   * trimmed. A search is one page of at most 20 (`next_cursor` is null, and
+   * it takes no cursor); it combines with `term`.
+   */
+  q?: string
+  /** 1–50 (1–20 with `q`); the api's default when omitted. */
   limit?: number
   /** The `next_cursor` of the previous page. */
   cursor?: string
   /** Read drafts too (`?preview=1`; needs a secret key; never cached). */
   preview?: boolean
+}
+
+/** What `events()` takes. */
+export interface EventsOptions {
+  /** Only events of this type (`rally`, `convention`, `fundraiser`, `blank`); `types` still counts every type. */
+  type?: string
+  /** The `next_cursor` of the previous page. */
+  cursor?: string
+  /** 1–50; the api's default (20) when omitted. */
+  limit?: number
 }
 
 export interface ReadOptions {
@@ -208,9 +230,17 @@ export interface BackgoldContent {
   /** `GET /entries/:type`, one page; null for an unknown type. */
   entries<K extends string>(type: K, opts?: EntriesOptions): Promise<EntriesResponse | null>
   /** Every entry of a type, walking the cursor; yields nothing for an unknown type. */
-  allEntries<K extends string>(type: K, opts?: Omit<EntriesOptions, 'cursor'>): AsyncIterable<Entry>
+  allEntries<K extends string>(type: K, opts?: Omit<EntriesOptions, 'cursor' | 'q'>): AsyncIterable<Entry>
   /** `GET /entries/:type/:slug` with typed `fields` when the type map knows the key; null when unpublished or unknown. */
   entry<K extends string>(type: K, slug: string, opts?: ReadOptions): Promise<TypedEntryResponse<K> | null>
+  /**
+   * `GET /events`: the organization's upcoming public events, soonest first,
+   * one page at a time, with every upcoming event counted by type. Cached and
+   * versioned like every published read. Going and seats left move between
+   * publishes and are not here: read `GET /events/live?ids=` yourself (it is
+   * cached 30 seconds and never by version, so not through `raw`).
+   */
+  events(opts?: EventsOptions): Promise<EventsResponse>
   /** `GET /terms/:taxonomy`; null for an unknown taxonomy. */
   terms(taxonomy: string): Promise<TermsResponse | null>
   /** `GET /authors`. */

@@ -1,7 +1,7 @@
 # @backgold/content
 
 A typed client for the BackGold headless Content API (`/api/content/v1`). It
-reads a site's pages, menus, sections, entries, types, terms, authors,
+reads a site's pages, menus, sections, entries, events, types, terms, authors,
 redirects and sitemap with a site key, caches every read under the site's
 content version, and helps with the two other things a partner site needs:
 verifying BackGold's webhooks and serving "Preview on your site".
@@ -122,12 +122,20 @@ const header = await bg.section('header')
 const { types } = await bg.types()
 ```
 
-**`entries(type, { term?, limit?, cursor?, preview? })`**: one page of a
+**`entries(type, { term?, q?, limit?, cursor?, preview? })`**: one page of a
 type's entries, newest first, with `next_cursor`. `null` for an unknown type.
 
 ```ts
 const first = await bg.entries('post', { limit: 10, term: 'taxes' })
 const second = first?.next_cursor ? await bg.entries('post', { limit: 10, cursor: first.next_cursor }) : null
+```
+
+`q` searches titles and summaries, ignoring case: 2 to 80 characters once
+trimmed, else a `BAD_QUERY` error. A search is one page of at most 20
+(`next_cursor` is `null`, and it takes no `cursor`); it combines with `term`.
+
+```ts
+const found = await bg.entries('post', { q: 'levy', limit: 10 })
 ```
 
 **`allEntries(type, { term?, limit?, preview? })`**: every entry of a type,
@@ -144,6 +152,32 @@ values, and the `areas` of the page it is shown on.
 const post = await bg.entry('post', 'levy-explained')
 const markdown = post?.entry.body.markdown
 const sidebar = post?.areas.sidebar ?? []
+```
+
+**`events({ type?, cursor?, limit? })`**: the organization's upcoming public
+events, soonest first, one page at a time (1 to 50, default 20), with
+`next_cursor`. Each row is an EventsList section's row: `sells_tickets` says
+whether the event sells tickets now, and `tickets_url` is its own page when it
+does. `types` counts every upcoming event by type (`key`, `label`,
+`upcoming`), whatever `type` narrowed the page to, so it can drive a filter.
+
+```ts
+const { events, types, next_cursor } = await bg.events({ type: 'fundraiser', limit: 12 })
+```
+
+Going and seats left change between publishes, so they are not in this read.
+Ask `GET /api/content/v1/events/live?ids=<id>,<id>` (1 to 50 ids) with your
+key, from the browser if you like: it answers `{ events: [{ id, going,
+seats_left }] }` (`seats_left` is `null` without a capacity), is cached for 30
+seconds, and is never keyed on the content version, so don't read it through
+`raw`.
+
+```ts
+const ids = events.map((e) => e.id).join(',')
+const res = await fetch(`https://api.backgold.com/api/content/v1/events/live?ids=${ids}`, {
+  headers: { Authorization: `Bearer ${publishableKey}` },
+})
+const { events: counts } = await res.json()
 ```
 
 **`terms(taxonomy)`**: a taxonomy's terms.

@@ -8,6 +8,7 @@ import {
   authorsExample,
   entriesExample,
   entryExample,
+  eventsExample,
   menuExample,
   pageExample,
   pagesExample,
@@ -58,6 +59,10 @@ const ROUTES: Record<string, Handler> = {
       ? { status: 400, body: { error: 'cursor is not one this API returned', code: 'BAD_CURSOR' } }
       : ok(entriesExample),
   '/entries/post/levy-explained': () => ok(entryExample),
+  '/events': (url) =>
+    url.searchParams.get('type') === 'gala'
+      ? { status: 400, body: { error: 'type must be one of rally, convention, fundraiser, blank', code: 'BAD_TYPE' } }
+      : ok(eventsExample),
   '/terms/tag': () => ok(termsExample),
   '/authors': () => ok(authorsExample),
   '/authors/dana-k': () => ok(authorExample),
@@ -141,6 +146,7 @@ describe('createClient: every named method', () => {
     assert.deepEqual(await client.types(), typesExample)
     assert.deepEqual(await client.entries('post'), entriesExample)
     assert.deepEqual(await client.entry('post', 'levy-explained'), entryExample)
+    assert.deepEqual(await client.events(), eventsExample)
     assert.deepEqual(await client.terms('tag'), termsExample)
     assert.deepEqual(await client.authors(), authorsExample)
     assert.deepEqual(await client.author('dana-k'), authorExample)
@@ -266,6 +272,38 @@ describe('createClient: the cache', () => {
       ['?limit=5&term=taxes', '?a=1&b=2&term=x'],
     )
     for (const key of rec.keys) assert.ok(!key.includes(PK.slice(11)), 'no key material in a store key')
+  })
+
+  it('sends and keys an entries search and an events page by their own parameters', async () => {
+    const { api, rec, client } = setup()
+    await client.entries('post', { q: 'levy', term: 'taxes' })
+    await client.entries('post', { q: 'budget' })
+    await client.events({ type: 'fundraiser', limit: 5 })
+    await client.events({ cursor: 'MjAyNi0xMC0xN1QyMzozMDowMC4wMDBafGV2dF80bTE' })
+    await client.events()
+    const scope = scopeOf(PK)
+    assert.deepEqual([...rec.keys].sort(), [
+      `${scope}:v184:/entries/post?q=budget`,
+      `${scope}:v184:/entries/post?q=levy&term=taxes`,
+      `${scope}:v184:/events?`,
+      `${scope}:v184:/events?cursor=MjAyNi0xMC0xN1QyMzozMDowMC4wMDBafGV2dF80bTE`,
+      `${scope}:v184:/events?limit=5&type=fundraiser`,
+      `${scope}:v184:/site?`,
+      `${scope}:version`,
+    ])
+    assert.deepEqual(
+      api.callsTo('/events').map((c) => c.url.search),
+      ['?limit=5&type=fundraiser', '?cursor=MjAyNi0xMC0xN1QyMzozMDowMC4wMDBafGV2dF80bTE', ''],
+    )
+    // A second read of the same search is the stored copy.
+    const before = api.calls.length
+    await client.entries('post', { q: 'budget' })
+    assert.equal(api.calls.length, before)
+  })
+
+  it('surfaces 400 BAD_TYPE from events()', async () => {
+    const { client } = setup()
+    await assert.rejects(client.events({ type: 'gala' }), { name: 'BackgoldApiError', status: 400, code: 'BAD_TYPE' })
   })
 
   it('stores CachedRead JSON for cacheTtlSeconds', async () => {

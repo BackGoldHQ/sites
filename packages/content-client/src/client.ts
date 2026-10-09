@@ -31,6 +31,7 @@ import type {
   CreateClient,
   EntriesResponse,
   Entry,
+  EventsResponse,
   MenuResponse,
   PageResponse,
   PagesResponse,
@@ -434,7 +435,7 @@ export const createClient: CreateClient = (opts) => {
   const entries = <K extends string>(type: K, opts: Parameters<BackgoldContent['entries']>[1] = {}) =>
     read<EntriesResponse>(
       `/entries/${seg(type)}`,
-      { term: opts.term, cursor: opts.cursor, limit: opts.limit === undefined ? undefined : String(opts.limit) },
+      { term: opts.term, q: opts.q, cursor: opts.cursor, limit: opts.limit === undefined ? undefined : String(opts.limit) },
       { preview: opts.preview },
       'null',
     )
@@ -467,6 +468,17 @@ export const createClient: CreateClient = (opts) => {
     allEntries,
     entry: <K extends string>(type: K, slug: string, opts?: ReadOptions) =>
       read<TypedEntryResponse<K>>(`/entries/${seg(type)}/${seg(slug)}`, {}, opts, 'null'),
+    events: async (eventsOpts = {}) =>
+      (await read<EventsResponse>(
+        '/events',
+        {
+          type: eventsOpts.type,
+          cursor: eventsOpts.cursor,
+          limit: eventsOpts.limit === undefined ? undefined : String(eventsOpts.limit),
+        },
+        undefined,
+        'throw',
+      ))!,
     terms: (taxonomy) => read<TermsResponse>(`/terms/${seg(taxonomy)}`, {}, undefined, 'null'),
     authors: () => must<AuthorsResponse>('/authors'),
     author: (slug) => read<AuthorResponse>(`/authors/${seg(slug)}`, {}, undefined, 'null'),
