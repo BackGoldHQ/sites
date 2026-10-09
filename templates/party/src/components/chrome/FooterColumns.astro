@@ -1,0 +1,49 @@
+---
+// The footer menu as columns, from `menuOf` (the Shows on rules already
+// applied). Each group is a column headed by its label, its links under it
+// (a group with an address of its own lists it first; a link nested deeper
+// is listed after its parent, in order). Links that sit at the
+// top level, outside any group, share one column with no heading, before the
+// groups. Draws nothing when the menu shows no link on this page.
+import type { MenuNode } from '@backgold/astro/server'
+
+interface Props {
+  nodes: MenuNode[]
+}
+
+interface Column {
+  label: string | null
+  links: MenuNode[]
+}
+
+const { nodes } = Astro.props
+/** A node and every link under it, in menu order, as one flat list. */
+const flat = (node: MenuNode): MenuNode[] => [...(node.href ? [{ ...node, children: [] }] : []), ...node.children.flatMap(flat)]
+const loose = nodes.filter((node) => node.children.length === 0)
+const columns: Column[] = [
+  ...(loose.length > 0 ? [{ label: null, links: loose }] : []),
+  ...nodes
+    .filter((node) => node.children.length > 0)
+    .map((node) => ({ label: node.label, links: flat(node) })),
+]
+---
+{columns.length > 0 && (
+  <nav class="footer-columns" aria-label="Footer menu">
+    {columns.map((column) => (
+      <div class="footer-column">
+        {column.label && <h2 class="footer-heading">{column.label}</h2>}
+        <ul>
+          {column.links.map((node) => (
+            <li>
+              {node.href ? (
+                <a href={node.href} rel={node.rel} aria-current={node.current ? 'page' : undefined}>{node.label}</a>
+              ) : (
+                <span>{node.label}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </nav>
+)}

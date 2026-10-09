@@ -1,0 +1,209 @@
+---
+// TeamGrid · Board (board A3, "Team & open roles · Board"; A12 shows it beside
+// Grid): the party's board as seats. Officers first (the leadership rows:
+// role over the name, the short bio under it), then the at-large members (the
+// staff rows, with their department), then each open role as an open seat in
+// the same group: drawn as an invitation, not a blank, with its line and a
+// button to its own link (else the section's "interested?" link). Each seat
+// has the photo, or the person's initials when there is none. Four seats
+// across on a wide screen, two on a phone. With no rows it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { text } from '../../../lib/format'
+import { initials, teamOf } from './people'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const intro = text(section.copy.teamOpenRolesIntro)
+const { leaders, staff, open, interest } = teamOf(section)
+const seats = staff.length + open.length
+---
+{(leaders.length > 0 || seats > 0) && (
+  <Band section={section} class="team team-board">
+    {heading && <h2>{heading}</h2>}
+    {leaders.length > 0 && (
+      <div class="seat-group">
+        <h3 class="seat-group-name">Officers</h3>
+        <ul class="seats" role="list">
+          {leaders.map((p) => (
+            <li class="seat">
+              {p.photo ? (
+                <img class="seat-photo" src={p.photo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class="seat-photo seat-initials" aria-hidden="true">{initials(p.name)}</span>
+              )}
+              {p.role && <p class="seat-role">{p.role}</p>}
+              <h4 class="seat-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</h4>
+              {p.bio && <p class="seat-line">{p.bio}</p>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {seats > 0 && (
+      <div class="seat-group">
+        <h3 class="seat-group-name">
+          At-large members <span class="seat-group-count">{seats === 1 ? '1 seat' : `${seats} seats`}</span>
+        </h3>
+        <ul class="seats" role="list">
+          {staff.map((p) => (
+            <li class="seat">
+              {p.photo ? (
+                <img class="seat-photo" src={p.photo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class="seat-photo seat-initials" aria-hidden="true">{initials(p.name)}</span>
+              )}
+              {p.role && <p class="seat-role">{p.role}</p>}
+              <h4 class="seat-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</h4>
+              {p.dept && <p class="seat-line">{p.dept}</p>}
+            </li>
+          ))}
+          {open.map((p) => {
+            const ask = p.link ? { ...p.link, label: 'Ask about running' } : interest
+            return (
+              <li class="seat seat-open">
+                <span class="seat-photo seat-empty" aria-hidden="true">?</span>
+                <p class="seat-role">{[p.role, p.dept].filter(Boolean).join(' · ')} · open seat</p>
+                <h4 class="seat-name">This seat is open</h4>
+                {(p.blurb ?? intro) && <p class="seat-line">{p.blurb ?? intro}</p>}
+                {ask && (
+                  <p class="seat-ask">
+                    <a class="button" href={ask.href} rel={ask.rel}>
+                      {ask.label}<span class="visually-hidden">: {p.role}</span>
+                    </a>
+                  </p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    )}
+  </Band>
+)}
+
+<style>
+  .seat-group + .seat-group {
+    margin-top: 2.25rem;
+  }
+  .seat-group-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0 0 1rem;
+    font-size: calc(var(--h3) * 1.05);
+    font-weight: 800;
+  }
+  .seat-group-count {
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .seats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .seat {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    border-radius: calc(var(--radius) * 1.5);
+    background: color-mix(in srgb, var(--page) 70%, transparent);
+  }
+  :global(.bg-band-contrast) .seat {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .seat > * {
+    margin: 0;
+  }
+  .seat-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+  .seat-initials,
+  .seat-empty {
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .seat .seat-role {
+    margin-top: 0.875rem;
+    color: var(--link);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .seat .seat-name {
+    margin-top: 0.25rem;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .seat-name a {
+    color: var(--ink);
+  }
+  .seat .seat-line {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .seat-open {
+    border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+    background: transparent;
+  }
+  :global(.bg-band-contrast) .seat-open {
+    background: transparent;
+  }
+  .seat .seat-ask {
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+  .seat-ask .button {
+    padding: 0.5rem 1rem;
+    font-size: var(--text-sm);
+    line-height: 1.2;
+    text-align: center;
+  }
+  @media (min-width: 48rem) {
+    .seats {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+    .seat {
+      padding: 1.125rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .seat:not(.seat-open) {
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    .seat:not(.seat-open):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 0.1);
+    }
+  }
+</style>

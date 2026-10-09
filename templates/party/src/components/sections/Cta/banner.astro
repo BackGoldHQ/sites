@@ -1,0 +1,64 @@
+---
+// Cta, 'banner' layout (board A3-leadership, section 4): one band-wide row,
+// the eyebrow, the heading and the line of copy on the left and the buttons
+// (the donate link first) on the right; on a phone the buttons follow the
+// words. It sits on the section's own band, which is the contrast band unless
+// the organization picks another. A donate link goes to the organization's
+// own donate page in BackGold, exactly as given: never rebuild it on this site.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const eyebrow = text(section.copy.eyebrow)
+const heading = text(section.copy.heading)
+const buttons = links(section)
+---
+<Band section={section} class="cta">
+  <div class="banner">
+    <div class="banner-words">
+      {eyebrow && <p class="kicker">{eyebrow}</p>}
+      {heading && <h2>{heading}</h2>}
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {buttons.length > 0 && (
+      <p class="actions banner-actions">
+        {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </div>
+</Band>
+
+<style>
+  .banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem 2rem;
+  }
+  .banner-words {
+    flex: 1 1 25rem;
+    min-width: 0;
+  }
+  .banner-words h2 {
+    font-size: clamp(1.875rem, 1.35rem + 1.7vw, 2.5rem);
+    line-height: 1.05;
+    max-width: 24em;
+    margin: 0;
+  }
+  .banner-words > :global(.lede) {
+    margin: 0.75rem 0 0;
+  }
+  .banner-words > :last-child {
+    margin-bottom: 0;
+  }
+  .banner-actions {
+    flex: 0 1 auto;
+    margin: 0;
+  }
+</style>

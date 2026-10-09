@@ -1,0 +1,40 @@
+---
+// EventsList: upcoming events, each linking to its page in BackGold, which is
+// where an RSVP or a ticket happens (follow the link as given; never build
+// an RSVP form here). `options.actions` is how each event links: 'buttons'
+// adds a "Details and RSVP" button under the event; 'link' (or none) makes
+// the title the link. With no events listed, the section places BackGold's
+// own events-list frame instead, when it has one.
+import type { Section } from '@backgold/content'
+import { Embed } from '@backgold/astro/components'
+import Band from '../Band.astro'
+import { actionsOf, eventsOf } from './events'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const buttons = actionsOf(section) === 'buttons'
+const events = eventsOf(section)
+---
+<Band section={section} class="events">
+  {heading && <h2>{heading}</h2>}
+  {events.length > 0 && (
+    <ul class="event-list" role="list">
+      {events.map((event) => (
+        <li class="event">
+          <h3 class="event-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
+          {event.when && event.startsAt && <p class="event-when"><time datetime={event.startsAt}>{event.when.full}</time></p>}
+          {event.place && <p class="event-where">{event.place}</p>}
+          {event.link && buttons && <p class="event-action"><a class="button" href={event.link.href} rel={event.link.rel}>Details and RSVP<span class="visually-hidden">: {event.title}</span></a></p>}
+        </li>
+      ))}
+    </ul>
+  )}
+  {events.length === 0 && section.embed && <Embed embed={section.embed} title={heading ?? 'Upcoming events'} />}
+  {events.length === 0 && !section.embed && <p class="empty">No upcoming events right now.</p>}
+</Band>

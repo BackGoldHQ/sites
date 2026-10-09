@@ -1,0 +1,43 @@
+---
+// Who wrote it, at the end of an entry: each writer's picture (or initials),
+// name, and the bio from their author record, with a link to their page.
+// Editors and photographers stay in the byline only.
+import type { EntryAuthor } from '@backgold/content'
+import { relFor, safeHref, safeSrc } from '@backgold/astro/server'
+import Prose from '../Prose.astro'
+import { initials, writers } from '../../lib/entries'
+
+interface Props {
+  authors: EntryAuthor[]
+}
+
+const people = writers(Astro.props.authors).slice(0, 3)
+const bg = Astro.locals.backgold
+const records = bg.setup === null ? await Promise.all(people.map((p) => bg.client.author(p.slug).catch(() => null))) : []
+const boxes = people.map((person, i) => {
+  const record = records[i]?.author ?? null
+  const link = safeHref(record?.link_url ?? person.link_url)
+  return {
+    name: record?.display_name ?? person.display_name,
+    href: `/authors/${encodeURIComponent(person.slug)}`,
+    avatar: safeSrc(record?.avatar_url ?? person.avatar_url),
+    bio: record?.bio ?? null,
+    link,
+    rel: link ? relFor(link) : undefined,
+  }
+})
+---
+{boxes.length > 0 && (
+  <section class="author-boxes" aria-label={boxes.length === 1 ? 'About the author' : 'About the authors'}>
+    {boxes.map((box) => (
+      <div class="author-box">
+        {box.avatar ? <img class="author-box-avatar" src={box.avatar} alt="" width="64" height="64" loading="lazy" /> : <span class="author-box-avatar" aria-hidden="true">{initials(box.name)}</span>}
+        <div>
+          <p class="author-box-name"><a href={box.href}>{box.name}</a></p>
+          {box.bio ? <Prose value={box.bio} class="author-box-bio" /> : <p class="muted">More from {box.name} is on their page.</p>}
+          {box.link && <p class="author-box-link"><a href={box.link} rel={box.rel}>Their website</a></p>}
+        </div>
+      </div>
+    ))}
+  </section>
+)}

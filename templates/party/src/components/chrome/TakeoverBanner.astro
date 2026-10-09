@@ -1,0 +1,25 @@
+---
+// TakeoverBanner: a headline and a line of pitch, centred and compact, on
+// the band and bleed chosen in BackGold. It is site chrome, not a page
+// section: it arrives only inside an area (most often Top banner, under the
+// header), and sections/index.ts registers it so <Area> can draw it. The
+// headline is an <h2>: the page's <h1> is its own.
+import type { Section } from '@backgold/content'
+import Band from '../sections/Band.astro'
+import { text } from '../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const headline = text(section.copy.headline)
+const pitch = text(section.copy.pitch)
+---
+{(headline || pitch) && (
+  <Band section={section} class="takeover">
+    {headline && <h2 class="takeover-headline">{headline}</h2>}
+    {pitch && <p class="takeover-pitch">{pitch}</p>}
+  </Band>
+)}

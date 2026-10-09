@@ -1,0 +1,29 @@
+---
+// The band every section sits in: the same classes and data attributes
+// @backgold/astro's DefaultSection emits, so src/styles/site.css styles a
+// section of yours and a block type BackGold adds later the same way.
+import type { Section } from '@backgold/content'
+
+interface Props {
+  section: Section
+  class?: string
+}
+
+const BANDS = ['plain', 'tint', 'panel', 'wash', 'contrast']
+const BLEEDS = ['full', 'contained']
+
+const { section, class: className } = Astro.props
+const band = BANDS.includes(section.band) ? section.band : 'plain'
+const bleed = BLEEDS.includes(section.bleed) ? section.bleed : 'full'
+---
+<section
+  class:list={['bg-section', `bg-band-${band}`, `bg-bleed-${bleed}`, className]}
+  data-type={section.type}
+  data-band={band}
+  data-bleed={bleed}
+  data-variant={section.variant ?? undefined}
+>
+  <div class="bg-section-inner">
+    <slot />
+  </div>
+</section>

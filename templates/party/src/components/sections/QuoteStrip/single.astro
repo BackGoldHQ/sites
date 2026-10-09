@@ -1,0 +1,78 @@
+---
+// QuoteStrip, 'single' layout (Single; board A2-about-platform, section 5):
+// one quote, large and centred in the display serif, with who said it under
+// it. It draws the section's first quote; the heading, when there is one,
+// sits small above it. Nothing is drawn when there is neither a heading nor
+// a quote.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const [quote] = rows(section)
+  .map((row) => ({ quote: text(row.quote), attribution: text(row.attribution) }))
+  .filter((q): q is { quote: string; attribution: string | null } => q.quote !== null)
+---
+{(heading || quote) && (
+  <Band section={section} class="quotes">
+    <div class="single">
+      {heading && <h2 class="single-heading">{heading}</h2>}
+      {quote && (
+        <figure class="single-quote">
+          <blockquote><p>{quote.quote}</p></blockquote>
+          {quote.attribution && <figcaption>{quote.attribution}</figcaption>}
+        </figure>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .single {
+    max-width: 54rem;
+    margin-inline: auto;
+    text-align: center;
+  }
+  .single-heading {
+    margin: 0 0 1.5rem;
+    max-width: none;
+    color: var(--link);
+    font-family: var(--font);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .single-quote {
+    margin: 0;
+  }
+  .single-quote blockquote {
+    margin: 0;
+  }
+  .single-quote blockquote p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 1rem + 1.9vw, 2.25rem);
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.28;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .single-quote blockquote p::before {
+    content: open-quote;
+  }
+  .single-quote blockquote p::after {
+    content: close-quote;
+  }
+  .single-quote figcaption {
+    margin-top: 1.25rem;
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+</style>

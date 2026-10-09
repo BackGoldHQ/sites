@@ -1,0 +1,29 @@
+---
+// Leaderboard: BackGold's hosted pages fill a leaderboard live, and the
+// Content API does not hand out its rows (supporters' names stay in
+// BackGold), so today this section renders nothing. Should rows arrive, it
+// lists them with a name and a figure.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const entries = rows(section)
+  .map((row) => ({ name: text(row.name) ?? text(row.label), value: text(row.value) ?? text(row.total) }))
+  .filter((e) => e.name)
+---
+{entries.length > 0 && (
+  <Band section={section} class="leaderboard">
+    {heading && <h2>{heading}</h2>}
+    <ol class="ranked">
+      {entries.map((e) => <li><span>{e.name}</span>{e.value && <strong>{e.value}</strong>}</li>)}
+    </ol>
+  </Band>
+)}

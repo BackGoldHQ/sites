@@ -1,0 +1,51 @@
+---
+// StatCards, 'row' layout, the default (board A2-about-platform, section 3):
+// a row of cards, each a figure with its label and an optional note, as many
+// to a row as fit and one to a row on a phone. A card marked `accent` in
+// BackGold shows its figure in the accent colour. 'ribbon' is its own file
+// beside this one.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { rows } from '../../../lib/section'
+import { literalStat, text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const stats = rows(section)
+  .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note), accent: row.accent === true }))
+  .filter((stat) => stat.value !== null)
+---
+{(heading || stats.length > 0) && (
+  <Band section={section} class="stats">
+    {heading && <h2>{heading}</h2>}
+    {stats.length > 0 && (
+      <ul class="grid grid-3 stat-list" role="list">
+        {stats.map((stat) => (
+          <li class="stat">
+            <p class:list={['stat-value', stat.accent && 'stat-accent']}>{stat.value}</p>
+            {stat.label && <p class="stat-label">{stat.label}</p>}
+            {stat.note && <p class="stat-note">{stat.note}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}
+
+<style>
+  .stat {
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    border-radius: calc(var(--radius) * 1.33);
+    background: color-mix(in srgb, var(--page) 60%, transparent);
+    box-shadow: 0 18px 40px -28px color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+  .stat-value {
+    font-family: var(--font-display);
+  }
+</style>

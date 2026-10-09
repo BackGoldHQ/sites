@@ -1,0 +1,42 @@
+---
+// One level of the header menu, from `menuOf` (the Shows on rules already
+// applied, the header button already left out). In the bar a link with
+// children (a group) is a <details> dropdown; only one is open at a time
+// (they share a `name`), and it opens on a click or Enter, so it works with
+// the keyboard and with scripts off. In the phone sheet every group is open:
+// its label is a small heading over its links. A group that has an address
+// of its own lists it first among its links.
+import type { MenuNode } from '@backgold/astro/server'
+
+interface Props {
+  nodes: MenuNode[]
+  mode: 'bar' | 'sheet'
+}
+
+const { nodes, mode } = Astro.props
+const childrenOf = (node: MenuNode): MenuNode[] => (node.href ? [{ ...node, children: [] }, ...node.children] : node.children)
+const holdsCurrent = (node: MenuNode) => node.children.some((child) => child.current)
+---
+<ul>
+  {nodes.map((node) => (
+    <li class:list={[node.children.length > 0 && 'menu-group']}>
+      {node.children.length === 0 ? (
+        node.href ? (
+          <a href={node.href} rel={node.rel} aria-current={node.current ? 'page' : undefined}>{node.label}</a>
+        ) : (
+          <span>{node.label}</span>
+        )
+      ) : mode === 'bar' ? (
+        <details name="site-header-menu" class:list={[holdsCurrent(node) && 'menu-group-current']}>
+          <summary>{node.label}</summary>
+          <Astro.self nodes={childrenOf(node)} mode="sheet" />
+        </details>
+      ) : (
+        <>
+          <span class="menu-group-label">{node.label}</span>
+          <Astro.self nodes={childrenOf(node)} mode="sheet" />
+        </>
+      )}
+    </li>
+  ))}
+</ul>

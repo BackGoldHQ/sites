@@ -1,0 +1,26 @@
+---
+// One entry in a list: indexes, term pages, the Blog and Collection sections.
+import type { Card } from '../lib/section'
+import { formatDay } from '../lib/format'
+
+interface Props {
+  card: Card
+  /** The card title's level: 2 on an index page (under its h1), 3 inside a section (under its h2). */
+  level?: 2 | 3
+}
+
+const { card, level = 2 } = Astro.props
+const Heading = level === 2 ? 'h2' : 'h3'
+const day = formatDay(card.date)
+---
+<article class="card">
+  {card.image && <img class="card-image" src={card.image.url} alt={card.image.alt} loading="lazy" decoding="async" />}
+  <div class="card-body">
+    {card.meta && <p class="card-meta">{card.meta}</p>}
+    <Heading class="card-title">
+      {card.href ? <a href={card.href}>{card.title}</a> : card.title}
+    </Heading>
+    {card.summary && <p class="card-summary">{card.summary}</p>}
+    {day && card.date && <time class="card-date" datetime={card.date}>{day}</time>}
+  </div>
+</article>

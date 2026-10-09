@@ -1,0 +1,42 @@
+---
+// The podcast entry layout, `episode`: the header with the type's own word
+// over the title ("Episode"), the episode's art beside the player (the
+// browser's own audio controls, reading the entry's media file), then the
+// show notes (the entry's body), its fields, Share, and the hosts.
+import { renderMarkdown, safeSrc } from '@backgold/astro/server'
+import AuthorBox from '../AuthorBox.astro'
+import EntryFields from '../EntryFields.astro'
+import EntryHeader from '../EntryHeader.astro'
+import Share from '../Share.astro'
+import type { EntryLayoutProps } from '../props'
+import '../../../styles/entries.css'
+
+type Props = EntryLayoutProps
+
+const { entry, type } = Astro.props
+const art = entry.hero ? safeSrc(entry.hero.url) : null
+const audio = safeSrc(entry.media_url)
+const notes = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+---
+<article class="entry entry-episode">
+  <EntryHeader entry={entry} type={type} kicker={type?.singular_label ?? 'Episode'} />
+  <div class="episode-player">
+    {art && <img class="episode-art" src={art} alt="" width="160" height="160" decoding="async" />}
+    {audio ? (
+      <audio src={audio} controls preload="none">
+        <a href={audio}>Download the episode</a>
+      </audio>
+    ) : (
+      <p class="empty">The audio for this episode is not up yet.</p>
+    )}
+  </div>
+  {notes && (
+    <section class="show-notes" aria-labelledby="show-notes">
+      <h2 id="show-notes">Show notes</h2>
+      <div class="prose entry-body" set:html={notes} />
+    </section>
+  )}
+  <EntryFields entry={entry} type={type} />
+  {entry.url && <Share title={entry.title} path={entry.url} />}
+  <AuthorBox authors={entry.authors} />
+</article>

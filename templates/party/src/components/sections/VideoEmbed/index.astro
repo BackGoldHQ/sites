@@ -1,0 +1,52 @@
+---
+// VideoEmbed: a YouTube or Vimeo video in its player, a video file in the
+// browser's own player, or a link when it is neither; a caption under it.
+// `variant` is 'portrait' for an upright video; anything else is 16:9.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const caption = text(section.copy.caption)
+const video = media(section, 'url', 'videoUrl')
+const poster = media(section, 'videoPosterUrl')
+
+function playerOf(url: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  const host = parsed.hostname.replace(/^www\./, '')
+  const youtube =
+    host === 'youtu.be'
+      ? parsed.pathname.slice(1)
+      : host === 'youtube.com' || host === 'm.youtube.com'
+        ? (parsed.searchParams.get('v') ?? /^\/(?:embed|shorts|live)\/([^/]+)/.exec(parsed.pathname)?.[1] ?? '')
+        : ''
+  if (/^[A-Za-z0-9_-]{11}$/.test(youtube)) return `https://www.youtube-nocookie.com/embed/${youtube}`
+  const vimeo = host === 'vimeo.com' || host === 'player.vimeo.com' ? /(\d{6,12})/.exec(parsed.pathname)?.[1] : undefined
+  return vimeo ? `https://player.vimeo.com/video/${vimeo}` : null
+}
+
+const player = video ? playerOf(video.url) : null
+const file = video && !player && /\.(mp4|webm|m4v|mov)(\?|$)/i.test(video.url) ? video.url : null
+const title = caption ?? 'Video'
+---
+{video && (
+  <Band section={section} class="video">
+    <figure class:list={['video-frame', section.variant === 'portrait' && 'video-portrait']}>
+      {player && <iframe src={player} title={title} loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>}
+      {file && <video src={file} poster={poster?.url} controls preload="none" playsinline></video>}
+      {!player && !file && <p><a href={video.url} rel="noopener">Watch the video</a></p>}
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  </Band>
+)}

@@ -1,0 +1,26 @@
+---
+// The newsletter list layout, `list`: the past issues, newest first, each
+// with its date, its headline and its preheader.
+import { safeHref } from '@backgold/astro/server'
+import ListFrame from '../ListFrame.astro'
+import type { ListLayoutProps } from '../props'
+import { formatDay } from '../../../lib/format'
+
+type Props = ListLayoutProps
+
+const props = Astro.props
+const issues = props.entries.map((entry) => ({ entry, href: entry.url ? safeHref(entry.url) : null, day: formatDay(entry.publish_at) }))
+---
+<ListFrame {...props} noun="issues" class="list-issues">
+  <ol class="issue-rows" role="list">
+    {issues.map((issue) => (
+      <li class="issue-row">
+        {issue.day && issue.entry.publish_at && <time datetime={issue.entry.publish_at}>{issue.day}</time>}
+        <div>
+          <h2 class="issue-row-title">{issue.href ? <a href={issue.href}>{issue.entry.title}</a> : issue.entry.title}</h2>
+          {issue.entry.summary && <p>{issue.entry.summary}</p>}
+        </div>
+      </li>
+    ))}
+  </ol>
+</ListFrame>

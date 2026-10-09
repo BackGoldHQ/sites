@@ -1,0 +1,122 @@
+---
+// Hero, 'cover' layout (Full photo; board A1-home, section 1): the photo
+// fills the band edge to edge and the headline, the line under it and the
+// buttons sit over its lower edge on a scrim of the contrast ground, in the
+// contrast band's inks so they read on any photo. Without a photo it draws
+// the same words on the section's own band. The page-opening Hero's
+// headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>.
+// A Hero with its signup form on carries an `embed`: BackGold's own form,
+// framed under the buttons.
+import type { ComponentProps } from 'astro/types'
+import { Embed } from '@backgold/astro/components'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, level = 2 } = Astro.props
+const Heading = level === 1 ? 'h1' : 'h2'
+const headline = text(section.copy.headline)
+const subheadline = text(section.copy.subheadline)
+const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const buttons = links(section)
+---
+<Band section={section} class:list={['hero-cover', picture && 'hero-cover-photo']}>
+  {picture && (
+    <>
+      <img
+        class="cover-image"
+        src={picture.url}
+        alt={picture.alt}
+        loading={level === 1 ? 'eager' : 'lazy'}
+        fetchpriority={level === 1 ? 'high' : undefined}
+        decoding="async"
+      />
+      <div class="cover-scrim" aria-hidden="true"></div>
+    </>
+  )}
+  <div class="cover-words">
+    {headline && <Heading class="cover-headline">{headline}</Heading>}
+    {subheadline && <p class="cover-lede">{subheadline}</p>}
+    {buttons.length > 0 && (
+      <p class="actions">
+        {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+    {section.embed && <Embed embed={section.embed} title="Sign up" />}
+  </div>
+</Band>
+
+<style>
+  /* The band itself: the photo's frame. Band.astro renders it, so it is reached through its class. */
+  :global(.bg-section.hero-cover-photo) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    min-height: clamp(32rem, 78vh, 40rem);
+  }
+  :global(.bg-section.hero-cover-photo) > :global(.bg-section-inner) {
+    width: 100%;
+  }
+
+  .cover-image {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  .cover-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--band-contrast) 15%, transparent) 0%,
+      color-mix(in srgb, var(--band-contrast) 55%, transparent) 35%,
+      color-mix(in srgb, var(--band-contrast) 82%, transparent) 60%,
+      color-mix(in srgb, var(--band-contrast) 94%, transparent) 100%
+    );
+  }
+
+  /* Over the photo the words take the contrast band's inks, which meet AA on its ground; the line under the headline takes the full ink, not the muted one, since the photo shows through the scrim. */
+  :global(.hero-cover-photo) .cover-words {
+    --ink: var(--band-contrast-ink);
+    --muted: var(--band-contrast-ink);
+    --link: var(--band-contrast-link);
+    --button: var(--band-contrast-button);
+    --button-ink: var(--band-contrast-button-ink);
+    color: var(--ink);
+    text-shadow: 0 1px 12px color-mix(in srgb, var(--band-contrast) 45%, transparent);
+  }
+  :global(.hero-cover-photo) .cover-words .button {
+    text-shadow: none;
+  }
+
+  .cover-headline {
+    font-size: clamp(2.75rem, 1.6rem + 4.6vw, 5.25rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    max-width: 11em;
+    margin: 0;
+  }
+  .cover-lede {
+    font-size: var(--text-lg);
+    color: var(--muted);
+    max-width: 34em;
+    margin: 1.25rem 0 0;
+  }
+  .cover-words .actions {
+    margin-top: 1.75rem;
+  }
+  .cover-words > :global(.bg-embed) {
+    margin-top: 1.5rem;
+  }
+</style>

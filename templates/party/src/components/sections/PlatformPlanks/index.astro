@@ -1,0 +1,56 @@
+---
+// PlatformPlanks: the platform, section by section. Each plank shows its
+// headline and plain-language line; the full text opens beneath it.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import { nested, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const parts = rows(section)
+  .map((row) => ({
+    num: text(row.num),
+    title: text(row.title),
+    ethos: text(row.ethos),
+    planks: nested(row, 'planks').filter((p) => text(p.headline)),
+  }))
+  .filter((part) => part.title || part.planks.length > 0)
+---
+{(heading || parts.length > 0) && (
+  <Band section={section} class="platform">
+    {heading && <h2>{heading}</h2>}
+    {parts.map((part) => (
+      <div class="platform-part">
+        {part.title && (
+          <h3>
+            {part.num && <span class="platform-num">{part.num}</span>} {part.title}
+          </h3>
+        )}
+        {part.ethos && <p class="lede">{part.ethos}</p>}
+        {part.planks.length > 0 && (
+          <ol class="plank-list">
+            {part.planks.map((plank) => (
+              <li class="plank">
+                <p class="plank-headline">{text(plank.headline)}</p>
+                {text(plank.plain) && <p>{text(plank.plain)}</p>}
+                {text(plank.full) && (
+                  <details>
+                    <summary>The full plank</summary>
+                    <Prose value={plank.full} />
+                  </details>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    ))}
+  </Band>
+)}

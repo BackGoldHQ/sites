@@ -1,0 +1,29 @@
+---
+// An entry's own fields (those its type declares in BackGold), each drawn by
+// its kind through FieldValue, after the body. A type the organization adds
+// renders with no change here. `omit` leaves out fields a layout already
+// shows in its own place (the newsletter's issue line).
+import type { ContentTypeSummary, EntryDetail } from '@backgold/content'
+import FieldValue from '../FieldValue.astro'
+
+interface Props {
+  entry: EntryDetail
+  type: ContentTypeSummary | undefined
+  omit?: string[]
+}
+
+const { entry, type, omit = [] } = Astro.props
+const isEmpty = (value: unknown) =>
+  value === null || value === undefined || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)
+const fields = (type?.fields ?? []).filter((field) => !omit.includes(field.key) && !isEmpty(entry.fields?.[field.key]))
+---
+{fields.length > 0 && (
+  <dl class="fields">
+    {fields.map((field) => (
+      <div class="field">
+        <dt>{field.label}</dt>
+        <dd><FieldValue field={field} value={entry.fields[field.key]} /></dd>
+      </div>
+    ))}
+  </dl>
+)}
