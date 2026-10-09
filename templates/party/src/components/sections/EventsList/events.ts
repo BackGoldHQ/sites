@@ -1,15 +1,16 @@
 // An EventsList's rows as its layouts draw them: each event's title, start,
 // place, type, whether it still takes registrations, and its page, at most the
-// section's `max` of them. Dates are lib/format.ts's: the parts below are
-// read off the string formatWhen writes, so every layout shows the same day
-// and time the list layout does.
+// section's `max` of them. Dates are lib/format.ts's, in the event's own time
+// zone: the parts below are read off the string formatWhen writes, so every
+// layout shows (and the agenda groups by) the same day and time the list
+// layout does.
 
 import type { Section } from '@backgold/content'
 import { linkOf, rows, type Link } from '../../../lib/section'
 import { formatWhen, text } from '../../../lib/format'
 
 interface When {
-  /** "Tuesday, October 14, 2026 at 7:00 PM UTC", as formatWhen writes it. */
+  /** "Tuesday, October 14, 2026 at 7:00 PM CDT", as formatWhen writes it. */
   full: string
   /** "Tue", or null for a date with no time (formatWhen leaves the weekday out). */
   weekday: string | null
@@ -22,7 +23,7 @@ interface When {
   year: number
   /** 0 for January. */
   monthIndex: number
-  /** "7:00 PM UTC", or null when the value has no time. */
+  /** "7:00 PM CDT", or null when the value has no time. */
   time: string | null
 }
 
@@ -45,12 +46,12 @@ const MONTHS = Array.from({ length: 12 }, (_, i) =>
   new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(Date.UTC(2000, i, 1)),
 )
 
-// formatWhen writes "Tuesday, October 14, 2026 at 7:00 PM" (", 7:00 PM" on an
-// older ICU), or "October 14, 2026" for a value with no time.
+// formatWhen writes "Tuesday, October 14, 2026 at 7:00 PM CDT" (", 7:00 PM
+// CDT" on an older ICU), or "October 14, 2026" for a value with no time.
 const WHEN = /^(?:(\p{L}+), )?(\p{L}+) (\d{1,2}), (\d{4})(?:(?:,| at) (.+))?$/u
 
-function whenOf(value: unknown): When | null {
-  const full = formatWhen(value)
+function whenOf(value: unknown, timeZone: unknown): When | null {
+  const full = formatWhen(value, timeZone)
   const m = full ? WHEN.exec(full) : null
   if (!full || !m) return null
   const [, weekday, month, day, year, time] = m
@@ -95,7 +96,7 @@ export function eventsOf(section: Section): EventRow[] {
         {
           title,
           startsAt,
-          when: whenOf(startsAt),
+          when: whenOf(startsAt, row.timezone),
           place: text(row.location) ?? (row.is_virtual === true ? 'Online' : null),
           type: typeLabel(row.type),
           closed: row.registration_closed === true,
