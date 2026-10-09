@@ -460,7 +460,10 @@ Each page is its own edge-cache entry (see [Caching](#caching)).
   `<section class="bg-section bg-band-<band> bg-bleed-<bleed>">` with
   `data-type`, `data-band` and `data-bleed`, the heading (`heading`, else
   `title`, else `headline`) as an `<h2>` (never an `<h1>`: the page has
-  one), copy, media, links, the data rows and the embed. Restyle it through
+  one), copy, media, links, the data rows and the embed. A data row's date
+  is the calendar day in the row's `timezone` (an event's own zone) when the
+  value is an instant (`Z` or an offset) and `Intl` knows the zone; otherwise
+  it is the day written in the value. Restyle it through
   the `--bg-*` custom properties or the classes.
 - On the preview page only (`/preview` and below), `<Section>` writes an
   empty marker before each section, `<span id="bg-section-<section id>"

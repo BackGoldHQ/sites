@@ -117,17 +117,49 @@ function firstString(row: Record<string, unknown>, keys: readonly string[]): str
   return null
 }
 
-const DATE_LABEL = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+const DATE_FIELDS: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' }
+const DATE_LABEL = new Intl.DateTimeFormat('en-US', { ...DATE_FIELDS, timeZone: 'UTC' })
 
-/** The date as authored: the calendar day in the value itself, so an offset never moves it. */
-function dateOf(value: string | null): DataRow['date'] {
+// A `Z` or a ±hh:mm offset at the end: the value names an instant.
+const INSTANT = /(?:z|[+-]\d{2}:?\d{2})$/i
+
+// One formatter per zone, null for a zone `Intl` rejects.
+const DATE_IN_ZONE = new Map<string, Intl.DateTimeFormat | null>()
+
+function dateInZone(zone: string): Intl.DateTimeFormat | null {
+  let formatter = DATE_IN_ZONE.get(zone)
+  if (formatter === undefined) {
+    try {
+      formatter = new Intl.DateTimeFormat('en-US', { ...DATE_FIELDS, timeZone: zone })
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error
+      formatter = null
+    }
+    DATE_IN_ZONE.set(zone, formatter)
+  }
+  return formatter
+}
+
+/**
+ * The date a row shows, with `iso` the value as given. An instant (ending in
+ * `Z` or a ±hh:mm offset) with a `zone` `Intl` accepts (an event row's own
+ * IANA `timezone`) is labelled with its calendar day in that zone. Anything
+ * else (no zone, a zone `Intl` rejects, a date-only or wall-clock value) is
+ * labelled with the calendar day written in the value, so an offset never
+ * moves it.
+ */
+function dateOf(value: string | null, zone: string | null): DataRow['date'] {
   if (!value || Number.isNaN(Date.parse(value))) return null
   const day = /^(\d{4}-\d{2}-\d{2})/.exec(value)?.[1]
   if (!day) return null
-  return { iso: value, label: DATE_LABEL.format(new Date(`${day}T00:00:00Z`)) }
+  const inZone = zone && INSTANT.test(value.trim()) ? dateInZone(zone) : null
+  return { iso: value, label: inZone ? inZone.format(new Date(value)) : DATE_LABEL.format(new Date(`${day}T00:00:00Z`)) }
 }
 
-/** Each `data.items` row, best effort, whatever the source: a title, a link, a line of text, an image, a date. */
+/**
+ * Each `data.items` row, best effort, whatever the source: a title, a link, a
+ * line of text, an image, a date (on the row's `timezone` day, when it has one).
+ */
 export function dataRowsOf(section: Section): DataRow[] {
   const rows: DataRow[] = []
   for (const item of section.data?.items ?? []) {
@@ -143,7 +175,8 @@ export function dataRowsOf(section: Section): DataRow[] {
     const href = rawHref ? safeHref(rawHref, { anchors: true }) : null
     const rawImage = firstString(row, ['image_url', 'image', 'hero'])
     const image = rawImage ? safeSrc(rawImage) : null
-    const date = dateOf(firstString(row, ['publish_at', 'starts_at', 'date', 'deadline']))
+    const zone = typeof row.timezone === 'string' && row.timezone.trim() ? row.timezone.trim() : null
+    const date = dateOf(firstString(row, ['publish_at', 'starts_at', 'date', 'deadline']), zone)
     if (!title && !text && !image && !date) continue
     rows.push({ title, href, rel: href ? relFor(href) : undefined, text, image, date })
   }

@@ -1,23 +1,45 @@
-// Dates, money and copy as the components show them. Dates are shown as
-// written in BackGold: the calendar day and clock time in the value itself,
-// so a server in another time zone never moves an event to the wrong day. A
-// time written in UTC (ending in `Z`, as event rows are) says so: BackGold
-// does not send the event's own time zone.
+// Dates, money and copy as the components show them. A date-only value is
+// the calendar day as written, so a server in another time zone never moves
+// it. A time with an explicit UTC `Z` or offset is an instant: given a zone
+// (an event row's own IANA `timezone`), it is shown in that zone with the
+// zone's short name ("… at 6:00 PM CDT"); with no zone, or one `Intl` does
+// not know, a `Z` time is shown in UTC and says "UTC", and an offset time as
+// written. A time with no offset is a wall clock and is shown as written.
 
 import { sanitizeRichText } from '@backgold/astro/server'
 
 const WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/
 
 const DAY = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
-const DAY_AND_TIME = new Intl.DateTimeFormat('en-US', {
+const DAY_AND_TIME_FIELDS: Intl.DateTimeFormatOptions = {
   weekday: 'long',
   month: 'long',
   day: 'numeric',
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
-  timeZone: 'UTC',
-})
+}
+const DAY_AND_TIME = new Intl.DateTimeFormat('en-US', { ...DAY_AND_TIME_FIELDS, timeZone: 'UTC' })
+
+// A `Z` or a ±hh:mm offset at the end: the value names an instant.
+const INSTANT = /(?:z|[+-]\d{2}:?\d{2})$/i
+
+// One formatter per zone, null for a zone `Intl` rejects.
+const IN_ZONE = new Map<string, Intl.DateTimeFormat | null>()
+
+function inZone(zone: string): Intl.DateTimeFormat | null {
+  let formatter = IN_ZONE.get(zone)
+  if (formatter === undefined) {
+    try {
+      formatter = new Intl.DateTimeFormat('en-US', { ...DAY_AND_TIME_FIELDS, timeZone: zone, timeZoneName: 'short' })
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error
+      formatter = null
+    }
+    IN_ZONE.set(zone, formatter)
+  }
+  return formatter
+}
 
 function wallClock(value: string): { date: Date; hasTime: boolean } | null {
   const m = WALL_CLOCK.exec(value)
@@ -34,13 +56,21 @@ export function formatDay(value: unknown): string | null {
   return parsed ? DAY.format(parsed.date) : null
 }
 
-/** "Thursday, October 8, 2026 at 7:00 PM" (the time only when the value has one; "… UTC" for a UTC time). */
-export function formatWhen(value: unknown): string | null {
+/**
+ * "Thursday, October 8, 2026 at 7:00 PM CDT" for an instant in `zone`; the
+ * day alone when the value has no time. See the top of this file for a value
+ * with no zone or no offset.
+ */
+export function formatWhen(value: unknown, zone?: string | null): string | null {
   if (typeof value !== 'string') return null
   const parsed = wallClock(value)
   if (!parsed) return null
   if (!parsed.hasTime) return DAY.format(parsed.date)
-  return /z$/i.test(value.trim()) ? `${DAY_AND_TIME.format(parsed.date)} UTC` : DAY_AND_TIME.format(parsed.date)
+  const offset = INSTANT.exec(value.trim())?.[0]
+  if (!offset) return DAY_AND_TIME.format(parsed.date)
+  const named = zone?.trim() ? inZone(zone.trim()) : null
+  if (named) return named.format(new Date(value))
+  return /z/i.test(offset) ? `${DAY_AND_TIME.format(parsed.date)} UTC` : DAY_AND_TIME.format(parsed.date)
 }
 
 const DOLLARS = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })

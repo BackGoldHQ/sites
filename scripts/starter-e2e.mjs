@@ -281,6 +281,9 @@ function kitchenSinkDocument() {
           { id: 'evt_1', title: 'Budget night', startsAt: '2026-10-15T23:00:00.000Z', endsAt: '2026-10-16T01:00:00.000Z', location: 'Main Street Library', type: 'meeting', timezone: 'America/Chicago', href: 'https://events.example.org/budget-night?via=page&via_page=lp_ks' },
           { id: 'evt_2', title: 'Saturday canvass', startsAt: '2026-10-17T14:00:00.000Z', location: 'Riverside Park', timezone: 'America/Chicago', href: 'https://events.example.org/saturday-canvass?via=page&via_page=lp_ks' },
           { id: 'evt_3', title: 'Online phone bank', startsAt: '2026-10-20T00:00:00.000Z', isVirtual: true, timezone: 'America/Chicago', registrationClosed: true, href: 'https://events.example.org/phone-bank?via=page&via_page=lp_ks' },
+          // Standard time, then a zone Intl does not know (shown in UTC).
+          { id: 'evt_4', title: 'Winter potluck', startsAt: '2027-01-14T00:30:00.000Z', location: 'Grange Hall', timezone: 'America/Chicago', href: 'https://events.example.org/winter-potluck?via=page&via_page=lp_ks' },
+          { id: 'evt_5', title: 'Mars mixer', startsAt: '2026-10-22T23:00:00.000Z', isVirtual: true, timezone: 'Mars/Olympus', href: 'https://events.example.org/mars-mixer?via=page&via_page=lp_ks' },
         ],
       }),
       block('Blog', { heading: 'Latest posts', kindFilter: 'all', maxItems: 3, orgSlug: 'pine-valley', siteId: 'cd_8f2a' }),
@@ -1272,6 +1275,19 @@ function sectionsOf(html) {
   return starts.map((m, i) => ({ type: m[1], html: main.slice(m.index, starts[i + 1]?.index ?? main.length) }))
 }
 
+/**
+ * The kitchen sink's events as the EventsList shows them: in each event's own
+ * zone with its short name, daylight and standard time alike, so a UTC
+ * evening lands on the zone's day; a zone Intl rejects falls back to UTC.
+ */
+const EVENT_WHEN = {
+  evt_1: 'Thursday, October 15, 2026 at 6:00 PM CDT',
+  evt_2: 'Saturday, October 17, 2026 at 9:00 AM CDT',
+  evt_3: 'Monday, October 19, 2026 at 7:00 PM CDT',
+  evt_4: 'Wednesday, January 13, 2027 at 6:30 PM CST',
+  evt_5: 'Thursday, October 22, 2026 at 11:00 PM UTC',
+}
+
 /** The text a data section must show for each of its rows, by block type. */
 const literal = (value) => typeof value === 'string' && value !== '' && !value.startsWith('auto:')
 const ROW_TEXT = {
@@ -1281,7 +1297,7 @@ const ROW_TEXT = {
   Map: (i) => [i.region],
   MovementMap: (i) => (literal(i.value) ? [i.value, i.label] : []),
   MovementTicker: (i) => (literal(i.value) ? [i.value, i.label] : []),
-  EventsList: (i) => [i.title],
+  EventsList: (i) => [i.title, EVENT_WHEN[i.id]],
   Collection: (i) => [i.title],
   ContentPost: (i) => [i.title],
   PlatformPlanks: (i) => [i.title, ...(i.planks ?? []).map((p) => p.headline)],
