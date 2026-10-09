@@ -1,0 +1,54 @@
+---
+// About, 'left' layout (Photo left; board A11-contact, section 3): a square
+// photo on the left, the heading and the story on the right; on a phone the
+// photo comes first. Without a photo the words take the column alone.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const photo = media(section, 'photoUrl')
+---
+<Band section={section} class="about">
+  <div class:list={['about-left', photo && 'about-left-photo']}>
+    {photo && <img class="about-left-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+    <div class="about-left-words">
+      {heading && <h2>{heading}</h2>}
+      <Prose value={section.copy.body} />
+    </div>
+  </div>
+</Band>
+
+<style>
+  .about-left {
+    display: grid;
+    gap: 2rem;
+  }
+  .about-left-words > :last-child {
+    margin-bottom: 0;
+  }
+  .about-left-image {
+    display: block;
+    width: 100%;
+    max-width: 22rem;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: calc(var(--radius) * 2);
+  }
+  @media (min-width: 48rem) {
+    .about-left-photo {
+      grid-template-columns: minmax(14rem, 18.75rem) minmax(0, 1fr);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+    .about-left-image {
+      max-width: none;
+    }
+  }
+</style>

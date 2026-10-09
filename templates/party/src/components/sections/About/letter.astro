@@ -1,0 +1,76 @@
+---
+// About, 'letter' layout (Signed letter; board A2-about-platform, section 2):
+// the story set as a letter, in the display serif at a reading measure, with
+// the writer's photo beside it and their signature (`copy.signature`) under
+// it. On a phone the photo sits above the letter, smaller. Without a photo
+// the letter is one centred column; without a signature it ends on the story.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const signature = text(section.copy.signature)
+const photo = media(section, 'photoUrl')
+---
+<Band section={section} class="about">
+  <div class:list={['letter', photo && 'letter-with-photo']}>
+    {photo && <img class="letter-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+    <div class="letter-words">
+      {heading && <h2>{heading}</h2>}
+      <Prose value={section.copy.body} class="letter-body" />
+      {signature && <p class="letter-signature">{signature}</p>}
+    </div>
+  </div>
+</Band>
+
+<style>
+  .letter {
+    display: grid;
+    gap: 2rem;
+  }
+  .letter:not(.letter-with-photo) {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+  .letter-image {
+    display: block;
+    width: 100%;
+    max-width: 12rem;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: calc(var(--radius) * 1.75);
+  }
+  .letter-words > :last-child {
+    margin-bottom: 0;
+  }
+  .letter-words :global(.letter-body) {
+    max-width: 36em;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    line-height: 1.7;
+  }
+  .letter-signature {
+    margin: 1.5rem 0 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 1.875rem);
+    line-height: 1.2;
+    color: var(--link);
+  }
+  @media (min-width: 48rem) {
+    .letter-with-photo {
+      grid-template-columns: minmax(12rem, 18.75rem) minmax(0, 1fr);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+    .letter-image {
+      max-width: none;
+    }
+  }
+</style>

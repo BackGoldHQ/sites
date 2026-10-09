@@ -1,0 +1,32 @@
+---
+// Progress: how much has been raised toward the goal, as BackGold last
+// counted it when the page was published.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { rows } from '../../../lib/section'
+import { formatCents } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const [row] = rows(section)
+const raised = typeof row?.raised_cents === 'number' ? row.raised_cents : null
+const goal = typeof row?.goal_cents === 'number' && row.goal_cents > 0 ? row.goal_cents : null
+const percent = raised !== null && goal !== null ? Math.min(100, Math.round((raised / goal) * 100)) : null
+---
+{raised !== null && (
+  <Band section={section} class="progress">
+    <p class="progress-figures">
+      <strong class="progress-raised">{formatCents(raised)}</strong> raised
+      {goal !== null && <span> of a {formatCents(goal)} goal</span>}
+    </p>
+    {percent !== null && (
+      <div class="meter" role="img" aria-label={`${percent}% of the goal`}>
+        <span class="meter-fill" style={`width:${percent}%`}></span>
+      </div>
+    )}
+  </Band>
+)}

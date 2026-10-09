@@ -1,0 +1,32 @@
+---
+// Blog: the newest posts. The section carries no rows of its own, so it reads
+// the newest entries of the blog types (posts, podcasts, videos: every
+// built-in type with pages), three or the section's `maxItems`, and links to
+// the full list at /blog.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import EntryCard from '../../EntryCard.astro'
+import { entryCard } from '../../../lib/section'
+import { text } from '../../../lib/format'
+import { latestEntries, shownOf } from './latest'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading) ?? 'Latest'
+const entries = await latestEntries(Astro.locals.backgold, shownOf(section, 3))
+---
+<Band section={section} class="entries">
+  <h2>{heading}</h2>
+  {entries.length > 0 ? (
+    <div class="grid grid-3">
+      {entries.map((entry) => <EntryCard card={entryCard(entry)} level={3} />)}
+    </div>
+  ) : (
+    <p class="empty">Nothing published yet.</p>
+  )}
+  {entries.length > 0 && <p class="more"><a href="/blog">All posts</a></p>}
+</Band>

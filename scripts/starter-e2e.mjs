@@ -1,13 +1,17 @@
 #!/usr/bin/env node
-// The starter template and the two packages it is built on, end to end on
-// workerd: builds @givegold/shared, @backgold/content and @backgold/astro,
-// packs the two public packages, installs them into a copy of
-// templates/astro-starter outside the repository (so nothing resolves through
-// the pnpm workspace), builds it, and runs it on `wrangler dev` against a
-// fixture Content API served from CONTENT_API_EXAMPLES. Exits non-zero at the
-// first failed check.
+// The starter template (or another template under templates/) and the two
+// packages it is built on, end to end on workerd: builds @givegold/shared,
+// @backgold/content and @backgold/astro, packs the two public packages,
+// installs them into a copy of the template outside the repository (so
+// nothing resolves through the pnpm workspace), builds it, and runs it on
+// `wrangler dev` against a fixture Content API served from
+// CONTENT_API_EXAMPLES. Exits non-zero at the first failed check.
 //
 //   node scripts/starter-e2e.mjs          run, then delete the temp copy
+//   node scripts/starter-e2e.mjs --template party
+//                                         the same checks on templates/party
+//                                         (default: templates/astro-starter);
+//                                         combines with every flag below
 //   node scripts/starter-e2e.mjs --keep   leave it (and print where it is)
 //   node scripts/starter-e2e.mjs --serve  skip the checks: keep the fixture api
 //                                         and the configured site running until
@@ -29,7 +33,13 @@ import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const TEMPLATE = join(ROOT, 'templates/astro-starter')
+const TEMPLATE_FLAG = process.argv.indexOf('--template')
+const TEMPLATE_NAME = TEMPLATE_FLAG === -1 ? 'astro-starter' : process.argv[TEMPLATE_FLAG + 1]
+if (!TEMPLATE_NAME || !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_NAME)) {
+  process.stderr.write('--template takes the name of a directory under templates/, for example --template party\n')
+  process.exit(2)
+}
+const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
 const SERVE = process.argv.includes('--serve')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
@@ -954,6 +964,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(/<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html), "the Donate section is BackGold's embed iframe")
   check(!html.includes('auto:total'), 'a live (auto:) stat is not printed')
+  check(
+    html.includes('The levy, explained') && !html.includes('The October letter'),
+    "home's Blog section lists the posts and leaves the newsletter out, as /blog does",
+  )
   assertNoSecrets(html, 'home')
 
   const banner = fixture.data.page('home', '').areas.top_banner[0]
@@ -1395,7 +1409,7 @@ async function main() {
   // Before the long build: --lighthouse without a Chrome fails now, never skips.
   const chrome = LIGHTHOUSE ? chromeForLighthouse() : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
-  log(`Working directory: ${work}`)
+  log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
   const siteDir = join(work, 'site')
   mkdirSync(packDir)

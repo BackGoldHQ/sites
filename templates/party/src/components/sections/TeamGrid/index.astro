@@ -1,0 +1,68 @@
+---
+// TeamGrid: the people behind the organization in three groups: leadership
+// (photo, role, a short bio), staff (name, role, department) and open roles,
+// with the section's "interested?" link under the open roles.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { text } from '../../../lib/format'
+import { initials, teamOf } from './people'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const intro = text(section.copy.teamOpenRolesIntro)
+const { leaders, staff, open, interest } = teamOf(section)
+// When some leaders have a photo, the others get their initials in its place so the row lines up.
+const anyPhoto = leaders.some((p) => p.photo)
+---
+{(leaders.length > 0 || staff.length > 0 || open.length > 0) && (
+  <Band section={section} class="team">
+    {heading && <h2>{heading}</h2>}
+    {leaders.length > 0 && (
+      <ul class="grid grid-3" role="list">
+        {leaders.map((p) => (
+          <li class="person">
+            {p.photo ? (
+              <img class="person-photo" src={p.photo} alt="" loading="lazy" decoding="async" />
+            ) : (
+              anyPhoto && <div class="person-photo person-initials" aria-hidden="true">{initials(p.name)}</div>
+            )}
+            <h3>{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</h3>
+            {p.role && <p class="muted">{p.role}</p>}
+            {p.bio && <p class="fine">{p.bio}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {staff.length > 0 && (
+      <ul class="staff-list" role="list">
+        {staff.map((p) => (
+          <li>
+            <strong>{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</strong>
+            {[p.role, p.dept].filter(Boolean).length > 0 && <span class="muted"> · {[p.role, p.dept].filter(Boolean).join(', ')}</span>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {open.length > 0 && (
+      <div class="open-roles">
+        <h3>Open roles</h3>
+        {intro && <p class="lede">{intro}</p>}
+        <ul class="staff-list" role="list">
+          {open.map((p) => (
+            <li>
+              <strong>{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.role}</a> : p.role}</strong>
+              {p.dept && <span class="muted"> · {p.dept}</span>}
+              {p.blurb && <p class="fine">{p.blurb}</p>}
+            </li>
+          ))}
+        </ul>
+        {interest && <p class="actions"><a class="button button-quiet" href={interest.href} rel={interest.rel}>{interest.label}</a></p>}
+      </div>
+    )}
+  </Band>
+)}

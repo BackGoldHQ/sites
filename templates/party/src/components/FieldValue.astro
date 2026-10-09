@@ -1,0 +1,41 @@
+---
+// One custom field of an entry, rendered by its kind from GET /types. A type
+// the organization adds in BackGold renders with no change here; to give a
+// field its own design, switch on `field.key` in
+// src/components/entries/EntryFields.astro.
+import type { ContentTypeField } from '@backgold/content'
+import { relFor, safeHref, safeSrc, sanitizeRichText } from '@backgold/astro/server'
+import Prose from './Prose.astro'
+import { formatBytes, formatDay, formatWhen, text } from '../lib/format'
+
+interface Props {
+  field: ContentTypeField
+  value: unknown
+}
+
+const { field, value } = Astro.props
+const record = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+const strings = Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && v.trim() !== '') : []
+const str = text(value)
+
+const image = field.kind === 'image' && record ? safeSrc(record.url) : null
+const pdf = field.kind === 'pdf' && record ? safeHref(record.url) : null
+const pdfName = text(record?.file_name) ?? 'Download the PDF'
+const pdfSize = formatBytes(record?.size_bytes)
+const link = field.kind === 'link' ? safeHref(value) : null
+const referenceUrl = field.kind === 'reference' && record ? safeHref(record.url) : null
+const referenceLabel = text(record?.label)
+const day = field.kind === 'date' ? formatDay(value) : field.kind === 'datetime' ? formatWhen(value) : null
+---
+{field.kind === 'short_text' && str && <p>{str}</p>}
+{field.kind === 'long_text' && <Prose value={value} />}
+{field.kind === 'rich_text' && str && <div class="prose" set:html={sanitizeRichText(str)} />}
+{image && <img src={image} alt="" loading="lazy" decoding="async" />}
+{pdf && <a href={pdf} rel={relFor(pdf)}>{pdfName}{pdfSize && <span class="muted"> (PDF, {pdfSize})</span>}</a>}
+{link && <a href={link} rel={relFor(link)}>{link.replace(/^(https?:\/\/|mailto:|tel:)/, '')}</a>}
+{day && str && <time datetime={str}>{day}</time>}
+{field.kind === 'boolean' && typeof value === 'boolean' && <span>{value ? 'Yes' : 'No'}</span>}
+{field.kind === 'choice' && str && <span>{str}</span>}
+{field.kind === 'choices' && strings.length > 0 && <span>{strings.join(', ')}</span>}
+{field.kind === 'list' && strings.length > 0 && <ul>{strings.map((item) => <li>{item}</li>)}</ul>}
+{field.kind === 'reference' && referenceLabel && (referenceUrl ? <a href={referenceUrl} rel={relFor(referenceUrl)}>{referenceLabel}</a> : <span>{referenceLabel}</span>)}

@@ -1,0 +1,19 @@
+---
+// The Hero a page opens with, its headline the page's <h1>. PageSections
+// draws it through <Section> so it gets the same preview marker as every
+// other section. The layout's own component comes from the sections map
+// ('Hero:<layout>', else 'Hero'), as for any other Hero, with `level={1}`.
+import type { Section } from '@backgold/content'
+import { sections } from './sections'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const byKey: Record<string, typeof sections.Hero> = sections
+const key = variant ? `Hero:${variant}` : null
+const Hero = (key !== null && Object.hasOwn(byKey, key) ? byKey[key] : undefined) ?? sections.Hero
+---
+<Hero section={section} variant={variant} level={1} />

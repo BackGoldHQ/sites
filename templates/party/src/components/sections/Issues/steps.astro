@@ -1,0 +1,127 @@
+---
+// Issues, 'steps' layout (board A10-petition, section 3): the kicker, the
+// heading and the lead, then the issues as a numbered path: each step a
+// numbered marker joined to the next by a line, with its title and its line
+// beside the marker. The path runs down the page on a phone and on a wide
+// screen with five or more steps; up to four steps run across a wide screen.
+// The section's links follow as buttons.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const steps = rows(section).filter((row) => text(row.title) || text(row.body))
+const ctas = links(section)
+---
+<Band section={section} class="issues">
+  {kicker && <p class="kicker">{kicker}</p>}
+  {heading && <h2>{heading}</h2>}
+  <Prose value={section.copy.lead} class="lede" />
+  {steps.length > 0 && (
+    <ol class:list={['steps', steps.length <= 4 && 'steps-across']} role="list">
+      {steps.map((step, i) => (
+        <li class="step">
+          <span class="step-marker" aria-hidden="true">{i + 1}</span>
+          <div class="step-words">
+            {text(step.title) && <h3>{text(step.title)}</h3>}
+            <Prose value={step.body} class="step-body" />
+          </div>
+        </li>
+      ))}
+    </ol>
+  )}
+  {ctas.length > 0 && (
+    <p class="actions">
+      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>
+
+<style>
+  .steps {
+    --marker: 2.75rem;
+    --rail: color-mix(in srgb, var(--ink) 22%, transparent);
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+  }
+  .step {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--marker) minmax(0, 1fr);
+    gap: 0 1.125rem;
+    padding-bottom: 1.75rem;
+  }
+  .step:last-child {
+    padding-bottom: 0;
+  }
+  /* The line from this step's marker down to the next one's. */
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: calc(var(--marker) / 2 - 1px);
+    top: calc(var(--marker) + 0.375rem);
+    bottom: 0.375rem;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--rail);
+  }
+  .step-marker {
+    display: grid;
+    place-items: center;
+    width: var(--marker);
+    height: var(--marker);
+    border-radius: 50%;
+    background: var(--button);
+    color: var(--button-ink);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .step-words {
+    padding-top: 0.5rem;
+  }
+  .step-words h3 {
+    margin: 0 0 0.375rem;
+  }
+  .step-words :global(.step-body) {
+    color: var(--muted);
+  }
+  .step-words :global(.step-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* Across: each step a column, its marker on the line that joins them. */
+  @media (min-width: 48rem) {
+    .steps-across {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      gap: 2.25rem;
+    }
+    .steps-across .step {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding-bottom: 0;
+    }
+    .steps-across .step:not(:last-child)::after {
+      left: calc(var(--marker) + 0.75rem);
+      right: -1.5rem;
+      top: calc(var(--marker) / 2 - 1px);
+      bottom: auto;
+      width: auto;
+      height: 2px;
+    }
+    .steps-across .step-words {
+      padding-top: 0;
+    }
+  }
+</style>

@@ -1,0 +1,68 @@
+---
+// The top of an entry's page, shared by every entry layout: a breadcrumb back
+// to its list, the line over the title (its terms, each a link to the term's
+// list, or the layout's own words), the title as the page's one <h1>, the
+// summary, and the byline (each role and its people, the date, the reading
+// time when the layout passes one).
+import type { ContentTypeSummary, EntryDetail } from '@backgold/content'
+import { safeSrc } from '@backgold/astro/server'
+import { formatDay } from '../../lib/format'
+import { bylineGroups, initials, listName, listPath, termPath } from '../../lib/entries'
+
+interface Props {
+  entry: EntryDetail
+  type: ContentTypeSummary | undefined
+  /** Words over the title instead of the entry's terms ("Episode", an issue's line). */
+  kicker?: string | null
+  minutes?: number | null
+}
+
+const { entry, type, kicker = null, minutes = null } = Astro.props
+const base = listPath(type)
+const day = formatDay(entry.publish_at)
+const groups = bylineGroups(entry.authors)
+const lead = entry.authors[0]
+const avatar = lead ? safeSrc(lead.avatar_url) : null
+const crumbTerm = entry.terms.find((t) => t.taxonomy === 'category') ?? null
+---
+<header class="entry-header">
+  {base && (
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href={base}>{listName(type)}</a>
+      {crumbTerm && <><span aria-hidden="true"> › </span><a href={termPath(base, crumbTerm.taxonomy, crumbTerm.slug)}>{crumbTerm.label}</a></>}
+    </nav>
+  )}
+  {kicker ? (
+    <p class="kicker">{kicker}</p>
+  ) : (
+    base && entry.terms.length > 0 && (
+      <p class="kicker entry-terms">
+        {entry.terms.map((term) => <a href={termPath(base, term.taxonomy, term.slug)}>{term.label}</a>)}
+      </p>
+    )
+  )}
+  <h1>{entry.title}</h1>
+  {entry.summary && <p class="lede">{entry.summary}</p>}
+  {(groups.length > 0 || day) && (
+    <div class="byline">
+      {lead && (avatar ? <img class="byline-avatar" src={avatar} alt="" width="44" height="44" /> : <span class="byline-avatar" aria-hidden="true">{initials(lead.display_name)}</span>)}
+      <p>
+        {groups.map(({ role, people }, i) => (
+          <>
+            {i > 0 && ' · '}
+            {role}{' '}
+            {people.map((person, j) => (
+              <>
+                {j > 0 && (j === people.length - 1 ? ' and ' : ', ')}
+                <a href={person.href}>{person.display_name}</a>
+              </>
+            ))}
+          </>
+        ))}
+        {groups.length > 0 && day && ' · '}
+        {day && entry.publish_at && <time datetime={entry.publish_at}>{day}</time>}
+        {minutes !== null && <> · {minutes} min read</>}
+      </p>
+    </div>
+  )}
+</header>

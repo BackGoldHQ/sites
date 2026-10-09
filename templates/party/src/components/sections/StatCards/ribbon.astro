@@ -1,0 +1,102 @@
+---
+// StatCards, 'ribbon' layout (board A1-home, section 2): every figure in one
+// band-wide row, each with its label (and note) under it, divided by thin
+// rules and with no cards. Two to a row on a phone. The heading, when there
+// is one, sits small above the row. A card marked `accent` in BackGold shows
+// its figure in the band's link colour. Nothing is drawn when there is
+// neither a heading nor a figure.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { rows } from '../../../lib/section'
+import { literalStat, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const stats = rows(section)
+  .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note), accent: row.accent === true }))
+  .filter((stat) => stat.value !== null)
+---
+{(heading || stats.length > 0) && (
+  <Band section={section} class="stats stats-ribbon">
+    {heading && <h2 class="ribbon-heading">{heading}</h2>}
+    {stats.length > 0 && (
+      <ul class="ribbon" role="list">
+        {stats.map((stat) => (
+          <li class="ribbon-stat">
+            <p class:list={['ribbon-value', stat.accent && 'ribbon-accent']}>{stat.value}</p>
+            {stat.label && <p class="ribbon-label">{stat.label}</p>}
+            {stat.note && <p class="ribbon-note">{stat.note}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}
+
+<style>
+  .ribbon-heading {
+    font-size: var(--h3);
+    margin-bottom: 1.25rem;
+  }
+  .ribbon {
+    --rule: color-mix(in srgb, var(--ink) 20%, transparent);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ribbon-stat {
+    padding: 1.125rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .ribbon-stat:nth-child(-n + 2) {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .ribbon-stat p {
+    margin: 0;
+  }
+  .ribbon-value {
+    font-family: var(--font-display);
+    font-size: clamp(2.125rem, 1.7rem + 1.4vw, 2.875rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .ribbon-accent {
+    color: var(--link);
+  }
+  .ribbon-stat .ribbon-label {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .ribbon-stat .ribbon-note {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+  @media (min-width: 48rem) {
+    .ribbon {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      gap: 0;
+    }
+    .ribbon-stat,
+    .ribbon-stat:nth-child(-n + 2) {
+      border-top: 0;
+      padding: 0.5rem 1.625rem;
+      border-left: 1px solid var(--rule);
+    }
+    .ribbon-stat:first-child {
+      border-left: 0;
+      padding-left: 0;
+    }
+  }
+</style>

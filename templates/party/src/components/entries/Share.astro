@@ -1,0 +1,24 @@
+---
+// Share, under an entry: plain links that open an email, a post on X, or a
+// post on Facebook with the entry's title and address. No counts, no
+// script: an entry page loads none of its own.
+interface Props {
+  title: string
+  /** The entry's path on this site. */
+  path: string
+}
+
+const { title, path } = Astro.props
+const bg = Astro.locals.backgold
+const origin = bg.setup === null ? bg.siteUrl : Astro.url.origin
+const url = new URL(path, origin).href
+const links = [
+  { label: 'Email', href: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}` },
+  { label: 'X', href: `https://x.com/intent/post?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}` },
+  { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+]
+---
+<div class="share" role="group" aria-label="Share">
+  <span class="share-label">Share</span>
+  {links.map((link) => <a class="share-link" href={link.href} rel={link.href.startsWith('https:') ? 'noopener' : undefined}>{link.label}</a>)}
+</div>

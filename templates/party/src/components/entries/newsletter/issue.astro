@@ -1,0 +1,41 @@
+---
+// The newsletter entry layout, `issue`: the issue's line over the title (its
+// `issue` field, like "October 2026", else the type's name), the headline,
+// the preheader, the date, the issue itself in the reading column, Share,
+// and a closing call to get the next one. Signing up is BackGold's own form,
+// never this template's: when this page's Above the footer area holds a
+// sign-up the call points down to it, and otherwise to the past issues.
+import { areaEntriesOf, renderMarkdown } from '@backgold/astro/server'
+import EntryFields from '../EntryFields.astro'
+import EntryHeader from '../EntryHeader.astro'
+import Share from '../Share.astro'
+import type { EntryLayoutProps } from '../props'
+import { listPath } from '../../../lib/entries'
+import { text } from '../../../lib/format'
+import '../../../styles/entries.css'
+
+type Props = EntryLayoutProps
+
+const { entry, type, areas } = Astro.props
+const line = text(entry.fields?.issue) ?? type?.singular_label ?? 'Newsletter'
+const body = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+const signupBelow = areaEntriesOf(areas, 'above_footer').some(
+  ({ item, needsWindow }) => !needsWindow && item.sections.some((section) => section.type === 'SignupCapture'),
+)
+const past = listPath(type)
+---
+<article class="entry entry-issue">
+  <EntryHeader entry={entry} type={type} kicker={line} />
+  {body ? <div class="prose entry-body" set:html={body} /> : <p class="empty">This issue has no text yet.</p>}
+  <EntryFields entry={entry} type={type} omit={['issue']} />
+  {entry.url && <Share title={entry.title} path={entry.url} />}
+  {(signupBelow || past) && (
+    <aside class="issue-next bg-band-tint" aria-labelledby="issue-next">
+      <h2 id="issue-next">Get the next issue</h2>
+      <p>One email when the next issue goes out.</p>
+      <p class="actions">
+        {signupBelow ? <a class="button" href="#above-the-footer">Sign up below</a> : <a class="button" href={past}>Read past issues</a>}
+      </p>
+    </aside>
+  )}
+</article>

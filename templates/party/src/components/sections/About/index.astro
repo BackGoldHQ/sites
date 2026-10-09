@@ -1,0 +1,57 @@
+---
+// About, 'right' layout, the default (Photo right; board A10-petition,
+// section 2): the heading and the story on the left, the photo on the right;
+// on a phone the photo follows the words. Without a photo the words take
+// the column alone. 'left' and 'letter' are their own files beside this one.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const photo = media(section, 'photoUrl')
+---
+<Band section={section} class="about">
+  <div class:list={['about-right', photo && 'about-right-photo']}>
+    <div class="about-right-words">
+      {heading && <h2>{heading}</h2>}
+      <Prose value={section.copy.body} />
+    </div>
+    {photo && <img class="about-right-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+  </div>
+</Band>
+
+<style>
+  .about-right {
+    display: grid;
+    gap: 2rem;
+  }
+  .about-right-words > :last-child {
+    margin-bottom: 0;
+  }
+  .about-right-image {
+    display: block;
+    width: 100%;
+    max-width: 26rem;
+    aspect-ratio: 4 / 4.4;
+    object-fit: cover;
+    border-radius: calc(var(--radius) * 2);
+  }
+  @media (min-width: 48rem) {
+    .about-right-photo {
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 22.5rem);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+    .about-right-image {
+      max-width: none;
+    }
+  }
+</style>

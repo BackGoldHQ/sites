@@ -1,0 +1,41 @@
+---
+// The video entry layout, `watch`: the video first and large (a YouTube or
+// Vimeo address in its player, a video file in the browser's own player with
+// the entry's picture as its poster, a link for anything else), then the
+// header, the description (the entry's body) under it, its fields, Share,
+// and who made it.
+import { relFor, renderMarkdown, safeSrc } from '@backgold/astro/server'
+import AuthorBox from '../AuthorBox.astro'
+import EntryFields from '../EntryFields.astro'
+import EntryHeader from '../EntryHeader.astro'
+import Share from '../Share.astro'
+import type { EntryLayoutProps } from '../props'
+import { playerOf } from '../../../lib/entries'
+import '../../../styles/entries.css'
+
+type Props = EntryLayoutProps
+
+const { entry, type } = Astro.props
+const source = safeSrc(entry.media_url)
+const player = source ? playerOf(source) : null
+const poster = entry.hero ? safeSrc(entry.hero.url) : null
+const description = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+---
+<article class="entry entry-watch">
+  <div class="watch-frame">
+    {player && <iframe src={player} title={entry.title} allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>}
+    {source && !player && (
+      <video src={source} poster={poster ?? undefined} controls preload="none" playsinline>
+        <a href={source} rel={relFor(source)}>Watch the video</a>
+      </video>
+    )}
+    {!source && <p class="watch-missing">The video for this page is not up yet.</p>}
+  </div>
+  <div class="watch-text">
+    <EntryHeader entry={entry} type={type} kicker={type?.singular_label ?? 'Video'} />
+    {description && <div class="prose entry-body" set:html={description} />}
+    <EntryFields entry={entry} type={type} />
+    {entry.url && <Share title={entry.title} path={entry.url} />}
+    <AuthorBox authors={entry.authors} />
+  </div>
+</article>

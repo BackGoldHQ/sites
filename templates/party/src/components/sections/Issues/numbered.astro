@@ -1,0 +1,117 @@
+---
+// Issues, 'numbered' layout (board A1-home, section 3): the kicker and the
+// heading with the section's links beside them as text links, the lead
+// paragraph, then the issues as a numbered list: each a large two-digit
+// numeral over a rule, its title and its line. Three to a row on a wide
+// screen, one to a row on a phone.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const issues = rows(section).filter((row) => text(row.title) || text(row.body))
+const more = links(section)
+const numeral = (i: number) => String(i + 1).padStart(2, '0')
+---
+<Band section={section} class="issues">
+  {(kicker || heading || more.length > 0) && (
+    <div class="numbered-head">
+      <div>
+        {kicker && <p class="kicker">{kicker}</p>}
+        {heading && <h2>{heading}</h2>}
+      </div>
+      {more.length > 0 && (
+        <p class="numbered-more">
+          {more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}
+        </p>
+      )}
+    </div>
+  )}
+  <Prose value={section.copy.lead} class="lede" />
+  {issues.length > 0 && (
+    <ol class="numbered" role="list">
+      {issues.map((issue, i) => (
+        <li class="numbered-item">
+          <p class="numbered-numeral" aria-hidden="true">{numeral(i)}</p>
+          {text(issue.title) && <h3>{text(issue.title)}</h3>}
+          <Prose value={issue.body} class="numbered-body" />
+        </li>
+      ))}
+    </ol>
+  )}
+</Band>
+
+<style>
+  .numbered-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .numbered-head h2 {
+    margin: 0;
+  }
+  .numbered-head .kicker {
+    margin-bottom: 0.625rem;
+  }
+  .numbered-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0 0 0 auto;
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+  .numbered-more a {
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  .numbered {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+  }
+  .numbered-item {
+    border-top: 3px solid var(--ink);
+    padding-top: 1.125rem;
+  }
+  .numbered-numeral {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.375rem, 2rem + 1.2vw, 3rem);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--link);
+  }
+  .numbered-item h3 {
+    margin: 0.75rem 0 0.5rem;
+  }
+  .numbered-item :global(.numbered-body) {
+    color: var(--muted);
+  }
+  .numbered-item :global(.numbered-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  @media (min-width: 40rem) {
+    .numbered {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2.5rem 2.25rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .numbered {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

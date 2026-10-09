@@ -1,0 +1,172 @@
+---
+// Map, 'map' layout (Map only; boards A11-contact, section 4, and
+// A12-catalogue): the heading, the count of places organized ("lit") and
+// the map itself, one tile per place coloured by its status with its name in
+// the tile (a link when the place has one), and a key under it. The section's
+// links follow as buttons. On a phone the tiles are too small to name, so
+// they become a compact strip and the same places are listed under it, the
+// directory: the list is the one the tiles draw, restyled, so a screen
+// reader meets each place once. Rows: `region`, `status` 'lit' or anything
+// else, an optional `url`.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, linkOf, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const litLabel = text(section.copy.litLabel) ?? 'Organized'
+const darkLabel = text(section.copy.darkLabel) ?? 'Still open'
+const regions = rows(section)
+  .map((row) => ({ name: text(row.region), lit: row.status === 'lit', link: linkOf(row.region, row.url) }))
+  .filter((r): r is { name: string; lit: boolean; link: ReturnType<typeof linkOf> } => r.name !== null)
+const litCount = regions.filter((r) => r.lit).length
+const actions = links(section)
+---
+<Band section={section} class="regions">
+  {heading && <h2>{heading}</h2>}
+  {regions.length > 0 && <p class="lede">{litCount} of {regions.length} {litLabel.toLowerCase()}</p>}
+  {regions.length > 0 && (
+    <figure class="tile-map">
+      <div class="tile-strip" aria-hidden="true">
+        {regions.map((r) => <span class:list={['strip-tile', r.lit && 'strip-tile-lit']}></span>)}
+      </div>
+      <ul class="tiles" role="list">
+        {regions.map((r) => (
+          <li class:list={['tile-place', r.lit && 'tile-place-lit']}>
+            {r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : <span>{r.name}</span>}
+            <span class="tile-status">{r.lit ? litLabel : darkLabel}</span>
+          </li>
+        ))}
+      </ul>
+      <figcaption class="key">
+        <span><i class="key-swatch key-swatch-lit" aria-hidden="true"></i>{litLabel}</span>
+        <span><i class="key-swatch" aria-hidden="true"></i>{darkLabel}</span>
+      </figcaption>
+    </figure>
+  )}
+  {actions.length > 0 && (
+    <p class="actions">
+      {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>
+
+<style>
+  /* A phone: the strip, the key, then the places as a list. */
+  .tile-map {
+    margin: 1.5rem 0 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .tile-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(1.25rem, 1fr));
+    gap: 0.25rem;
+  }
+  .strip-tile {
+    aspect-ratio: 1.1;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+  }
+  .strip-tile-lit {
+    background: var(--button);
+  }
+  .key {
+    order: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .key-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-right: 0.375rem;
+    border-radius: 0.1875rem;
+    vertical-align: -0.0625rem;
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+  .key-swatch-lit {
+    background: var(--button);
+    border-color: var(--button);
+  }
+  .tiles {
+    order: 2;
+    list-style: none;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  }
+  .tile-place {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    font-weight: 700;
+  }
+  .tile-status {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  /* Wider: the places are the map, each a tile with its name. */
+  @media (min-width: 40rem) {
+    .tile-strip {
+      display: none;
+    }
+    .tiles {
+      order: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+      gap: 0.375rem;
+      margin: 0;
+      border-top: 0;
+    }
+    .tile-place {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      aspect-ratio: 1.1;
+      padding: 0.375rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: color-mix(in srgb, var(--ink) 9%, transparent);
+      color: var(--ink);
+      font-size: var(--text-xs);
+      line-height: 1.2;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .tile-place-lit {
+      background: var(--button);
+      color: var(--button-ink);
+    }
+    .tile-place a {
+      color: inherit;
+    }
+    .tile-status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .key {
+      margin-top: 1rem;
+    }
+  }
+</style>

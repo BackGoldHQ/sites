@@ -1,0 +1,7 @@
+---
+import type { ComponentProps } from 'astro/types'
+import Default from './index.astro'
+
+type Props = ComponentProps<typeof Default>
+---
+<Default {...Astro.props} />

@@ -1,0 +1,36 @@
+---
+// The podcast list layout, `list`: one episode per row, newest first, with
+// its art, the date, the title, the summary and a Listen link to the
+// episode's page, where the player is.
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import ListFrame from '../ListFrame.astro'
+import type { ListLayoutProps } from '../props'
+import { formatDay } from '../../../lib/format'
+
+type Props = ListLayoutProps
+
+const props = Astro.props
+const rows = props.entries.map((entry) => ({
+  entry,
+  href: entry.url ? safeHref(entry.url) : null,
+  art: entry.hero ? safeSrc(entry.hero.url) : null,
+  day: formatDay(entry.publish_at),
+}))
+---
+<ListFrame {...props} noun="episodes" class="list-episodes">
+  <ol class="episode-rows" role="list">
+    {rows.map((row) => (
+      <li class="episode-row">
+        <article>
+          {row.art ? <img class="episode-row-art" src={row.art} alt="" width="96" height="96" loading="lazy" decoding="async" /> : <span class="episode-row-art" aria-hidden="true"></span>}
+          <div>
+            {row.day && row.entry.publish_at && <p class="kicker"><time datetime={row.entry.publish_at}>{row.day}</time></p>}
+            <h2 class="episode-row-title">{row.href ? <a href={row.href}>{row.entry.title}</a> : row.entry.title}</h2>
+            {row.entry.summary && <p>{row.entry.summary}</p>}
+            {row.href && <p class="episode-row-listen"><a href={row.href} aria-label={`Listen to ${row.entry.title}`}>Listen</a></p>}
+          </div>
+        </article>
+      </li>
+    ))}
+  </ol>
+</ListFrame>

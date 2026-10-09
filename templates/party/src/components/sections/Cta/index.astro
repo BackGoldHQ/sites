@@ -1,0 +1,31 @@
+---
+// Cta: an eyebrow, a heading, a line of copy and up to two buttons (the
+// donate link first). A donate link goes to the organization's own donate
+// page in BackGold, exactly as given: never rebuild it on this site.
+// `variant` is the layout chosen in BackGold, kept as `data-variant`.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const eyebrow = text(section.copy.eyebrow)
+const heading = text(section.copy.heading)
+const buttons = links(section)
+---
+<Band section={section} class="cta">
+  {eyebrow && <p class="kicker">{eyebrow}</p>}
+  {heading && <h2>{heading}</h2>}
+  <Prose value={section.copy.body} class="lede" />
+  {buttons.length > 0 && (
+    <p class="actions">
+      {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>

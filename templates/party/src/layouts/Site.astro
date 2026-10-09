@@ -1,0 +1,145 @@
+---
+// Every page's frame, as template.json's `chrome` and `areas` declare it:
+//
+//   the header bar   the site's logo or name at the left; the header menu,
+//                    each group a dropdown; the header button at the right.
+//                    On a phone the menu opens as a sheet under the bar (its
+//                    groups open in place, the header button again full
+//                    width, the legal line under it) and the button stays
+//                    beside Menu in the bar.
+//   Top banner       (`top_banner`) under the header, full width.
+//   the page         <main>; each page renders its own single <h1>.
+//   other areas      any area this template does not place (one the
+//                    organization added in BackGold), after the page, full
+//                    width, in the order BackGold lists the site's areas.
+//   Above the footer (`above_footer`) over the footer, full width, inside
+//                    #above-the-footer (the newsletter issue's closing call
+//                    links there when the area holds a sign-up).
+//   the footer       the site's name, its description and social links, the
+//                    footer menu as columns (a column per group), and the
+//                    legal line.
+//
+// The Sidebar (`sidebar`) is drawn beside the page by the routes, in
+// src/pages/[...path].astro and preview.astro. The takeover banner is the
+// TakeoverBanner section an area carries (most often Top banner); it draws
+// through the sections map like any area item.
+//
+// `page` is the BackGold page being drawn as `{ id, takes_donations }`, or
+// null on a route with no BackGold page (a list, an entry, an author, a
+// tag, the 404); the menus apply each link's Shows on rule against it.
+// Every route here passes it: left out, every link and the button show.
+// `areas` is the response's `areas`; null draws no area.
+import type { Areas } from '@backgold/content'
+import { Analytics, Area, Disclaimer, MenuButton, Seo } from '@backgold/astro/components'
+import { menuOf, relFor, safeHref, safeSrc, type MenuPage } from '@backgold/astro/server'
+import FooterColumns from '../components/chrome/FooterColumns.astro'
+import MenuList from '../components/chrome/MenuList.astro'
+import { sections } from '../components/sections'
+import { brandCss } from '../lib/brand'
+import '../styles/site.css'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  canonicalPath: string
+  noindex?: boolean
+  jsonLd?: object[]
+  page?: MenuPage | null
+  areas?: Areas | null
+}
+
+/** The areas this layout (and the routes, for the Sidebar) place by name. */
+const PLACED_AREAS = ['top_banner', 'sidebar', 'above_footer']
+
+const bg = Astro.locals.backgold
+if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
+
+const { site, legal, client } = bg
+const { page, areas = null, ...head } = Astro.props
+const [primary, footer] = await Promise.all([client.menu('primary'), client.menu('footer')])
+const pathname = Astro.url.pathname
+const headerItems = primary?.items ?? []
+const headerNodes = menuOf(headerItems, pathname, page)
+const footerNodes = menuOf(footer?.items ?? [], pathname, page)
+const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []
+const name = site.name ?? site.domain
+const logo = safeSrc(site.brand.logo_url)
+const description = site.seo.description?.trim() || null
+const social = site.social.flatMap(({ platform, url }) => {
+  const href = safeHref(url)
+  return href ? [{ label: platform.charAt(0).toUpperCase() + platform.slice(1), href, rel: relFor(href) }] : []
+})
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <Seo {...head} />
+    <style is:inline set:html={brandCss(site.brand)}></style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-name" href="/">
+          {logo ? <img src={logo} alt={name} class="site-logo" /> : name}
+        </a>
+        {headerNodes.length > 0 && (
+          <>
+            <nav class="header-bar-menu" aria-label="Header menu">
+              <MenuList nodes={headerNodes} mode="bar" />
+            </nav>
+            <details class="header-sheet">
+              <summary>Menu</summary>
+              <div class="header-sheet-panel">
+                <nav aria-label="Header menu">
+                  <MenuList nodes={headerNodes} mode="sheet" />
+                </nav>
+                <MenuButton items={headerItems} page={page} class="button header-sheet-button" />
+                <div class="header-sheet-legal"><Disclaimer legal={legal} /></div>
+              </div>
+            </details>
+          </>
+        )}
+        <MenuButton items={headerItems} page={page} class="button header-button" />
+      </div>
+    </header>
+    <Area name="top_banner" areas={areas} components={sections} />
+
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+
+    {otherAreas.map((key) => <Area name={key} areas={areas} components={sections} class="bg-area-after-page" />)}
+    <div id="above-the-footer">
+      <Area name="above_footer" areas={areas} components={sections} />
+    </div>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <a class="footer-name" href="/">{name}</a>
+          {description && <p class="footer-description">{description}</p>}
+          {social.length > 0 && (
+            <ul class="social" aria-label="Social media">
+              {social.map((s) => <li><a href={s.href} rel={s.rel}>{s.label}</a></li>)}
+            </ul>
+          )}
+        </div>
+        <FooterColumns nodes={footerNodes} />
+        {/*
+          The legal line ("Paid for by …") must appear on every page, as text in
+          the HTML the server sends. It is required by law, and BackGold checks
+          the live home page for it every hour and warns the organization when
+          it is missing. Restyle it freely; do not remove it or render it with
+          client-side script.
+        */}
+        <div class="disclaimer">
+          <Disclaimer legal={legal} />
+        </div>
+      </div>
+    </footer>
+    <Analytics />
+  </body>
+</html>
