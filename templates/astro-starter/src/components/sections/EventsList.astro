@@ -4,7 +4,8 @@
 // an RSVP form here). `options.actions` is how each event links: 'buttons'
 // adds a "Details and RSVP" button under the event; 'link' (or none) makes
 // the title the link. With no events listed, the section places BackGold's
-// own events-list frame instead, when it has one.
+// own events-list frame instead, when it has one. Each time is shown in the
+// event's own zone (the row's `timezone`).
 import type { Section } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import Band from './Band.astro'
@@ -23,7 +24,7 @@ const events = rows(section).flatMap((row) => {
   const title = text(row.title)
   if (!title) return []
   const startsAt = text(row.starts_at)
-  return [{ title, startsAt, when: formatWhen(startsAt), location: text(row.location), link: linkOf('Details and RSVP', row.url) }]
+  return [{ title, startsAt, when: formatWhen(startsAt, text(row.timezone)), location: text(row.location), link: linkOf('Details and RSVP', row.url) }]
 })
 ---
 <Band section={section} class="events">
