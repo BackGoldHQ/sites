@@ -1,5 +1,6 @@
-// An EventsList's rows as its layouts draw them: each event's title, start,
-// place, type, whether it still takes registrations, and its page, at most the
+// An EventsList's rows as its layouts draw them: each event's id (for its
+// live counts), title, start, place, type, whether it still takes
+// registrations, its page, and the action a button offers on it, at most the
 // section's `max` of them. Dates are lib/format.ts's, in the event's own time
 // zone: the parts below are read off the string formatWhen writes, so every
 // layout shows (and the agenda groups by) the same day and time the list
@@ -28,6 +29,8 @@ interface When {
 }
 
 export interface EventRow {
+  /** The event's id, which names its live counts' slot; null when the row has none. */
+  id: string | null
   title: string
   /** The row's own value, for `<time datetime>`. */
   startsAt: string | null
@@ -40,6 +43,12 @@ export interface EventRow {
   closed: boolean
   /** The event's own page, labelled with its title. */
   link: Link | null
+  /**
+   * The button's link: "Details" to the event's page once registration has
+   * closed, else "Get tickets" (to `tickets_url`, else the event's page) when
+   * the event sells tickets, else "RSVP" to the event's page.
+   */
+  action: Link | null
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) =>
@@ -92,15 +101,19 @@ export function eventsOf(section: Section): EventRow[] {
       const title = text(row.title)
       if (!title) return []
       const startsAt = text(row.starts_at)
+      const closed = row.registration_closed === true
+      const tickets = !closed && row.sells_tickets === true
       return [
         {
+          id: text(row.id),
           title,
           startsAt,
           when: whenOf(startsAt, row.timezone),
           place: text(row.location) ?? (row.is_virtual === true ? 'Online' : null),
           type: typeLabel(row.type),
-          closed: row.registration_closed === true,
+          closed,
           link: linkOf(title, row.url),
+          action: tickets ? (linkOf('Get tickets', row.tickets_url) ?? linkOf('Get tickets', row.url)) : linkOf(closed ? 'Details' : 'RSVP', row.url),
         },
       ]
     })

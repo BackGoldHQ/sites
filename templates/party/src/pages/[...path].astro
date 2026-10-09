@@ -12,6 +12,18 @@
 // layout draws "Older" on to the next page and "Newest" back to the first
 // (the api names no previous page, so there is no "Newer").
 //
+// The news list (/blog) and its terms' lists carry a search box that sends
+// `?q=` to /blog. There a search of 2 to 80 characters lists the matching
+// posts (the Content API's `?q=`, at most 20 a type) in place of the list,
+// with no pager; anything else under `q` shows the list. A response to a
+// request with `q` is never stored: the edge cache keys a list by its cursor
+// alone, so a stored search would answer the bare list's address.
+//
+// `/events/<type>` is the events page with its Agenda section's rows read
+// from the Content API's `GET /events?type=` (src/lib/events.ts), when the
+// path is not already a page or an entry; a type with no upcoming event, or
+// one that does not exist, is a 404.
+//
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
 // page, an entry, a list and a term pass their areas to the layout (Top
@@ -20,7 +32,7 @@
 // column.
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
-import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage } from '@backgold/astro/server'
+import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryCard from '../components/EntryCard.astro'
 import NotFound from '../components/NotFound.astro'
@@ -28,7 +40,8 @@ import PageSections from '../components/PageSections.astro'
 import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { sections } from '../components/sections'
-import { filterOf, listName, listPath } from '../lib/entries'
+import { filterOf, listName, listPath, searchNews, searchQuery } from '../lib/entries'
+import { typedEventsPage } from '../lib/events'
 import { entryCard } from '../lib/section'
 
 const bg = Astro.locals.backgold
@@ -38,7 +51,11 @@ const { client, site, siteUrl } = bg
 const siteName = site.name ?? site.domain
 const pathname = Astro.url.pathname
 // The URL, not just the path: a list's `?cursor=` asks for a later page.
-const resolved = await resolveRoute(client, Astro.url)
+let resolved: Resolved = await resolveRoute(client, Astro.url)
+const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
+if (typed) resolved = { kind: 'page', page: typed.page }
+const rawQuery = Astro.url.searchParams.get('q')
+if (rawQuery !== null) Astro.response.headers.set('Cache-Control', 'no-store')
 
 if (resolved.kind === 'feed') {
   return new Response(await atomFeed(client, siteUrl, resolved.type), {
@@ -52,11 +69,12 @@ switch (resolved.kind) {
   case 'page': {
     const { page, sections } = resolved.page
     const firstImage = sections.flatMap((s) => Object.values(s.media ?? {})).map((m) => safeSrc(m.url)).find((u) => u !== null)
+    const title = page.meta.title ?? page.title ?? undefined
     head = {
-      title: page.meta.title ?? page.title ?? undefined,
+      title: typed && title ? `${typed.type.label} · ${title}` : title,
       description: page.meta.description ?? undefined,
       image: safeSrc(page.meta.image_url) ?? firstImage ?? undefined,
-      canonicalPath: page.url,
+      canonicalPath: typed ? pathname : page.url,
       jsonLd: jsonLdFor({ site, siteUrl, kind: 'page', page }),
     }
     break
@@ -105,20 +123,23 @@ const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && a
 
 // A list, or a term's list: its layout and what it is given. The filter comes
 // from the type's whole first page, so every term with an entry on it stays
-// offered while one is chosen and on every later page.
+// offered while one is chosen, on every later page and beside a search.
 let list: { Layout: ReturnType<typeof listLayoutFor>; props: ListLayoutProps } | null = null
 if (resolved.kind === 'index' || resolved.kind === 'term') {
   const key = resolved.type === 'blog' ? 'post' : resolved.type.key
   const base = listPath(resolved.type)
   const whole = resolved.kind === 'index' && resolved.cursor === null ? resolved : base ? await resolveRoute(client, base) : null
+  const news = resolved.type === 'blog' && base !== null
+  const q = news && resolved.kind === 'index' ? searchQuery(rawQuery) : null
   list = {
     Layout: listLayoutFor(key),
     props: {
       type: resolved.type,
-      entries: resolved.entries,
-      pager: pagerOf(resolved, pathname),
+      entries: q === null ? resolved.entries : await searchNews(client, q),
+      pager: q === null ? pagerOf(resolved, pathname) : { newest: null, older: null },
       filter: whole?.kind === 'index' ? filterOf(whole.entries) : null,
       term: resolved.kind === 'term' ? { taxonomy: resolved.taxonomy, term: resolved.term } : null,
+      search: news ? { action: base, q } : null,
     },
   }
 }

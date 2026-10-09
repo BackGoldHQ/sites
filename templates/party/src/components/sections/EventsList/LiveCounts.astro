@@ -1,0 +1,66 @@
+---
+// The live counts' one script (board A6 note 3, A7 note 4): an event's
+// "142 going" and "12 seats left" are never part of the cached page. Each
+// layout that draws events places this once; it writes the script the first
+// time on a page, when the site has a live route to ask (src/lib/live.ts):
+// first-party, the same-origin path with no key; with a site key, the api's
+// address and the publishable key, which the script sends as its
+// Authorization header (it sends none when the script carries no key).
+// After the document is parsed, the script gathers every `data-bg-live` slot
+// on the page, asks `GET /events/live?ids=` for their ids (50 at a time) and
+// writes each event's counts into its slots as text: "N going" when anyone
+// is going, "N seats left" when the event has a capacity, joined by " · ".
+// An event the answer leaves out, or a failed read, leaves its slots empty,
+// as they are with scripts off.
+import { firstLiveScript, liveSource } from '../../../lib/live'
+
+const source = firstLiveScript(Astro.request) ? await liveSource(Astro.locals.backgold.firstParty) : null
+---
+{source && (
+  <script is:inline data-bg-live-api={source.url} data-bg-live-key={source.key ?? undefined}>
+    (function (script) {
+      var api = script.getAttribute('data-bg-live-api')
+      var key = script.getAttribute('data-bg-live-key')
+      var count = function (n, one, many) {
+        return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many)
+      }
+      var words = function (event) {
+        var parts = []
+        if (typeof event.going === 'number' && isFinite(event.going) && event.going > 0) parts.push(count(event.going, 'going', 'going'))
+        if (typeof event.seats_left === 'number' && isFinite(event.seats_left) && event.seats_left >= 0) parts.push(count(event.seats_left, 'seat left', 'seats left'))
+        return parts.join(' · ')
+      }
+      var fill = function () {
+        var slots = document.querySelectorAll('[data-bg-live]')
+        var ids = []
+        for (var i = 0; i < slots.length; i++) {
+          var id = slots[i].getAttribute('data-bg-live')
+          if (id && ids.indexOf(id) < 0) ids.push(id)
+        }
+        for (var start = 0; start < ids.length; start += 50) {
+          var batch = ids.slice(start, start + 50).map(encodeURIComponent).join(',')
+          var headers = { Accept: 'application/json' }
+          if (key) headers.Authorization = 'Bearer ' + key
+          fetch(api + '?ids=' + batch, { headers: headers })
+            .then(function (res) {
+              return res.ok ? res.json() : null
+            })
+            .then(function (body) {
+              var events = body && Array.isArray(body.events) ? body.events : []
+              for (var e = 0; e < events.length; e++) {
+                var event = events[e]
+                if (!event || typeof event.id !== 'string') continue
+                var text = words(event)
+                for (var s = 0; s < slots.length; s++) {
+                  if (slots[s].getAttribute('data-bg-live') === event.id) slots[s].textContent = text
+                }
+              }
+            })
+            .catch(function () {})
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill)
+      else fill()
+    })(document.currentScript)
+  </script>
+)}

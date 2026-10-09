@@ -29,6 +29,7 @@ import { accessSync, constants as fsConstants, cpSync, mkdirSync, mkdtempSync, o
 import { createServer, request as httpRequest } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
+import { runInNewContext } from 'node:vm'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -40,6 +41,10 @@ if (!TEMPLATE_NAME || !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_NAME)) {
   process.exit(2)
 }
 const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
+// The party template draws what its boards need from the Content API (live
+// counts, event types, news search, seats, the roster's levels); only it is
+// checked for those drawings.
+const PARTY = TEMPLATE_NAME === 'party'
 const SERVE = process.argv.includes('--serve')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
@@ -638,7 +643,8 @@ function fixtureData(ex, kitchenSections) {
       copy: { heading: 'Come to a meeting' },
       media: {},
       links: [],
-      data: ex.SectionsResponse.sections[0].data,
+      // Every EventsList row carries whether the event sells tickets.
+      data: { ...ex.SectionsResponse.sections[0].data, items: ex.SectionsResponse.sections[0].data.items.map((row) => ({ sells_tickets: false, tickets_url: null, ...row })) },
       embed: { iframe: 'https://api.backgold.com/embed/events/pine-valley', script: 'https://secure.backgold.com/embed.js' },
     },
     {
@@ -662,10 +668,134 @@ function fixtureData(ex, kitchenSections) {
     { id: 'Leaderboard-1', type: 'Leaderboard', band: 'panel', bleed: 'full', variant: null, copy: { heading: 'Top chapters' }, media: {}, links: [], data: { source: 'leaderboard', items: [] } },
   ]
 
+  // ── The party boards' data (A1, A3, A4, A6, A7) ──
+  // Upcoming events as GET /events and the EventsList rows carry them: one
+  // that sells tickets, one whose registration has closed, two types with
+  // more than one event between them.
+  const eventRow = (row) => ({ ends_at: null, timezone: 'America/Denver', location: null, is_virtual: false, registration_closed: false, sells_tickets: false, tickets_url: null, ...row })
+  const upcoming = [
+    eventRow({ id: 'evt_w1', title: 'Harlow County candidate forum', starts_at: '2026-10-14T19:00:00.000Z', location: 'Harlow Civic Hall', type: 'meeting', url: 'https://events.example.org/candidate-forum' }),
+    eventRow({ id: 'evt_w2', title: 'Door-knock Saturday in Alder County', starts_at: '2026-10-18T09:00:00.000Z', location: 'Alder Grange Hall', type: 'volunteer', url: 'https://events.example.org/door-knock' }),
+    eventRow({
+      id: 'evt_w3',
+      title: 'Get-out-the-vote dinner',
+      starts_at: '2026-11-01T18:30:00.000Z',
+      location: 'Fenwick Union Depot',
+      type: 'fundraiser',
+      url: 'https://events.example.org/gotv-dinner',
+      sells_tickets: true,
+      tickets_url: 'https://events.example.org/gotv-dinner/tickets',
+    }),
+    eventRow({ id: 'evt_w4', title: 'New member night', starts_at: '2026-12-03T19:30:00.000Z', is_virtual: true, type: 'volunteer', registration_closed: true, url: 'https://events.example.org/new-member-night' }),
+  ]
+  const eventTypes = [
+    { key: 'meeting', label: 'Meetings', upcoming: 1 },
+    { key: 'volunteer', label: 'Volunteer', upcoming: 2 },
+    { key: 'fundraiser', label: 'Fundraisers', upcoming: 1 },
+    // A type with no upcoming event: no tab, and its address is a 404.
+    { key: 'rally', label: 'Rallies', upcoming: 0 },
+  ]
+  // GET /events/live: a count, a count with seats left, a zero, and evt_w2 left out.
+  const live = { evt_w1: { going: 142, seats_left: null }, evt_w3: { going: 88, seats_left: 12 }, evt_w4: { going: 0, seats_left: null } }
+  const eventsSections = [
+    {
+      id: 'EventsList-agenda',
+      type: 'EventsList',
+      band: 'plain',
+      bleed: 'full',
+      variant: 'agenda',
+      copy: { heading: 'Upcoming events', eventsEmptyCta: 'Tell us and we will put it here.' },
+      media: {},
+      links: [],
+      options: { max: 6, actions: 'buttons' },
+      data: { source: 'events', items: upcoming },
+    },
+    {
+      id: 'EventsList-cards',
+      type: 'EventsList',
+      band: 'tint',
+      bleed: 'full',
+      variant: 'cards',
+      copy: { heading: 'Coming up' },
+      media: {},
+      links: [],
+      options: { max: 3, actions: 'buttons' },
+      data: { source: 'events', items: [upcoming[0], upcoming[2]] },
+    },
+  ]
+  // TeamGrid rows by seat: two bodies (the officers' first, sharing a term),
+  // a vacant seat whose url is its open role, and one staff member.
+  const seat = (row) => ({ since: null, term_ends: null, is_officer: false, photo_url: null, bio: null, link: null, url: null, ...row })
+  const team = [
+    seat({ body: 'Officers', body_key: 'officers', seat: 'Chair', name: 'Rowan Achterberg', since: '2023-04-15', term_ends: '2027-04-30', is_officer: true, bio: 'Osgood County' }),
+    seat({
+      body: 'Officers',
+      body_key: 'officers',
+      seat: 'Treasurer',
+      name: 'Idris Valcourt',
+      since: '2021-04-17',
+      term_ends: '2027-04-30',
+      is_officer: true,
+      photo_url: 'https://api.backgold.com/api/media-files/med_idris',
+      bio: 'Brannock County',
+      link: 'https://example.org/idris',
+    }),
+    seat({ body: 'At-large members', body_key: 'at-large', seat: 'At-large', name: 'Tobias Wrenfield', since: '2024-04-20', term_ends: '2027-04-30', bio: 'Marrow County' }),
+    seat({ body: 'At-large members', body_key: 'at-large', seat: 'At-large', name: null, term_ends: '2029-04-30', url: '/open-roles/at-large-seat' }),
+    seat({ body: 'Staff', body_key: 'staff', seat: 'Organizer', name: 'Sam Ortiz' }),
+  ]
+  // CandidateRoster rows: eleven (more than ten, so the ballot draws its
+  // controls) across five levels, issues on some, one donate address.
+  const candidate = (row) => ({ issues: [], status: null, donate_url: null, web_url: null, image_url: null, ...row })
+  const candidates = [
+    candidate({ name: 'Halvard Brisco', office: 'Governor', level: 'State', region: 'Statewide', issues: ['Taxes', 'Open books'], status: 'On the ballot', donate_url: 'https://secure.backgold.com/donate/brisco', web_url: 'https://example.org/brisco' }),
+    candidate({ name: 'Noor Ellingsworth', office: 'State Senate', level: 'State', region: 'District 12 · Alder, Brannock', issues: ['Schools'], web_url: 'https://example.org/noor' }),
+    candidate({ name: 'Gideon Marchetti', office: 'State Senate', level: 'State', region: 'District 4 · Tull' }),
+    candidate({ name: 'Ada Kestrel', office: 'U.S. House', level: 'Federal', region: 'District 2' }),
+    candidate({ name: 'Simone Varga-Holt', office: 'Harlow County Commission', level: 'County', region: 'Harlow County' }),
+    candidate({ name: 'Corwin Bale', office: 'Harlow County Commission', level: 'County', region: 'Precinct 3' }),
+    candidate({ name: 'Mara Lindqvist', office: 'County Clerk', level: 'County', region: 'Brannock County' }),
+    candidate({ name: 'Pell Okafor', office: 'Harlow City Council', level: 'Local', region: 'Ward 2' }),
+    candidate({ name: 'Rhea Tamsin', office: 'Harlow City Council', level: 'Local', region: 'Ward 5' }),
+    candidate({ name: 'Wes Ondrak', office: 'Alder School Board', level: 'School board', region: 'Seat 1' }),
+    candidate({ name: 'June Halloran', office: 'Alder School Board', level: 'School board', region: 'Seat 4' }),
+  ]
+  const leadershipSections = [
+    {
+      id: 'TeamGrid-board',
+      type: 'TeamGrid',
+      band: 'plain',
+      bleed: 'full',
+      variant: 'board',
+      copy: { heading: 'Our state committee' },
+      media: {},
+      links: [{ label: 'Tell us you are interested', target: { kind: 'page', slug: 'volunteer' }, url: '/volunteer' }],
+      data: { source: 'team', items: team },
+    },
+    {
+      id: 'CandidateRoster-ballot',
+      type: 'CandidateRoster',
+      band: 'tint',
+      bleed: 'full',
+      variant: 'ballot',
+      copy: { heading: 'Our candidates, office by office' },
+      media: {},
+      links: [],
+      data: { source: 'candidates', items: candidates },
+    },
+  ]
+  const boardPage = (id, slug, title, sections) => ({
+    page: { ...ex.PageResponse.page, id, slug, title, url: `/${slug}`, is_home: false, meta: { title: null, description: null, image_url: null } },
+    sections,
+    areas: { top_banner: [], sidebar: [], above_footer: [] },
+    legal,
+  })
+
   return {
     legal,
     site,
     types,
+    events: { upcoming, types: eventTypes, live },
     menus: {
       primary: {
         ...ex.MenuResponse,
@@ -684,6 +814,8 @@ function fixtureData(ex, kitchenSections) {
       ...ex.PagesResponse.pages,
       { id: 'lp_issues', slug: 'issues', title: 'Issues', url: '/issues', is_home: false, published_at: '2026-09-30T14:00:00.000Z', updated_at: '2026-10-01T09:12:00.000Z' },
       { id: 'lp_ks', slug: 'kitchen-sink', title: 'Kitchen sink', url: '/kitchen-sink', is_home: false, published_at: '2026-10-01T14:00:00.000Z', updated_at: '2026-10-01T14:00:00.000Z' },
+      { id: 'lp_events', slug: 'events', title: 'Events', url: '/events', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
+      { id: 'lp_leadership', slug: 'leadership', title: 'Leadership', url: '/leadership', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
     ],
     page: (slug, headline) =>
       slug === 'home'
@@ -701,7 +833,11 @@ function fixtureData(ex, kitchenSections) {
                 sections: kitchenSections,
                 legal,
               }
-            : null,
+            : slug === 'events'
+              ? boardPage('lp_events', 'events', 'Events', eventsSections)
+              : slug === 'leadership'
+                ? boardPage('lp_leadership', 'leadership', 'Leadership', leadershipSections)
+                : null,
     entryAreas,
     entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary, quarryRoadSummary], newsletter: [issueSummary] },
     pageSize: { endorsement: 1 },
@@ -734,8 +870,17 @@ function placeholderImage(path) {
 
 function startFixture(examples, kitchenSections) {
   const data = fixtureData(examples, kitchenSections)
-  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), total: 0, origin: '' }
+  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '' }
   const MOUNT = '/api/content/v1'
+  // The Content API answers every origin itself (a browser on the site reads
+  // GET /events/live with the publishable key), as the api's contentApiCors does.
+  const CORS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, If-None-Match, Content-Type',
+    'Access-Control-Expose-Headers': 'ETag, X-Content-Version',
+    'Access-Control-Max-Age': '86400',
+  }
 
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://fixture')
@@ -743,7 +888,7 @@ function startFixture(examples, kitchenSections) {
     state.total++
     state.requests.set(url.pathname, (state.requests.get(url.pathname) ?? 0) + 1)
     const etag = `"v${state.version}"`
-    const headers = { 'Content-Type': 'application/json', 'X-Content-Version': String(state.version), ETag: etag }
+    const headers = { 'Content-Type': 'application/json', 'X-Content-Version': String(state.version), ETag: etag, ...CORS }
     const send = (status, body, extra = {}) => {
       res.writeHead(status, { ...headers, ...extra })
       // Uploaded files in the examples live on api.backgold.com; the fixture serves stand-ins.
@@ -766,10 +911,24 @@ function startFixture(examples, kitchenSections) {
       res.writeHead(404, { 'Content-Type': 'application/json' })
       return res.end(JSON.stringify({ error: 'Not found', code: 'NOT_FOUND' }))
     }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS)
+      return res.end()
+    }
+    state.seen.push({ path, search: url.search, key })
     if (key !== SITE_KEY && key !== SECRET_KEY) return send(401, { error: 'Unauthorized', code: 'UNAUTHORIZED' })
 
     const parts = path.split('/').filter(Boolean).map(decodeURIComponent)
     const missing = () => send(404, { error: 'Not found', code: 'NOT_FOUND' })
+
+    // GET /events/live?ids=: the counts, outside the content version.
+    if (parts[0] === 'events' && parts[1] === 'live' && parts.length === 2) {
+      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean)
+      if (ids.length === 0 || ids.length > 50) return send(400, { error: 'ids names 1 to 50 events', code: 'BAD_IDS' })
+      const events = ids.filter((id) => Object.hasOwn(data.events.live, id)).map((id) => ({ id, ...data.events.live[id] }))
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30', ...CORS })
+      return res.end(JSON.stringify({ events }))
+    }
 
     if (parts[0] === 'preview') {
       if (key !== SECRET_KEY) return send(403, { error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' })
@@ -804,6 +963,17 @@ function startFixture(examples, kitchenSections) {
           body = entry ? { entry, areas: data.entryAreas } : undefined
           break
         }
+        // ?q= (2 to 80 characters): title and summary, at most 20, no later page.
+        const q = url.searchParams.get('q')
+        if (q !== null) {
+          if (Array.from(q).length < 2 || Array.from(q).length > 80) return send(400, { error: 'q is 2 to 80 characters', code: 'BAD_QUERY' })
+          const needle = q.toLowerCase()
+          const found = list
+            .filter((e) => `${e.title} ${e.summary ?? ''}`.toLowerCase().includes(needle))
+            .sort((a, b) => (`${a.publish_at}|${a.id}` < `${b.publish_at}|${b.id}` ? 1 : -1))
+          body = { entries: found.slice(0, 20), next_cursor: null }
+          break
+        }
         // Newest first by (publish_at, id), keyset-paged as the api pages:
         // the cursor is base64url of `<publish_at>|<id>` of the last entry shown.
         const term = url.searchParams.get('term')
@@ -819,6 +989,23 @@ function startFixture(examples, kitchenSections) {
         const shown = matching.slice(0, limit)
         const last = shown[shown.length - 1]
         body = { entries: shown, next_cursor: matching.length > limit ? Buffer.from(key(last)).toString('base64url') : null }
+        break
+      }
+      case 'events': {
+        // GET /events?type=&cursor=&limit=: upcoming, soonest first; every
+        // type with its count, whatever the filter. The cursor is base64url
+        // of the offset of the next row.
+        if (parts.length !== 1) break
+        const type = url.searchParams.get('type')
+        const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? 20) || 20, 50))
+        const offset = Number(Buffer.from(url.searchParams.get('cursor') ?? '', 'base64url').toString('utf8')) || 0
+        const matching = data.events.upcoming.filter((e) => !type || e.type === type).sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1))
+        const shown = matching.slice(offset, offset + limit)
+        body = {
+          events: shown,
+          types: data.events.types,
+          next_cursor: offset + limit < matching.length ? Buffer.from(String(offset + limit)).toString('base64url') : null,
+        }
         break
       }
       case 'terms':
@@ -1401,6 +1588,267 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
   check(rendered.length === types.length - ALWAYS_EMPTY.length, `no section renders twice or unasked (${rendered.length} sections)`)
 }
 
+// ── The party boards' data drawings ──────────────────────────────────────────
+
+/** The markup of the page's section of `type` that contains `marker`. */
+function sectionWith(html, type, marker) {
+  return sectionsOf(html).find((s) => s.type === type && s.html.includes(marker))?.html ?? ''
+}
+
+/** Text with tags dropped and entities decoded, whitespace collapsed. */
+const plain = (html) => decode(html.replace(/<script\b[\s\S]*?<\/script>/g, ' ').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim()
+
+/**
+ * Runs the page's live-counts script as a browser would after load, against
+ * a stand-in document holding the page's `data-bg-live` slots, with the real
+ * fetch (so it reads the fixture api). Returns each slot's id and text.
+ */
+async function runLiveScript(html) {
+  const tag = /<script\b([^>]*\bdata-bg-live-api="[^"]*"[^>]*)>([\s\S]*?)<\/script>/.exec(html)
+  if (!tag) throw new CheckFailed('the page has no live-counts script')
+  const attributes = Object.fromEntries([...tag[1].matchAll(/([\w-]+)="([^"]*)"/g)].map((m) => [m[1], decode(m[2])]))
+  const slots = [...html.matchAll(/\bdata-bg-live="([^"]*)"/g)].map((m) => {
+    const id = decode(m[1])
+    return { id, textContent: '', getAttribute: (name) => (name === 'data-bg-live' ? id : null) }
+  })
+  const reads = []
+  const document = {
+    readyState: 'complete',
+    currentScript: { getAttribute: (name) => attributes[name] ?? null },
+    querySelectorAll: (selector) => (selector === '[data-bg-live]' ? slots : []),
+    addEventListener: () => {},
+  }
+  runInNewContext(tag[2], {
+    document,
+    fetch: (...args) => {
+      const read = fetch(...args)
+      reads.push(read)
+      return read
+    },
+    encodeURIComponent,
+    isFinite,
+  })
+  await Promise.allSettled(reads)
+  await new Promise((r) => setTimeout(r, 100))
+  return { attributes, slots, reads: reads.length }
+}
+
+// Renders LiveCounts.astro alone with Astro's container through the copy's own
+// astro and vite (no astro.config, so no adapter), with a first-party
+// locals.backgold, and prints the markup as one JSON line.
+const FIRST_PARTY_PROBE = `import { createServer } from 'vite'
+import { getViteConfig } from 'astro/config'
+const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
+const server = await createServer({ ...config, configFile: false })
+try {
+  const { experimental_AstroContainer } = await server.ssrLoadModule('astro/container')
+  const { default: LiveCounts } = await server.ssrLoadModule('/src/components/sections/EventsList/LiveCounts.astro')
+  const container = await experimental_AstroContainer.create()
+  const html = await container.renderToString(LiveCounts, { locals: { backgold: { firstParty: true } } })
+  console.log('PROBE ' + JSON.stringify(html))
+} finally {
+  await server.close()
+}
+`
+
+/**
+ * First-party live counts, unit-level (the fixture api cannot answer on the
+ * site's own origin): the script a first-party site writes asks the
+ * same-origin path and carries no key, and run as a browser would it sends
+ * no Authorization header.
+ */
+async function checkFirstPartyLive(siteDir) {
+  log('\nFirst-party live counts (LiveCounts rendered alone, first-party locals)')
+  const probe = join(siteDir, 'live-first-party-probe.mjs')
+  writeFileSync(probe, FIRST_PARTY_PROBE)
+  const result = spawnSync('node', [probe], { cwd: siteDir, encoding: 'utf8', env: process.env })
+  rmSync(probe, { force: true })
+  const line = (result.stdout ?? '').split('\n').find((l) => l.startsWith('PROBE '))
+  if (result.status !== 0 || !line) throw new Error(`the first-party probe exited with ${result.status}\n${result.stdout}${result.stderr}`)
+  const html = JSON.parse(line.slice(6))
+  const tag = /<script\b([^>]*\bdata-bg-live-api="[^"]*"[^>]*)>([\s\S]*?)<\/script>/.exec(html)
+  check(tag !== null && /\bdata-bg-live-api="\/api\/content\/v1\/events\/live"/.test(tag[1]), 'first-party, the script asks the same-origin path /api/content/v1/events/live')
+  check(!/data-bg-live-key/.test(tag[1]), 'and carries no key attribute')
+  const slot = { textContent: '', getAttribute: (name) => (name === 'data-bg-live' ? 'evt_w1' : null) }
+  const asked = []
+  runInNewContext(tag[2], {
+    document: {
+      readyState: 'complete',
+      currentScript: { getAttribute: (name) => (name === 'data-bg-live-api' ? '/api/content/v1/events/live' : null) },
+      querySelectorAll: () => [slot],
+      addEventListener: () => {},
+    },
+    fetch: (url, init) => {
+      asked.push({ url, headers: init?.headers ?? {} })
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ events: [{ id: 'evt_w1', going: 3, seats_left: null }] }) })
+    },
+    encodeURIComponent,
+    isFinite,
+  })
+  await new Promise((r) => setTimeout(r, 50))
+  check(
+    asked.length === 1 && asked[0].url === '/api/content/v1/events/live?ids=evt_w1' && !Object.keys(asked[0].headers).some((h) => h.toLowerCase() === 'authorization') && slot.textContent === '3 going',
+    `run as a browser would, it asks /api/content/v1/events/live?ids=evt_w1 with no Authorization header and fills the slot (${JSON.stringify(asked)}, "${slot.textContent}")`,
+  )
+}
+
+async function checkPartyBoards(origin, fixture) {
+  log('\nParty boards: live counts, tickets, event types, news search, roster, seats')
+  const liveReads = () => fixture.state.seen.filter((s) => s.path === '/events/live')
+
+  // A6: the events page.
+  const beforeLive = liveReads().length
+  let res = await get(origin, '/events')
+  let html = await res.text()
+  check(res.status === 200 && tags(html, 'h1').length === 1, `GET /events is 200 with one <h1> (got ${res.status})`)
+  check(liveReads().length === beforeLive, 'rendering /events reads no live counts on the server')
+  const agenda = sectionWith(html, 'EventsList', 'class="agenda"')
+  const cards = sectionWith(html, 'EventsList', 'class="ev-cards"')
+  check(agenda !== '' && cards !== '', 'the events page draws its Agenda and its Cards sections')
+  const slotIds = (markup) => [...markup.matchAll(/<(?:span|p)\b[^>]*\bdata-bg-live="([^"]+)"[^>]*><\/(?:span|p)>/g)].map((m) => m[1])
+  const upcomingIds = fixture.data.events.upcoming.map((e) => e.id)
+  check(
+    JSON.stringify(slotIds(agenda)) === JSON.stringify(upcomingIds) && JSON.stringify(slotIds(cards)) === JSON.stringify(['evt_w1', 'evt_w3']),
+    `each agenda row and card has an empty data-bg-live slot named by its event id (${slotIds(agenda).join(', ')} / ${slotIds(cards).join(', ')})`,
+  )
+  const liveScripts = html.split('data-bg-live-api=').length - 1
+  check(liveScripts === 1, `the live-counts script is on the page once for two event sections (found ${liveScripts})`)
+  const ran = await runLiveScript(html)
+  check(
+    ran.attributes['data-bg-live-api'] === `${fixture.origin}/api/content/v1/events/live` && ran.attributes['data-bg-live-key'] === SITE_KEY,
+    "the script reads the api's /events/live with the publishable key",
+  )
+  const read = liveReads().at(-1)
+  check(
+    ran.reads === 1 && read && read.key === SITE_KEY && decodeURIComponent(read.search) === `?ids=${upcomingIds.join(',')}`,
+    `run as a browser would, it asks once for every id on the page (${read ? decodeURIComponent(read.search) : 'no read'})`,
+  )
+  const filled = Object.fromEntries(upcomingIds.map((id) => [id, ran.slots.filter((s) => s.id === id).map((s) => s.textContent)]))
+  check(
+    filled.evt_w1.every((t) => t === '142 going') &&
+      filled.evt_w3.every((t) => t === '88 going · 12 seats left') &&
+      filled.evt_w2.every((t) => t === '') &&
+      filled.evt_w4.every((t) => t === '') &&
+      filled.evt_w1.length === 2 &&
+      filled.evt_w3.length === 2,
+    `it fills each slot: "142 going", "88 going · 12 seats left", and nothing for an event left out or with no one going (${JSON.stringify(filled)})`,
+  )
+  const actions = (markup) => [...markup.matchAll(/<a class="button" href="([^"]*)"[^>]*>([^<]*)<span class="visually-hidden"[^>]*>: ([^<]*)<\/span>/g)].map((m) => [decode(m[3]), m[2], decode(m[1])])
+  const agendaActions = Object.fromEntries(actions(agenda).map(([title, label, href]) => [title, `${label} ${href}`]))
+  check(
+    agendaActions['Get-out-the-vote dinner'] === 'Get tickets https://events.example.org/gotv-dinner/tickets' &&
+      agendaActions['Harlow County candidate forum'] === 'RSVP https://events.example.org/candidate-forum' &&
+      agendaActions['New member night'] === 'Details https://events.example.org/new-member-night',
+    `the agenda's buttons: Get tickets to the tickets address, RSVP, Details once registration closed (${JSON.stringify(agendaActions)})`,
+  )
+  check(
+    actions(cards).some(([title, label, href]) => title === 'Get-out-the-vote dinner' && label === 'Get tickets' && href === 'https://events.example.org/gotv-dinner/tickets'),
+    'the cards draw Get tickets on the event that sells tickets',
+  )
+  const tabsOf = (markup) => [...(/<nav class="agenda-tabs[^"]*"[^>]*>([\s\S]*?)<\/nav>/.exec(markup)?.[1] ?? '').matchAll(/<a href="([^"]*)"([^>]*)>([^<]*)<\/a>/g)].map((m) => ({ href: m[1], current: /aria-current="page"/.test(m[2]), label: decode(m[3]) }))
+  let tabs = tabsOf(agenda)
+  check(
+    JSON.stringify(tabs.map((t) => `${t.label} ${t.href}`)) === JSON.stringify(['All /events', 'Meetings /events/meeting', 'Volunteer /events/volunteer', 'Fundraisers /events/fundraiser']) && tabs[0].current && tabs.filter((t) => t.current).length === 1,
+    `the agenda's type tabs: All (current), then each type with an upcoming event; no tab for Rallies (${tabs.map((t) => t.label).join(', ')})`,
+  )
+  check(!cards.includes('agenda-tabs'), 'the Cards section draws no tabs')
+
+  res = await get(origin, '/events/volunteer')
+  html = await res.text()
+  const typedAgenda = sectionWith(html, 'EventsList', 'class="agenda"')
+  tabs = tabsOf(typedAgenda)
+  check(
+    res.status === 200 &&
+      plain(typedAgenda).includes('Door-knock Saturday in Alder County') &&
+      plain(typedAgenda).includes('New member night') &&
+      !plain(typedAgenda).includes('Harlow County candidate forum') &&
+      !plain(typedAgenda).includes('Get-out-the-vote dinner'),
+    `/events/volunteer draws the agenda with the volunteer events from GET /events?type=volunteer (got ${res.status})`,
+  )
+  check(tabs.find((t) => t.current)?.label === 'Volunteer', 'and marks the Volunteer tab current')
+  check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
+  check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
+  check(fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer'), 'it read GET /events?type=volunteer')
+  for (const path of ['/events/rally', '/events/no-such-type']) {
+    res = await get(origin, path)
+    await res.text()
+    check(res.status === 404, `${path} (no upcoming event, or no such type) is a 404 (got ${res.status})`)
+  }
+
+  // A4: the news list's search.
+  const searchForm = (page) => /<form class="list-search"[^>]*>([\s\S]*?)<\/form>/.exec(page)
+  res = await get(origin, '/blog?q=the')
+  html = await res.text()
+  let text = plain(html)
+  check(
+    res.status === 200 && text.includes('2 results for ‘the’') && html.includes('The levy, explained') && html.includes('Open books, line by line'),
+    `/blog?q=the lists the two posts that match, under "2 results for ‘the’" (got ${res.status})`,
+  )
+  check(!/<nav class="pager"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'a search has no pager and is never stored')
+  check(/<input\b[^>]*name="q"[^>]*value="the"/.test(searchForm(html)?.[0] ?? '') && /<nav class="list-filter"/.test(html), 'the box keeps the search, and the filter chips stay')
+  check(fixture.state.seen.some((s) => s.path === '/entries/post' && new URLSearchParams(s.search).get('q') === 'the'), 'it read GET /entries/post?q=the')
+  res = await get(origin, '/blog?q=zz')
+  html = await res.text()
+  check(res.status === 200 && plain(html).includes('Nothing matches ‘zz’.') && !html.includes('post-rows'), `/blog?q=zz says "Nothing matches ‘zz’." (got ${res.status})`)
+  const searchesBefore = fixture.state.seen.filter((s) => new URLSearchParams(s.search).has('q')).length
+  for (const path of ['/blog?q=x', `/blog?q=${'a'.repeat(81)}`]) {
+    res = await get(origin, path)
+    html = await res.text()
+    check(res.status === 200 && html.includes('Open books, line by line') && !/results? for|Nothing matches/.test(plain(html)), `${path.slice(0, 24)}… (under 2 or over 80 characters) shows the list and asks the api nothing`)
+  }
+  check(fixture.state.seen.filter((s) => new URLSearchParams(s.search).has('q')).length === searchesBefore, 'a search out of range never reaches the api')
+  res = await get(origin, '/blog')
+  html = await res.text()
+  const form = searchForm(html)?.[0] ?? ''
+  check(
+    res.headers.get('x-backgold-cache') === 'MISS' && /role="search"/.test(form) && /action="\/blog"/.test(form) && /method="get"/.test(form) && /name="q"/.test(form) && !/value=/.test(form) && plain(form).includes('Search news'),
+    `/blog draws the "Search news" box (a GET form to /blog with q), and no search was stored under its address (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`,
+  )
+  check(!/results? for|Nothing matches/.test(plain(html)), 'the bare list shows no search sentence')
+  res = await get(origin, '/endorsements')
+  check(!/class="list-search"/.test(await res.text()), 'a list other than News has no search box')
+
+  // A3: the leadership page.
+  res = await get(origin, '/leadership')
+  html = await res.text()
+  check(res.status === 200 && tags(html, 'h1').length === 1, `GET /leadership is 200 with one <h1> (got ${res.status})`)
+  const roster = sectionWith(html, 'CandidateRoster', 'data-ballot')
+  const levelTabs = [...roster.matchAll(/<button type="button" aria-pressed="(true|false)"[^>]*data-ballot-level="([^"]*)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => ({ pressed: m[1] === 'true', level: decode(m[2]), label: plain(m[3]) }))
+  check(
+    JSON.stringify(levelTabs.map((t) => t.label)) === JSON.stringify(['All 11', 'Federal 1', 'State 3', 'County 3', 'Local 2', 'School board 2']) && levelTabs[0].pressed && levelTabs.filter((t) => t.pressed).length === 1,
+    `the ballot's tabs: All first, then each level present in ballot order with its count (${levelTabs.map((t) => t.label).join(', ')})`,
+  )
+  check(
+    /<div class="ballot-controls"[^>]*\bhidden\b/.test(roster) && /<input\b[^>]*placeholder="Find a candidate or county"/.test(roster) && roster.split('<script').length - 1 === 1,
+    'the search box and tabs are drawn hidden for the section script to show (no route), with one script',
+  )
+  const levelsOn = [...roster.matchAll(/<li class="ballot-cand" data-level="([^"]*)" data-find="([^"]*)"/g)].map((m) => [decode(m[1]), decode(m[2])])
+  check(levelsOn.length === 11 && levelsOn.every(([level]) => level !== '') && levelsOn.some(([, find]) => find === 'noor ellingsworth state senate district 12 · alder, brannock'), 'each candidate carries its level and its name, office and place for the filter')
+  const donates = [...roster.matchAll(/<a class="button" href="([^"]*)"[^>]*>Donate<span class="visually-hidden"[^>]*> to ([^<]*)<\/span>/g)].map((m) => [decode(m[2]), decode(m[1])])
+  check(
+    JSON.stringify(donates) === JSON.stringify([['Halvard Brisco', 'https://secure.backgold.com/donate/brisco']]),
+    `Donate is drawn only for the candidate with a donate address (${JSON.stringify(donates)})`,
+  )
+  check(/<ul class="ballot-issues"[^>]*>\s*<li[^>]*>Taxes<\/li>\s*<li[^>]*>Open books<\/li>\s*<\/ul>/.test(roster), "a candidate's issues are chips")
+  const team = sectionWith(html, 'TeamGrid', 'seat-group')
+  const groups = [...team.matchAll(/<h3 class="seat-group-name"[^>]*>([\s\S]*?)<\/h3>/g)].map((m) => plain(m[1]))
+  check(
+    JSON.stringify(groups) === JSON.stringify(['Officers 2 seats · term ends April 2027', 'At-large members 2 seats', 'Staff 1 seat']),
+    `the team board groups seats by body, officers first and Staff last, a shared term beside the count (${groups.join(' | ')})`,
+  )
+  const teamText = plain(team)
+  check(
+    teamText.includes('Chair Rowan Achterberg since 2023 Osgood County') && teamText.includes('At-large Tobias Wrenfield since 2024 · term ends April 2027 Marrow County'),
+    'a held seat shows its role, the holder, "since 2023" (and its own term when the body does not share one) and the bio',
+  )
+  check(
+    teamText.includes('At-large · open seat This seat is open Any member in good standing can stand for it at convention. term ends April 2029') &&
+      /<a class="button" href="\/open-roles\/at-large-seat"[^>]*>Ask about running/.test(team),
+    "the vacant seat is an invitation with Ask about running to its open role's page",
+  )
+  check(/<a href="https:\/\/example\.org\/idris"[^>]*>Idris Valcourt<\/a>/.test(team) && teamText.includes('Organizer Sam Ortiz'), "a holder's name links to their link; staff are drawn under Staff")
+}
+
 /**
  * Every non-chrome, non-compliance block type has a component of its own in
  * the template. A block the api projects only inside an area (areaBlocks)
@@ -1438,6 +1886,8 @@ async function main() {
   const leaked = filesUnder(join(siteDir, 'dist')).filter((f) => readFileSync(f, 'utf8').includes(BUILD_CANARY))
   check(leaked.length === 0, `the build machine's environment is not in the built Worker${leaked.length ? ` (found in ${leaked.join(', ')})` : ''}`)
 
+  if (PARTY) await checkFirstPartyLive(siteDir)
+
   const examples = await loadExamples()
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
@@ -1457,6 +1907,7 @@ async function main() {
   try {
     await checkConfigured(configured.origin, fixture, disclaimer)
     await checkKitchenSink(configured.origin, kitchen, disclaimer)
+    if (PARTY) await checkPartyBoards(configured.origin, fixture)
     if (chrome) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

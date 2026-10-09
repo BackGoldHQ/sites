@@ -1,29 +1,99 @@
 ---
 // TeamGrid · Board (board A3, "Team & open roles · Board"; A12 shows it beside
-// Grid): the party's board as seats. Officers first (the leadership rows:
-// role over the name, the short bio under it), then the at-large members (the
-// staff rows, with their department), then each open role as an open seat in
-// the same group: drawn as an invitation, not a blank, with its line and a
-// button to its own link (else the section's "interested?" link). Each seat
-// has the photo, or the person's initials when there is none. Four seats
-// across on a wide screen, two on a phone. With no rows it draws nothing.
+// Grid): the party's board as seats, each with the photo (the holder's
+// initials when there is none), its role over the holder's name, and a line
+// under it. Four seats across on a wide screen, two on a phone. With no rows
+// it draws nothing.
+//
+// When the rows are the party's seats (people.ts), each body is a group under
+// its name with its seat count, in BackGold's order (the officers' body
+// first, Staff last); a term every seat in the body shares is written beside
+// the count ("term ends April 2027"), otherwise on each seat. A held seat's
+// line is "since 2023", then the holder's bio. A vacant seat is drawn as an
+// invitation, not a blank: "This seat is open" with the section's open-roles
+// line (else "Any member in good standing can stand for it at convention.")
+// and "Ask about running" to its open role's page (else the section's
+// "interested?" link). Open roles that arrive without a seat follow, under
+// "Open roles".
+//
+// When the rows are the older groups, officers come first (the leadership
+// rows: role over the name, the short bio under it), then the at-large
+// members (the staff rows, with their department), then each open role as an
+// open seat in the same group.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
 import { text } from '../../../lib/format'
-import { initials, teamOf } from './people'
+import { bodiesOf, initials, sharedTerm, teamOf } from './people'
 
 type Props = ComponentProps<typeof Default>
+
+const OPEN_LINE = 'Any member in good standing can stand for it at convention.'
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
 const intro = text(section.copy.teamOpenRolesIntro)
-const { leaders, staff, open, interest } = teamOf(section)
+const team = teamOf(section)
+const { interest } = team
+const bodies = bodiesOf(section)
+const bySeat = bodies.length > 0
+// By seat, the open roles that came without a seat; by group, every row.
+const { leaders, staff } = bySeat ? { leaders: [], staff: [] } : team
+const open = bySeat ? team.openRoles : team.open
 const seats = staff.length + open.length
+const count = (n: number) => (n === 1 ? '1 seat' : `${n} seats`)
+const ask = (link: { href: string; rel: 'noopener' | undefined } | null) => (link ? { ...link, label: 'Ask about running' } : interest)
 ---
-{(leaders.length > 0 || seats > 0) && (
+{(bySeat || leaders.length > 0 || seats > 0) && (
   <Band section={section} class="team team-board">
     {heading && <h2>{heading}</h2>}
+    {bodies.map((body) => {
+      const term = sharedTerm(body)
+      return (
+        <div class="seat-group">
+          <h3 class="seat-group-name">
+            {body.name} <span class="seat-group-count">{[count(body.seats.length), term && `term ends ${term}`].filter(Boolean).join(' · ')}</span>
+          </h3>
+          <ul class="seats" role="list">
+            {body.seats.map((s) => {
+              if (!s.name) {
+                const button = ask(s.link)
+                return (
+                  <li class="seat seat-open">
+                    <span class="seat-photo seat-empty" aria-hidden="true">?</span>
+                    <p class="seat-role">{[s.seat, 'open seat'].filter(Boolean).join(' · ')}</p>
+                    <h4 class="seat-name">This seat is open</h4>
+                    <p class="seat-line">{intro ?? OPEN_LINE}</p>
+                    {!term && s.termEnds && <p class="seat-line">term ends {s.termEnds}</p>}
+                    {button && (
+                      <p class="seat-ask">
+                        <a class="button" href={button.href} rel={button.rel}>
+                          {button.label}<span class="visually-hidden">: {s.seat ?? body.name}</span>
+                        </a>
+                      </p>
+                    )}
+                  </li>
+                )
+              }
+              const line = [s.since && `since ${s.since}`, !term && s.termEnds && `term ends ${s.termEnds}`].filter(Boolean).join(' · ')
+              return (
+                <li class="seat">
+                  {s.photo ? (
+                    <img class="seat-photo" src={s.photo} alt="" loading="lazy" decoding="async" />
+                  ) : (
+                    <span class="seat-photo seat-initials" aria-hidden="true">{initials(s.name)}</span>
+                  )}
+                  {s.seat && <p class="seat-role">{s.seat}</p>}
+                  <h4 class="seat-name">{s.link ? <a href={s.link.href} rel={s.link.rel}>{s.name}</a> : s.name}</h4>
+                  {line && <p class="seat-line">{line}</p>}
+                  {s.bio && <p class="seat-line">{s.bio}</p>}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )
+    })}
     {leaders.length > 0 && (
       <div class="seat-group">
         <h3 class="seat-group-name">Officers</h3>
@@ -46,7 +116,7 @@ const seats = staff.length + open.length
     {seats > 0 && (
       <div class="seat-group">
         <h3 class="seat-group-name">
-          At-large members <span class="seat-group-count">{seats === 1 ? '1 seat' : `${seats} seats`}</span>
+          {bySeat ? 'Open roles' : 'At-large members'} <span class="seat-group-count">{count(seats)}</span>
         </h3>
         <ul class="seats" role="list">
           {staff.map((p) => (
@@ -62,17 +132,17 @@ const seats = staff.length + open.length
             </li>
           ))}
           {open.map((p) => {
-            const ask = p.link ? { ...p.link, label: 'Ask about running' } : interest
+            const button = ask(p.link)
             return (
               <li class="seat seat-open">
                 <span class="seat-photo seat-empty" aria-hidden="true">?</span>
                 <p class="seat-role">{[p.role, p.dept].filter(Boolean).join(' · ')} · open seat</p>
                 <h4 class="seat-name">This seat is open</h4>
                 {(p.blurb ?? intro) && <p class="seat-line">{p.blurb ?? intro}</p>}
-                {ask && (
+                {button && (
                   <p class="seat-ask">
-                    <a class="button" href={ask.href} rel={ask.rel}>
-                      {ask.label}<span class="visually-hidden">: {p.role}</span>
+                    <a class="button" href={button.href} rel={button.rel}>
+                      {button.label}<span class="visually-hidden">: {p.role}</span>
                     </a>
                   </p>
                 )}
@@ -84,6 +154,7 @@ const seats = staff.length + open.length
     )}
   </Band>
 )}
+
 
 <style>
   .seat-group + .seat-group {
