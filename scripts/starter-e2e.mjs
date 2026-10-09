@@ -383,6 +383,13 @@ async function loadExamples() {
   return structuredClone(mod.CONTENT_API_EXAMPLES)
 }
 
+/** The shared example's EventsList section, by type: its position in `sectionsExample` is not a contract. */
+function exampleEventsList(ex) {
+  const section = ex.SectionsResponse.sections.find((s) => s.type === 'EventsList')
+  if (!section?.data?.items) throw new Error('the shared SectionsResponse example has no EventsList section with data rows')
+  return section
+}
+
 function fixtureData(ex, kitchenSections) {
   const legal = ex.SiteResponse.legal
   const site = ex.SiteResponse.site
@@ -644,7 +651,7 @@ function fixtureData(ex, kitchenSections) {
       media: {},
       links: [],
       // Every EventsList row carries whether the event sells tickets.
-      data: { ...ex.SectionsResponse.sections[0].data, items: ex.SectionsResponse.sections[0].data.items.map((row) => ({ sells_tickets: false, tickets_url: null, ...row })) },
+      data: { ...exampleEventsList(ex).data, items: exampleEventsList(ex).data.items.map((row) => ({ sells_tickets: false, tickets_url: null, ...row })) },
       embed: { iframe: 'https://api.backgold.com/embed/events/pine-valley', script: 'https://secure.backgold.com/embed.js' },
     },
     {
