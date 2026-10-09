@@ -80,9 +80,17 @@ export const eventTypePath = (key: string): string => `${EVENTS_PATH}/${encodeUR
 /** The sections whose layout draws the tabs: an EventsList in its Agenda layout. */
 export const drawsTabs = (section: Section): boolean => section.type === 'EventsList' && section.variant === 'agenda'
 
+/**
+ * The most rows `GET /events` returns in one read: the route answers 400
+ * BAD_LIMIT for a `limit` outside 1 to 50 (the api's ENTRY_LIMIT_MAX, which
+ * no package the template reads exports).
+ */
+const EVENTS_LIMIT_MAX = 50
+
+/** The section's row cap as a `limit`, at most EVENTS_LIMIT_MAX. */
 function capOf(section: Section): number | undefined {
   const max = section.options?.max
-  return typeof max === 'number' && Number.isFinite(max) && max > 0 ? Math.floor(max) : undefined
+  return typeof max === 'number' && Number.isFinite(max) && max > 0 ? Math.min(Math.floor(max), EVENTS_LIMIT_MAX) : undefined
 }
 
 /**
@@ -115,8 +123,9 @@ export async function tabsFor(
  * `/events/<key>`: the events page with each Agenda section's rows read from
  * `GET /events?type=<key>`, and the type. Null (a 404) when the path names no
  * type, the events page has no Agenda section, or the key is not a type with
- * an upcoming event (one the tabs do not offer). Other sections keep their
- * baked rows.
+ * an upcoming event (one the tabs do not offer), including a key the api
+ * refuses as no type at all. Other sections keep their baked rows; any other
+ * failed read throws.
  */
 export async function typedEventsPage(
   client: BackgoldContent,
@@ -133,8 +142,10 @@ export async function typedEventsPage(
   try {
     listing = await eventsListing(client, request, { type: key, limit: capOf(agenda[0]!) })
   } catch (error) {
-    // An api without the route answers 404: no type has an address yet.
-    if (error instanceof BackgoldApiError && error.status === 404) return null
+    // An api without the route answers 404: no type has an address yet. A key
+    // outside the api's event types answers 400 BAD_TYPE: no such type. Any
+    // other 400 (BAD_LIMIT, BAD_CURSOR) is the template's own mistake and throws.
+    if (error instanceof BackgoldApiError && (error.status === 404 || (error.status === 400 && error.code === 'BAD_TYPE'))) return null
     throw error
   }
   const type = typeTabs(listing).find((t) => t.key === key)
