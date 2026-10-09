@@ -1,13 +1,17 @@
 ---
 // EventsList · Cards (board A1, "Upcoming events · Cards"; A12 shows it beside
 // List and Agenda): a card per event with its date line, its type, the time
-// and the place, and whether it still takes registrations. Each card opens
-// the event's own page in BackGold, where an RSVP or a ticket happens:
-// `options.actions` 'buttons' puts an RSVP button on the card, 'link' (or
+// and the place, its live counts ("142 going", "12 seats left", filled in by
+// LiveCounts after the page loads; empty without scripts), and whether it
+// still takes registrations. Each card opens the event's own page in
+// BackGold, where an RSVP or a ticket happens: `options.actions` 'buttons'
+// puts a button on the card ("Get tickets" when the event sells tickets,
+// "RSVP" otherwise, "Details" once registration has closed), 'link' (or
 // none) makes the whole card the link. With no events it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
+import LiveCounts from './LiveCounts.astro'
 import { actionsOf, eventsOf } from './events'
 import { text } from '../../../lib/format'
 
@@ -37,17 +41,19 @@ const events = eventsOf(section)
           )}
           <h3 class="ev-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
           {(event.when?.time || event.place) && <p class="ev-meta">{[event.when?.time, event.place].filter(Boolean).join(' · ')}</p>}
+          {event.id && <p class="ev-live" data-bg-live={event.id}></p>}
           {event.closed && <p class="ev-closed">Registration closed</p>}
-          {event.link && buttons && (
+          {event.action && buttons && (
             <p class="ev-action">
-              <a class="button" href={event.link.href} rel={event.link.rel}>
-                {event.closed ? 'Details' : 'RSVP'}<span class="visually-hidden">: {event.title}</span>
+              <a class="button" href={event.action.href} rel={event.action.rel}>
+                {event.action.label}<span class="visually-hidden">: {event.title}</span>
               </a>
             </p>
           )}
         </li>
       ))}
     </ul>
+    <LiveCounts />
   </Band>
 )}
 
@@ -131,6 +137,14 @@ const events = eventsOf(section)
   .ev-meta {
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  .ev-live {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .ev-live:empty {
+    display: none;
   }
   .ev-closed {
     color: var(--muted);

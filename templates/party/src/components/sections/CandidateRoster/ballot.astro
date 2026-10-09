@@ -1,31 +1,37 @@
 ---
 // CandidateRoster · Ballot (board A3, "Candidate roster · Ballot"; A12 shows it
 // beside Cards and Compact): the candidates grouped by office in ballot order
-// (statewide, then the legislature, judicial and local offices, then any
-// other), each office under a rule with its level, each candidate with the
-// headshot (initials when there is none), the place and status, and the
-// buttons to their donate page in BackGold and their own site. The board's
-// filter tabs become a row of links to each office once there are more than
-// ten candidates in more than one office, so they work with scripts off; its
-// search box is not drawn (the template has no search page for candidates).
-// With no candidates it draws nothing.
+// (by the office's level: Federal, State, County, Local, Municipal, Judicial,
+// School board, then any other), each office under a rule with its level, each
+// candidate with the headshot (initials when there is none), the place and
+// status, their issues as chips, and the buttons to their donate address
+// (only when the record has one) and their own site.
+//
+// Once there are more than ten candidates (DS §24.7) the board's controls
+// come first: a search box ("Find a candidate or county", matching the name,
+// the office and the place) and, when the candidates span more than one
+// level, a tab per level with its count ("All 23", "State 5"). Both filter the
+// roster in the browser, since it is already on the page and small; while
+// they narrow it, "Showing N of M." says how far, with "Show all candidates"
+// to undo both. The controls are drawn hidden and shown by the section's
+// script, so with scripts off the whole roster shows and nothing is offered
+// that cannot work. With no candidates it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
 import { text } from '../../../lib/format'
-import { candidatesOf, initials, LEVEL_LABELS, type Candidate } from './candidates'
+import { candidatesOf, initials, levelRank, type Candidate } from './candidates'
 
 type Props = ComponentProps<typeof Default>
 
-const BALLOT_ORDER = ['statewide', 'legislative', 'judicial', 'local']
-const JUMP_AFTER = 10
+const CONTROLS_AFTER = 10
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
 const candidates = candidatesOf(section)
+const rosterId = `${section.id}-ballot`.replace(/[^A-Za-z0-9_-]/g, '-')
 
 interface Office {
-  id: string
   name: string
   level: string | null
   candidates: Candidate[]
@@ -38,101 +44,210 @@ for (const c of candidates) {
   const name = c.office ?? 'Also on the ballot'
   let office = offices.find((o) => o.name === name)
   if (!office) {
-    office = { id: `${section.id}-office-${offices.length + 1}`.replace(/[^A-Za-z0-9_-]/g, '-'), name, level: c.level, candidates: [] }
+    office = { name, level: c.level, candidates: [] }
     offices.push(office)
   }
   office.candidates.push(c)
 }
-const rank = (level: string | null) => {
-  const i = level ? BALLOT_ORDER.indexOf(level) : -1
-  return i < 0 ? BALLOT_ORDER.length : i
-}
-offices.sort((a, b) => rank(a.level) - rank(b.level))
+offices.sort((a, b) => levelRank(a.level) - levelRank(b.level))
 for (const office of offices) office.candidates.sort((a, b) => (a.region ?? '').localeCompare(b.region ?? '', 'en', { numeric: true }))
-const jump = candidates.length > JUMP_AFTER && offices.length > 1
+
+const controls = candidates.length > CONTROLS_AFTER
+const levels = [...new Set(candidates.map((c) => c.level).filter((l): l is string => l !== null))]
+  .sort((a, b) => levelRank(a) - levelRank(b))
+  .map((level) => ({ level, count: candidates.filter((c) => c.level === level).length }))
+const tabs = controls && levels.length > 1 ? levels : []
+const findText = (c: Candidate) => [c.name, c.office, c.region].filter(Boolean).join(' ').toLowerCase()
 ---
 {candidates.length > 0 && (
   <Band section={section} class="roster roster-ballot">
     {heading && <h2>{heading}</h2>}
-    {jump && (
-      <nav class="ballot-jump" aria-label="Offices">
-        <ul role="list">
-          {offices.map((office) => (
-            <li>
-              <a href={`#${office.id}`}>
-                {office.name} <span class="ballot-jump-count">{office.candidates.length}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    )}
-    <div class="ballot">
-      {offices.map((office) => (
-        <div class="ballot-office" id={office.id}>
-          <h3 class="ballot-office-name">
-            {office.name}
-            {office.level && LEVEL_LABELS[office.level] && <small>{LEVEL_LABELS[office.level]}</small>}
-          </h3>
-          <ul class="ballot-cands" role="list">
-            {office.candidates.map((c) => (
-              <li class="ballot-cand">
-                {c.photo ? (
-                  <img class="ballot-photo" src={c.photo} alt="" loading="lazy" decoding="async" />
-                ) : (
-                  <span class="ballot-photo ballot-initials" aria-hidden="true">{initials(c.name)}</span>
-                )}
-                <div class="ballot-who">
-                  <h4 class="ballot-name">{c.name}</h4>
-                  {(c.region || c.status) && <p class="ballot-place">{[c.region, c.status].filter(Boolean).join(' · ')}</p>}
-                </div>
-                {(c.donate || c.site) && (
-                  <p class="ballot-acts">
-                    {c.donate && (
-                      <a class="button" href={c.donate.href} rel={c.donate.rel}>
-                        {c.donate.label}<span class="visually-hidden"> to {c.name}</span>
-                      </a>
-                    )}
-                    {c.site && (
-                      <a class="button button-quiet" href={c.site.href} rel={c.site.rel}>
-                        {c.site.label}<span class="visually-hidden">: {c.name}</span>
-                      </a>
-                    )}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+    <div class="ballot-roster" data-ballot>
+      {controls && (
+        <div class="ballot-controls" data-ballot-controls hidden>
+          <input
+            class="ballot-search"
+            type="search"
+            aria-label="Find a candidate or county"
+            placeholder="Find a candidate or county"
+            aria-controls={rosterId}
+            data-ballot-search
+          />
+          {tabs.length > 0 && (
+            <div class="ballot-tabs" role="group" aria-label="Levels">
+              <button type="button" aria-pressed="true" aria-controls={rosterId} data-ballot-level="">
+                All <span class="ballot-tab-count">{candidates.length}</span>
+              </button>
+              {tabs.map((t) => (
+                <button type="button" aria-pressed="false" aria-controls={rosterId} data-ballot-level={t.level}>
+                  {t.level} <span class="ballot-tab-count">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      ))}
+      )}
+      <div class="ballot" id={rosterId}>
+        {offices.map((office) => (
+          <div class="ballot-office" data-ballot-office>
+            <h3 class="ballot-office-name">
+              {office.name}
+              {office.level && <small>{office.level}</small>}
+            </h3>
+            <ul class="ballot-cands" role="list">
+              {office.candidates.map((c) => (
+                <li class="ballot-cand" data-level={c.level ?? ''} data-find={findText(c)}>
+                  {c.photo ? (
+                    <img class="ballot-photo" src={c.photo} alt="" loading="lazy" decoding="async" />
+                  ) : (
+                    <span class="ballot-photo ballot-initials" aria-hidden="true">{initials(c.name)}</span>
+                  )}
+                  <div class="ballot-who">
+                    <h4 class="ballot-name">{c.name}</h4>
+                    {(c.region || c.status) && <p class="ballot-place">{[c.region, c.status].filter(Boolean).join(' · ')}</p>}
+                    {c.issues.length > 0 && (
+                      <ul class="ballot-issues" role="list">
+                        {c.issues.map((issue) => <li>{issue}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                  {(c.donate || c.site) && (
+                    <p class="ballot-acts">
+                      {c.donate && (
+                        <a class="button" href={c.donate.href} rel={c.donate.rel}>
+                          {c.donate.label}<span class="visually-hidden"> to {c.name}</span>
+                        </a>
+                      )}
+                      {c.site && (
+                        <a class="button button-quiet" href={c.site.href} rel={c.site.rel}>
+                          {c.site.label}<span class="visually-hidden">: {c.name}</span>
+                        </a>
+                      )}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {controls && (
+        <p class="ballot-showing" role="status" data-ballot-showing hidden>
+          <span data-ballot-count></span>
+          <button type="button" class="ballot-reset" data-ballot-reset>Show all candidates</button>
+        </p>
+      )}
+      {controls && (
+        <script is:inline>
+          (function (root) {
+            if (!root) return
+            var controls = root.querySelector('[data-ballot-controls]')
+            var search = root.querySelector('[data-ballot-search]')
+            var tabs = root.querySelectorAll('[data-ballot-level]')
+            var cands = root.querySelectorAll('[data-find]')
+            var offices = root.querySelectorAll('[data-ballot-office]')
+            var showing = root.querySelector('[data-ballot-showing]')
+            var count = root.querySelector('[data-ballot-count]')
+            var level = ''
+            var apply = function () {
+              var words = search.value.trim().toLowerCase()
+              var shown = 0
+              for (var i = 0; i < cands.length; i++) {
+                var match = (!level || cands[i].getAttribute('data-level') === level) && (!words || cands[i].getAttribute('data-find').indexOf(words) >= 0)
+                cands[i].hidden = !match
+                if (match) shown++
+              }
+              for (var o = 0; o < offices.length; o++) offices[o].hidden = !offices[o].querySelector('[data-find]:not([hidden])')
+              showing.hidden = shown === cands.length
+              count.textContent = shown === cands.length ? '' : 'Showing ' + shown + ' of ' + cands.length + '.'
+            }
+            var choose = function (tab) {
+              level = tab ? tab.getAttribute('data-ballot-level') : ''
+              for (var t = 0; t < tabs.length; t++) tabs[t].setAttribute('aria-pressed', tabs[t].getAttribute('data-ballot-level') === level ? 'true' : 'false')
+            }
+            for (var t = 0; t < tabs.length; t++) {
+              tabs[t].addEventListener('click', function (event) {
+                choose(event.currentTarget)
+                apply()
+              })
+            }
+            search.addEventListener('input', apply)
+            root.querySelector('[data-ballot-reset]').addEventListener('click', function () {
+              search.value = ''
+              choose(null)
+              apply()
+              search.focus()
+            })
+            controls.hidden = false
+          })(document.currentScript.closest('[data-ballot]'))
+        </script>
+      )}
     </div>
   </Band>
 )}
 
 <style>
-  .ballot-jump ul {
+  .ballot-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-top: 1.25rem;
+  }
+  .ballot-controls[hidden],
+  .ballot-showing[hidden],
+  .ballot-office[hidden],
+  .ballot-cand[hidden] {
+    display: none;
+  }
+  .ballot-search {
+    flex: 1 1 16rem;
+    max-width: 24rem;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.125rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--page) 70%, transparent);
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+  }
+  .ballot-search::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+  .ballot-search:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .ballot-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin: 1.25rem 0 0;
-    padding: 0;
-    list-style: none;
   }
-  .ballot-jump a {
-    display: inline-block;
+  .ballot-tabs button {
+    min-height: 2.75rem;
     padding: 0.375rem 0.875rem;
     border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
     border-radius: var(--pill);
+    background: transparent;
     color: var(--ink);
+    font: inherit;
     font-size: var(--text-sm);
     font-weight: 600;
-    text-decoration: none;
+    cursor: pointer;
   }
-  .ballot-jump a:hover {
+  .ballot-tabs button:hover {
     border-color: var(--ink);
   }
-  .ballot-jump-count {
-    color: var(--muted);
+  .ballot-tabs button[aria-pressed='true'] {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+  .ballot-tab-count {
+    opacity: 0.75;
   }
   .ballot {
     display: grid;
@@ -144,7 +259,6 @@ const jump = candidates.length > JUMP_AFTER && offices.length > 1
     gap: 0.875rem;
     padding-top: 0.875rem;
     border-top: 2px solid var(--ink);
-    scroll-margin-top: 1rem;
   }
   .ballot-office-name {
     margin: 0;
@@ -212,6 +326,22 @@ const jump = candidates.length > JUMP_AFTER && offices.length > 1
     color: var(--muted);
     font-size: var(--text-sm);
   }
+  .ballot-who .ballot-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+    padding: 0;
+    list-style: none;
+  }
+  .ballot-issues li {
+    padding: 0.0625rem 0.5rem;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--link) 12%, transparent);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 700;
+  }
   .ballot-acts {
     grid-column: 1 / -1;
     display: flex;
@@ -222,6 +352,25 @@ const jump = candidates.length > JUMP_AFTER && offices.length > 1
   .ballot-acts .button {
     padding: 0.4375rem 1rem;
     font-size: var(--text-sm);
+  }
+  .ballot-showing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 1.125rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .ballot-reset {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--link);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
   }
   @media (min-width: 40rem) {
     .ballot-cand {

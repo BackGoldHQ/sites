@@ -293,6 +293,62 @@
   background: var(--button);
   color: var(--button-ink);
 }
+/* The news list's search box (board A4): one field with its button inside
+   the field's pill, under the filter. */
+.list-search {
+  display: flex;
+  align-items: center;
+  max-width: 28rem;
+  margin: 0 0 2rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: var(--pill);
+  background: color-mix(in srgb, var(--page) 70%, transparent);
+}
+.list-filter + .list-search {
+  margin-top: -1rem;
+}
+.list-search:focus-within {
+  border-color: var(--ink);
+}
+.list-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0 0.5rem 1.125rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.list-search input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.list-search input:focus-visible {
+  outline: none;
+}
+.list-search-go {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.list-search-go:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -3px;
+}
+.list-results {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
 /* The pager under the rows: Newest at the start, Older at the end, each a
    pill like the filter's. */
 .pager {

@@ -23,4 +23,13 @@ export interface ListLayoutProps {
   filter: ListFilter | null
   /** On a term's list, the term and its taxonomy; null on the whole list. */
   term: { taxonomy: TermsResponse['taxonomy']; term: TermsResponse['terms'][number] } | null
+  /** The search box, on the news list and its terms' lists; null on every other list. */
+  search: ListSearch | null
+}
+
+export interface ListSearch {
+  /** The news list's address, where the box sends `?q=`. */
+  action: string
+  /** The search the rows answer (`entries` are its results, with no pager); null when they are the list itself. */
+  q: string | null
 }

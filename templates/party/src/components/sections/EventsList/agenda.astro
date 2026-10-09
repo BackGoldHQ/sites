@@ -1,19 +1,30 @@
 ---
 // EventsList · Agenda (board A6, "Upcoming events · Agenda"; A12 shows it
 // beside List and Cards): the events grouped by month under the month's name
-// and its count, each a row with the day, the type, the time and the place.
-// A month between two listed months that has no event is drawn as an
-// invitation ("December is open.") with the section's empty-events line, never
-// as a blank. The board's type tabs are not drawn: they are addresses
-// (/events/<type>) and the template has no such page. Each event opens its
-// own page in BackGold: `options.actions` 'buttons' adds an RSVP button to the
-// row, 'link' (or none) makes the title the link. With no events it draws
-// nothing.
+// and its count, each a row with the day, the type, the time, the place and
+// its live counts ("142 going", "12 seats left", filled in by LiveCounts
+// after the page loads; empty without scripts). A month between two listed
+// months that has no event is drawn as an invitation ("December is open.")
+// with the section's empty-events line, never as a blank.
+//
+// On the events page (/events) the type tabs come first: All, then each event
+// type with an upcoming event, from the Content API's GET /events. They are
+// addresses, /events/<type>, so they work with scripts off; there the rows
+// are that type's upcoming events (src/pages/[...path].astro reads them) and
+// its tab is marked current. Anywhere else, or when the types cannot be read,
+// no tabs are drawn.
+//
+// Each event opens its own page in BackGold: `options.actions` 'buttons' adds
+// a button to the row ("Get tickets" when the event sells tickets, "RSVP"
+// otherwise, "Details" once registration has closed), 'link' (or none) makes
+// the title the link. With no events it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
+import LiveCounts from './LiveCounts.astro'
 import { actionsOf, eventsOf, monthName, type EventRow } from './events'
 import { text } from '../../../lib/format'
+import { EVENTS_PATH, eventTypePath, tabsFor } from '../../../lib/events'
 
 type Props = ComponentProps<typeof Default>
 
@@ -22,6 +33,8 @@ const heading = text(section.copy.heading)
 const invitation = text(section.copy.eventsEmptyCta)
 const buttons = actionsOf(section) === 'buttons'
 const events = eventsOf(section)
+const bg = Astro.locals.backgold
+const tabs = events.length > 0 && bg.setup === null ? await tabsFor(bg.client, Astro.request, section, Astro.url.pathname) : null
 
 interface Month {
   label: string
@@ -51,6 +64,16 @@ const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
 {events.length > 0 && (
   <Band section={section} class="events events-agenda">
     {heading && <h2>{heading}</h2>}
+    {tabs && (
+      <nav class="agenda-tabs" aria-label="Event types">
+        <ul role="list">
+          <li><a href={EVENTS_PATH} aria-current={tabs.active === null ? 'page' : undefined}>All</a></li>
+          {tabs.tabs.map((t) => (
+            <li><a href={eventTypePath(t.key)} aria-current={tabs.active === t.key ? 'page' : undefined}>{t.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    )}
     <div class="agenda">
       {months.map((month) => (
         <div class="agenda-month">
@@ -73,17 +96,18 @@ const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
                   <div class="agenda-body">
                     {event.type && <p class="agenda-chip">{event.type}</p>}
                     <h4 class="agenda-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h4>
-                    {(event.when?.time || event.place || event.closed) && (
+                    {(event.when?.time || event.place || event.closed || event.id) && (
                       <p class="agenda-meta">
                         {[event.when?.time, event.place].filter(Boolean).map((part) => <span>{part}</span>)}
+                        {event.id && <span class="agenda-live" data-bg-live={event.id}></span>}
                         {event.closed && <span class="agenda-closed">Registration closed</span>}
                       </p>
                     )}
                   </div>
-                  {event.link && buttons && (
+                  {event.action && buttons && (
                     <p class="agenda-action">
-                      <a class="button" href={event.link.href} rel={event.link.rel}>
-                        {event.closed ? 'Details' : 'RSVP'}<span class="visually-hidden">: {event.title}</span>
+                      <a class="button" href={event.action.href} rel={event.action.rel}>
+                        {event.action.label}<span class="visually-hidden">: {event.title}</span>
                       </a>
                     </p>
                   )}
@@ -99,10 +123,37 @@ const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
         </div>
       ))}
     </div>
+    <LiveCounts />
   </Band>
 )}
 
 <style>
+  .agenda-tabs ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .agenda-tabs a {
+    display: inline-block;
+    padding: 0.4375rem 0.875rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border-radius: var(--pill);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .agenda-tabs a:hover {
+    border-color: var(--ink);
+  }
+  .agenda-tabs a[aria-current='page'] {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
   .agenda {
     margin-top: 1.5rem;
   }
@@ -198,6 +249,13 @@ const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
     margin-top: 0.25rem;
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  .agenda-live {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .agenda-live:empty {
+    display: none;
   }
   .agenda-closed {
     font-weight: 700;

@@ -1,6 +1,7 @@
 // A CandidateRoster's rows as its layouts draw them: each approved candidate
-// with the office, its level, the place, the issues, the headshot, and links
-// to their site and their donate page in BackGold (followed as given; a
+// with the office, its level (the label BackGold sends: Federal, State,
+// County, …), the place, the issues, the headshot, and links to their site
+// and, when the record has one, their donate address (followed as given; a
 // donation never happens here).
 
 import type { Section } from '@backgold/content'
@@ -11,7 +12,7 @@ import { text } from '../../../lib/format'
 export interface Candidate {
   name: string
   office: string | null
-  /** 'statewide', 'legislative', 'judicial', 'local', or null. */
+  /** The office's level as a voter reads it ("State", "County"), or null. */
   level: string | null
   region: string | null
   status: string | null
@@ -42,12 +43,13 @@ export function candidatesOf(section: Section): Candidate[] {
   })
 }
 
-/** The level as a voter reads it on the ballot. */
-export const LEVEL_LABELS: Record<string, string> = {
-  statewide: 'Statewide',
-  legislative: 'Legislature',
-  judicial: 'Judicial',
-  local: 'Local',
+/** The levels BackGold sends, in ballot order; any other level comes after them. */
+export const BALLOT_ORDER = ['Federal', 'State', 'County', 'Local', 'Municipal', 'Judicial', 'School board', 'Other']
+
+/** A level's place in BALLOT_ORDER (an unknown or missing level last). */
+export function levelRank(level: string | null): number {
+  const i = level ? BALLOT_ORDER.indexOf(level) : -1
+  return i < 0 ? BALLOT_ORDER.length : i
 }
 
 /** "RA" for a headshot that has not been uploaded. */

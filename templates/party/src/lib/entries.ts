@@ -1,8 +1,8 @@
 // Reading entries for the entry and list layouts (src/components/entries):
 // where a type's list lives, a term's address, the byline, the reading time,
-// the filter a list offers, and a video's player.
+// the filter a list offers, the news list's search, and a video's player.
 
-import type { ContentTypeSummary, Entry, EntryAuthor } from '@backgold/content'
+import type { BackgoldContent, ContentTypeSummary, EntriesResponse, Entry, EntryAuthor } from '@backgold/content'
 import type { ResolvedType } from '@backgold/astro/server'
 
 /**
@@ -113,4 +113,28 @@ export function playerOf(url: string): string | null {
   if (/^[A-Za-z0-9_-]{11}$/.test(youtube)) return `https://www.youtube-nocookie.com/embed/${youtube}`
   const vimeo = host === 'vimeo.com' || host === 'player.vimeo.com' ? /(\d{6,12})/.exec(parsed.pathname)?.[1] : undefined
   return vimeo ? `https://player.vimeo.com/video/${vimeo}` : null
+}
+
+/** The shortest and longest search the Content API answers (`GET /entries/:type?q=`). */
+const SEARCH_MIN = 2
+const SEARCH_MAX = 80
+
+/** A list's `?q=`, trimmed, when it is a search the api answers (2 to 80 characters); else null. */
+export function searchQuery(raw: string | null): string | null {
+  const q = raw?.trim() ?? ''
+  const length = Array.from(q).length
+  return length >= SEARCH_MIN && length <= SEARCH_MAX ? q : null
+}
+
+/**
+ * The news list's search: each built-in type that shares `/blog` read with
+ * `?q=` (at most 20 entries each, no later page), newest first. Cached under
+ * the content version like every other read.
+ */
+export async function searchNews(client: BackgoldContent, q: string): Promise<Entry[]> {
+  const { types } = await client.types()
+  const pages = await Promise.all(types.filter(sharesBlog).map((t) => client.raw<EntriesResponse>(`/entries/${encodeURIComponent(t.key)}`, { q })))
+  return pages
+    .flatMap((page) => page?.entries ?? [])
+    .sort((a, b) => ((a.publish_at ?? '') !== (b.publish_at ?? '') ? ((a.publish_at ?? '') < (b.publish_at ?? '') ? 1 : -1) : a.id < b.id ? 1 : -1))
 }
