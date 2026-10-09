@@ -714,7 +714,8 @@ function fixtureData(ex, kitchenSections) {
       copy: { heading: 'Upcoming events', eventsEmptyCta: 'Tell us and we will put it here.' },
       media: {},
       links: [],
-      options: { max: 6, actions: 'buttons' },
+      // A cap over the api's limit of 50: the typed read asks for 50.
+      options: { max: 80, actions: 'buttons' },
       data: { source: 'events', items: upcoming },
     },
     {
@@ -1001,10 +1002,19 @@ function startFixture(examples, kitchenSections) {
       case 'events': {
         // GET /events?type=&cursor=&limit=: upcoming, soonest first; every
         // type with its count, whatever the filter. The cursor is base64url
-        // of the offset of the next row.
+        // of the offset of the next row. A limit outside 1 to 50 is 400
+        // BAD_LIMIT and a type key outside the known types is 400 BAD_TYPE, as
+        // the api answers.
         if (parts.length !== 1) break
+        const rawLimit = url.searchParams.get('limit')
+        const limit = rawLimit === null ? 20 : Number(rawLimit)
+        if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+          return send(400, { error: 'limit must be a whole number from 1 to 50', code: 'BAD_LIMIT' })
+        }
         const type = url.searchParams.get('type')
-        const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? 20) || 20, 50))
+        if (type && !data.events.types.some((t) => t.key === type)) {
+          return send(400, { error: `type must be one of ${data.events.types.map((t) => t.key).join(', ')}`, code: 'BAD_TYPE' })
+        }
         const offset = Number(Buffer.from(url.searchParams.get('cursor') ?? '', 'base64url').toString('utf8')) || 0
         const matching = data.events.upcoming.filter((e) => !type || e.type === type).sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1))
         const shown = matching.slice(offset, offset + limit)
@@ -1775,7 +1785,10 @@ async function checkPartyBoards(origin, fixture) {
   check(tabs.find((t) => t.current)?.label === 'Volunteer', 'and marks the Volunteer tab current')
   check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
   check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
-  check(fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer'), 'it read GET /events?type=volunteer')
+  check(
+    fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer' && new URLSearchParams(s.search).get('limit') === '50'),
+    "it read GET /events?type=volunteer with limit=50, the agenda's cap of 80 held to the api's maximum (the api answers 400 BAD_LIMIT above 50)",
+  )
   for (const path of ['/events/rally', '/events/no-such-type']) {
     res = await get(origin, path)
     await res.text()
