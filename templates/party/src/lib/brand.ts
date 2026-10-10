@@ -1,18 +1,37 @@
 // The site's colours as CSS custom properties, from the brand in BackGold
-// (`/site.brand`). The layout writes them into `:root`; src/styles/site.css
-// reads only these names, so restyling starts here or there.
+// (`/site.brand`): the template's token sheet. The layout writes them into
+// `:root`, a light set and a dark set (under `prefers-color-scheme: dark`);
+// src/styles/site.css reads only these names, so restyling starts here or
+// there.
 //
-// A section's `band` is a ground, never a colour. The five grounds follow
-// BackGold's own renderer:
-//   plain    the page background
-//   tint     halfway between the page and the panel colour
-//   panel    the card colour
-//   wash     the page with 12% of the primary colour over it
-//   contrast a dark brand ground (the darker of primary and secondary,
-//            fading to 35% darker), with light text
-// Every band gets an ink, a muted ink, a link colour and a button pair chosen
-// here so text meets WCAG AA (4.5:1) on that ground whatever the brand is:
-// a brand colour that would fail on a band is swapped for the band's ink.
+// The derivations follow boards A1 and A13 (docs/design/sites-unification-
+// 2026-10/mockups), drawn for a brand of indigo (primary), parchment
+// (secondary) and coral (accent):
+//   page      the secondary colour when it is light enough to read on
+//             (parchment), else a near-white; dark mode: the primary deep
+//             in shadow.
+//   ink       the primary steeped in near-black when the primary is dark
+//             (A1's #191c33), else a neutral ink; dark mode: the secondary.
+//   accent    "accent text": kickers, numerals, date lines, the wordmark's
+//             second line. The accent colour taken darker (light grounds) or
+//             lighter (dark grounds) until it reads at AA.
+//   button    the main call (Donate, Join the party): the accent colour, with
+//             whichever ink reads on it. `button-2` is the quieter solid
+//             button (RSVP, Sign me up): the primary colour.
+//   link      a text link: the primary colour on light grounds.
+//
+// A section's `band` is a ground, never a colour. The grounds:
+//   plain     the page
+//   tint      a step off the page, deeper in the page's own hue
+//   panel     the card colour
+//   wash      the primary colour washed over white
+//   contrast  the primary itself (dark mode: the secondary), flat
+//   photo     not a band an organization picks: the dark scrim the template
+//             lays over a photo (Hero · Full photo), the same in both modes
+// Every band gets an ink, a muted ink, an accent, a link colour, two button
+// pairs, a card colour and two rule colours, chosen here so text meets WCAG
+// AA (4.5:1) on that ground whatever the brand is: a brand colour that would
+// fail on a band is swapped for the band's ink.
 
 type Rgb = [number, number, number]
 
@@ -26,12 +45,15 @@ export interface BrandColors {
 const FALLBACK = { primary: '#1f3a5f', secondary: '#f4efe6', accent: '#b4232c' } as const
 
 const PAGE = '#fbfaf8'
-const SURFACE = '#f0ede6'
+const DARK_PAGE = '#121417'
 const INK = '#16191f'
 const LIGHT_INK = '#ffffff'
+const BLACK = '#000000'
 const AA = 4.5
 /** Buttons and focus rings are not text: 3:1 against their ground (WCAG 1.4.11). */
 const NON_TEXT = 3
+/** A ground lighter than this takes dark text. */
+const LIGHT_GROUND = 0.18
 
 function parse(hex: string): Rgb {
   const n = Number.parseInt(hex.slice(1), 16)
@@ -54,6 +76,16 @@ function mix(a: string, b: string, amount: number): string {
   return hex([0, 1, 2].map((i) => x[i]! * amount + y[i]! * (1 - amount)) as Rgb)
 }
 
+/** A light colour taken deeper in its own hue: each channel's distance from white times `k` (A1's tint is the page at 1.7). */
+function deepen(color: string, k: number): string {
+  return hex(parse(color).map((c) => 255 - (255 - c) * k) as Rgb)
+}
+
+/** A colour brightened in its own hue: each channel times `k`, then a little white (A13's dark-mode coral). */
+function brighten(color: string, k: number): string {
+  return mix(hex(parse(color).map((c) => c * k) as Rgb), '#ffffff', 0.85)
+}
+
 function luminance(color: string): number {
   const [r, g, b] = parse(color).map((c) => {
     const s = c / 255
@@ -68,9 +100,11 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-/** Whichever of the dark and light ink reads better on `ground`. */
-function inkOn(ground: string): string {
-  return contrast(INK, ground) >= contrast(LIGHT_INK, ground) ? INK : LIGHT_INK
+const isLight = (ground: string) => luminance(ground) > LIGHT_GROUND
+
+/** Whichever of `dark` and `light` reads better on `ground`. */
+function inkOn(ground: string, dark = INK, light = LIGHT_INK): string {
+  return contrast(dark, ground) >= contrast(light, ground) ? dark : light
 }
 
 /** `color` when it reaches `ratio` on every one of `grounds`, else `fallback`. */
@@ -78,31 +112,79 @@ function readable(color: string, grounds: string[], ratio: number, fallback: str
   return grounds.every((g) => contrast(color, g) >= ratio) ? color : fallback
 }
 
-/** The ink faded toward the ground as far as it can go and still pass AA. */
-function mutedOn(ink: string, grounds: string[]): string {
-  for (const amount of [0.72, 0.78, 0.84, 0.9]) {
-    const muted = mix(ink, grounds[0]!, amount)
-    if (grounds.every((g) => contrast(muted, g) >= AA)) return muted
-  }
-  return ink
+/** The first of `candidates` that reads at AA on `ground`, else `fallback`. */
+function firstReadable(candidates: string[], ground: string, fallback: string): string {
+  return candidates.find((c) => contrast(c, ground) >= AA) ?? fallback
 }
 
 /** A ground light text reads on: `color`, darkened until white reaches AA. */
 function darkGround(color: string): string {
   let ground = color
-  for (let step = 0; step < 20 && contrast(LIGHT_INK, ground) < AA; step++) ground = mix(ground, '#000000', 0.9)
+  for (let step = 0; step < 20 && contrast(LIGHT_INK, ground) < AA; step++) ground = mix(ground, BLACK, 0.9)
   return ground
 }
 
 interface Band {
   ground: string
-  /** The far end of the ground's gradient; the same colour except on `contrast`. */
-  end: string
   ink: string
   muted: string
+  accent: string
   link: string
   button: string
   buttonInk: string
+  button2: string
+  button2Ink: string
+  surface: string
+  line: string
+  lineStrong: string
+}
+
+type BandName = 'plain' | 'tint' | 'panel' | 'wash' | 'contrast' | 'photo'
+
+/** One mode's inks and brand colours, which every band of that mode starts from. */
+interface Mode {
+  primary: string
+  accent: string
+  /** Text on a light ground. */
+  darkText: string
+  /** Text on a dark ground. */
+  lightText: string
+  /** The main call's fill in this mode (the accent, brightened in dark mode). */
+  call: string
+  /** The page's card colour and rules, for every light ground. */
+  surface: string
+  line: string
+  lineStrong: string
+}
+
+function band(ground: string, m: Mode): Band {
+  const light = isLight(ground)
+  const ink = light ? readable(m.darkText, [ground], AA, inkOn(ground)) : readable(m.lightText, [ground], AA, inkOn(ground))
+  const muted = light
+    ? firstReadable([0.78, 0.84, 0.9].map((a) => mix(mix(m.primary, ink, 0.5), ground, a)), ground, ink)
+    : firstReadable([0.72, 0.78, 0.84, 0.9].map((a) => mix(LIGHT_INK, ground, a)), ground, ink)
+  const accent = light
+    ? firstReadable([0.86, 0.78, 0.7, 0.6].map((a) => mix(m.accent, BLACK, a)), ground, ink)
+    : firstReadable([0.4, 0.5, 0.6, 0.7].map((a) => mix(LIGHT_INK, brighten(m.accent, 1.3), a)), ground, ink)
+  const link = light ? readable(m.primary, [ground], AA, ink) : firstReadable([mix(LIGHT_INK, m.primary, 0.72)], ground, ink)
+  const buttonInk = inkOn(m.call, m.darkText, LIGHT_INK)
+  const callReads = contrast(buttonInk, m.call) >= AA && contrast(m.call, ground) >= 1.5
+  const button = callReads ? m.call : readable(m.primary, [ground], NON_TEXT, ink)
+  const button2 = light ? readable(m.primary, [ground], NON_TEXT, ink) : contrast(m.primary, ground) >= 1.25 ? m.primary : ink
+  return {
+    ground,
+    ink,
+    muted,
+    accent,
+    link,
+    button,
+    buttonInk: callReads ? buttonInk : inkOn(button),
+    button2,
+    button2Ink: inkOn(button2, m.darkText, m.lightText),
+    surface: light ? m.surface : mix(LIGHT_INK, ground, 0.06),
+    line: light ? m.line : mix(LIGHT_INK, ground, 0.12),
+    lineStrong: light ? m.lineStrong : mix(LIGHT_INK, ground, 0.2),
+  }
 }
 
 interface Palette {
@@ -110,59 +192,122 @@ interface Palette {
   secondary: string
   accent: string
   page: string
-  bands: Record<'plain' | 'tint' | 'panel' | 'wash' | 'contrast', Band>
+  bands: Record<BandName, Band>
 }
 
-function band(ground: string, end: string, brand: { primary: string; accent: string }): Band {
-  const ink = inkOn(ground)
-  const grounds = [ground, end]
-  const link = readable(brand.accent, grounds, AA, readable(brand.primary, grounds, AA, ink))
-  const button = readable(brand.primary, grounds, NON_TEXT, readable(brand.accent, grounds, NON_TEXT, ink))
-  return { ground, end, ink, muted: mutedOn(ink, grounds), link, button, buttonInk: inkOn(button) }
+function colorsOf(brand: BrandColors | null | undefined) {
+  return {
+    primary: brandColor(brand?.primary_color) ?? FALLBACK.primary,
+    secondary: brandColor(brand?.secondary_color) ?? FALLBACK.secondary,
+    accent: brandColor(brand?.accent_color) ?? FALLBACK.accent,
+  }
 }
 
-/** The palette for a brand; any colour missing or malformed falls back to FALLBACK. */
-function palette(brand: BrandColors | null | undefined): Palette {
-  const primary = brandColor(brand?.primary_color) ?? FALLBACK.primary
-  const secondary = brandColor(brand?.secondary_color) ?? FALLBACK.secondary
-  const accent = brandColor(brand?.accent_color) ?? FALLBACK.accent
+/** The light palette for a brand; any colour missing or malformed falls back to FALLBACK. */
+function lightPalette(brand: BrandColors | null | undefined): Palette {
+  const { primary, secondary, accent } = colorsOf(brand)
+  const page = luminance(secondary) >= 0.75 ? secondary : PAGE
+  const steeped = mix(primary, '#101010', 0.45)
+  const darkText = luminance(primary) < 0.08 && contrast(steeped, page) >= 7 ? steeped : INK
   const darker = luminance(primary) <= luminance(secondary) ? primary : secondary
-  const contrastGround = darkGround(darker)
-  const colors = { primary, accent }
+  const contrastGround = contrast(LIGHT_INK, primary) >= AA ? primary : darkGround(darker)
+  const m: Mode = {
+    primary,
+    accent,
+    darkText,
+    lightText: contrast(page, contrastGround) >= AA ? page : LIGHT_INK,
+    call: accent,
+    surface: mix(LIGHT_INK, page, 0.8),
+    line: mix(deepen(page, 2), darkText, 0.95),
+    lineStrong: mix(deepen(page, 3), darkText, 0.9),
+  }
   return {
     primary,
     secondary,
     accent,
-    page: PAGE,
+    page,
     bands: {
-      plain: band(PAGE, PAGE, colors),
-      tint: band(mix(SURFACE, PAGE, 0.5), mix(SURFACE, PAGE, 0.5), colors),
-      panel: band(SURFACE, SURFACE, colors),
-      wash: band(mix(primary, PAGE, 0.12), mix(primary, PAGE, 0.12), colors),
-      contrast: band(contrastGround, mix(contrastGround, '#000000', 0.65), colors),
+      plain: band(page, m),
+      tint: band(deepen(page, 1.7), m),
+      panel: band(m.surface, m),
+      wash: band(mix(primary, LIGHT_INK, 0.11), m),
+      contrast: band(contrastGround, m),
+      photo: band(darkGround(mix(primary, BLACK, 0.4)), m),
     },
   }
 }
 
-/** The palette as a `:root { … }` rule. Every value is a `#rrggbb` built above, never text from BackGold. */
-export function brandCss(brand: BrandColors | null | undefined): string {
-  const p = palette(brand)
-  const lines = [
+/** The dark palette (board A13's other theme): the primary deep in shadow, the secondary as ink, the contrast band light. */
+function darkPalette(brand: BrandColors | null | undefined): Palette {
+  const { primary, secondary, accent } = colorsOf(brand)
+  const shadowed = mix(primary, BLACK, 0.43)
+  const page = luminance(shadowed) < 0.03 ? shadowed : DARK_PAGE
+  const lightText = luminance(secondary) >= 0.75 ? mix(secondary, BLACK, 0.98) : '#f1ede6'
+  const steeped = mix(primary, '#101010', 0.45)
+  const darkText = luminance(primary) < 0.08 ? steeped : INK
+  const contrastGround = luminance(secondary) >= 0.75 ? deepen(secondary, 1.3) : '#efe7d6'
+  const m: Mode = {
+    primary: mix(primary, LIGHT_INK, 0.94),
+    accent,
+    darkText,
+    lightText,
+    call: brighten(accent, 1.3),
+    surface: mix(LIGHT_INK, contrastGround, 0.5),
+    line: mix(deepen(contrastGround, 2), darkText, 0.95),
+    lineStrong: mix(deepen(contrastGround, 3), darkText, 0.9),
+  }
+  const lightModeColors = lightPalette(brand)
+  return {
+    primary,
+    secondary,
+    accent,
+    page,
+    bands: {
+      plain: band(page, m),
+      tint: band(mix(primary, BLACK, 0.55), m),
+      panel: band(mix(primary, BLACK, 0.66), m),
+      wash: band(mix(primary, BLACK, 0.72), m),
+      contrast: band(contrastGround, m),
+      // A photo does not change with the visitor's theme: its scrim and words are light mode's.
+      photo: { ...lightModeColors.bands.photo, button: m.call, buttonInk: inkOn(m.call, INK, LIGHT_INK) },
+    },
+  }
+}
+
+function lines(p: Palette): string[] {
+  const out = [
     `--bg-brand-primary:${p.primary}`,
     `--bg-brand-secondary:${p.secondary}`,
     `--bg-brand-accent:${p.accent}`,
     `--page:${p.page}`,
+    `--shadow-ink:${p.bands.plain.ink}`,
   ]
   for (const [name, b] of Object.entries(p.bands)) {
-    lines.push(
+    out.push(
       `--band-${name}:${b.ground}`,
-      `--band-${name}-end:${b.end}`,
       `--band-${name}-ink:${b.ink}`,
       `--band-${name}-muted:${b.muted}`,
+      `--band-${name}-accent:${b.accent}`,
       `--band-${name}-link:${b.link}`,
       `--band-${name}-button:${b.button}`,
       `--band-${name}-button-ink:${b.buttonInk}`,
+      `--band-${name}-button-2:${b.button2}`,
+      `--band-${name}-button-2-ink:${b.button2Ink}`,
+      `--band-${name}-surface:${b.surface}`,
+      `--band-${name}-line:${b.line}`,
+      `--band-${name}-line-strong:${b.lineStrong}`,
     )
   }
-  return `:root{${lines.join(';')}}`
+  return out
+}
+
+/**
+ * The palettes as CSS: a `:root { … }` rule for the light set and the same
+ * names again under `prefers-color-scheme: dark`. Every value is a `#rrggbb`
+ * built above, never text from BackGold.
+ */
+export function brandCss(brand: BrandColors | null | undefined): string {
+  const light = lines(lightPalette(brand)).join(';')
+  const dark = lines(darkPalette(brand)).join(';')
+  return `:root{color-scheme:light dark;${light}}@media (prefers-color-scheme:dark){:root{${dark}}}`
 }

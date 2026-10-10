@@ -1,0 +1,91 @@
+---
+// Cta, 'strip' layout (board A1, "Area · Top banner · Convention notice:
+// Call to action · Strip"): one slim line on the section's band: a dot in
+// the accent, the heading in bold, " · " and the line of copy (the place and
+// the date), and the section's links at the right as underlined text. On a
+// phone (A13) it wraps, the link under the words. Made for the Top banner
+// area, which Site.astro draws above the header, and drawn the same wherever
+// a page places it. A donate link goes to the organization's own donate page
+// in BackGold, exactly as given.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const body = text(section.copy.body)
+const buttons = links(section)
+---
+{(heading || body || buttons.length > 0) && (
+  <Band section={section} class="cta-strip">
+    <p class="strip">
+      <span class="strip-dot" aria-hidden="true"></span>
+      {(heading || body) && (
+        <span class="strip-words">
+          {heading && <b>{heading}</b>}
+          {heading && body && ' · '}
+          {body}
+        </span>
+      )}
+      {buttons.length > 0 && (
+        <span class="strip-links">
+          {buttons.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}
+        </span>
+      )}
+    </p>
+  </Band>
+)}
+
+<style>
+  /* A1's .tbar: 46px tall, 14px type (13px on a phone). */
+  :global(.bg-section.cta-strip) {
+    --bg-section-padding: 0.375rem var(--gutter);
+    font-size: 0.8125rem;
+  }
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.875rem;
+    min-height: 2.125rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .strip-dot {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--button);
+  }
+  .strip-words b {
+    font-weight: 700;
+  }
+  .strip-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+  .strip-links a {
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (min-width: 48rem) {
+    :global(.bg-section.cta-strip) {
+      font-size: var(--text-sm);
+    }
+    .strip {
+      flex-wrap: nowrap;
+    }
+    .strip-links {
+      margin-left: auto;
+      white-space: nowrap;
+    }
+  }
+</style>

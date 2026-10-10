@@ -1,10 +1,11 @@
 ---
-// StatCards, 'ribbon' layout (board A1-home, section 2): every figure in one
-// band-wide row, each with its label (and note) under it, divided by thin
-// rules and with no cards. Two to a row on a phone. The heading, when there
-// is one, sits small above the row. A card marked `accent` in BackGold shows
-// its figure in the band's link colour. Nothing is drawn when there is
-// neither a heading nor a figure.
+// StatCards, 'ribbon' layout (board A1-home, section 2; A13 on a phone):
+// every figure in one band-wide row, each a large display-serif numeral with
+// its label (and note) under it in the muted ink, divided by thin rules and
+// with no cards; the band hugs the row (no section padding of its own).
+// Two by two on a phone. The heading, when there is one, sits small above
+// the row. A card marked `accent` in BackGold shows its figure in the band's
+// accent. Nothing is drawn when there is neither a heading nor a figure.
 import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
 import type Default from './index.astro'
@@ -37,12 +38,15 @@ const stats = rows(section)
 )}
 
 <style>
+  /* A1's ribbon: 30px above and below the figures, the band no deeper than that. */
+  :global(.bg-section.stats-ribbon) {
+    --bg-section-padding: 0.5rem var(--gutter);
+  }
   .ribbon-heading {
     font-size: var(--h3);
-    margin-bottom: 1.25rem;
+    margin: 1.25rem 0 0;
   }
   .ribbon {
-    --rule: color-mix(in srgb, var(--ink) 20%, transparent);
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 1.25rem;
@@ -51,25 +55,25 @@ const stats = rows(section)
     padding: 0;
   }
   .ribbon-stat {
+    min-width: 0;
     padding: 1.125rem 0;
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--line);
   }
   .ribbon-stat:nth-child(-n + 2) {
     border-top: 0;
-    padding-top: 0;
   }
   .ribbon-stat p {
     margin: 0;
   }
   .ribbon-value {
     font-family: var(--font-display);
-    font-size: clamp(2.125rem, 1.7rem + 1.4vw, 2.875rem);
+    font-size: clamp(2.125rem, 1.6rem + 1.6vw, 2.875rem);
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.02em;
   }
   .ribbon-accent {
-    color: var(--link);
+    color: var(--accent);
   }
   .ribbon-stat .ribbon-label {
     margin-top: 0.5rem;
@@ -91,8 +95,8 @@ const stats = rows(section)
     .ribbon-stat,
     .ribbon-stat:nth-child(-n + 2) {
       border-top: 0;
-      padding: 0.5rem 1.625rem;
-      border-left: 1px solid var(--rule);
+      padding: 1.875rem 1.625rem;
+      border-left: 1px solid var(--line);
     }
     .ribbon-stat:first-child {
       border-left: 0;

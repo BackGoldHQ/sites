@@ -8,7 +8,7 @@
     "About": ["right", "left", "letter"],
     "Issues": ["cards", "steps", "numbered"],
     "StatCards": ["row", "ribbon"],
-    "Cta": ["card", "banner", "photo"],
+    "Cta": ["card", "banner", "strip", "photo"],
     "QuoteStrip": ["row", "single"],
     "Map": ["directory", "map"],
     "MovementMap": ["full"],
@@ -38,7 +38,7 @@
     "Advocacy": ["full"]
   },
   "areas": {
-    "top_banner": "Under the header",
+    "top_banner": "Above the header",
     "sidebar": "Beside the page, under it on a phone",
     "above_footer": "Just above the footer",
     "unknown": "after_page"

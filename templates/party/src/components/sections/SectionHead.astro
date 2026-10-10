@@ -1,0 +1,31 @@
+---
+// A section's head as board A1 draws it over Key issues, Upcoming events,
+// the news and the candidate roster: the kicker over the heading at the
+// left and the section's "more" links ("The whole platform", "All events")
+// at the right, underlined, on the heading's baseline. On a phone the links
+// wrap under the heading. Draws nothing when there is nothing to show.
+import type { Link } from '../../lib/section'
+
+interface Props {
+  kicker: string | null
+  heading: string | null
+  more: Link[]
+}
+
+const { kicker, heading, more } = Astro.props
+---
+{(kicker || heading || more.length > 0) && (
+  <div class="section-head">
+    {(kicker || heading) && (
+      <div>
+        {kicker && <p class="kicker">{kicker}</p>}
+        {heading && <h2>{heading}</h2>}
+      </div>
+    )}
+    {more.length > 0 && (
+      <p class="section-head-more">
+        {more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </div>
+)}

@@ -7,7 +7,8 @@
 import type { Entry, Section } from '@backgold/content'
 import { safeHref, safeSrc } from '@backgold/astro/server'
 import { sharesBlog } from '../../../lib/entries'
-import { formatDay, listOf } from '../../../lib/format'
+import { formatDay, formatShortDay, listOf } from '../../../lib/format'
+import { initials } from '../CandidateRoster/candidates'
 
 /** The section's `maxItems` when set, else `fallback`. */
 export function shownOf(section: Section, fallback: number): number {
@@ -37,13 +38,19 @@ interface Story {
   category: string | null
   date: string | null
   day: string | null
+  /** "Oct 2", the date as the Lead story's bylines show it. */
+  shortDay: string | null
   /** "A and B", the post's authors. */
   byline: string | null
+  /** The first author's picture, else their initials ("CP"); null without an author. */
+  avatar: { url: string | null; initials: string } | null
 }
 
 export function storyOf(entry: Entry): Story {
   const category = entry.terms.find((t) => t.taxonomy === 'category') ?? entry.terms[0]
-  const authors = entry.authors.map((a) => a.display_name).filter((name) => name && name.trim() !== '')
+  const named = entry.authors.filter((a) => a.display_name && a.display_name.trim() !== '')
+  const authors = named.map((a) => a.display_name)
+  const first = named[0]
   return {
     title: entry.title,
     href: entry.url ? safeHref(entry.url) : null,
@@ -52,6 +59,8 @@ export function storyOf(entry: Entry): Story {
     category: category?.label ?? null,
     date: entry.publish_at,
     day: formatDay(entry.publish_at),
+    shortDay: formatShortDay(entry.publish_at),
     byline: authors.length > 0 ? listOf(authors) : null,
+    avatar: first ? { url: safeSrc(first.avatar_url), initials: initials(first.display_name) } : null,
   }
 }

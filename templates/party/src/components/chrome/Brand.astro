@@ -1,0 +1,54 @@
+---
+// The site's brand as boards A1 and A13 draw it in the header and footer: a
+// link home holding the organization's logo when BackGold has one, else the
+// template's mark (a sun over mountains in a ring, in the brand's primary,
+// secondary and accent colours) beside a two-line wordmark: the name's first
+// word large, the rest of it in small capitals under it ("Westmark" /
+// "Liberty Party"). A one-word name is one line.
+import { safeSrc } from '@backgold/astro/server'
+
+interface Props {
+  name: string
+  logoUrl: string | null
+  class?: string
+}
+
+const { name, logoUrl, class: className } = Astro.props
+const logo = safeSrc(logoUrl)
+const [first = name, ...rest] = name.trim().split(/\s+/)
+const second = rest.join(' ')
+---
+<a class:list={['brand', className]} href="/">
+  {logo ? (
+    <img src={logo} alt={name} class="brand-logo" />
+  ) : (
+    <>
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <circle class="brand-mark-ring" cx="24" cy="24" r="23" stroke-width="2" />
+        <circle class="brand-mark-sun" cx="31" cy="20" r="7" />
+        <path class="brand-mark-land" d="M5 33l10-11 6 6 8-10 14 15v2a23 23 0 01-38 0z" />
+        <path class="brand-mark-snow" d="M15 22l3 3.4M29 18l3.6 4" stroke-width="1.6" fill="none" />
+      </svg>
+      <span class="brand-words">
+        <span class="brand-name">{first}</span>
+        {second && <span class="brand-rest">{second}</span>}
+      </span>
+    </>
+  )}
+</a>
+
+<style>
+  .brand-mark-ring {
+    fill: var(--bg-brand-primary);
+    stroke: var(--bg-brand-secondary);
+  }
+  .brand-mark-sun {
+    fill: var(--bg-brand-accent);
+  }
+  .brand-mark-land {
+    fill: var(--bg-brand-secondary);
+  }
+  .brand-mark-snow {
+    stroke: var(--bg-brand-primary);
+  }
+</style>
