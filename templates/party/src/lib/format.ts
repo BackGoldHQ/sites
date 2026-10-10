@@ -14,6 +14,7 @@ const WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/
 const INSTANT = /[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:z|[+-]\d{2}:?\d{2})$/i
 
 const DAY = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+const SHORT_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const DAY_AND_TIME_PARTS: Intl.DateTimeFormatOptions = {
   weekday: 'long',
   month: 'long',
@@ -57,6 +58,13 @@ export function formatDay(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const parsed = wallClock(value)
   return parsed ? DAY.format(parsed.date) : null
+}
+
+/** "Oct 8" (board A1's news bylines), or null when the value is not a date. */
+export function formatShortDay(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const parsed = wallClock(value)
+  return parsed ? SHORT_DAY.format(parsed.date) : null
 }
 
 /**

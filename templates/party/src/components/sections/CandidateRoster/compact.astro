@@ -1,25 +1,35 @@
 ---
-// CandidateRoster · Compact (board A1, "Candidate roster · Compact"; A12 shows
-// it beside Cards and Ballot): a tight grid of the candidates, each with the
-// headshot (their initials when there is none), the name, the office and the
-// place. The name links to the candidate's own site when the record has one.
-// Four across on a wide screen, two on a phone. With no candidates it draws
-// nothing.
+// CandidateRoster · Compact (board A1, "Candidate roster · Compact"; A12
+// shows it beside Cards and Ballot): the section head (the kicker, the
+// heading and its "All N candidates" link), then one row of four candidates
+// from the top of the ballot (by level, BackGold's order within a level),
+// each with a square headshot (their initials on the brand's gradient when
+// there is none), the name, the office and the place as a chip. The name
+// links to the candidate's own site when the record has one. Two across on
+// a phone. With no candidates it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import { links } from '../../../lib/section'
 import { text } from '../../../lib/format'
-import { candidatesOf, initials } from './candidates'
+import { candidatesOf, initials, levelRank } from './candidates'
 
 type Props = ComponentProps<typeof Default>
 
+/** A1 draws one row; the section's link goes to the rest. */
+const SHOWN = 4
+
 const { section } = Astro.props
-const heading = text(section.copy.heading)
 const candidates = candidatesOf(section)
+  .map((c, i) => ({ c, i }))
+  .sort((a, b) => levelRank(a.c.level) - levelRank(b.c.level) || a.i - b.i)
+  .slice(0, SHOWN)
+  .map(({ c }) => c)
 ---
 {candidates.length > 0 && (
   <Band section={section} class="roster roster-compact">
-    {heading && <h2>{heading}</h2>}
+    <SectionHead kicker={text(section.copy.kicker)} heading={text(section.copy.heading)} more={links(section)} />
     <ul class="compact" role="list">
       {candidates.map((c) => (
         <li class="compact-item">
@@ -30,7 +40,7 @@ const candidates = candidatesOf(section)
           )}
           <h3 class="compact-name">{c.site ? <a href={c.site.href} rel={c.site.rel}>{c.name}</a> : c.name}</h3>
           {c.office && <p class="compact-office">{c.office}</p>}
-          {c.region && <p class="compact-region">{c.region}</p>}
+          {c.region && <p class="compact-region"><span class="chip chip-wash">{c.region}</span></p>}
         </li>
       ))}
     </ul>
@@ -41,10 +51,13 @@ const candidates = candidatesOf(section)
   .compact {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem 0.875rem;
-    margin: 1.5rem 0 0;
+    gap: 1.5rem 0.875rem;
+    margin: 0;
     padding: 0;
     list-style: none;
+  }
+  .compact-item {
+    min-width: 0;
   }
   .compact-item > * {
     margin: 0;
@@ -54,42 +67,41 @@ const candidates = candidatesOf(section)
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
-    border-radius: var(--radius);
+    border-radius: 1rem;
   }
   .compact-initials {
     display: grid;
     place-items: center;
-    background: color-mix(in srgb, var(--ink) 8%, transparent);
-    color: var(--muted);
+    background: linear-gradient(150deg, var(--bg-brand-primary), var(--bg-brand-accent));
+    color: var(--band-photo-ink);
     font-family: var(--font-display);
     font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    font-weight: 600;
   }
   .compact-item .compact-name {
     margin-top: 0.75rem;
-    font-size: var(--text-lg);
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.25;
   }
   .compact-name a {
     color: var(--ink);
+    text-decoration: none;
+  }
+  .compact-name a:hover {
+    text-decoration: underline;
   }
   .compact-item .compact-office {
-    margin-top: 0.125rem;
     color: var(--muted);
     font-size: var(--text-sm);
   }
   .compact-item .compact-region {
-    display: inline-block;
     margin-top: 0.5rem;
-    padding: 0.125rem 0.625rem;
-    border-radius: var(--pill);
-    background: color-mix(in srgb, var(--link) 12%, transparent);
-    color: var(--ink);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    letter-spacing: 0.04em;
+  }
+  /* A1 draws the place as a chip as wide as the card. */
+  .compact-region .chip {
+    display: flex;
+    white-space: normal;
   }
   @media (min-width: 48rem) {
     .compact {

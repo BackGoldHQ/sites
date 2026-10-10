@@ -1,9 +1,13 @@
 ---
-// TakeoverBanner: a headline and a line of pitch, centred and compact, on
-// the band and bleed chosen in BackGold. It is site chrome, not a page
-// section: it arrives only inside an area (most often Top banner, under the
-// header), and sections/index.ts registers it so <Area> can draw it. The
-// headline is an <h2>: the page's <h1> is its own.
+// TakeoverBanner (board A12, "Takeover banner · Takeover"): a full-screen ask
+// before the page, until its end date. The headline large and the line of
+// pitch under it, centred, on the band chosen in BackGold, filling the first
+// screen; the page follows below it, so a visitor reads the ask first and
+// scrolls on to the page (no script, nothing to dismiss). It is site chrome,
+// not a page section: it arrives only inside an area (most often Top banner,
+// which Site.astro draws first, above the header), and sections/index.ts
+// registers it so <Area> can draw it; an end date in the area item hides it
+// on time. The headline is an <h2>: the page's <h1> is its own.
 import type { Section } from '@backgold/content'
 import Band from '../sections/Band.astro'
 import { text } from '../../lib/format'
@@ -23,3 +27,30 @@ const pitch = text(section.copy.pitch)
     {pitch && <p class="takeover-pitch">{pitch}</p>}
   </Band>
 )}
+
+<style>
+  :global(.bg-section.takeover) {
+    display: grid;
+    align-content: center;
+    min-height: 100vh;
+    min-height: 100svh;
+    text-align: center;
+  }
+  /* A contained takeover is still the first screen: it keeps its corners and margins inside it. */
+  :global(.bg-section.takeover.bg-bleed-contained) {
+    min-height: calc(100vh - 2 * var(--gutter));
+    min-height: calc(100svh - 2 * var(--gutter));
+  }
+  .takeover-headline {
+    max-width: 14em;
+    margin: 0 auto;
+    font-size: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+    line-height: 1;
+  }
+  .takeover-pitch {
+    max-width: 34em;
+    margin: 1.25rem auto 0;
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+</style>

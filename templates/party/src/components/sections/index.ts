@@ -51,6 +51,7 @@ import CollectionList from './Collection/list.astro'
 import CollectionCompact from './Collection/compact.astro'
 import CtaBanner from './Cta/banner.astro'
 import CtaPhoto from './Cta/photo.astro'
+import CtaStrip from './Cta/strip.astro'
 import EventsListCards from './EventsList/cards.astro'
 import EventsListAgenda from './EventsList/agenda.astro'
 import HeroCover from './Hero/cover.astro'
@@ -85,6 +86,7 @@ export const sections = {
   'StatCards:ribbon': StatCardsRibbon,
   Cta,
   'Cta:banner': CtaBanner,
+  'Cta:strip': CtaStrip,
   'Cta:photo': CtaPhoto,
   QuoteStrip,
   'QuoteStrip:single': QuoteStripSingle,

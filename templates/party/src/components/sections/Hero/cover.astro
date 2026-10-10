@@ -1,12 +1,17 @@
 ---
-// Hero, 'cover' layout (Full photo; board A1-home, section 1): the photo
-// fills the band edge to edge and the headline, the line under it and the
-// buttons sit over its lower edge on a scrim of the contrast ground, in the
-// contrast band's inks so they read on any photo. Without a photo it draws
-// the same words on the section's own band. The page-opening Hero's
-// headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>.
-// A Hero with its signup form on carries an `embed`: BackGold's own form,
-// framed under the buttons.
+// Hero, 'cover' layout (Full photo; board A1-home, section 1, and A13): the
+// photo fills the band edge to edge and the kicker, the headline, the line
+// under it and the buttons sit over its lower edge on a fixed scrim (A1 note
+// 2: legibility is not a taste, there is no overlay option), in the photo
+// band's inks so they read on any photo. The headline's last word is set in
+// the accent, in italic (A1's "Fewer *excuses.*"): the contract carries no
+// mark for it, so the template takes the last word. The photo's caption,
+// when the section carries one (`copy.caption`), sits at the photo's lower
+// left. The first button is the main call, the rest outlines. Without a
+// photo it draws the same words on the section's own band. The page-opening
+// Hero's headline is the page's <h1> (`level={1}`); any other Hero's is an
+// <h2>. A Hero with its signup form on carries an `embed`: BackGold's own
+// form, framed under the buttons.
 import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
@@ -18,10 +23,15 @@ type Props = ComponentProps<typeof Default>
 
 const { section, level = 2 } = Astro.props
 const Heading = level === 1 ? 'h1' : 'h2'
-const headline = text(section.copy.headline)
+const kicker = text(section.copy.kicker)
+const headline = text(section.copy.headline)?.trim() ?? null
 const subheadline = text(section.copy.subheadline)
+const caption = text(section.copy.caption)
 const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const buttons = links(section)
+// "More freedom. Fewer " and "excuses.": the last word apart, for the accent.
+const split = headline ? /^(.*\s)(\S+)$/su.exec(headline) : null
+const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
 ---
 <Band section={section} class:list={['hero-cover', picture && 'hero-cover-photo']}>
   {picture && (
@@ -35,10 +45,12 @@ const buttons = links(section)
         decoding="async"
       />
       <div class="cover-scrim" aria-hidden="true"></div>
+      {caption && <p class="cover-caption">{caption}</p>}
     </>
   )}
-  <div class="cover-words">
-    {headline && <Heading class="cover-headline">{headline}</Heading>}
+  <div class:list={['cover-words', picture && 'on-photo']}>
+    {kicker && <p class="kicker">{kicker}</p>}
+    {headline && <Heading class="cover-headline">{lead}{last && <em>{last}</em>}</Heading>}
     {subheadline && <p class="cover-lede">{subheadline}</p>}
     {buttons.length > 0 && (
       <p class="actions">
@@ -47,6 +59,7 @@ const buttons = links(section)
     )}
     {section.embed && <Embed embed={section.embed} title="Sign up" />}
   </div>
+  {!picture && caption && <p class="cover-caption">{caption}</p>}
 </Band>
 
 <style>
@@ -57,7 +70,8 @@ const buttons = links(section)
     overflow: hidden;
     display: flex;
     align-items: flex-end;
-    min-height: clamp(32rem, 78vh, 40rem);
+    min-height: 32.5rem;
+    --bg-section-padding: var(--space) var(--gutter) clamp(2.25rem, 1.5rem + 2.5vw, 4rem);
   }
   :global(.bg-section.hero-cover-photo) > :global(.bg-section-inner) {
     width: 100%;
@@ -72,51 +86,90 @@ const buttons = links(section)
     max-width: none;
     object-fit: cover;
   }
+  /* A1's scrim: light at the top, deep where the words are, so they read on any photo. */
   .cover-scrim {
     position: absolute;
     inset: 0;
     z-index: -1;
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--band-contrast) 15%, transparent) 0%,
-      color-mix(in srgb, var(--band-contrast) 55%, transparent) 35%,
-      color-mix(in srgb, var(--band-contrast) 82%, transparent) 60%,
-      color-mix(in srgb, var(--band-contrast) 94%, transparent) 100%
+      color-mix(in srgb, var(--band-photo) 10%, transparent) 0%,
+      color-mix(in srgb, var(--band-photo) 35%, transparent) 30%,
+      color-mix(in srgb, var(--band-photo) 80%, transparent) 62%,
+      color-mix(in srgb, var(--band-photo) 92%, transparent) 100%
     );
   }
-
-  /* Over the photo the words take the contrast band's inks, which meet AA on its ground; the line under the headline takes the full ink, not the muted one, since the photo shows through the scrim. */
-  :global(.hero-cover-photo) .cover-words {
-    --ink: var(--band-contrast-ink);
-    --muted: var(--band-contrast-ink);
-    --link: var(--band-contrast-link);
-    --button: var(--band-contrast-button);
-    --button-ink: var(--band-contrast-button-ink);
-    color: var(--ink);
-    text-shadow: 0 1px 12px color-mix(in srgb, var(--band-contrast) 45%, transparent);
+  .cover-caption {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.625rem;
+    z-index: 1;
+    max-width: calc(100% - 1.5rem);
+    margin: 0;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--band-photo) 70%, transparent);
+    color: var(--band-photo-ink);
+    font-size: 0.6875rem;
+    line-height: 1.4;
   }
-  :global(.hero-cover-photo) .cover-words .button {
-    text-shadow: none;
+  /* With no photo the caption has nothing to sit on, so it follows the words. */
+  :global(.hero-cover:not(.hero-cover-photo)) .cover-caption {
+    position: static;
+    display: inline-block;
+    margin-top: 1.5rem;
+    background: none;
+    padding: 0;
+    color: var(--muted);
   }
 
+  .cover-words .kicker {
+    margin-bottom: 0.875rem;
+  }
   .cover-headline {
-    font-size: clamp(2.75rem, 1.6rem + 4.6vw, 5.25rem);
+    font-size: clamp(2.75rem, 1.4rem + 4.9vw, 5.25rem);
     font-weight: 800;
-    line-height: 0.98;
+    line-height: 0.96;
     letter-spacing: -0.03em;
     max-width: 11em;
     margin: 0;
+  }
+  .cover-headline em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--accent);
   }
   .cover-lede {
     font-size: var(--text-lg);
     color: var(--muted);
     max-width: 34em;
-    margin: 1.25rem 0 0;
+    margin: 1.375rem 0 0;
+  }
+  .on-photo .cover-lede {
+    color: color-mix(in srgb, var(--ink) 92%, transparent);
   }
   .cover-words .actions {
-    margin-top: 1.75rem;
+    margin-top: 1.875rem;
   }
   .cover-words > :global(.bg-embed) {
     margin-top: 1.5rem;
+  }
+  @media (min-width: 48rem) {
+    :global(.bg-section.hero-cover-photo) {
+      min-height: 37.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cover-headline,
+    .cover-lede {
+      animation: cover-rise 0.4s ease-out both;
+    }
+  }
+  /* A1's motion note: the headline and lede rise 12px and fade in once on load. */
+  @keyframes cover-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
   }
 </style>

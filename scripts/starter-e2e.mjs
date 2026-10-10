@@ -792,6 +792,97 @@ function fixtureData(ex, kitchenSections) {
       data: { source: 'candidates', items: candidates },
     },
   ]
+  // Board A1's home sections, in the party template's layouts: the cover
+  // hero (kicker, a caption), the ribbon, the compact roster (the eleven
+  // candidates above, four shown by level), the photo call to action; its
+  // Top banner holds a Call to action · Strip and Above the footer an email
+  // sign-up with its framed form (the kitchen sink's, projected).
+  const a1Sections = [
+    {
+      id: 'Hero-a1',
+      type: 'Hero',
+      band: 'plain',
+      bleed: 'full',
+      variant: 'cover',
+      copy: { kicker: 'Westmark Liberty Party', headline: 'More freedom. Fewer excuses.', subheadline: "Westmark's third party, in all 58 counties.", caption: 'Photo: county chapter chairs, Harlow, last spring' },
+      media: { imageUrl: { url: 'https://api.backgold.com/api/lp-assets/a1/hero.webp' } },
+      links: [
+        { label: 'Join the party', target: { kind: 'surface', surface: 'join', path: '/join' }, url: '/join' },
+        { label: 'Meet our candidates', target: { kind: 'page', slug: 'leadership' }, url: '/leadership' },
+      ],
+      options: {},
+    },
+    {
+      id: 'StatCards-a1',
+      type: 'StatCards',
+      band: 'contrast',
+      bleed: 'contained',
+      variant: 'ribbon',
+      copy: { heading: '' },
+      media: {},
+      links: [],
+      options: {},
+      data: { source: 'stats', items: [{ label: 'county chapters, and counting', value: '41', note: null, accent: false }, { label: 'registered members', value: '12,480', note: null, accent: false }] },
+    },
+    {
+      id: 'CandidateRoster-a1',
+      type: 'CandidateRoster',
+      band: 'plain',
+      bleed: 'full',
+      variant: 'compact',
+      copy: { kicker: 'On your ballot November 3', heading: 'Our candidates', allLabel: 'All 11 candidates' },
+      media: {},
+      links: [{ label: 'All 11 candidates', target: { kind: 'page', slug: 'leadership' }, url: '/leadership' }],
+      options: {},
+      data: { source: 'candidates', items: candidates },
+    },
+    {
+      id: 'Cta-a1',
+      type: 'Cta',
+      band: 'contrast',
+      bleed: 'contained',
+      variant: 'photo',
+      copy: { eyebrow: 'Take part', heading: 'Westmark does not need another party that asks permission.', caption: 'Photo: new member night, Osgood County' },
+      media: { photoUrl: { url: 'https://api.backgold.com/api/lp-assets/a1/cta.webp' } },
+      links: [{ label: 'Become a member', target: { kind: 'surface', surface: 'join', path: '/join' }, url: '/join' }],
+      options: {},
+    },
+  ]
+  const signup = kitchenSections.find((section) => section.type === 'SignupCapture')
+  if (!signup?.embed) throw new Error('the kitchen sink has no SignupCapture with an embed')
+  const a1Areas = {
+    top_banner: [
+      {
+        key: 'convention-notice',
+        label: 'Convention notice',
+        from: null,
+        until: null,
+        sections: [
+          {
+            id: 'Cta-strip',
+            type: 'Cta',
+            band: 'contrast',
+            bleed: 'full',
+            variant: 'strip',
+            copy: { heading: 'State convention', body: 'Harlow Civic Hall · April 10 and 11', donateButtonText: 'Register as a delegate', volunteerButtonText: '' },
+            media: {},
+            links: [{ label: 'Register as a delegate', target: { kind: 'page', slug: 'convention' }, url: '/convention' }],
+            options: {},
+          },
+        ],
+      },
+    ],
+    sidebar: [],
+    above_footer: [
+      {
+        key: 'join-the-newsletter',
+        label: 'Join the newsletter',
+        from: null,
+        until: null,
+        sections: [{ ...signup, id: 'SignupCapture-a1', band: 'tint', copy: { heading: 'One email a week. What happened, what is next, where to show up.' } }],
+      },
+    ],
+  }
   const boardPage = (id, slug, title, sections) => ({
     page: { ...ex.PageResponse.page, id, slug, title, url: `/${slug}`, is_home: false, meta: { title: null, description: null, image_url: null } },
     sections,
@@ -824,6 +915,7 @@ function fixtureData(ex, kitchenSections) {
       { id: 'lp_ks', slug: 'kitchen-sink', title: 'Kitchen sink', url: '/kitchen-sink', is_home: false, published_at: '2026-10-01T14:00:00.000Z', updated_at: '2026-10-01T14:00:00.000Z' },
       { id: 'lp_events', slug: 'events', title: 'Events', url: '/events', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       { id: 'lp_leadership', slug: 'leadership', title: 'Leadership', url: '/leadership', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
+      { id: 'lp_a1', slug: 'a1-home', title: 'A1 home', url: '/a1-home', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
     ],
     page: (slug, headline) =>
       slug === 'home'
@@ -845,7 +937,9 @@ function fixtureData(ex, kitchenSections) {
               ? boardPage('lp_events', 'events', 'Events', eventsSections)
               : slug === 'leadership'
                 ? boardPage('lp_leadership', 'leadership', 'Leadership', leadershipSections)
-                : null,
+                : slug === 'a1-home'
+                  ? { ...boardPage('lp_a1', 'a1-home', 'A1 home', a1Sections), areas: a1Areas }
+                  : null,
     entryAreas,
     entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary, quarryRoadSummary], newsletter: [issueSummary] },
     pageSize: { endorsement: 1 },
@@ -1876,6 +1970,61 @@ async function checkPartyBoards(origin, fixture) {
 }
 
 /**
+ * Boards A1 and A13 (the party template's home and its chrome): the Top
+ * banner above the header (a takeover on home, the announcement strip on the
+ * A1 page), the type the boards name, the cover hero's kicker, accent word
+ * and caption, the compact roster's one row, the photo call to action's
+ * caption, the email sign-up's band Above the footer, and the footer's
+ * social circles and bottom row.
+ */
+async function checkPartyChrome(origin) {
+  log('\nParty chrome and home (boards A1, A13)')
+  let res = await get(origin, '/')
+  let html = await res.text()
+  const header = html.indexOf('<header class="site-header"')
+  check(header > 0 && html.indexOf('data-bg-area="top_banner"') < header, 'the Top banner area is drawn above the header')
+  check(/<section class="bg-section[^"]*\btakeover\b/.test(html), "home's TakeoverBanner is drawn as the full-screen takeover")
+  check(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Fraunces[^"]*Public\+Sans/.test(html), 'the page loads the faces the boards name (Fraunces, Public Sans)')
+  check(/<a class="brand[^"]*" href="\/"[^>]*>\s*<img src="[^"]*" alt="Pine Valley for Liberty" class="brand-logo"/.test(html), 'the header brand is the logo, linking home, when the site has one')
+  check(/<a href="https:\/\/facebook\.com\/pinevalleyliberty"[^>]*aria-label="Facebook"[^>]*>Fb<\/a>/.test(html), 'a social link is a circle with its short name and its full name for screen readers')
+  check(/<span class="footer-powered"[^>]*>Powered by BackGold<\/span>/.test(html), 'the bottom row ends with Powered by BackGold')
+  check(/<summary[^>]*><span class="sheet-open"[^>]*>Menu<\/span><span class="sheet-close"[^>]*>Close<\/span><\/summary>/.test(html), 'the phone sheet opens from Menu and reads Close while open')
+
+  res = await get(origin, '/a1-home')
+  html = await res.text()
+  check(res.status === 200 && tags(html, 'h1').length === 1, `the A1 page is 200 with one <h1> (got ${res.status})`)
+  const strip = /<p class="strip"[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? ''
+  check(
+    html.indexOf('class="strip"') < html.indexOf('<header class="site-header"') &&
+      plain(strip) === 'State convention · Harlow Civic Hall · April 10 and 11 Register as a delegate' &&
+      /<b[^>]*>State convention<\/b>/.test(strip) &&
+      /<a href="\/convention"[^>]*>Register as a delegate<\/a>/.test(strip),
+    `a Call to action · Strip in Top banner is the slim strip above the header: the bold title, " · " place and date, the link (${plain(strip)})`,
+  )
+  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? ''
+  check(/^More freedom\. Fewer <em[^>]*>excuses\.<\/em>$/.test(h1.trim()), `the cover headline's last word is the accent (${h1})`)
+  const hero = sectionWith(html, 'Hero', 'cover-words')
+  check(
+    /<p class="kicker"[^>]*>Westmark Liberty Party<\/p>/.test(hero) && /<p class="cover-caption"[^>]*>Photo: county chapter chairs, Harlow, last spring<\/p>/.test(hero),
+    'the cover draws its kicker and the photo caption',
+  )
+  check(/<a class="button[^"]*"[^>]*>Join the party<\/a><a class="button button-quiet"[^>]*>Meet our candidates<\/a>/.test(hero), 'the cover draws its main call and an outline beside it')
+  const roster = sectionWith(html, 'CandidateRoster', 'compact')
+  const names = [...roster.matchAll(/<h3 class="compact-name"[^>]*>([\s\S]*?)<\/h3>/g)].map((m) => plain(m[1]))
+  check(
+    JSON.stringify(names) === JSON.stringify(['Ada Kestrel', 'Halvard Brisco', 'Noor Ellingsworth', 'Gideon Marchetti']),
+    `the compact roster draws one row of four from the top of the ballot (${names.join(', ')})`,
+  )
+  check(/<p class="section-head-more"[^>]*><a href="\/leadership"[^>]*>All 11 candidates<\/a>/.test(roster) && /<p class="kicker"[^>]*>On your ballot November 3<\/p>/.test(roster), 'and its section head: the kicker and "All 11 candidates"')
+  check(/<p class="cta-photo-caption"[^>]*>Photo: new member night, Osgood County<\/p>/.test(sectionWith(html, 'Cta', 'cta-photo')), "the photo call to action draws its photo's caption")
+  const signup = /<aside\b[^>]*data-bg-area="above_footer"[^>]*>([\s\S]*?)<\/aside>/.exec(html)?.[1] ?? ''
+  check(
+    /class="bg-section[^"]*\bsignup-band\b/.test(signup) && /<h2[^>]*>One email a week\./.test(signup) && /<iframe\b[^>]*data-bg-embed/.test(signup),
+    "an email sign-up Above the footer is A1's band: the heading beside BackGold's framed form",
+  )
+}
+
+/**
  * Every non-chrome, non-compliance block type has a component of its own in
  * the template. A block the api projects only inside an area (areaBlocks)
  * counts with its area role.
@@ -1934,6 +2083,7 @@ async function main() {
     await checkConfigured(configured.origin, fixture, disclaimer)
     await checkKitchenSink(configured.origin, kitchen, disclaimer)
     if (PARTY) await checkPartyBoards(configured.origin, fixture)
+    if (PARTY) await checkPartyChrome(configured.origin)
     if (chrome) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

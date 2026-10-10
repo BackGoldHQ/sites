@@ -161,12 +161,14 @@ checks it, along with the schema.
 ## Areas
 
 An area is a place on the site that holds the same reusable sections on many
-pages: a convention notice under the header, a newsletter sign-up over the
+pages: a convention notice above the header, a newsletter sign-up over the
 footer. The organization fills areas in BackGold, and each page, entry or
 list arrives with its `areas`. The template places them as `template.json`
 says, each with the package's `<Area>`:
 
-- **Top banner** (`top_banner`), under the header, in `src/layouts/Site.astro`;
+- **Top banner** (`top_banner`), above the header, in `src/layouts/Site.astro`:
+  a Call to action in its Strip layout is the slim announcement strip, a
+  takeover banner fills the first screen before the page;
 - **Sidebar** (`sidebar`), beside the main column of a page, an entry or a
   list, under it on a phone, in `src/pages/[...path].astro` and
   `src/pages/preview.astro`; with nothing in it the page keeps one column;
@@ -175,8 +177,9 @@ says, each with the package's `<Area>`:
   the site's areas, in `Site.astro`.
 
 The takeover banner is a `TakeoverBanner` section an area carries (most often
-Top banner); `src/components/chrome/TakeoverBanner.astro` draws it, registered
-in `index.ts` so `<Area>` finds it.
+Top banner); `src/components/chrome/TakeoverBanner.astro` draws it as a
+full-screen ask before the page, registered in `index.ts` so `<Area>` finds
+it.
 
 An item with a start or an end date is sent hidden and shown in the browser
 while its dates hold, so a cached page still shows and hides it on time. An
@@ -186,16 +189,19 @@ area with nothing in it draws nothing.
 
 The organization edits one header menu and one footer menu in BackGold.
 
-- **The header bar** (`Site.astro`, with `src/components/chrome/MenuList.astro`)
-  shows the site's logo or name, the header menu with each group as a
-  dropdown, and the header button at the right. On a phone the menu opens as a
-  sheet under the bar and the button stays beside it; the sheet repeats the
+- **The header bar** (`Site.astro`, with `src/components/chrome/MenuList.astro`
+  and `Brand.astro`) shows the site's logo, or the template's mark beside the
+  name as a two-line wordmark ("Westmark" over "LIBERTY PARTY"), the header
+  menu with each group as a dropdown, and the header button at the right. On
+  a phone the menu opens as a sheet under the bar and the button stays beside
+  Menu (which reads Close while the sheet is open); the sheet repeats the
   button full width under the menu, then the legal line, and the page behind
   it dims. The dropdowns and the sheet are `<details>` elements: they work
   with the keyboard and with scripts off.
 - **The footer** (`Site.astro`, with `src/components/chrome/FooterColumns.astro`)
-  shows the site's name, its description and its social links, then the
-  footer menu as columns, one per group, then the legal line.
+  shows the brand, the site's description and its social links, then the
+  footer menu as columns, one per group, then the legal line, then the bottom
+  row: the utility menu's links and "Powered by BackGold".
 
 Each link has a **Shows on** rule, and the package's `menuOf` and
 `<MenuButton>` apply it against the page being drawn: every route passes the
@@ -206,18 +212,24 @@ menu and is drawn at the right of the header on the pages its rule names.
 ## Restyle it
 
 - **Type and spacing are the template's.** `src/styles/site.css` sets the type
-  scale (a system serif for headings, the system sans for text), the spacing,
-  the radii and every component's shape.
+  scale (Fraunces for headings and numerals, Public Sans for text, both from
+  Google Fonts, loaded in `Site.astro`), the spacing, the radii and every
+  component's shape.
 - **Colours are the organization's.** `src/lib/brand.ts` turns the brand
-  colours set in BackGold into CSS custom properties: `--bg-brand-primary`,
+  colours set in BackGold into CSS custom properties, a light set and a dark
+  set (for visitors whose device is in dark mode): `--bg-brand-primary`,
   `--bg-brand-secondary`, `--bg-brand-accent`, and for each band `--band-<band>`
-  with its `-ink`, `-muted`, `-link`, `-button` and `-button-ink`, each text
-  colour chosen to meet WCAG AA on its ground whatever the brand is. `site.css`
-  reads only these names; it has no colour of its own.
+  with its `-ink`, `-muted`, `-accent`, `-link`, `-button`, `-button-ink`,
+  `-button-2`, `-button-2-ink`, `-surface`, `-line` and `-line-strong`, each
+  text colour chosen to meet WCAG AA on its ground whatever the brand is.
+  `site.css` reads only these names; it has no colour of its own.
 - **Bands.** Each section has a `band` (`plain`, `tint`, `panel`, `wash`,
   `contrast`) and a `bleed` (`full` or `contained`), as the classes
   `bg-band-<band>` and `bg-bleed-<bleed>`. Inside a section use the short
-  names `--ink`, `--muted`, `--link`, `--button` and `--button-ink`. The
+  names `--ink`, `--muted`, `--accent` (kickers, numerals, date lines),
+  `--link`, `--button` and `--button-ink` (the main call), `--button-2` and
+  `--button-2-ink` (the quieter solid button), `--surface` (cards), `--line`
+  and `--line-strong`. Words over a photo take the class `on-photo`. The
   footer sits on the contrast band.
 
 Every link and image address that reaches a page goes through `safeHref` or
