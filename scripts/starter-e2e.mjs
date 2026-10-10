@@ -1204,14 +1204,20 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(!html.includes('data-bg-donate'), 'an entry page (no BackGold page) shows no Donate header button')
   check(html.includes('href="/#volunteer"') && !html.includes('href="/issues"'), 'an entry page shows Volunteer and leaves out Issues')
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published entry carries no section markers and no preview meta')
-  // An entry with no embed loads no script but JSON-LD and, because its areas
-  // hold a dated item, the areas' one window script.
-  const dated = Object.values(fixture.data.entryAreas).flat().some((item) => item.from !== null || item.until !== null)
+  // An entry loads no script but JSON-LD, the areas' one window script because
+  // its areas hold a dated item, and the frames' one resize script because an
+  // area's sign-up is framed by its reusable section.
+  const areaItems = Object.values(fixture.data.entryAreas).flat()
+  const dated = areaItems.some((item) => item.from !== null || item.until !== null)
+  const framed = areaItems.some((item) => item.sections.some((section) => section.embed?.iframe))
   const scripts = tags(html, 'script').filter((s) => !/type="application\/ld\+json"/.test(s))
   const entryWindowScripts = html.split('[data-bg-area-item][data-from]').length - 1
+  const entryResizeScripts = html.split("data.type !== 'givegold:resize'").length - 1
   check(
-    scripts.length === entryWindowScripts && entryWindowScripts === (dated ? 1 : 0),
-    `an entry with no embed loads only JSON-LD${dated ? " and the areas' window script once" : ''} (${scripts.length} other script tag(s))`,
+    scripts.length === entryWindowScripts + entryResizeScripts &&
+      entryWindowScripts === (dated ? 1 : 0) &&
+      entryResizeScripts === (framed ? 1 : 0),
+    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''} (${scripts.length} other script tag(s))`,
   )
   const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
   check(
