@@ -328,7 +328,8 @@ function kitchenSinkDocument() {
           { kind: 'race', office: 'School Board, Place 3', name: 'Marcus Okafor', party: 'Nonpartisan', region: 'Pine Valley ISD', summary: 'Parent of three; wants the budget online.', endorsed: true },
           { kind: 'race', office: 'Justice of the Peace, Precinct 2', name: 'Elena Brandt', party: 'Liberty', region: 'Precinct 2', endorsed: true },
           { kind: 'measure', office: 'Proposition A: Library bonds', position: 'no', summary: 'A forty-year bond for one building.', region: 'Pine County' },
-          { kind: 'measure', office: 'Proposition B: Open checkbook', position: 'yes', summary: 'Every county payment posted within a week.', region: 'Pine County' },
+          { kind: 'measure', office: 'Proposition B: Open checkbook', position: 'yes', summary: 'Every county payment posted within a week.', href: '/issues', region: 'Pine County' },
+          { kind: 'measure', office: 'Proposition C: Fire district merger', position: 'neutral', summary: 'Our members are split, so we take no position.', region: 'Pine County' },
         ],
       }),
       block('Scorecard', {
