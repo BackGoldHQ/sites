@@ -39,7 +39,7 @@
         "description": "Where BackGold's Content API lives. Keep `https://api.backgold.com` unless BackGold tells you otherwise."
       },
       "BACKGOLD_CACHE": {
-        "description": "A KV namespace the site keeps its BackGold reads and content version in. Cloudflare creates it for you."
+        "description": "A KV namespace the site keeps its BackGold reads, content version and map geometry in. Cloudflare creates it for you."
       }
     }
   }

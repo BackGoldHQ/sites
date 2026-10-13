@@ -1,0 +1,109 @@
+---
+// The map both Map layouts draw when the section has its geometry
+// (src/lib/regions.ts drawMap): one path per place in BackGold's geometry
+// for the section's set, drawn on the server, coloured by its row's status
+// (lit in the main call's colour, dark as the open ground, starting
+// between), with the place's name and status as its tooltip; a lit place
+// with a link opens it. A framed map (`focusRegion`) dims every other place.
+// The key follows, with a starting entry only when a row is starting. The
+// directory under it names every lit and starting place and counts the
+// rest, so the map and its key are hidden from screen readers and the map's
+// links (lit places only) are out of the tab order: a keyboard meets each
+// link once, in the directory.
+import type { DrawnMap, MapLabels } from '../../../lib/regions'
+
+interface Props {
+  drawn: DrawnMap
+  labels: MapLabels
+  /** True when a row is starting: the key gets its entry. */
+  starting: boolean
+  /** 'large' for the map layout, 'compact' over the directory's cards. */
+  size: 'large' | 'compact'
+}
+
+const { drawn, labels, starting, size } = Astro.props
+---
+<div class:list={['region-map', `region-map-${size}`]} aria-hidden="true">
+  <svg class="region-map-svg" viewBox={drawn.viewBox} preserveAspectRatio="xMidYMid meet" focusable="false">
+    {drawn.regions.map((r) => {
+      const classes = ['region', `region-${r.status}`, r.focus && 'region-focus', drawn.focus && !r.focus && 'region-dim']
+      const title = `${r.label} · ${labels[r.status]}`
+      return r.link ? (
+        <a href={r.link.href} rel={r.link.rel} tabindex="-1"><path class:list={classes} d={r.d}><title>{title}</title></path></a>
+      ) : (
+        <path class:list={classes} d={r.d}><title>{title}</title></path>
+      )
+    })}
+  </svg>
+  <p class="key">
+    <span><i class="key-swatch key-swatch-lit"></i>{labels.lit}</span>
+    {starting && <span><i class="key-swatch key-swatch-starting"></i>{labels.starting}</span>}
+    <span><i class="key-swatch"></i>{labels.dark}</span>
+  </p>
+</div>
+
+<style>
+  .region-map {
+    --open-ground: color-mix(in srgb, var(--ink) 9%, var(--bg-band-background));
+    --starting-fill: color-mix(in srgb, var(--button) 45%, var(--open-ground));
+    margin-top: 1.5rem;
+  }
+  .region-map-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(80vh, 46rem);
+  }
+  .region-map-compact .region-map-svg {
+    max-height: min(60vh, 30rem);
+  }
+  .region {
+    fill: var(--open-ground);
+    stroke: var(--bg-band-background);
+    stroke-width: 0.75px;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .region-lit {
+    fill: var(--button);
+  }
+  .region-starting {
+    fill: var(--starting-fill);
+  }
+  a:hover .region-lit {
+    fill: color-mix(in srgb, var(--button) 80%, var(--ink));
+  }
+  .region-dim {
+    opacity: 0.7;
+  }
+  .region-focus {
+    stroke: var(--ink);
+    stroke-width: 2px;
+  }
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.25rem;
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .key-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-right: 0.375rem;
+    border-radius: 0.1875rem;
+    vertical-align: -0.0625rem;
+    background: var(--open-ground);
+    border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+  .key-swatch-lit {
+    background: var(--button);
+    border-color: var(--button);
+  }
+  .key-swatch-starting {
+    background: var(--starting-fill);
+  }
+</style>

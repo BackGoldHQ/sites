@@ -294,7 +294,7 @@ the HTML the server sends, and never type its words into the template.
 | `BACKGOLD_SITE_KEY` | variable | yes | The site's publishable key, `bg_site_pk_…`, from **Developer → Keys**. It only reads what the public site shows. |
 | `SITE_URL` | variable | set it in production | The site's public address. Used for canonical links, the sitemap and feeds. |
 | `BACKGOLD_API_ORIGIN` | variable | no | Where the Content API lives. Keep `https://api.backgold.com`. |
-| `BACKGOLD_CACHE` | KV namespace | no | Where the site keeps its BackGold reads and the last content version, shared by every copy of the Worker. |
+| `BACKGOLD_CACHE` | KV namespace | no | Where the site keeps its BackGold reads, the last content version and the Coverage map's geometry, shared by every copy of the Worker. |
 | `BACKGOLD_SECRET_KEY` | secret | for previews | A secret key, `bg_site_sk_…`, from **Developer → Keys**. Only the `/preview` page uses it. |
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for the webhook | The webhook endpoint's signing secret, `whsec_…`, from **Developer → Webhooks**. |
 

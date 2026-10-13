@@ -1,0 +1,19 @@
+---
+// The coverage line both Map layouts draw under the heading (src/lib/
+// regions.ts coverage): the count in the text colour, then the status label
+// it counts, muted, as written ("8 of 254 counties · Organized").
+import type { Coverage } from '../../../lib/regions'
+
+interface Props {
+  coverage: Coverage
+}
+
+const { coverage } = Astro.props
+---
+<p class="lede"><span class="coverage-count">{coverage.count}</span> · {coverage.label}</p>
+
+<style>
+  .coverage-count {
+    color: var(--ink);
+  }
+</style>
