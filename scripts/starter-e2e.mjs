@@ -371,12 +371,13 @@ function kitchenSinkDocument() {
         body: 'Three issues on this year’s ballot, side by side.',
         usLabel: 'Pine Valley for Liberty',
         themLabel: 'The incumbents',
+        them2Label: 'The challengers',
         leftLabel: 'More freedom',
         rightLabel: 'More government',
         rows: [
-          { issue: 'Property tax', us: 'Freeze the levy for four years', them: 'Raise it with appraisals', usAt: 15, themAt: 75 },
-          { issue: 'County spending', us: 'Post every check online', them: 'Annual summary only', usAt: 20, themAt: 65 },
-          { issue: 'Schools', us: 'Classrooms before administration', them: 'A new central office', usAt: 30, themAt: 70 },
+          { issue: 'Property tax', us: 'Freeze the levy for four years', them: 'Raise it with appraisals', them2: 'Cap increases at 5%', usAt: 15, themAt: 75, them2At: 55 },
+          { issue: 'County spending', us: 'Post every check online', them: 'Annual summary only', them2: 'Quarterly reports', usAt: 20, themAt: 65, them2At: 60 },
+          { issue: 'Schools', us: 'Classrooms before administration', them: 'A new central office', them2: 'Study it first', usAt: 30, themAt: 70, them2At: 35 },
         ],
       }),
       block('Stories', {
@@ -2220,7 +2221,7 @@ const ROW_TEXT = {
   // The offer's name and the program's first benefit; prices are the template's own words over the *_cents columns.
   Membership: (i) => [i.name, ...(i.benefits ?? []).slice(0, 1)],
   Faq: (i) => [i.question],
-  Comparison: (i) => [i.issue],
+  Comparison: (i) => [i.issue, i.us, i.them, i.them2],
   Stories: (i) => [i.title],
   Countdown: () => [],
   Leaderboard: () => [],
