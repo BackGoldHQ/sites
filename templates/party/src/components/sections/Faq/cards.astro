@@ -1,10 +1,74 @@
 ---
-// Faq, 'cards' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Faq · Cards (board 07, C): the kicker, heading and line of copy, then every
+// question as a card on the band's surface, two up (one on a phone), the
+// question as the card's heading and the whole answer under it, nothing to
+// open. The contact heading and its button close it in a filled panel in the
+// contrast band's colours. The FAQPage JSON-LD goes with it as on every Faq
+// layout. With no questions and no heading it draws nothing.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import Contact from './Contact.astro'
+import { contactOf, faqSchema, questionsOf } from './faq'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const questions = questionsOf(section)
+const schema = faqSchema(questions)
 ---
-<Default {...Astro.props} />
+{(questions.length > 0 || heading) && (
+  <Band section={section} class="faq faq-cards">
+    <div class="faq-intro">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {questions.length > 0 && (
+      <ul class="grid grid-2 faq-card-grid" role="list">
+        {questions.map((q) => (
+          <li class="faq-card">
+            <h3 class="faq-card-question">{q.question}</h3>
+            <Prose value={q.answer} class="faq-card-answer" />
+          </li>
+        ))}
+      </ul>
+    )}
+    <Contact contact={contactOf(section)} look="panel" />
+    {schema && <script is:inline type="application/ld+json" set:html={schema} />}
+  </Band>
+)}
+
+<style>
+  .faq-intro > :global(.lede) {
+    margin: -0.5rem 0 0;
+  }
+  .faq-card-grid {
+    gap: 1rem;
+  }
+  .faq-card {
+    padding: 1.25rem 1.375rem 1.375rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .faq-card-question {
+    margin: 0 0 0.5rem;
+    font-size: calc(var(--h3) * 0.9);
+  }
+  .faq-card :global(.faq-card-answer) {
+    color: var(--muted);
+  }
+  .faq-card :global(.faq-card-answer > :last-child) {
+    margin-bottom: 0;
+  }
+  @media (min-width: 40rem) {
+    .faq-card {
+      padding: 1.5rem 1.625rem 1.625rem;
+    }
+  }
+</style>

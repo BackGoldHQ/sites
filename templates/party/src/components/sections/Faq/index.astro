@@ -1,13 +1,18 @@
 ---
-// Faq, 'accordion' layout, the default. A stub for the design pass: the
-// kicker and heading, the body, each row's text fields on one line, and the
-// section's links as buttons, so the section renders with its words before
-// it has a design. Replace this file's contents to give the layout its design.
+// Faq · Accordion, the default (board 07, A): the kicker and heading, the
+// line of copy, then every question in one reading column, each a <details>
+// the visitor opens (the first open when `firstOpen` is on), and under them
+// the contact heading with its button in a slim row when the section has
+// the contact link. Every Faq layout writes the questions and answers as
+// FAQPage JSON-LD for search. With no questions and no heading it draws
+// nothing.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import SectionHead from '../SectionHead.astro'
 import Prose from '../../Prose.astro'
-import { links, rows } from '../../../lib/section'
+import Contact from './Contact.astro'
+import Questions from './Questions.astro'
+import { contactOf, faqSchema, questionsOf } from './faq'
 import { text } from '../../../lib/format'
 
 interface Props {
@@ -18,22 +23,27 @@ interface Props {
 const { section } = Astro.props
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const lines = rows(section)
-  .map((row) => Object.values(row).map(text).filter((value): value is string => value !== null).join(' · '))
-  .filter(Boolean)
-const ctas = links(section)
+const questions = questionsOf(section)
+const schema = faqSchema(questions)
 ---
-<Band section={section} class="faq-stub">
-  <SectionHead kicker={kicker} heading={heading} more={[]} />
-  <Prose value={section.copy.body} />
-  {lines.length > 0 && (
-    <ul role="list">
-      {lines.map((line) => <li>{line}</li>)}
-    </ul>
-  )}
-  {ctas.length > 0 && (
-    <p class="actions">
-      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
-    </p>
-  )}
-</Band>
+{(questions.length > 0 || heading) && (
+  <Band section={section} class="faq faq-accordion">
+    <div class="faq-column">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+      {questions.length > 0 && <Questions questions={questions} firstOpen={section.options?.firstOpen === true} />}
+      <Contact contact={contactOf(section)} look="row" />
+    </div>
+    {schema && <script is:inline type="application/ld+json" set:html={schema} />}
+  </Band>
+)}
+
+<style>
+  .faq-column {
+    max-width: calc(var(--measure) + 4rem);
+    margin-inline: auto;
+  }
+  .faq-column > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+</style>

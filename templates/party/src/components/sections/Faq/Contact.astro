@@ -1,0 +1,63 @@
+---
+// A Faq's way to ask what the list does not answer (board 07): the contact
+// heading ("Still have a question?") with the one button beside it, which
+// goes to the address the operator gave. `row` is a slim line under a rule,
+// under the accordion; `panel` is C's filled panel in the contrast band's
+// colours (on a section that is already on the contrast band, a tint of its
+// ink). On a phone the button wraps under the heading. Draws nothing without
+// the link.
+import type { Contact } from './faq'
+
+interface Props {
+  contact: Contact | null
+  look: 'row' | 'panel'
+}
+
+const { contact, look } = Astro.props
+---
+{contact && (
+  <div class:list={['faq-contact', `faq-contact-${look}`, look === 'panel' && 'bg-band-contrast']}>
+    {contact.heading && <h3 class="faq-contact-heading">{contact.heading}</h3>}
+    <a class="button" href={contact.link.href} rel={contact.link.rel}>{contact.link.label}</a>
+  </div>
+)}
+
+<style>
+  .faq-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-top: 1.75rem;
+  }
+  .faq-contact-heading {
+    flex: 1 1 14rem;
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .faq-contact-row {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+  .faq-contact-panel {
+    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .faq-contact-panel {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  @media (min-width: 40rem) {
+    .faq-contact-panel {
+      padding: 1.5rem 1.75rem 1.5rem 2rem;
+    }
+    .faq-contact-panel .faq-contact-heading {
+      font-size: var(--h3);
+    }
+  }
+</style>
