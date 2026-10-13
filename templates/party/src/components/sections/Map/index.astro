@@ -1,16 +1,33 @@
 ---
 // Map, 'directory' layout, the default (Map and directory; board
-// A11-contact, section 4): the heading and the count of places organized
-// ("lit"), a compact strip of one tile per place coloured by its status with
-// a key under it, then the directory: a card per place with its status, the
-// place's name a link when it has one. Open places have a dashed card. The
-// section's links follow as buttons. The strip repeats what the directory
-// says, so it is hidden from screen readers. Rows: `region`, `status` 'lit'
-// or anything else, an optional `url`. 'map' is its own file beside this one.
+// A11-contact, section 4). The kicker over the heading, then the coverage
+// line (CoverageLine.astro: "8 of 254 counties · Organized").
+//
+// With the section's geometry (`media.geoUrl`, read on the server,
+// src/lib/geo.ts): the map (RegionMap.astro: every place in the set
+// coloured by its row's status, a lit place with a link opening it, and the
+// key), then the directory: a card for each lit and starting place with its
+// status, the place's name a link when it has one, and one dashed card for
+// the places the map draws dark, their count and the dark label ("239
+// counties", "No chapter yet"), with the section's charter link as its
+// button. The section's other links follow, quiet.
+//
+// Without a geometry (a section that never picked a set of places, or one
+// whose geometry could not be read): a compact strip of one tile per row
+// coloured lit or not with a key under it, then a card per row, every place
+// not lit dashed as open. The strip repeats what the cards say, so it is
+// hidden from screen readers. The section's links follow as buttons.
+//
+// Rows: `region`, `status` 'lit', 'starting' or anything else (dark), an
+// optional `url`. 'map' is its own file beside this one.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
-import { links, linkOf, rows } from '../../../lib/section'
+import CoverageLine from './CoverageLine.astro'
+import RegionMap from './RegionMap.astro'
+import { links, media, rows } from '../../../lib/section'
 import { text } from '../../../lib/format'
+import { loadGeo } from '../../../lib/geo'
+import { coverage, drawMap, invitation, mapLabels, placesOf } from '../../../lib/regions'
 
 interface Props {
   section: Section
@@ -18,43 +35,76 @@ interface Props {
 }
 
 const { section } = Astro.props
+const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const litLabel = text(section.copy.litLabel) ?? 'Organized'
-const darkLabel = text(section.copy.darkLabel) ?? 'Still open'
-const regions = rows(section)
-  .map((row) => ({ name: text(row.region), lit: row.status === 'lit', link: linkOf(row.region, row.url) }))
-  .filter((r): r is { name: string; lit: boolean; link: ReturnType<typeof linkOf> } => r.name !== null)
-const litCount = regions.filter((r) => r.lit).length
+const labels = mapLabels(section)
+const places = placesOf(rows(section))
+const geo = await loadGeo(media(section, 'geoUrl')?.url ?? null, Astro.locals)
+const drawn = geo ? drawMap(geo, places, text(section.options?.focusRegion)) : null
 const actions = links(section)
+const invite = drawn ? invitation(section, drawn, actions, labels) : null
+const below = invite?.charter ? actions.filter((link) => link !== invite.charter) : actions
 ---
-<Band section={section} class="regions">
-  {heading && <h2>{heading}</h2>}
-  {regions.length > 0 && <p class="lede">{litCount} of {regions.length} {litLabel.toLowerCase()}</p>}
-  {regions.length > 0 && (
-    <>
-      <div class="strip" aria-hidden="true">
-        {regions.map((r) => <span class:list={['strip-tile', r.lit && 'strip-tile-lit']}></span>)}
-      </div>
-      <p class="key" aria-hidden="true">
-        <span><i class="key-swatch key-swatch-lit"></i>{litLabel}</span>
-        <span><i class="key-swatch"></i>{darkLabel}</span>
-      </p>
+{drawn ? (
+  <Band section={section} class="regions">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    <CoverageLine coverage={coverage(section, drawn, places, labels)} />
+    <RegionMap drawn={drawn} labels={labels} starting={places.some((p) => p.status === 'starting')} size="compact" />
+    {(invite || places.some((p) => p.status !== 'dark')) && (
       <ul class="directory" role="list">
-        {regions.map((r) => (
-          <li class:list={['place', !r.lit && 'place-open']}>
-            <span class="place-name">{r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : r.name}</span>
-            <span class="place-status">{r.lit ? litLabel : darkLabel}</span>
+        {places.filter((p) => p.status !== 'dark').map((p) => (
+          <li class="place">
+            <span class="place-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</span>
+            <span class="place-status">{labels[p.status]}</span>
           </li>
         ))}
+        {invite && (
+          <li class="place place-open place-invite">
+            <span class="place-name">{invite.count}</span>
+            <span class="place-status">{invite.label}</span>
+            {invite.charter && <a class="button button-small" href={invite.charter.href} rel={invite.charter.rel}>{invite.charter.label}</a>}
+          </li>
+        )}
       </ul>
-    </>
-  )}
-  {actions.length > 0 && (
-    <p class="actions">
-      {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
-    </p>
-  )}
-</Band>
+    )}
+    {below.length > 0 && (
+      <p class="actions">
+        {below.map((link, i) => <a class:list={['button', (invite?.charter || i > 0) && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+) : (
+  <Band section={section} class="regions">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    {places.length > 0 && <CoverageLine coverage={coverage(section, null, places, labels)} />}
+    {places.length > 0 && (
+      <>
+        <div class="strip" aria-hidden="true">
+          {places.map((r) => <span class:list={['strip-tile', r.status === 'lit' && 'strip-tile-lit']}></span>)}
+        </div>
+        <p class="key" aria-hidden="true">
+          <span><i class="key-swatch key-swatch-lit"></i>{labels.lit}</span>
+          <span><i class="key-swatch"></i>{labels.dark}</span>
+        </p>
+        <ul class="directory" role="list">
+          {places.map((r) => (
+            <li class:list={['place', r.status !== 'lit' && 'place-open']}>
+              <span class="place-name">{r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : r.name}</span>
+              <span class="place-status">{r.status === 'lit' ? labels.lit : labels.dark}</span>
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+    {actions.length > 0 && (
+      <p class="actions">
+        {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+)}
 
 <style>
   .strip {
@@ -134,5 +184,9 @@ const actions = links(section)
     display: block;
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  /* The places the map draws dark, as one card with the charter link. */
+  .place-invite .button {
+    margin-top: 0.625rem;
   }
 </style>

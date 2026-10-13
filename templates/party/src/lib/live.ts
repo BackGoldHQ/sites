@@ -18,8 +18,9 @@
 //   origin that is not an http(s) URL, there is nothing to ask and no counts
 //   are drawn.
 
+import { apiOrigin, trimmed, workerVars } from './env'
+
 const PUBLISHABLE_KEY = /^bg_site_pk_[A-Za-z0-9]+$/
-const DEFAULT_API_ORIGIN = 'https://api.backgold.com'
 const LIVE_PATH = '/api/content/v1/events/live'
 
 export interface LiveSource {
@@ -29,33 +30,14 @@ export interface LiveSource {
   key: string | null
 }
 
-let loaded: Promise<Record<string, unknown>> | undefined
-
-/** The Worker's vars (`env` of `cloudflare:workers`); `{}` where that module cannot be imported. */
-function vars(): Promise<Record<string, unknown>> {
-  loaded ??= import('cloudflare:workers').then(
-    (mod) => mod.env as Record<string, unknown>,
-    () => ({}),
-  )
-  return loaded
-}
-
-const trimmed = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
-
 /** The live route for this site (see above); null when a key-mode site has nothing to ask with. */
 export async function liveSource(firstParty: boolean): Promise<LiveSource | null> {
   if (firstParty) return { url: LIVE_PATH, key: null }
-  const env = await vars()
+  const env = await workerVars()
   const key = trimmed(env.BACKGOLD_SITE_KEY)
   if (!PUBLISHABLE_KEY.test(key)) return null
-  const origin = (trimmed(env.BACKGOLD_API_ORIGIN) || DEFAULT_API_ORIGIN).replace(/\/+$/, '')
-  try {
-    const url = new URL(origin)
-    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.search || url.hash) return null
-  } catch {
-    return null
-  }
-  return { url: `${origin}${LIVE_PATH}`, key }
+  const origin = apiOrigin(env)
+  return origin ? { url: `${origin}${LIVE_PATH}`, key } : null
 }
 
 const emitted = new WeakSet<Request>()

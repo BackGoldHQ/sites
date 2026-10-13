@@ -1,62 +1,165 @@
 ---
 // Map, 'map' layout (Map only; boards A11-contact, section 4, and
-// A12-catalogue): the heading, the count of places organized ("lit") and
-// the map itself, one tile per place coloured by its status with its name in
-// the tile (a link when the place has one), and a key under it. The section's
-// links follow as buttons. On a phone the tiles are too small to name, so
-// they become a compact strip and the same places are listed under it, the
-// directory: the list is the one the tiles draw, restyled, so a screen
-// reader meets each place once. Rows: `region`, `status` 'lit' or anything
-// else, an optional `url`.
+// A12-catalogue). The kicker over the heading, then the coverage line
+// (CoverageLine.astro: "8 of 254 counties · Organized").
+//
+// With the section's geometry (`media.geoUrl`, read on the server,
+// src/lib/geo.ts): the map large (RegionMap.astro: every place in the set
+// coloured by its row's status, a lit place with a link opening it, and the
+// key), then the directory as a list on every width (in columns on a wide
+// screen): the lit and starting places, each a link when it has one, with
+// its status. The places the map draws dark are one dashed line under it,
+// their count and the dark label ("239 counties · No chapter yet"), with
+// the section's charter link as its button; the section's other links
+// follow, quiet.
+//
+// Without a geometry (a section that never picked a set of places, or one
+// whose geometry could not be read) it draws tiles instead: one tile per
+// row coloured lit or not with its name in the tile (a link when the place
+// has one), and a key under it. On a phone the tiles are too small to name,
+// so they become a compact strip and the same places are listed under it:
+// the list is the one the tiles draw, restyled, so a screen reader meets
+// each place once. The section's links follow as buttons.
+//
+// Rows: `region`, `status` 'lit', 'starting' or anything else (dark), an
+// optional `url`.
 import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
+import CoverageLine from './CoverageLine.astro'
+import RegionMap from './RegionMap.astro'
 import type Default from './index.astro'
-import { links, linkOf, rows } from '../../../lib/section'
+import { links, media, rows } from '../../../lib/section'
 import { text } from '../../../lib/format'
+import { loadGeo } from '../../../lib/geo'
+import { coverage, drawMap, invitation, mapLabels, placesOf } from '../../../lib/regions'
 
 type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
+const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const litLabel = text(section.copy.litLabel) ?? 'Organized'
-const darkLabel = text(section.copy.darkLabel) ?? 'Still open'
-const regions = rows(section)
-  .map((row) => ({ name: text(row.region), lit: row.status === 'lit', link: linkOf(row.region, row.url) }))
-  .filter((r): r is { name: string; lit: boolean; link: ReturnType<typeof linkOf> } => r.name !== null)
-const litCount = regions.filter((r) => r.lit).length
+const labels = mapLabels(section)
+const places = placesOf(rows(section))
+const geo = await loadGeo(media(section, 'geoUrl')?.url ?? null, Astro.locals)
+const drawn = geo ? drawMap(geo, places, text(section.options?.focusRegion)) : null
 const actions = links(section)
+const invite = drawn ? invitation(section, drawn, actions, labels) : null
+const below = invite?.charter ? actions.filter((link) => link !== invite.charter) : actions
 ---
-<Band section={section} class="regions">
-  {heading && <h2>{heading}</h2>}
-  {regions.length > 0 && <p class="lede">{litCount} of {regions.length} {litLabel.toLowerCase()}</p>}
-  {regions.length > 0 && (
-    <figure class="tile-map">
-      <div class="tile-strip" aria-hidden="true">
-        {regions.map((r) => <span class:list={['strip-tile', r.lit && 'strip-tile-lit']}></span>)}
-      </div>
-      <ul class="tiles" role="list">
-        {regions.map((r) => (
-          <li class:list={['tile-place', r.lit && 'tile-place-lit']}>
-            {r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : <span>{r.name}</span>}
-            <span class="tile-status">{r.lit ? litLabel : darkLabel}</span>
+{drawn ? (
+  <Band section={section} class="regions">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    <CoverageLine coverage={coverage(section, drawn, places, labels)} />
+    <RegionMap drawn={drawn} labels={labels} starting={places.some((p) => p.status === 'starting')} size="large" />
+    {places.some((p) => p.status !== 'dark') && (
+      <ul class="place-list" role="list">
+        {places.filter((p) => p.status !== 'dark').map((p) => (
+          <li class="place-row">
+            {p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : <span>{p.name}</span>}
+            <span class="place-status">{labels[p.status]}</span>
           </li>
         ))}
       </ul>
-      <figcaption class="key">
-        <span><i class="key-swatch key-swatch-lit" aria-hidden="true"></i>{litLabel}</span>
-        <span><i class="key-swatch" aria-hidden="true"></i>{darkLabel}</span>
-      </figcaption>
-    </figure>
-  )}
-  {actions.length > 0 && (
-    <p class="actions">
-      {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
-    </p>
-  )}
-</Band>
+    )}
+    {invite && (
+      <div class="place-invite">
+        <p><span class="place-invite-count">{invite.count}</span> · {invite.label}</p>
+        {invite.charter && <a class="button" href={invite.charter.href} rel={invite.charter.rel}>{invite.charter.label}</a>}
+      </div>
+    )}
+    {below.length > 0 && (
+      <p class="actions">
+        {below.map((link, i) => <a class:list={['button', (invite?.charter || i > 0) && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+) : (
+  <Band section={section} class="regions">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    {places.length > 0 && <CoverageLine coverage={coverage(section, null, places, labels)} />}
+    {places.length > 0 && (
+      <figure class="tile-map">
+        <div class="tile-strip" aria-hidden="true">
+          {places.map((r) => <span class:list={['strip-tile', r.status === 'lit' && 'strip-tile-lit']}></span>)}
+        </div>
+        <ul class="tiles" role="list">
+          {places.map((r) => (
+            <li class:list={['tile-place', r.status === 'lit' && 'tile-place-lit']}>
+              {r.link ? <a href={r.link.href} rel={r.link.rel}>{r.name}</a> : <span>{r.name}</span>}
+              <span class="tile-status">{r.status === 'lit' ? labels.lit : labels.dark}</span>
+            </li>
+          ))}
+        </ul>
+        <figcaption class="key">
+          <span><i class="key-swatch key-swatch-lit" aria-hidden="true"></i>{labels.lit}</span>
+          <span><i class="key-swatch" aria-hidden="true"></i>{labels.dark}</span>
+        </figcaption>
+      </figure>
+    )}
+    {actions.length > 0 && (
+      <p class="actions">
+        {actions.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+)}
 
 <style>
-  /* A phone: the strip, the key, then the places as a list. */
+  /* With the map: the directory under it, a list on every width. */
+  .place-list {
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .place-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--line);
+    font-weight: 700;
+    break-inside: avoid;
+  }
+  .place-status {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+  /* The places the map draws dark, as one line with the charter link. */
+  .place-invite {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+  }
+  .place-invite p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .place-invite-count {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  /* Wider: the list runs in columns. */
+  @media (min-width: 48rem) {
+    .place-list {
+      columns: 3 14rem;
+      column-gap: 2.5rem;
+      border-top: 0;
+    }
+  }
+
+  /* Without the map, a phone: the strip, the key, then the places as a list. */
   .tile-map {
     margin: 1.5rem 0 0;
     display: flex;
@@ -121,7 +224,7 @@ const actions = links(section)
     font-weight: 400;
   }
 
-  /* Wider: the places are the map, each a tile with its name. */
+  /* Without the map, wider: the places are the map, each a tile with its name. */
   @media (min-width: 40rem) {
     .tile-strip {
       display: none;

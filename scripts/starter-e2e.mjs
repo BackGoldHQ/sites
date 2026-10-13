@@ -24,7 +24,7 @@
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
 import { spawn, spawnSync } from 'node:child_process'
-import { createHmac } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { accessSync, constants as fsConstants, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, request as httpRequest } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
@@ -917,6 +917,74 @@ function fixtureData(ex, kitchenSections) {
       },
     ],
   }
+  // The coverage page (party only): Map sections drawn from their geometry.
+  // Texas's counties as a party site draws them (twenty rows, eight lit,
+  // five with a link, one starting, eleven dark, and the section's charter
+  // and organizer links); the four made-up places in the directory layout (a
+  // relative geoUrl, read from the api origin), framed on one place, and at
+  // a geometry address the api does not have (the tiles).
+  const geo = geoFixtures()
+  const geoUrl = (hash) => ({ url: `https://api.backgold.com/lp-runtime/${hash}.json` })
+  const regionRow = (region, status, url = null) => ({ region, status, url, is_new: false })
+  const texasRows = [
+    regionRow('Travis', 'lit', 'https://example.org/travis'),
+    regionRow('Hays', 'lit', 'https://example.org/hays'),
+    regionRow('Williamson', 'lit'),
+    regionRow('Bexar', 'lit', 'https://example.org/bexar'),
+    regionRow('Harris', 'lit', 'https://example.org/harris'),
+    regionRow('Dallas', 'lit'),
+    regionRow('Tarrant', 'lit', 'https://example.org/tarrant'),
+    regionRow('Collin', 'lit'),
+    regionRow('Denton', 'starting'),
+    ...['El Paso', 'Lubbock', 'Midland', 'Brazos', 'McLennan', 'Bell', 'Nueces', 'Cameron', 'Hidalgo', 'Webb', 'Galveston'].map((name) => regionRow(name, 'dark')),
+  ]
+  const fourRows = [regionRow('alder', 'lit', 'https://example.org/alder'), regionRow('Birch', 'lit'), regionRow('Cedar', 'starting'), regionRow('Dunmore', 'dark')]
+  const chapterLinks = [
+    { label: 'Start a chapter', target: { kind: 'page', slug: 'contact' }, url: '/contact' },
+    { label: 'Talk to an organizer', target: { kind: 'page', slug: 'organize' }, url: '/organize' },
+  ]
+  const mapSection = (id, variant, copy, media, options, items, links = []) => ({
+    id,
+    type: 'Map',
+    band: 'plain',
+    bleed: 'full',
+    variant,
+    copy,
+    media: { geoUrl: media },
+    links,
+    options,
+    data: { source: 'regions', items },
+  })
+  const coverageSections = [
+    mapSection(
+      'Map-texas',
+      'map',
+      {
+        kicker: 'Near you',
+        heading: 'Find your county chapter',
+        litLabel: 'Chapter meets monthly',
+        darkLabel: 'No chapter yet',
+        startingLabel: 'Getting started',
+        charterCtaText: 'Start a chapter',
+        organizerText: 'Talk to an organizer',
+      },
+      geoUrl(geo.texas.hash),
+      { geoId: 'tx-counties', regionTotal: 254, regionNoun: 'county' },
+      texasRows,
+      chapterLinks,
+    ),
+    mapSection(
+      'Map-four',
+      'directory',
+      { kicker: 'Chapters', heading: 'Four places', charterCtaText: 'Start a chapter', organizerText: 'Talk to an organizer' },
+      { url: `/lp-runtime/${geo.four.hash}.json` },
+      {},
+      fourRows,
+      chapterLinks,
+    ),
+    mapSection('Map-framed', 'map', { heading: 'One place, framed' }, geoUrl(geo.four.hash), { focusRegion: 'cedar', regionNoun: 'county' }, fourRows),
+    mapSection('Map-unread', 'map', { heading: 'A map BackGold cannot find' }, geoUrl('0'.repeat(64)), {}, fourRows),
+  ]
   const boardPage = (id, slug, title, sections) => ({
     page: { ...ex.PageResponse.page, id, slug, title, url: `/${slug}`, is_home: false, meta: { title: null, description: null, image_url: null } },
     sections,
@@ -928,6 +996,7 @@ function fixtureData(ex, kitchenSections) {
     legal,
     site,
     types,
+    geo,
     events: { upcoming, calendar, types: eventTypes, live },
     menus: {
       primary: {
@@ -952,6 +1021,7 @@ function fixtureData(ex, kitchenSections) {
       { id: 'lp_a1', slug: 'a1-home', title: 'A1 home', url: '/a1-home', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       // The party template opens its news list with this page's Hero (board A4).
       ...(PARTY ? [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' }] : []),
+      ...(PARTY ? [{ id: 'lp_coverage', slug: 'coverage', title: 'Coverage', url: '/coverage', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }] : []),
     ],
     page: (slug, headline) =>
       slug === 'home'
@@ -964,6 +1034,8 @@ function fixtureData(ex, kitchenSections) {
                 media: {}, links: [], options: {},
               },
             ])
+        : slug === 'coverage' && PARTY
+          ? boardPage('lp_coverage', 'coverage', 'Coverage', coverageSections)
         : slug === 'issues'
           ? {
               page: { ...ex.PageResponse.page, id: 'lp_issues', slug: 'issues', title: 'Issues', url: '/issues', is_home: false, meta: { title: null, description: 'What we will do.', image_url: null } },
@@ -1005,8 +1077,37 @@ function fixtureData(ex, kitchenSections) {
 }
 
 const UPLOADS = /https:\/\/api\.backgold\.com\/api\/(?:media-files|lp-assets|content-pages)\//g
+// Geometry files in the fixture's sections live on api.backgold.com too; the fixture serves them itself.
+const GEO_FILES = /https:\/\/api\.backgold\.com\/lp-runtime\//g
 
 /** A stand-in for an uploaded image: a logo mark for the logo, a landscape for anything else. */
+// ── The Map section's geometry, served at /lp-runtime/<sha-256>.json as the api serves it ──
+
+/**
+ * Geometry files the fixture serves, by the SHA-256 of their bytes (the
+ * api's content address): a set of four made-up places (a large one, two
+ * middling ones and a small one, so a framed map has somewhere to zoom) and
+ * BackGold's Texas counties, the real set a party site draws.
+ */
+function geoFixtures() {
+  const file = (json) => ({ json, hash: createHash('sha256').update(json).digest('hex') })
+  const four = file(
+    JSON.stringify({
+      width: 600,
+      height: 400,
+      paths: {
+        Alder: 'M0,0 L400,0 L400,400 L0,400 Z',
+        Birch: 'M400,0 L600,0 L600,200 L400,200 Z',
+        Cedar: 'M400,200 L460,200 L460,260 L400,260 Z',
+        Dunmore: 'M460,200 L600,200 L600,400 L460,400 Z',
+      },
+      centroids: { Alder: [200, 200], Birch: [500, 100], Cedar: [430, 230], Dunmore: [530, 300] },
+    }),
+  )
+  const texas = file(JSON.stringify(JSON.parse(readFileSync(join(ROOT, 'packages/site/src/geo/tx-counties.json'), 'utf8'))))
+  return { four, texas, byHash: new Map([four, texas].map((f) => [f.hash, f.json])) }
+}
+
 function placeholderImage(path) {
   if (path.includes('med_logo')) {
     return '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="56" viewBox="0 0 200 56"><rect width="56" height="56" rx="10" fill="#1b3a5c"/><path d="M14 40 L28 14 L42 40 Z" fill="#f4efe6"/><text x="66" y="35" font-family="system-ui,sans-serif" font-size="17" font-weight="700" fill="#1b3a5c">Pine Valley</text></svg>'
@@ -1038,7 +1139,7 @@ function startFixture(examples, kitchenSections) {
     const send = (status, body, extra = {}) => {
       res.writeHead(status, { ...headers, ...extra })
       // Uploaded files in the examples live on api.backgold.com; the fixture serves stand-ins.
-      res.end(body === undefined ? undefined : JSON.stringify(body).replace(UPLOADS, `${state.origin}/media/`))
+      res.end(body === undefined ? undefined : JSON.stringify(body).replace(UPLOADS, `${state.origin}/media/`).replace(GEO_FILES, `${state.origin}/lp-runtime/`))
     }
     // --serve: after editing and rebuilding the copy, POST here and then to the
     // Worker's /api/backgold/revalidate so the edge cache moves to a new version.
@@ -1050,6 +1151,13 @@ function startFixture(examples, kitchenSections) {
     if (url.pathname.startsWith('/media/')) {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' })
       return res.end(placeholderImage(url.pathname))
+    }
+    // A geometry file by its hash, immutable as the api serves it; any other hash is a 404.
+    const geoHash = /^\/lp-runtime\/([0-9a-f]{64})\.json$/.exec(url.pathname)?.[1]
+    if (geoHash) {
+      const json = data.geo.byHash.get(geoHash)
+      res.writeHead(json ? 200 : 404, { 'Content-Type': 'application/json', 'Cache-Control': json ? 'public, max-age=31536000, immutable' : 'no-store' })
+      return res.end(json ?? JSON.stringify({ error: 'Not found', code: 'NOT_FOUND' }))
     }
     const auth = req.headers.authorization ?? ''
     const key = auth.startsWith('Bearer ') ? auth.slice(7) : ''
@@ -2213,6 +2321,137 @@ async function checkPartyBoards(origin, fixture) {
 }
 
 /**
+ * The Map section drawn from its geometry (/coverage), and its tiles where
+ * there is none: on the kitchen sink (no geoUrl) and at an address the api
+ * does not have.
+ */
+async function checkPartyMap(origin, fixture) {
+  log('\nParty map: the Map section drawn from its geometry')
+  const { four, texas } = fixture.data.geo
+  const unreadHash = '0'.repeat(64)
+  const geoReads = (hash) => fixture.state.requests.get(`/lp-runtime/${hash}.json`) ?? 0
+  let res = await get(origin, '/coverage')
+  let html = await res.text()
+  check(res.status === 200, `GET /coverage is 200 (got ${res.status})`)
+  const maps = sectionsOf(html).filter((s) => s.type === 'Map').map((s) => s.html)
+  check(maps.length === 4, `it draws its four Map sections (found ${maps.length})`)
+  const [tx, fourDirectory, framed, unread] = maps
+  const svgOf = (markup) => /<svg\b[^>]*class="region-map-svg"[\s\S]*?<\/svg>/.exec(markup)?.[0] ?? ''
+  const viewBox = (markup) => /<svg\b[^>]*\bviewBox="([^"]+)"/.exec(svgOf(markup))?.[1]
+  // Each place's path, in drawing order: its classes, its tooltip, and the link around it.
+  const places = (markup) =>
+    [...svgOf(markup).matchAll(/(<a\b[^>]*>)?<path\b([^>]*)><title[^>]*>([^<]*)<\/title><\/path>/g)].map((m) => ({
+      classes: (/\bclass="([^"]*)"/.exec(m[2])?.[1] ?? '').split(/\s+/),
+      title: decode(m[3]),
+      link: m[1] ? /\bhref="([^"]*)"/.exec(m[1])?.[1] : null,
+      unfocusable: m[1] ? /\btabindex="-1"/.test(m[1]) : null,
+    }))
+  const lede = (markup) => plain(/<p class="lede"[^>]*>([\s\S]*?)<\/p>/.exec(markup)?.[1] ?? '')
+  const keyEntries = (markup) => [...(/<p class="key"[^>]*>([\s\S]*?)<\/p>/.exec(markup)?.[1] ?? '').matchAll(/<\/i>([^<]*)<\/span>/g)].map((m) => decode(m[1]))
+  const head = (markup) => plain(markup.slice(0, markup.indexOf('</h2>') + 5))
+  // Solid buttons (the main call) and quiet ones, as [label, href].
+  const buttons = (markup, kind) =>
+    [...markup.matchAll(/<a class="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].filter((m) => m[1].split(' ').includes('button') && m[1].split(' ').includes('button-quiet') === (kind === 'quiet')).map((m) => [decode(m[3]), m[2]])
+
+  const texasGeo = JSON.parse(texas.json)
+  const txPlaces = places(tx)
+  const with_ = (list, cls) => list.filter((p) => p.classes.includes(cls))
+  check(
+    viewBox(tx) === `0 0 ${texasGeo.width} ${texasGeo.height}` && txPlaces.length === Object.keys(texasGeo.paths).length,
+    `Map · map with Texas's geometry draws an <svg> on the server, a path per county (${txPlaces.length} paths, viewBox ${viewBox(tx)})`,
+  )
+  check(
+    with_(txPlaces, 'region-lit').length === 8 && with_(txPlaces, 'region-starting').length === 1 && with_(txPlaces, 'region-dark').length === txPlaces.length - 9,
+    `each county is classed by its row: 8 lit, 1 starting, every other county dark, rows or none (${with_(txPlaces, 'region-lit').length}/${with_(txPlaces, 'region-starting').length}/${with_(txPlaces, 'region-dark').length})`,
+  )
+  const txLinks = txPlaces.filter((p) => p.link)
+  check(
+    txLinks.length === 5 && txLinks.every((p) => p.classes.includes('region-lit') && p.unfocusable) && txPlaces.find((p) => p.title === 'Travis · Chapter meets monthly')?.link === 'https://example.org/travis',
+    `the five lit counties with a link open it, out of the tab order (${txLinks.map((p) => p.title).join(', ')})`,
+  )
+  check(head(tx) === 'Near you Find your county chapter' && /<p class="kicker"[^>]*>Near you<\/p>\s*<h2/.test(tx), `the kicker is drawn over the heading (${head(tx)})`)
+  check(
+    lede(tx) === '8 of 254 counties · Chapter meets monthly' && /<span class="coverage-count"[^>]*>8 of 254 counties<\/span>/.test(tx),
+    `the coverage line is the count of lit rows against the set's total and noun, then the lit label as written (${lede(tx)})`,
+  )
+  check(
+    JSON.stringify(keyEntries(tx)) === JSON.stringify(['Chapter meets monthly', 'Getting started', 'No chapter yet']) && /<div class="region-map region-map-large"[^>]*aria-hidden="true"/.test(tx),
+    `the key has a starting entry when a row is starting, and the map and its key are hidden from screen readers (${keyEntries(tx).join(', ')})`,
+  )
+  const rowsListed = [...tx.matchAll(/<li class="place-row"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => plain(m[1]))
+  const darkNames = fixture.data.page('coverage', fixture.state.headline).sections[0].data.items.filter((r) => r.status === 'dark').map((r) => r.region)
+  const list = tx.slice(tx.indexOf('class="place-list"'))
+  check(
+    rowsListed.length === 9 &&
+      rowsListed[0] === 'Travis Chapter meets monthly' &&
+      rowsListed[8] === 'Denton Getting started' &&
+      darkNames.every((name) => !plain(list).includes(name)) &&
+      /<a href="https:\/\/example\.org\/travis" rel="noopener"[^>]*>Travis<\/a>/.test(list),
+    `the directory under the map names only the lit and starting counties, a link where it has one (${rowsListed.length} rows: ${rowsListed.map((r) => r.split(' ')[0]).join(', ')})`,
+  )
+  const invite = plain(/<div class="place-invite"[^>]*>([\s\S]*?)<\/div>/.exec(tx)?.[1] ?? '')
+  check(
+    invite === '245 counties · No chapter yet Start a chapter' &&
+      /<span class="place-invite-count"[^>]*>245 counties<\/span>/.test(tx) &&
+      JSON.stringify(buttons(tx, 'solid')) === JSON.stringify([['Start a chapter', '/contact']]) &&
+      JSON.stringify(buttons(tx, 'quiet')) === JSON.stringify([['Talk to an organizer', '/organize']]) &&
+      !/class="tiles"/.test(tx),
+    `the dark counties are one line, their count and the dark label, with the charter link its one button; the organizer link follows, quiet (${invite})`,
+  )
+
+  const fourPlaces = places(fourDirectory)
+  check(
+    viewBox(fourDirectory) === '0 0 600 400' &&
+      fourPlaces.map((p) => p.title).join(' | ') === 'Alder · Organized | Birch · Organized | Cedar · Getting started | Dunmore · Still open' &&
+      fourPlaces[0].link === 'https://example.org/alder' && fourPlaces[0].classes.includes('region-lit') &&
+      fourPlaces[1].link === null && fourPlaces[1].classes.includes('region-lit') &&
+      fourPlaces[2].classes.includes('region-starting') && fourPlaces[3].classes.includes('region-dark'),
+    `Map · directory reads a relative geoUrl from the api and matches rows to places ignoring case: Alder lit and linked, Birch lit, Cedar starting, Dunmore dark (${fourPlaces.map((p) => `${p.title}${p.link ? ' -> ' + p.link : ''}`).join(', ')})`,
+  )
+  const cards = [...fourDirectory.matchAll(/<li class="(place[^"]*)"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => `${plain(m[2])}${m[1].includes('place-open') ? ' (open)' : ''}`)
+  check(
+    head(fourDirectory) === 'Chapters Four places' && lede(fourDirectory) === '2 of 4 · Organized' && cards.join(' | ') === 'alder Organized | Birch Organized | Cedar Getting started | 1 place Still open Start a chapter (open)',
+    `with no total or noun the line counts the rows; a card for each lit and starting place, then one dashed card for the dark ones, their count and the template's dark label when the section has none (${lede(fourDirectory)}; ${cards.join(' | ')})`,
+  )
+  check(
+    /<a class="button button-small" href="\/contact"[^>]*>Start a chapter<\/a>/.test(fourDirectory) &&
+      buttons(fourDirectory, 'solid').length === 1 &&
+      JSON.stringify(buttons(fourDirectory, 'quiet')) === JSON.stringify([['Talk to an organizer', '/organize']]),
+    "the dashed card carries the charter link as the section's one solid button; the organizer link follows, quiet",
+  )
+
+  const framedPlaces = places(framed)
+  check(
+    viewBox(framed) === '353.5 179 153 102' &&
+      framedPlaces.at(-1)?.title === 'Cedar · Getting started' && framedPlaces.at(-1)?.classes.includes('region-focus') &&
+      framedPlaces.slice(0, -1).every((p) => p.classes.includes('region-dim')),
+    `focusRegion frames its place: the viewBox zooms to Cedar, drawn last, the others dimmed (viewBox ${viewBox(framed)})`,
+  )
+  check(lede(framed) === 'Cedar county · Getting started', `a framed map's line names its place and status (${lede(framed)})`)
+
+  check(
+    svgOf(unread) === '' && (unread.match(/<li class="tile-place/g) ?? []).length === 4 && lede(unread) === '2 of 4 · Organized',
+    `a geoUrl the api cannot serve draws the tiles, as a section with no geoUrl does, under the same coverage line (${lede(unread)})`,
+  )
+  check(geoReads(texas.hash) === 1 && geoReads(four.hash) === 1 && geoReads(unreadHash) === 1, `each geometry was read once for the page, the four places' once for two sections (${geoReads(texas.hash)}, ${geoReads(four.hash)}, ${geoReads(unreadHash)})`)
+
+  // A new content version (the webhook), so the page renders again.
+  const version = fixture.bump(fixture.state.headline)
+  const hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  res = await get(origin, '/coverage')
+  html = await res.text()
+  check(
+    hook.status === 204 && res.status === 200 && res.headers.get('x-backgold-cache') === 'MISS' && geoReads(texas.hash) === 1 && geoReads(four.hash) === 1 && geoReads(unreadHash) === 2,
+    `rendered again at a new content version, the page reads no geometry it has (kept by its hash) and asks again for the one that failed (${res.headers.get('x-backgold-cache')}; ${geoReads(texas.hash)}, ${geoReads(four.hash)}, ${geoReads(unreadHash)})`,
+  )
+
+  res = await get(origin, '/kitchen-sink')
+  html = await res.text()
+  const sink = sectionsOf(html).find((s) => s.type === 'Map')?.html ?? ''
+  check(/<div class="strip"/.test(sink) && (sink.match(/<span class="strip-tile/g) ?? []).length === 3 && !/region-map/.test(sink), 'a Map section with no geoUrl draws its tile strip and no map, as before')
+}
+
+/**
  * Boards A1 and A13 (the party template's home and its chrome): the Top
  * banner above the header (a takeover on home, the announcement strip on the
  * A1 page), the type the boards name, the cover hero's kicker, accent word
@@ -2343,6 +2582,7 @@ async function main() {
     await checkConfigured(configured.origin, fixture, disclaimer)
     await checkKitchenSink(configured.origin, kitchen, disclaimer)
     if (PARTY) await checkPartyBoards(configured.origin, fixture)
+    if (PARTY) await checkPartyMap(configured.origin, fixture)
     if (PARTY) await checkPartyChrome(configured.origin)
     if (chrome) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
