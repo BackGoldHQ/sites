@@ -1,13 +1,15 @@
 ---
 // SignupCapture (board A12): an email sign-up with its consent, BackGold's
-// frame (ModuleFrame) in one of three layouts.
-//   card    (the default) the kicker and heading over the sign-up on a raised
-//           card, narrow and centred
-//   band    (A1, Above the footer) the kicker and heading at the left and the
-//           fields straight on the band at the right: first name, last name
-//           and email in a row (the three a sign-up is matched to a person
-//           by), the button under them, the consent line
-//   inline  the heading and a one-line sign-up side by side, for a slim strip
+// frame (ModuleFrame) in one of three layouts. The section's words (its
+// kicker in small capitals, its heading, its lede under the heading) are
+// drawn here, each only when it has words; the frame draws the fields.
+//   card    (the default) the words over the sign-up on a raised card,
+//           narrow and centred
+//   band    (A1 and C1, Above the footer) the words at the left and the
+//           fields straight on the band at the right: first name and last
+//           name, then email and ZIP (email alone when the organization
+//           leaves ZIP out), the button under them, the consent line
+//   inline  the words and a one-line sign-up side by side, for a slim strip
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import ModuleFrame from '../modules/ModuleFrame.astro'
@@ -22,14 +24,16 @@ const { section, variant } = Astro.props
 const layout = variant === 'band' || variant === 'inline' ? variant : 'card'
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
+const lede = text(section.copy.lede)
 ---
 {(heading || section.embed) && (
   <Band section={section} class:list={['signup', `signup-${layout}`]}>
     <div class="signup-grid">
-      {(kicker || heading) && (
+      {(kicker || heading || lede) && (
         <div class="signup-words">
           {kicker && <p class="kicker">{kicker}</p>}
           {heading && <h2>{heading}</h2>}
+          {lede && <p class="lede">{lede}</p>}
         </div>
       )}
       <ModuleFrame
@@ -63,6 +67,12 @@ const heading = text(section.copy.heading)
     font-size: clamp(1.75rem, 1.4rem + 1vw, 2.125rem);
     line-height: 1.08;
   }
+  /* C1's lede: one line under the heading, in the muted ink. */
+  .signup-words .lede {
+    max-width: 26em;
+    margin: clamp(0.625rem, 0.5rem + 0.4vw, 0.875rem) 0 0;
+    text-wrap: balance;
+  }
   :global(.signup-card) .signup-grid {
     max-width: 38rem;
     margin-inline: auto;
@@ -70,7 +80,8 @@ const heading = text(section.copy.heading)
   :global(.signup-card) .signup-words {
     text-align: center;
   }
-  :global(.signup-card) .signup-words h2 {
+  :global(.signup-card) .signup-words h2,
+  :global(.signup-card) .signup-words .lede {
     margin-inline: auto;
   }
   @media (min-width: 48rem) {

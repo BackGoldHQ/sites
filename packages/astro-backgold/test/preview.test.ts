@@ -20,6 +20,11 @@ describe('handlePreview', () => {
     expect(api.calls).toHaveLength(0)
   })
 
+  it('answers 503 when BackGold says the key is not a secret key', async () => {
+    const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: 'bg_site_sk_revoked_or_odd', apiOrigin: API_ORIGIN, fetch: async () => Response.json({ error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' }, { status: 403 }) })
+    expect(result.ok ? 200 : result.response.status).toBe(503)
+  })
+
   it('treats a publishable key in BACKGOLD_SECRET_KEY as not configured', async () => {
     const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: PK, apiOrigin: API_ORIGIN, fetch: fakeApi().fetch })
     expect(result.ok ? 200 : result.response.status).toBe(503)
@@ -114,6 +119,16 @@ describe('handlePreview in first-party mode', () => {
     expect(result.ok).toBe(true)
     expect(pub.calls).toHaveLength(0)
     expect(binding.headers[0]!.has('Authorization')).toBe(false)
+  })
+
+  it('never answers the key-mode 503: an api refusal is a 502', async () => {
+    // The fake api refuses a first-party read for a site it does not know as SECRET_KEY_REQUIRED.
+    const result = await handlePreview(link('bg_preview=tok_good'), { secretKey: undefined, apiOrigin: API_ORIGIN, firstParty: { siteId: 'site_unknown', fetch: fakeApi().fetch } })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(502)
+    expect((await result.response.json()).code).toBe('PREVIEW_UNAVAILABLE')
+    for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
   })
 
   it('answers the same errors', async () => {

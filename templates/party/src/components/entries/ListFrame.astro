@@ -1,19 +1,20 @@
 ---
 // Around every list layout: the list's name as the page's one <h1> (on a
 // term's list, the term, under the list's name; on the whole news list, the
-// list's intro when it has one: a Hero whose headline is the <h1>), the filter (All, then each
-// term a listed entry carries, the current one marked), on the news list the
-// search box (board A4, "Search news": a form that sends `?q=` to the news
-// list), the rows the layout draws in the slot (a sentence instead when there
-// is nothing to show), and the pager under them: "Older" on to the next page
-// when there is one, and "Newest" back to the first from any later page. The
-// filter's term lists page the same way at their own addresses. A search's
-// results say how many matched ("2 results for ‘levy’"), or that nothing did,
-// and have no pager; All stays unmarked, since they are not the whole list.
-import { Section } from '@backgold/astro/components'
-import LeadingHero from '../LeadingHero.astro'
+// list's intro when it has one: the page at the list's address, its sections
+// drawn as a page draws them, so its leading Hero's headline is the <h1>),
+// the filter (All, then each term a listed entry carries, the current one
+// marked), on the news list the search box (board A4, "Search news": a form
+// that sends `?q=` to the news list), the rows the layout draws in the slot
+// (a sentence instead when there is nothing to show), and the pager under
+// them: "Older" on to the next page when there is one, and "Newest" back to
+// the first from any later page. The filter's term lists page the same way at
+// their own addresses. A search's results say how many matched ("2 results
+// for ‘levy’"), or that nothing did, and have no pager; All stays unmarked,
+// since they are not the whole list.
+import PageSections from '../PageSections.astro'
 import type { ListLayoutProps } from './props'
-import { listName, listPath, termPath } from '../../lib/entries'
+import { basePath, listName, termPath } from '../../lib/entries'
 import '../../styles/entries.css'
 
 interface Props extends ListLayoutProps {
@@ -22,23 +23,23 @@ interface Props extends ListLayoutProps {
   class?: string
 }
 
-const { type, entries, pager, filter, term, search, intro = null, noun, class: className } = Astro.props
-const base = listPath(type)
-const name = listName(type)
+const { type, base: address, entries, pager, filter, term, search, intro = null, noun, class: className } = Astro.props
+const base = basePath(address)
+const name = listName(type, address, intro)
 const current = term ? `${term.taxonomy.key}/${term.term.slug}` : null
 const q = search?.q ?? null
 const results = (n: number) => (n === 1 ? '1 result' : `${n} results`)
 ---
 <div class:list={['listing', className]}>
   {intro && !term ? (
-    <div class="list-intro"><Section section={intro} components={{ Hero: LeadingHero }} /></div>
+    <div class="list-intro"><PageSections page={intro} siteName={name} /></div>
   ) : (
     <header class="page-header list-header">
-      {term && <p class="kicker"><a href={base ?? '/'}>{name}</a> · {term.taxonomy.label}</p>}
+      {term && <p class="kicker"><a href={base}>{name}</a> · {term.taxonomy.label}</p>}
       <h1>{term ? term.term.label : name}</h1>
     </header>
   )}
-  {base && filter && filter.terms.length > 0 && (
+  {filter && filter.terms.length > 0 && (
     <nav class="list-filter" aria-label={`Narrow the ${name.toLowerCase()}`}>
       <ul>
         <li><a href={base} aria-current={current === null && q === null ? 'page' : undefined}>All</a></li>

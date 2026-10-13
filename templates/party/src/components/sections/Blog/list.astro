@@ -2,20 +2,22 @@
 // Blog · List (board A4, "Blog · List"; A12 shows it beside Cards and Lead
 // story): one post per row, newest first, with its cover, category, title,
 // summary and byline (authors · date). Four posts, or the section's
-// `maxItems`; "All news" goes to the full list at /blog. The board's
-// category tabs, search and pager belong to the news page (/blog), not to the
-// section, and are not drawn here. With nothing published it draws nothing.
+// `maxItems`; "All news" goes to the full list at the organization's blog
+// base. The board's category tabs, search and pager belong to that list, not
+// to the section, and are not drawn here. With nothing published it draws
+// nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
 import { text } from '../../../lib/format'
-import { latestEntries, shownOf, storyOf } from './latest'
+import { latestNews, shownOf, storyOf } from './latest'
 
 type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading) ?? 'Latest'
-const stories = (await latestEntries(Astro.locals.backgold, shownOf(section, 4))).map(storyOf)
+const { entries, listPath } = await latestNews(Astro.locals.backgold, shownOf(section, 4))
+const stories = entries.map(storyOf)
 ---
 {stories.length > 0 && (
   <Band section={section} class="entries blog-list">
@@ -39,7 +41,7 @@ const stories = (await latestEntries(Astro.locals.backgold, shownOf(section, 4))
         </li>
       ))}
     </ul>
-    <p class="more"><a href="/blog">All news</a></p>
+    {listPath && <p class="more"><a href={listPath}>All news</a></p>}
   </Band>
 )}
 

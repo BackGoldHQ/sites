@@ -11,10 +11,13 @@
 // the main column when it has an item, and are one column when it has none.
 // A list and a tag draw 50 entries a page: "Older" goes on to the next page,
 // and "Newest" back to the first from any later one (the api names no
-// previous page, so there is no "Newer").
-import type { Areas } from '@backgold/content'
+// previous page, so there is no "Newer"). The blog types' list (posts,
+// podcasts and videos together, at the organization's blog base: `/news`, or
+// `/blog` on an organization that kept it) opens with its intro when a
+// published page sits at its address: that page's sections, above the list.
+import type { Areas, PageResponse } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
-import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
+import { areaEntriesOf, atomFeed, isBlogType, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryArticle from '../components/EntryArticle.astro'
 import EntryCard from '../components/EntryCard.astro'
@@ -39,7 +42,16 @@ if (resolved.kind === 'feed') {
 }
 if (resolved.kind === 'not_found') Astro.response.status = 404
 
-const typeName = (type: ResolvedType) => (type === 'blog' ? 'Blog' : type.plural_label)
+/**
+ * A list's name: the blog types' list is named by its intro page's title when
+ * it has one, else by its address (`news` is "News", `blog` is "Blog"); any
+ * other type's by its plural.
+ */
+function typeName(type: ResolvedType, base: string, intro: PageResponse | null = null): string {
+  if (type !== 'blog' && !isBlogType(type)) return type.plural_label
+  const words = base.replace(/-/g, ' ')
+  return intro?.page.title?.trim() || words.charAt(0).toUpperCase() + words.slice(1)
+}
 
 let head: { title?: string; description?: string; image?: string; canonicalPath: string; noindex?: boolean; jsonLd?: object[] }
 switch (resolved.kind) {
@@ -56,7 +68,11 @@ switch (resolved.kind) {
     break
   }
   case 'index':
-    head = { title: `${typeName(resolved.type)} · ${siteName}`, canonicalPath: pathname, jsonLd: jsonLdFor({ site, siteUrl, kind: 'index', type: resolved.type }) }
+    head = {
+      title: `${typeName(resolved.type, resolved.base, resolved.intro)} · ${siteName}`,
+      canonicalPath: pathname,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'index', type: resolved.type, base: resolved.base, intro: resolved.intro }),
+    }
     break
   case 'entry': {
     const { entry, type } = resolved
@@ -81,7 +97,7 @@ switch (resolved.kind) {
     head = {
       title: `${resolved.term.label} · ${siteName}`,
       canonicalPath: pathname,
-      jsonLd: jsonLdFor({ site, siteUrl, kind: 'term', type: resolved.type, taxonomy: resolved.taxonomy, term: resolved.term }),
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'term', type: resolved.type, base: resolved.base, taxonomy: resolved.taxonomy, term: resolved.term }),
     }
     break
   default:
@@ -110,7 +126,11 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
 
   {resolved.kind === 'index' && (
     <div class="listing">
-      <header class="page-header"><h1>{typeName(resolved.type)}</h1></header>
+      {resolved.intro ? (
+        <PageSections page={resolved.intro} siteName={typeName(resolved.type, resolved.base, resolved.intro)} />
+      ) : (
+        <header class="page-header"><h1>{typeName(resolved.type, resolved.base)}</h1></header>
+      )}
       {resolved.entries.length > 0 ? (
         <div class="grid grid-3">{resolved.entries.map((entry) => <EntryCard card={entryCard(entry)} />)}</div>
       ) : (

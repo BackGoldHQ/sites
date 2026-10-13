@@ -1,20 +1,26 @@
 // GET /preview — BackGold's "Preview on your site" link and the Developer
 // page's test preview: `?bg_preview=<token>&path=<path>`. The page is the
 // site's own (so a draft renders in its layout); it calls `loadPreview`.
-// The draft is read with the secret key, or in first-party mode as the site
-// (`BACKGOLD_SITE_ID`, or in the dispatched form the request's
-// `X-BackGold-Site`) through the `BACKGOLD_API` binding, by a client made for this request
-// alone (its store is a fresh memory map, and the client never stores a
-// preview read anyway).
+// The draft is read by a client made for this request alone (its store is a
+// fresh memory map, and the client never stores a preview read anyway):
+//
+//   first-party  the `BACKGOLD_API` binding is set: through it as the site
+//                (`BACKGOLD_SITE_ID`, or in the dispatched form the request's
+//                `X-BackGold-Site`), with no key. A dispatched request naming
+//                no site answers `noSite()`.
+//   key mode     no binding: with `BACKGOLD_SECRET_KEY`; without one, 503
+//                PREVIEW_NOT_CONFIGURED in the Developer page's words.
+//
 // Every answer, draft or error, carries PREVIEW_HEADERS (private, no-store;
-// noindex): a token that is not one (empty, `.`, `..`) is a 400, a read that
-// timed out a 504, and anything else that goes wrong reading the draft (the
-// network, an api error) a 502 that names nothing internal.
+// noindex): a token that is not one (empty, `.`, `..`) or that BackGold
+// refuses is a 400, a read that timed out a 504, and anything else that goes
+// wrong reading the draft (the network, an api error) a 502 that names
+// nothing internal.
 
 import { BackgoldApiError, createClient, memoryCache, previewFromRequest } from '@backgold/content'
 import type { PreviewResponse } from '@backgold/content'
-import { DEFAULT_API_ORIGIN, firstPartyOf, text, workerEnv } from './env.js'
-import { errorResponse } from './respond.js'
+import { DEFAULT_API_ORIGIN, firstPartyOf, namesNoSite, text, workerEnv } from './env.js'
+import { errorResponse, noSite } from './respond.js'
 import { isApiTimeout, withTimeout } from './timeout.js'
 
 /** The headers every preview answer carries. */
@@ -47,7 +53,10 @@ const fail = (status: number, code: string, error: string): PreviewResult => ({
   response: errorResponse(status, code, error, PREVIEW_HEADERS),
 })
 
-/** The draft a preview link names, or the response to send instead. */
+/**
+ * The draft a preview link names, or the response to send instead. Without
+ * `firstParty` it is key mode: no secret key is the 503.
+ */
 export async function handlePreview(request: Request, deps: PreviewDeps): Promise<PreviewResult> {
   const notConfigured = fail(503, 'PREVIEW_NOT_CONFIGURED', NO_SECRET_KEY)
   if (!deps.firstParty && !deps.secretKey) return notConfigured
@@ -73,21 +82,28 @@ export async function handlePreview(request: Request, deps: PreviewDeps): Promis
     if (error instanceof BackgoldApiError && error.code === 'BAD_PREVIEW_TOKEN') {
       return fail(400, 'BAD_PREVIEW_TOKEN', 'This preview link is not valid or has expired.')
     }
-    if (error instanceof BackgoldApiError && error.code === 'SECRET_KEY_REQUIRED') return notConfigured
+    // Only a key can be the wrong kind: a first-party read reads as a secret key does.
+    if (!deps.firstParty && error instanceof BackgoldApiError && error.code === 'SECRET_KEY_REQUIRED') return notConfigured
     if (isApiTimeout(error)) return fail(504, 'PREVIEW_UNAVAILABLE', 'BackGold did not answer in time. Try the preview again.')
     return fail(502, 'PREVIEW_UNAVAILABLE', 'BackGold could not be reached for this preview. Try again.')
   }
 }
 
 /**
- * `handlePreview` with the Worker's own environment: `BACKGOLD_SECRET_KEY`,
- * or in first-party mode the `BACKGOLD_API` binding and the site
- * (`BACKGOLD_SITE_ID`, or in the dispatched form the request's
- * `X-BackGold-Site`), and `BACKGOLD_API_ORIGIN`. What a site's `/preview`
- * page calls.
+ * `handlePreview` with the Worker's own environment: in first-party mode the
+ * `BACKGOLD_API` binding and the site (`BACKGOLD_SITE_ID`, or in the
+ * dispatched form the request's `X-BackGold-Site`), else
+ * `BACKGOLD_SECRET_KEY`; and `BACKGOLD_API_ORIGIN`. A dispatched request
+ * that names no site answers `noSite()` with the preview headers, never the
+ * key-mode 503. What a site's `/preview` page calls.
  */
 export async function loadPreview(request: Request): Promise<PreviewResult> {
   const env = await workerEnv()
+  if (namesNoSite(env, request.headers)) {
+    const response = noSite()
+    for (const [name, value] of Object.entries(PREVIEW_HEADERS)) response.headers.set(name, value)
+    return { ok: false, response }
+  }
   const firstParty = firstPartyOf(env, request.headers)
   return handlePreview(request, {
     secretKey: text(env.BACKGOLD_SECRET_KEY),

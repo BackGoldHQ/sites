@@ -56,6 +56,21 @@ describe('sitemapXml', () => {
   })
 })
 
+describe('sitemapXml, an organization whose blog base is news', () => {
+  it('passes the api’s /news addresses through as they are', async () => {
+    const { bg } = client({
+      '/sitemap': {
+        urls: [
+          { url: `${SITE_URL}/news`, kind: 'type_index', updated_at: '2026-10-13T12:00:00.000Z' },
+          { url: `${SITE_URL}/news/levy-explained`, kind: 'entry', updated_at: '2026-10-13T12:00:00.000Z' },
+        ],
+      },
+    })
+    const { urlset } = parse(await sitemapXml(bg, SITE_URL))
+    expect(urlset.url.map((u: { loc: string }) => u.loc)).toEqual([`${SITE_URL}/news`, `${SITE_URL}/news/levy-explained`])
+  })
+})
+
 describe('robotsTxt', () => {
   it('allows everything, names the default AI crawlers, points at the sitemap', () => {
     expect(robotsTxt({ siteUrl: SITE_URL, aiCrawlers: DEFAULT_AI_CRAWLERS, sitemap: true })).toBe(
@@ -430,6 +445,22 @@ describe('atomFeed', () => {
     expect(feed.entry[0].summary).toBeUndefined()
   })
 
+  it('links the merged feed to the blog base’s list on an organization at /news, its home still /feed.xml', async () => {
+    const { bg } = client({
+      '/types': { types: [builtIn('post', 'Posts', 'news'), builtIn('podcast', 'Podcasts', 'news'), builtIn('video', 'Videos', 'news'), endorsement] },
+      '/entries/post': { entries: [entryOf({ url: '/news/levy-explained' })], next_cursor: null },
+      '/entries/podcast': { entries: [], next_cursor: null },
+      '/entries/video': { entries: [], next_cursor: null },
+    })
+    const { feed } = parse(await atomFeed(bg, SITE_URL, 'blog'))
+    expect(feed.id).toBe(`${SITE_URL}/feed.xml`)
+    expect(feed.link).toEqual([
+      { '@_rel': 'self', '@_type': 'application/atom+xml', '@_href': `${SITE_URL}/feed.xml` },
+      { '@_rel': 'alternate', '@_type': 'text/html', '@_href': `${SITE_URL}/news` },
+    ])
+    expect(feed.entry.map((e: { id: string }) => e.id)).toEqual([`${SITE_URL}/news/levy-explained`])
+  })
+
   it('escapes and serves a type at its url_base, 50 entries at most', async () => {
     const entries = Array.from({ length: 60 }, (_, i) =>
       entryOf({ id: `ci_${i}`, slug: `e${i}`, type: 'endorsement', url: `/endorsements/e${i}`, title: `A & B <${i}> \u0001`, publish_at: new Date(Date.UTC(2026, 0, 1 + i)).toISOString() }),
@@ -488,6 +519,23 @@ describe('jsonLdFor', () => {
       { '@type': 'ListItem', position: 1, name: 'Pine Valley for Liberty', item: `${SITE_URL}/` },
       { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
       { '@type': 'ListItem', position: 3, name: 'Taxes', item: `${SITE_URL}/blog/tag/taxes` },
+    ])
+  })
+
+  it('names the blog types’ list by its intro page, else by its base, at the blog base', () => {
+    const intro = { ...(CONTENT_API_EXAMPLES.PageResponse as PageResponse), page: { ...page, slug: 'news', url: '/news', is_home: false, title: 'From the party' } }
+    const crumbs = (things: object[]) => (things[2] as { itemListElement: Array<{ name: string; item: string }> }).itemListElement.slice(1).map((i) => [i.name, i.item])
+    expect(crumbs(jsonLdFor({ site, siteUrl: SITE_URL, kind: 'index', type: 'blog', base: 'news', intro }))).toEqual([['From the party', `${SITE_URL}/news`]])
+    expect(crumbs(jsonLdFor({ site, siteUrl: SITE_URL, kind: 'index', type: 'blog', base: 'news', intro: null }))).toEqual([['News', `${SITE_URL}/news`]])
+    expect(crumbs(jsonLdFor({ site, siteUrl: SITE_URL, kind: 'index', type: 'blog', base: 'press-room' }))).toEqual([['Press room', `${SITE_URL}/press-room`]])
+    expect(crumbs(jsonLdFor({ site, siteUrl: SITE_URL, kind: 'term', type: 'blog', base: 'news', taxonomy: { key: 'tag', label: 'Tags' }, term: { slug: 'taxes', label: 'Taxes' } }))).toEqual([
+      ['News', `${SITE_URL}/news`],
+      ['Taxes', `${SITE_URL}/news/tag/taxes`],
+    ])
+    const entry = { ...entryDetail.entry, url: '/news/levy-explained' }
+    expect(crumbs(jsonLdFor({ site, siteUrl: SITE_URL, kind: 'entry', type: builtIn('post', 'Posts', 'news'), entry }))).toEqual([
+      ['News', `${SITE_URL}/news`],
+      ['The levy, explained', `${SITE_URL}/news/levy-explained`],
     ])
   })
 

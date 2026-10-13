@@ -1,13 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
-import { BUILT_IN_CONTENT_TYPES, BUILT_IN_TYPE_FIELDS, typesExample } from '@givegold/shared'
+import { BUILT_IN_CONTENT_TYPES, BUILT_IN_TYPE_FIELDS, isBlogContentType, typesExample } from '@givegold/shared'
 import type { BuiltInFieldDef, ContentFieldKind, ContentTypeField, ContentTypeSummary } from '@givegold/shared'
 import { generateTypes } from './codegen.js'
 import { renderTypes } from './codegen-render.js'
 
 function type(key: string, fields: ContentTypeField[]): ContentTypeSummary {
-  return { key, singular_label: key, plural_label: key, routable: false, url_base: null, built_in: false, fields }
+  return { key, singular_label: key, plural_label: key, routable: false, url_base: null, built_in: false, index: null, fields }
 }
 
 const EVERY_KIND: ContentTypeField[] = [
@@ -132,6 +132,7 @@ const BUILT_IN_TYPES: ContentTypeSummary[] = BUILT_IN_CONTENT_TYPES.map((t) => (
   routable: t.routable,
   url_base: t.url_base,
   built_in: true,
+  index: isBlogContentType({ key: t.key, built_in: true }) ? 'blog' : null,
   fields: (LOCKED_FIELDS[t.key] ?? []).map((f) => ({
     key: f.key,
     label: f.label,

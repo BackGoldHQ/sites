@@ -7,7 +7,7 @@
 import type { ContentTypeSummary, EntryDetail } from '@backgold/content'
 import { safeSrc } from '@backgold/astro/server'
 import { formatDay } from '../../lib/format'
-import { bylineGroups, initials, listName, listPath, termPath } from '../../lib/entries'
+import { bylineGroups, initials, listOf, termPath } from '../../lib/entries'
 
 interface Props {
   entry: EntryDetail
@@ -18,7 +18,8 @@ interface Props {
 }
 
 const { entry, type, kicker = null, minutes = null } = Astro.props
-const base = listPath(type)
+const list = listOf(type)
+const base = list?.path ?? null
 const day = formatDay(entry.publish_at)
 const groups = bylineGroups(entry.authors)
 const lead = entry.authors[0]
@@ -26,10 +27,10 @@ const avatar = lead ? safeSrc(lead.avatar_url) : null
 const crumbTerm = entry.terms.find((t) => t.taxonomy === 'category') ?? null
 ---
 <header class="entry-header">
-  {base && (
+  {list && (
     <nav class="crumbs" aria-label="Breadcrumb">
-      <a href={base}>{listName(type)}</a>
-      {crumbTerm && <><span aria-hidden="true"> › </span><a href={termPath(base, crumbTerm.taxonomy, crumbTerm.slug)}>{crumbTerm.label}</a></>}
+      <a href={list.path}>{list.name}</a>
+      {crumbTerm && <><span aria-hidden="true"> › </span><a href={termPath(list.path, crumbTerm.taxonomy, crumbTerm.slug)}>{crumbTerm.label}</a></>}
     </nav>
   )}
   {kicker ? (

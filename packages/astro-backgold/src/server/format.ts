@@ -91,18 +91,59 @@ export function isoDate(raw: string | null | undefined): string | null {
 }
 
 /**
- * Whether a type's entries live under `/blog`: a routable built-in that
- * reports `blog` as its url_base (post, podcast and video), or none. A
- * built-in that reports a base of its own (the newsletter, at `newsletters`)
- * lives there, like a custom type.
+ * The address the blog types listed under before it was the organization's
+ * own: what an api older than `@backgold/astro` 0.4 reports as their
+ * `url_base`, with no `index` beside it.
  */
-export const isBlogType = (type: ContentTypeSummary): boolean => type.built_in && type.routable && (type.url_base ?? 'blog') === 'blog'
+const LEGACY_BLOG_BASE = 'blog'
 
-/** A routable type's index path, or null when the type has no pages of its own. */
-export function typeIndexPath(type: ContentTypeSummary | 'blog'): string | null {
-  if (type === 'blog' || isBlogType(type)) return '/blog'
-  if (!type.routable || !type.url_base) return null
-  return `/${encodeURIComponent(type.url_base)}`
+/**
+ * Whether a type is one of the blog types, which list together (post, podcast
+ * and video): the api names their shared list with `index: 'blog'`. An api
+ * that reports no `index` at all (older than this package) is read by its
+ * old rule: a routable built-in that reports `blog` as its url_base, or none.
+ * A built-in with an address of its own (the newsletter, at `newsletters`)
+ * lists alone, like a custom type.
+ */
+export function isBlogType(type: ContentTypeSummary): boolean {
+  const index = (type as { index?: ContentTypeSummary['index'] }).index
+  if (index !== undefined) return index === 'blog'
+  return type.built_in && type.routable && (type.url_base ?? LEGACY_BLOG_BASE) === LEGACY_BLOG_BASE
+}
+
+/**
+ * The blog types' shared address, without slashes (`news`, or `blog` on an
+ * organization that kept it): the url_base the blog types report, the post
+ * type's first. Null when the site has no blog type.
+ */
+export function blogBaseOf(types: readonly ContentTypeSummary[]): string | null {
+  const group = types.filter(isBlogType)
+  const lead = group.find((t) => t.key === 'post') ?? group[0]
+  return lead ? (lead.url_base ?? LEGACY_BLOG_BASE) : null
+}
+
+/**
+ * A list's address without slashes: the blog types' merged list (`'blog'`) at
+ * `base`, the blog base (the legacy `blog` when it is not given); any other
+ * routable type at its url_base (a blog type's is the blog base); null for a
+ * type with no pages of its own.
+ */
+export function listBase(type: ContentTypeSummary | 'blog', base?: string): string | null {
+  if (type === 'blog') return base ?? LEGACY_BLOG_BASE
+  if (!type.routable) return null
+  return type.url_base ?? (isBlogType(type) ? LEGACY_BLOG_BASE : null)
+}
+
+/** A list's path (`/<listBase>`), or null when the type has no pages of its own. */
+export function listIndexPath(type: ContentTypeSummary | 'blog', base?: string): string | null {
+  const segment = listBase(type, base)
+  return segment === null ? null : `/${encodeURIComponent(segment)}`
+}
+
+/** What an address is called where nothing names it: capitalised, a hyphen read as a space (`news` is "News", `press-room` "Press room"). */
+export function baseLabel(base: string): string {
+  const words = base.replace(/-/g, ' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 /** The bylines that name an author of the work, not its editor or photographer. */

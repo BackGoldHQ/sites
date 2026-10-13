@@ -1,9 +1,14 @@
 import { BackgoldApiError } from '@backgold/content'
 import type { Areas, Author, BackgoldContent, ContentTypeSummary, EntriesResponse, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
 import { CURSOR_PARAM, validCursor } from './cursor.js'
-import { isBlogType } from './format.js'
+import { blogBaseOf, isBlogType } from './format.js'
 
-/** A routable type, or `'blog'`: the built-in types that share `/blog` (post, podcast, video). */
+/**
+ * A routable type, or `'blog'`: the blog types (`index: 'blog'` in GET
+ * /types: post, podcast and video), listed together at their shared address,
+ * the organization's blog base. `'blog'` names that list, not its address: the
+ * address is the `base` a list carries.
+ */
 export type ResolvedType = ContentTypeSummary | 'blog'
 
 /**
@@ -11,16 +16,34 @@ export type ResolvedType = ContentTypeSummary | 'blog'
  * index and a term carry the areas their response named (a page carries its
  * own inside `page`); an author and not_found carry none. An index and a term
  * carry the page of the list they show: `cursor`, the one it was read at
- * (null for the first page), and `next_cursor`, the next page's.
+ * (null for the first page), and `next_cursor`, the next page's; and `base`,
+ * the list's address without slashes (the blog base for `'blog'`, the type's
+ * url_base for any other type).
+ *
+ * An index carries `intro`: on the blog types' list, the published page whose
+ * address is the blog base (the starter page `news` on an organization whose
+ * blog base is `news`), for the site to draw its sections above the list. The
+ * page is the list's intro, never a page of its own at that address. Null on
+ * every other list, and when no page sits at the base.
  */
 export type Resolved =
   | { kind: 'page'; page: PageResponse }
-  | { kind: 'index'; type: ResolvedType; entries: Entry[]; cursor: string | null; next_cursor: string | null; areas: Areas }
+  | {
+      kind: 'index'
+      type: ResolvedType
+      base: string
+      intro: PageResponse | null
+      entries: Entry[]
+      cursor: string | null
+      next_cursor: string | null
+      areas: Areas
+    }
   | { kind: 'entry'; type: ContentTypeSummary; entry: EntryDetail; areas: Areas }
   | { kind: 'author'; author: Author; entries: Entry[] }
   | {
       kind: 'term'
       type: ResolvedType
+      base: string
       taxonomy: TermsResponse['taxonomy']
       term: TermsResponse['terms'][number]
       entries: Entry[]
@@ -33,7 +56,6 @@ export type Resolved =
 
 /** The api's largest page. */
 const INDEX_LIMIT = 50
-const BLOG_BASE = 'blog'
 const AUTHORS_BASE = 'authors'
 const FEED_FILE = 'feed.xml'
 const NOT_FOUND: Resolved = { kind: 'not_found' }
@@ -103,8 +125,8 @@ async function typePage(
 
 /**
  * A page of a list. One type's list is read at `cursor`, with its own
- * `next_cursor`. `/blog` with more than one built-in type merges their first
- * pages, reads no cursor and has a null `next_cursor` (a cursor names one
+ * `next_cursor`. The blog base with more than one blog type merges their
+ * first pages, reads no cursor and has a null `next_cursor` (a cursor names one
  * type's list). The areas are the first answering type's: the rules that
  * place a section on a list are per site, so every type's list answers the
  * same areas.
@@ -124,15 +146,17 @@ async function listPage(bg: BackgoldContent, types: ContentTypeSummary[], term: 
 
 /**
  * Resolve a path against the site's pages, `/types` url bases, authors and
- * terms: a published page, a type's index at its `url_base` (the built-ins
- * that report `blog` merged at `/blog`; every other routable type, the
- * newsletter included, at its own), an entry, an author at `/authors/<slug>`, a term index at
+ * terms: a published page, a type's index at its `url_base` (the blog types,
+ * `index: 'blog'`, merged at their shared base, the organization's blog base;
+ * every other routable type, the newsletter included, at its own), an entry,
+ * an author at `/authors/<slug>`, a term index at
  * `/<url_base>/<taxonomy>/<slug>`, a type's feed at `/<url_base>/feed.xml`.
- * `location` is the pathname, or the request's URL (or a path with its
- * query), whose `?cursor=` asks an index or a term for that page of one
- * type's list; a cursor the api would not accept reads the first page.
- * Redirects are the middleware's. A malformed path is `not_found`; an api
- * failure throws.
+ * A page at the blog base is that list's intro: the path resolves to the
+ * list, with the page as `intro`. `location` is the pathname, or the
+ * request's URL (or a path with its query), whose `?cursor=` asks an index or
+ * a term for that page of one type's list; a cursor the api would not accept
+ * reads the first page. Redirects are the middleware's. A malformed path is
+ * `not_found`; an api failure throws.
  */
 export async function resolveRoute(bg: BackgoldContent, location: string | URL): Promise<Resolved> {
   const { pathname, cursor } = locate(location)
@@ -144,19 +168,22 @@ export async function resolveRoute(bg: BackgoldContent, location: string | URL):
   }
 
   const [{ pages }, { types }] = await Promise.all([bg.pages(), bg.types()])
+  const [base, second, third, ...rest] = segments as [string, ...string[]]
+  const blogBase = blogBaseOf(types)
+  const atBlogBase = blogBase !== null && base === blogBase
   const listed = pages.find((p) => samePath(p.url, segments))
-  if (listed) {
+  // A page at the blog base is the list's intro, read beside the list below.
+  const introPage = atBlogBase && second === undefined ? listed : undefined
+  if (listed && !introPage) {
     const page = await bg.page(listed.is_home ? 'home' : listed.slug)
     if (page) return { kind: 'page', page }
   }
 
-  const [base, second, third, ...rest] = segments as [string, ...string[]]
-  const blogTypes = types.filter(isBlogType)
   let type: ResolvedType | undefined
   let members: ContentTypeSummary[] = []
-  if (base === BLOG_BASE && blogTypes.length > 0) {
+  if (atBlogBase) {
     type = 'blog'
-    members = blogTypes
+    members = types.filter(isBlogType)
   } else {
     const own = types.find((t) => !isBlogType(t) && t.routable && t.url_base === base)
     if (own) {
@@ -175,7 +202,10 @@ export async function resolveRoute(bg: BackgoldContent, location: string | URL):
   }
   if (rest.length > 0) return NOT_FOUND
 
-  if (second === undefined) return { kind: 'index', type, ...(await listPage(bg, members, undefined, cursor)) }
+  if (second === undefined) {
+    const [list, intro] = await Promise.all([listPage(bg, members, undefined, cursor), introPage ? bg.page(introPage.slug) : null])
+    return { kind: 'index', type, base, intro, ...list }
+  }
 
   if (third === undefined) {
     if (second === FEED_FILE) return { kind: 'feed', type }
@@ -192,5 +222,5 @@ export async function resolveRoute(bg: BackgoldContent, location: string | URL):
   const listing = await listPage(bg, members, term.slug, cursor)
   // `?term=` matches the slug in any taxonomy; the page names one.
   const entries = listing.entries.filter((e) => e.terms.some((t) => t.taxonomy === terms.taxonomy.key && t.slug === term.slug))
-  return { kind: 'term', type, taxonomy: terms.taxonomy, term, ...listing, entries }
+  return { kind: 'term', type, base, taxonomy: terms.taxonomy, term, ...listing, entries }
 }

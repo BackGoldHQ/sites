@@ -19,11 +19,17 @@
 //   ink       the primary steeped in near-black when the primary is dark
 //             (A1's #191c33), else a neutral ink; dark mode: the secondary.
 //   accent    "accent text": kickers, numerals, date lines, the wordmark's
-//             second line. The accent colour taken darker (light grounds) or
-//             lighter (dark grounds) until it reads at AA.
+//             second line. The accent colour itself when it reads at AA on
+//             the ground; else taken darker (light grounds) or lighter (dark
+//             grounds) a twentieth at a time, only until it does.
 //   button    the main call (Donate, Join the party): the accent colour, with
-//             whichever ink reads on it. `button-2` is the quieter solid
-//             button (RSVP, Sign me up): the primary colour.
+//             whichever ink reads on it. In dark mode the accent stays itself
+//             when it holds 3:1 against the page, as a fill must (WCAG
+//             1.4.11), and is lightened only until it does. On a ground where
+//             the call's ink falls short of AA, or the call nearly matches the
+//             ground (under 1.5:1), the primary colour takes its place.
+//             `button-2` is the quieter solid button (RSVP, Sign me up): the
+//             primary colour.
 //   link      a text link: the primary colour on light grounds.
 //
 // A section's `band` is a ground, never a colour. The grounds:
@@ -91,11 +97,6 @@ function deepen(color: string, k: number): string {
   return hex(parse(color).map((c) => 255 - (255 - c) * k) as Rgb)
 }
 
-/** A colour brightened in its own hue: each channel times `k`, then a little white (A13's dark-mode coral). */
-function brighten(color: string, k: number): string {
-  return mix(hex(parse(color).map((c) => c * k) as Rgb), '#ffffff', 0.85)
-}
-
 function luminance(color: string): number {
   const [r, g, b] = parse(color).map((c) => {
     const s = c / 255
@@ -125,6 +126,19 @@ function readable(color: string, grounds: string[], ratio: number, fallback: str
 /** The first of `candidates` that reads at AA on `ground`, else `fallback`. */
 function firstReadable(candidates: string[], ground: string, fallback: string): string {
   return candidates.find((c) => contrast(c, ground) >= AA) ?? fallback
+}
+
+/**
+ * `color` taken toward `toward` (black or white) a twentieth at a time, at
+ * most `limit` of the way, stopping at the first step that reaches `ratio` on
+ * `ground`: `color` itself when it already does, else `fallback`.
+ */
+function reaching(color: string, toward: string, limit: number, ground: string, ratio: number, fallback: string): string {
+  for (let step = 0; step <= Math.round(limit * 20); step++) {
+    const candidate = mix(toward, color, step / 20)
+    if (contrast(candidate, ground) >= ratio) return candidate
+  }
+  return fallback
 }
 
 /** A ground light text reads on: `color`, darkened until white reaches AA. */
@@ -159,7 +173,7 @@ interface Mode {
   darkText: string
   /** Text on a dark ground. */
   lightText: string
-  /** The main call's fill in this mode (the accent, brightened in dark mode). */
+  /** The main call's fill in this mode: the accent (dark mode: lightened only as far as a fill needs). */
   call: string
   /** The page's card colour and rules, for every light ground. */
   surface: string
@@ -173,9 +187,7 @@ function band(ground: string, m: Mode): Band {
   const muted = light
     ? firstReadable([0.78, 0.84, 0.9].map((a) => mix(mix(m.primary, ink, 0.5), ground, a)), ground, ink)
     : firstReadable([0.72, 0.78, 0.84, 0.9].map((a) => mix(LIGHT_INK, ground, a)), ground, ink)
-  const accent = light
-    ? firstReadable([0.86, 0.78, 0.7, 0.6].map((a) => mix(m.accent, BLACK, a)), ground, ink)
-    : firstReadable([0.4, 0.5, 0.6, 0.7].map((a) => mix(LIGHT_INK, brighten(m.accent, 1.3), a)), ground, ink)
+  const accent = light ? reaching(m.accent, BLACK, 0.4, ground, AA, ink) : reaching(m.accent, LIGHT_INK, 0.7, ground, AA, ink)
   const link = light ? readable(m.primary, [ground], AA, ink) : firstReadable([mix(LIGHT_INK, m.primary, 0.72)], ground, ink)
   const buttonInk = inkOn(m.call, m.darkText, LIGHT_INK)
   const callReads = contrast(buttonInk, m.call) >= AA && contrast(m.call, ground) >= 1.5
@@ -262,7 +274,7 @@ function darkPalette(brand: BrandColors | null | undefined): Palette {
     accent,
     darkText,
     lightText,
-    call: brighten(accent, 1.3),
+    call: reaching(accent, LIGHT_INK, 0.7, page, NON_TEXT, accent),
     surface: mix(LIGHT_INK, contrastGround, 0.5),
     line: mix(deepen(contrastGround, 2), darkText, 0.95),
     lineStrong: mix(deepen(contrastGround, 3), darkText, 0.9),

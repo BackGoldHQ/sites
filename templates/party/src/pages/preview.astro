@@ -1,11 +1,13 @@
 ---
 // BackGold's "Preview on your site" link: /preview?bg_preview=<token>&path=<path>.
-// The draft is read with BACKGOLD_SECRET_KEY (it never reaches the page) and
-// rendered with the same layout, menus, areas and components as the
-// published site, under a "Preview, not published" bar. Here each section
-// carries the marker the BackGold editor scrolls to. Never cached, never
-// indexed. Without a secret key this answers 503; with a bad or expired
-// link, 400.
+// On BackGold's own deploys (the BACKGOLD_API binding) the draft is read
+// first-party through the binding as the site, with no key: the composer's
+// frame needs nothing set up. A copy deployed with the Deploy button reads it
+// with BACKGOLD_SECRET_KEY (it never reaches the page), and without one
+// answers 503. Either way it is rendered with the same layout, menus, areas
+// and components as the published site, under a "Draft · not published"
+// bar, and each section carries the marker the BackGold editor scrolls to.
+// Never cached, never indexed. A bad or expired link answers 400.
 import { PREVIEW_HEADERS, areaEntriesOf, loadPreview, type MenuPage } from '@backgold/astro/server'
 import { Area, PreviewBar } from '@backgold/astro/components'
 import Site from '../layouts/Site.astro'

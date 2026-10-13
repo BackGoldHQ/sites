@@ -32,8 +32,13 @@
 // TakeoverBanner section an area carries (most often Top banner); it draws
 // through the sections map like any area item.
 //
-// The type is the template's own: Fraunces and Public Sans, the faces the
-// boards name, from Google Fonts (the boards load them from there too).
+// The type is the site's when it wears a saved theme in BackGold: its heading
+// and body faces from `/site`'s `theme.fonts`, declared as a hosted BackGold
+// page declares them (src/lib/fonts.ts). A slot the theme does not fill, and
+// every slot of a site with no theme, keeps the template's own face, the one
+// the boards name: Fraunces for headings, Public Sans for text, from Google
+// Fonts (the boards load them from there too). Either way the faces never
+// block the first paint.
 //
 // `page` is the BackGold page being drawn as `{ id, takes_donations }`, or
 // null on a route with no BackGold page (a list, an entry, an author, a
@@ -50,6 +55,7 @@ import ModeToggle from '../components/chrome/ModeToggle.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
 import { sections } from '../components/sections'
 import { appearanceOf, brandCss } from '../lib/brand'
+import { siteFonts } from '../lib/fonts'
 import '../styles/site.css'
 
 interface Props {
@@ -91,7 +97,8 @@ const social = site.social.flatMap(({ platform, url }) => {
 const aboveFooter = { ...sections, SignupCapture: SignupBand }
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
-const FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap'
+/** The theme's faces, else the template's own (src/lib/fonts.ts). */
+const fonts = siteFonts(site.theme, bg.firstParty)
 ---
 <!doctype html>
 <html lang="en">
@@ -99,14 +106,19 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <Seo {...head} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    {/* Never render-blocking: the faces arrive after first paint (display=swap
-        holds the fallback stack until then), and without script they load as
-        a plain stylesheet. */}
-    <link rel="stylesheet" href={FONTS} media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href={FONTS} /></noscript>
+    {fonts.preconnects.map((p) => <link rel="preconnect" href={p.href} crossorigin={p.crossorigin ? '' : undefined} />)}
+    {/* The template's own faces never block rendering: they arrive after first
+        paint (display=swap holds the fallback stack until then), and without
+        script they load as a plain stylesheet. */}
+    {fonts.stylesheet && (
+      <>
+        <link rel="stylesheet" href={fonts.stylesheet} media="print" onload="this.media='all'" />
+        <noscript><link rel="stylesheet" href={fonts.stylesheet} /></noscript>
+      </>
+    )}
     <style is:inline set:html={brandCss(site.brand, appearance)}></style>
+    {/* The theme's faces: @font-face rules with font-display swap, so they too arrive after first paint. */}
+    {fonts.css && <style is:inline set:html={fonts.css}></style>}
     {appearance === 'auto' && (
       <script is:inline>
         try {

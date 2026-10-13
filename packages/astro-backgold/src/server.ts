@@ -16,6 +16,7 @@ export { PREVIEW_HEADERS, handlePreview, loadPreview } from './server/preview.js
 export type { PreviewDeps, PreviewResult } from './server/preview.js'
 export { resolveRoute } from './server/resolve.js'
 export type { Resolved, ResolvedType } from './server/resolve.js'
+export { blogBaseOf, isBlogType } from './server/format.js'
 export type { BackgoldAnalytics } from './server/analytics.js'
 export { renderMarkdown, sanitizeRichText } from './server/markdown.js'
 export { relFor, safeHref, safeSrc } from './server/urls.js'

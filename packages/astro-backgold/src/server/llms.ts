@@ -1,5 +1,5 @@
 import type { BackgoldContent, ContentTypeSummary, MenuItem, SiteResponse } from '@backgold/content'
-import { absoluteUrl, htmlToTextLines, isoDate, markdownLine, markdownText, markdownUrl, siteName, typeIndexPath, writtenBy } from './format.js'
+import { absoluteUrl, htmlToTextLines, isoDate, markdownLine, markdownText, markdownUrl, listIndexPath, siteName, writtenBy } from './format.js'
 
 /** Entries listed per type in `llms.txt`. */
 const LLMS_ENTRIES_PER_TYPE = 20
@@ -16,7 +16,7 @@ const FULL_MAX_BYTES = 512 * 1024
 const DOCUMENT_DELIMITER = '---'
 const HEADER_LABELS = ['Type', 'URL', 'Published', 'By', 'Summary'] as const
 
-const routable = (types: ContentTypeSummary[]): ContentTypeSummary[] => types.filter((t) => typeIndexPath(t) !== null)
+const routable = (types: ContentTypeSummary[]): ContentTypeSummary[] => types.filter((t) => listIndexPath(t) !== null)
 
 /** `# Name` and the description as a blockquote. */
 function header(site: SiteResponse['site']): string[] {

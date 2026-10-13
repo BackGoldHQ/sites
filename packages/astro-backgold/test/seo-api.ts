@@ -13,8 +13,10 @@ export const SITE_URL = 'https://pinevalleyliberty.org'
 export const entryDetail = CONTENT_API_EXAMPLES.EntryResponse as { entry: EntryDetail }
 export const typesExample = CONTENT_API_EXAMPLES.TypesResponse as { types: ContentTypeSummary[] }
 
-export function builtIn(key: string, plural: string): ContentTypeSummary {
-  return { key, singular_label: plural.slice(0, -1), plural_label: plural, routable: true, url_base: null, built_in: true, fields: [] }
+/** A routable built-in type; post, podcast and video list together (`index: 'blog'`). */
+export function builtIn(key: string, plural: string, url_base: string | null = null): ContentTypeSummary {
+  const index = ['post', 'podcast', 'video'].includes(key) ? 'blog' : null
+  return { key, singular_label: plural.slice(0, -1), plural_label: plural, routable: true, url_base, built_in: true, index, fields: [] }
 }
 
 /** A list entry from the example, with the given changes. */

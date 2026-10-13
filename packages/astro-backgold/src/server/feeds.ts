@@ -1,5 +1,5 @@
 import type { BackgoldContent, ContentTypeSummary, Entry } from '@backgold/content'
-import { absoluteUrl, isBlogType, isoDate, siteName, typeIndexPath, writtenBy, xmlEscape } from './format.js'
+import { absoluteUrl, blogBaseOf, isBlogType, isoDate, listIndexPath, siteName, writtenBy, xmlEscape } from './format.js'
 
 /** Entries per feed. */
 const FEED_SIZE = 50
@@ -18,10 +18,15 @@ async function newest(bg: BackgoldContent, types: ContentTypeSummary[]): Promise
     .slice(0, FEED_SIZE)
 }
 
-/** An Atom feed of a routable type's entries, or of the blog built-ins (`'blog'`, served at `/feed.xml`). */
+/**
+ * An Atom feed of a routable type's entries, or of the blog types merged
+ * (`'blog'`: its home is `/feed.xml`, whichever address asked, and its HTML
+ * page is the blog base's list).
+ */
 export async function atomFeed(bg: BackgoldContent, siteUrl: string, type: ContentTypeSummary | 'blog'): Promise<string> {
-  const [{ site }, types] = await Promise.all([bg.site(), type === 'blog' ? bg.types().then((r) => r.types.filter(isBlogType)) : [type]])
-  const index = typeIndexPath(type) ?? ''
+  const [{ site }, all] = await Promise.all([bg.site(), type === 'blog' ? bg.types().then((r) => r.types) : [type]])
+  const types = type === 'blog' ? all.filter(isBlogType) : all
+  const index = listIndexPath(type, type === 'blog' ? (blogBaseOf(all) ?? undefined) : undefined) ?? ''
   const self = type === 'blog' ? `${siteUrl}/feed.xml` : `${siteUrl}${index}/feed.xml`
   const name = siteName(site)
   const title = type === 'blog' ? name : `${type.plural_label} · ${name}`

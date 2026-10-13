@@ -1,5 +1,5 @@
 import { createClient, memoryCache } from '@backgold/content'
-import type { Areas, ContentTypeSummary, EntriesResponse, Entry, EntryResponse } from '@backgold/content'
+import type { Areas, ContentTypeSummary, EntriesResponse, Entry, EntryResponse, PageResponse } from '@backgold/content'
 import { encodeEntryCursor } from '@givegold/shared/content-api'
 import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
 import { describe, expect, it } from 'vitest'
@@ -14,18 +14,21 @@ const type = (key: string, over: Partial<ContentTypeSummary>): ContentTypeSummar
   routable: true,
   url_base: key,
   built_in: false,
+  index: null,
   fields: [],
   ...over,
 })
 
-// As GET /types reports them: post, podcast and video at `blog`, the newsletter at its own base.
+// As GET /types reports them on an organization that kept `blog`: post,
+// podcast and video listed together (`index: 'blog'`) at its blog base, the
+// newsletter at its own base.
 const TYPES = [
-  type('post', { built_in: true, url_base: 'blog' }),
-  type('podcast', { built_in: true, url_base: 'blog' }),
+  type('post', { built_in: true, url_base: 'blog', index: 'blog' }),
+  type('podcast', { built_in: true, url_base: 'blog', index: 'blog' }),
   type('plank', { built_in: true, routable: false, url_base: null }),
   type('endorsement', { url_base: 'endorsements' }),
   type('note', { routable: false, url_base: null }),
-  type('video', { built_in: true, url_base: 'blog' }),
+  type('video', { built_in: true, url_base: 'blog', index: 'blog' }),
   type('newsletter', { built_in: true, url_base: 'newsletters' }),
 ]
 const NEWSLETTER = TYPES[6]!
@@ -64,7 +67,8 @@ const elsewhere = entry({ id: 'ci_e2', slug: 'mayor', type: 'endorsement', url: 
 const areasFrom = (from: string): Areas => ({ sidebar: [{ key: from, label: from, from: null, until: null, sections: [] }], top_banner: [] })
 const detail = (e: Entry): EntryResponse => ({ entry: { ...e, body: { markdown: '' }, fields: {} }, areas: areasFrom(`entry:${e.slug}`) })
 
-function api() {
+/** The fixture api; `over` replaces or adds answers by path (query included). */
+function api(over: Record<string, unknown> = {}) {
   const calls: string[] = []
   const routes: Record<string, unknown> = {
     '/site': CONTENT_API_EXAMPLES.SiteResponse,
@@ -92,6 +96,7 @@ function api() {
     '/entries/endorsement/sheriff': detail(endorsement),
     '/terms/tag': CONTENT_API_EXAMPLES.TermsResponse,
     '/authors/dana-k': CONTENT_API_EXAMPLES.AuthorResponse,
+    ...over,
   }
   const fetch = (async (input: string | URL | Request) => {
     const url = new URL(input instanceof Request ? input.url : String(input))
@@ -126,7 +131,7 @@ describe('resolveRoute', () => {
   it('resolves /blog to the built-in types merged, newest first', async () => {
     const { client } = api()
     const resolved = await resolveRoute(client, '/blog')
-    expect(resolved).toEqual({ kind: 'index', type: 'blog', entries: [episode, post, clip], cursor: null, next_cursor: null, areas: areasFrom('list:post') })
+    expect(resolved).toEqual({ kind: 'index', type: 'blog', base: 'blog', intro: null, entries: [episode, post, clip], cursor: null, next_cursor: null, areas: areasFrom('list:post') })
   })
 
   it('keeps podcast and video merged under /blog: they report `blog`, so /podcast and /videos are nothing', async () => {
@@ -151,6 +156,8 @@ describe('resolveRoute', () => {
     expect(await resolveRoute(client, '/newsletters')).toEqual({
       kind: 'index',
       type: NEWSLETTER,
+      base: 'newsletters',
+      intro: null,
       entries: [issue],
       cursor: null,
       next_cursor: PAGE_2,
@@ -165,7 +172,16 @@ describe('resolveRoute', () => {
   it('resolves a custom type index at its url_base, first page with its cursor', async () => {
     const { client, calls } = api()
     const resolved = await resolveRoute(client, '/endorsements')
-    expect(resolved).toEqual({ kind: 'index', type: TYPES[3], entries: [endorsement], cursor: null, next_cursor: 'cursor-endorsement', areas: areasFrom('list:endorsement') })
+    expect(resolved).toEqual({
+      kind: 'index',
+      type: TYPES[3],
+      base: 'endorsements',
+      intro: null,
+      entries: [endorsement],
+      cursor: null,
+      next_cursor: 'cursor-endorsement',
+      areas: areasFrom('list:endorsement'),
+    })
     expect(calls.sort()).toEqual(['/entries/endorsement?limit=50', '/pages', '/types'])
   })
 
@@ -209,6 +225,7 @@ describe('resolveRoute', () => {
     expect(resolved).toEqual({
       kind: 'term',
       type: TYPES[3],
+      base: 'endorsements',
       taxonomy: { key: 'tag', label: 'Tags', hierarchical: false },
       term: { id: 'term_1', slug: 'taxes', label: 'Taxes', parent_id: null, position: 0 },
       entries: [endorsement],
@@ -216,7 +233,7 @@ describe('resolveRoute', () => {
       next_cursor: null,
       areas: areasFrom('list:endorsement'),
     })
-    expect(await resolveRoute(client, '/blog/tag/taxes')).toMatchObject({ kind: 'term', type: 'blog', entries: [post], areas: areasFrom('list:post') })
+    expect(await resolveRoute(client, '/blog/tag/taxes')).toMatchObject({ kind: 'term', type: 'blog', base: 'blog', entries: [post], areas: areasFrom('list:post') })
   })
 
   it('answers not_found for an unknown taxonomy or term without listing entries', async () => {
@@ -254,6 +271,98 @@ describe('resolveRoute', () => {
   })
 })
 
+// An organization whose blog base is `news` (every organization made since
+// the address became the organization's own): /types reports the blog types
+// at `news`, and the site has a published page there, the list's intro.
+const NEWS_TYPES = TYPES.map((t) => (t.index === 'blog' ? { ...t, url_base: 'news' } : t))
+const newsPage = (CONTENT_API_EXAMPLES.PageResponse as PageResponse)
+const NEWS_INTRO: PageResponse = { ...newsPage, page: { ...newsPage.page, id: 'lp_news', slug: 'news', title: 'From the party', url: '/news', is_home: false } }
+const atNews = (e: Entry): Entry => ({ ...e, url: `/news/${e.slug}` })
+const newsOrg = () =>
+  api({
+    '/types': { types: NEWS_TYPES },
+    '/pages': {
+      pages: [
+        ...(CONTENT_API_EXAMPLES.PagesResponse as { pages: unknown[] }).pages,
+        { id: 'lp_news', slug: 'news', title: 'From the party', url: '/news', is_home: false, published_at: null, updated_at: '2026-10-13T00:00:00.000Z' },
+      ],
+    },
+    '/pages/news': NEWS_INTRO,
+    '/entries/post?limit=50': { entries: [atNews(post)], next_cursor: 'cursor-post', areas: areasFrom('list:post') },
+    '/entries/podcast?limit=50': { entries: [atNews(episode)], next_cursor: null, areas: areasFrom('list:podcast') },
+    '/entries/video?limit=50': { entries: [atNews(clip)], next_cursor: null, areas: areasFrom('list:video') },
+  })
+
+describe('resolveRoute, an organization whose blog base is news', () => {
+  it('resolves /news to the blog types merged, with the page at /news as the intro', async () => {
+    const { client, calls } = newsOrg()
+    expect(await resolveRoute(client, '/news')).toEqual({
+      kind: 'index',
+      type: 'blog',
+      base: 'news',
+      intro: NEWS_INTRO,
+      entries: [atNews(episode), atNews(post), atNews(clip)],
+      cursor: null,
+      next_cursor: null,
+      areas: areasFrom('list:post'),
+    })
+    expect(calls).toContain('/pages/news')
+    expect(await resolveRoute(client, `/news/?cursor=${PAGE_2}`)).toMatchObject({ kind: 'index', type: 'blog', base: 'news', intro: NEWS_INTRO })
+  })
+
+  it('resolves an entry, a term and the feed under /news, and nothing under /blog', async () => {
+    const { client } = newsOrg()
+    expect(await resolveRoute(client, '/news/levy-explained')).toMatchObject({ kind: 'entry', type: NEWS_TYPES[0], entry: { slug: 'levy-explained' } })
+    expect(await resolveRoute(client, '/news/clip-one')).toMatchObject({ kind: 'entry', type: NEWS_TYPES[5], entry: { slug: 'clip-one' } })
+    expect(await resolveRoute(client, '/news/tag/taxes')).toMatchObject({ kind: 'term', type: 'blog', base: 'news', entries: [post] })
+    expect(await resolveRoute(client, '/news/feed.xml')).toEqual({ kind: 'feed', type: 'blog' })
+    for (const path of ['/blog', '/blog/levy-explained', '/blog/feed.xml']) expect(await resolveRoute(client, path), path).toEqual({ kind: 'not_found' })
+  })
+
+  it('draws an intro only on the whole list, and leaves the page alone where no blog type lists', async () => {
+    const { client, calls } = newsOrg()
+    expect(await resolveRoute(client, '/news/tag/taxes')).not.toHaveProperty('intro')
+    expect(calls).not.toContain('/pages/news')
+    const bare = api({
+      '/types': { types: NEWS_TYPES.filter((t) => t.index !== 'blog') },
+      '/pages': { pages: [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: null, updated_at: '2026-10-13T00:00:00.000Z' }] },
+      '/pages/news': NEWS_INTRO,
+    })
+    expect(await resolveRoute(bare.client, '/news')).toEqual({ kind: 'page', page: NEWS_INTRO })
+  })
+
+  it('keeps a page at /news a page of its own on an organization still at /blog', async () => {
+    const { client } = api({
+      '/pages': { pages: [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: null, updated_at: '2026-10-13T00:00:00.000Z' }] },
+      '/pages/news': NEWS_INTRO,
+    })
+    expect(await resolveRoute(client, '/news')).toEqual({ kind: 'page', page: NEWS_INTRO })
+    expect(await resolveRoute(client, '/blog')).toMatchObject({ kind: 'index', type: 'blog', base: 'blog', intro: null })
+  })
+})
+
+describe('resolveRoute, an api that reports no index (older than 0.4)', () => {
+  // As an older api answers GET /types: no `index`, the blog types at `blog`.
+  const LEGACY_TYPES = TYPES.map(({ index: _index, ...rest }) => rest) as unknown as ContentTypeSummary[]
+
+  it('still merges the built-ins that report `blog` at /blog, and leaves the newsletter at its own', async () => {
+    const { client } = api({ '/types': { types: LEGACY_TYPES } })
+    expect(await resolveRoute(client, '/blog')).toEqual({
+      kind: 'index',
+      type: 'blog',
+      base: 'blog',
+      intro: null,
+      entries: [episode, post, clip],
+      cursor: null,
+      next_cursor: null,
+      areas: areasFrom('list:post'),
+    })
+    expect(await resolveRoute(client, '/blog/clip-one')).toMatchObject({ kind: 'entry', entry: { slug: 'clip-one' } })
+    expect(await resolveRoute(client, '/newsletters')).toMatchObject({ kind: 'index', base: 'newsletters', type: { key: 'newsletter' } })
+    expect(await resolveRoute(client, '/blog/october')).toEqual({ kind: 'not_found' })
+  })
+})
+
 describe('resolveRoute, a page of a list', () => {
   it('reads one type’s list at the ?cursor= it is asked for, from a path with its query or the URL', async () => {
     for (const location of [`/endorsements?cursor=${PAGE_2}`, new URL(`https://pinevalleyliberty.org/endorsements?utm_source=x&cursor=${PAGE_2}`)]) {
@@ -261,6 +370,8 @@ describe('resolveRoute, a page of a list', () => {
       expect(await resolveRoute(client, location)).toEqual({
         kind: 'index',
         type: TYPES[3],
+        base: 'endorsements',
+        intro: null,
         entries: [older],
         cursor: PAGE_2,
         next_cursor: PAGE_3,
@@ -307,7 +418,16 @@ describe('resolveRoute, a page of a list', () => {
 })
 
 describe('pagerOf', () => {
-  const index = (cursor: string | null, next_cursor: string | null): Resolved => ({ kind: 'index', type: TYPES[3]!, entries: [], cursor, next_cursor, areas: {} })
+  const index = (cursor: string | null, next_cursor: string | null): Resolved => ({
+    kind: 'index',
+    type: TYPES[3]!,
+    base: 'endorsements',
+    intro: null,
+    entries: [],
+    cursor,
+    next_cursor,
+    areas: {},
+  })
 
   it('links the first page on to the next, and has no way back', () => {
     expect(pagerOf(index(null, PAGE_2), '/endorsements')).toEqual({ newest: null, older: `/endorsements?cursor=${PAGE_2}` })

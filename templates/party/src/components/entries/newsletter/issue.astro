@@ -10,7 +10,7 @@ import EntryFields from '../EntryFields.astro'
 import EntryHeader from '../EntryHeader.astro'
 import Share from '../Share.astro'
 import type { EntryLayoutProps } from '../props'
-import { listPath } from '../../../lib/entries'
+import { listOf } from '../../../lib/entries'
 import { text } from '../../../lib/format'
 import '../../../styles/entries.css'
 
@@ -22,7 +22,7 @@ const body = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
 const signupBelow = areaEntriesOf(areas, 'above_footer').some(
   ({ item, needsWindow }) => !needsWindow && item.sections.some((section) => section.type === 'SignupCapture'),
 )
-const past = listPath(type)
+const past = listOf(type)?.path ?? null
 ---
 <article class="entry entry-issue">
   <EntryHeader entry={entry} type={type} kicker={line} />

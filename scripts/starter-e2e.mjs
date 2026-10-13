@@ -5,7 +5,9 @@
 // installs them into a copy of the template outside the repository (so
 // nothing resolves through the pnpm workspace), builds it, and runs it on
 // `wrangler dev` against a fixture Content API served from
-// CONTENT_API_EXAMPLES. Exits non-zero at the first failed check.
+// CONTENT_API_EXAMPLES: first an organization that kept the legacy blog
+// address (`/blog`), then one at `/news` with a page there, the news list's
+// intro. Exits non-zero at the first failed check.
 //
 //   node scripts/starter-e2e.mjs          run, then delete the temp copy
 //   node scripts/starter-e2e.mjs --template party
@@ -20,6 +22,10 @@
 //                                         also score home and an entry page with
 //                                         Lighthouse (performance, accessibility,
 //                                         SEO >= 95); needs Chrome at $CHROME_BIN
+//
+// --template party needs Chrome at $CHROME_BIN too: the party template's look
+// (the header button's contrast, the accent, the faces, light and dark) is
+// read in a headless Chrome, driven over the DevTools protocol.
 //
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
@@ -152,8 +158,8 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // @backgold/astro depends on @backgold/content ^0.2.0; the override makes
-  // that the tarball too, never the copy on npm.
+  // @backgold/astro depends on @backgold/content; the override makes that
+  // the tarball too, never the copy on npm.
   pkg.overrides = { '@backgold/content': content }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
   run('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], siteDir)
@@ -362,6 +368,52 @@ function kitchenSinkDocument() {
   }
 }
 
+/**
+ * The fixture organization moved to the blog base `news`, as an organization
+ * made since the address became its own is: /types reports the blog types at
+ * `news`, every post address and the menu's link to the list are under
+ * `/news`, and a published page sits at `/news` (on the party template, the
+ * starter's News page) with a Hero and a call to action, the list's intro.
+ * On the party template its home's Blog section is the List layout, so the
+ * section draws "All news".
+ */
+function newsBaseData(data, ex) {
+  const move = (value) => JSON.parse(JSON.stringify(value).replaceAll('/blog/', '/news/').replaceAll('/blog"', '/news"'))
+  const intro = {
+    page: { ...ex.PageResponse.page, id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, meta: { title: null, description: null, image_url: null } },
+    sections: [
+      {
+        id: 'Hero-news', type: 'Hero', band: 'plain', bleed: 'full', variant: 'statement',
+        copy: { kicker: 'News', headline: 'From the party', subheadline: 'Announcements and the occasional argument.' },
+        media: {}, links: [], options: {},
+      },
+      {
+        id: 'Cta-news', type: 'Cta', band: 'panel', bleed: 'full', variant: null,
+        copy: { heading: 'Hear it from us first' },
+        media: {}, links: [{ label: 'Volunteer', target: { kind: 'page', slug: 'volunteer' }, url: '/volunteer' }], options: {},
+      },
+    ],
+    areas: { top_banner: [], sidebar: [], above_footer: [] },
+    legal: data.legal,
+  }
+  const page = data.page
+  return {
+    ...data,
+    types: data.types.map((t) => (t.index === 'blog' ? { ...t, url_base: 'news' } : t)),
+    menus: move(data.menus),
+    pages: [...data.pages.filter((p) => p.slug !== 'news'), { id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }],
+    page: (slug, headline) => {
+      if (slug === 'news') return intro
+      const found = page(slug, headline)
+      if (slug !== 'home' || !PARTY) return found
+      return { ...found, sections: found.sections.map((sec) => (sec.type === 'Blog' ? { ...sec, variant: 'list' } : sec)) }
+    },
+    entries: move(data.entries),
+    entry: move(data.entry),
+    sitemap: move(data.sitemap),
+  }
+}
+
 /** The kitchen sink's sections, made by the api's own projection from the built @givegold/shared. */
 async function kitchenSink() {
   const shared = await import(pathToFileURL(join(ROOT, 'packages/shared/dist/content-api.js')).href)
@@ -457,9 +509,11 @@ function fixtureData(ex, kitchenSections) {
   }
 
   const types = [
-    // As GET /types reports them: post at `blog`, the newsletter at its own base.
-    { key: 'post', singular_label: 'Post', plural_label: 'Posts', routable: true, url_base: 'blog', built_in: true, fields: [] },
-    { key: 'newsletter', singular_label: 'Newsletter', plural_label: 'Newsletters', routable: true, url_base: 'newsletters', built_in: true, fields: [{ key: 'issue', label: 'Issue', kind: 'short_text', required: false }] },
+    // As GET /types reports them: post listed with the blog types
+    // (`index: 'blog'`) at the organization's blog base, `blog` here; the
+    // newsletter at its own base.
+    { key: 'post', singular_label: 'Post', plural_label: 'Posts', routable: true, url_base: 'blog', built_in: true, index: 'blog', fields: [] },
+    { key: 'newsletter', singular_label: 'Newsletter', plural_label: 'Newsletters', routable: true, url_base: 'newsletters', built_in: true, index: null, fields: [{ key: 'issue', label: 'Issue', kind: 'short_text', required: false }] },
     {
       ...ex.TypesResponse.types[0],
       fields: [
@@ -913,7 +967,18 @@ function fixtureData(ex, kitchenSections) {
         label: 'Join the newsletter',
         from: null,
         until: null,
-        sections: [{ ...signup, id: 'SignupCapture-a1', band: 'tint', copy: { heading: 'One email a week. What happened, what is next, where to show up.' } }],
+        sections: [
+          {
+            ...signup,
+            id: 'SignupCapture-a1',
+            band: 'tint',
+            copy: {
+              kicker: 'The party letter',
+              heading: 'One email a week. What happened, what is next, where to show up.',
+              lede: 'Where the chapters met, what passed, and the next night to come along.',
+            },
+          },
+        ],
       },
     ],
   }
@@ -1019,7 +1084,9 @@ function fixtureData(ex, kitchenSections) {
       { id: 'lp_events', slug: 'events', title: 'Events', url: '/events', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       { id: 'lp_leadership', slug: 'leadership', title: 'Leadership', url: '/leadership', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       { id: 'lp_a1', slug: 'a1-home', title: 'A1 home', url: '/a1-home', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
-      // The party template opens its news list with this page's Hero (board A4).
+      // The party template's starter page `news`. On this organization, still
+      // at /blog, it is a page of its own; at /news it is the list's intro
+      // (newsBaseData).
       ...(PARTY ? [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' }] : []),
       ...(PARTY ? [{ id: 'lp_coverage', slug: 'coverage', title: 'Coverage', url: '/coverage', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }] : []),
     ],
@@ -1115,8 +1182,10 @@ function placeholderImage(path) {
   return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfd9e3"/><stop offset="1" stop-color="#f4efe6"/></linearGradient></defs><rect width="1200" height="800" fill="url(#s)"/><path d="M0 560 L260 330 L430 470 L640 250 L900 520 L1200 360 L1200 800 L0 800 Z" fill="#1b3a5c" opacity=".85"/><path d="M0 660 L300 520 L620 640 L900 560 L1200 650 L1200 800 L0 800 Z" fill="#2f5a3a"/></svg>'
 }
 
-function startFixture(examples, kitchenSections) {
-  const data = fixtureData(examples, kitchenSections)
+/** The fixture Content API; `blogBase` 'news' serves the organization at /news (newsBaseData). */
+function startFixture(examples, kitchenSections, blogBase = 'blog') {
+  const plain = fixtureData(examples, kitchenSections)
+  const data = blogBase === 'news' ? newsBaseData(plain, examples) : plain
   const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '' }
   const MOUNT = '/api/content/v1'
   // The Content API answers every origin itself (a browser on the site reads
@@ -1347,10 +1416,11 @@ function startFixture(examples, kitchenSections) {
 
 // ── 4. The built Worker on wrangler dev ──────────────────────────────────────
 
-async function startWorker(siteDir, { vars, logFile }) {
+/** The built Worker on `wrangler dev`; `persist` names its local KV's directory under the site (one per organization served). */
+async function startWorker(siteDir, { vars, logFile, persist = '.wrangler-e2e' }) {
   const port = await freePort()
   const inspector = await freePort()
-  const args = ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(port), '--inspector-port', String(inspector), '--persist-to', join(siteDir, '.wrangler-e2e'), '--show-interactive-dev-session=false']
+  const args = ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(port), '--inspector-port', String(inspector), '--persist-to', join(siteDir, persist), '--show-interactive-dev-session=false']
   const values = typeof vars === 'function' ? vars(`http://127.0.0.1:${port}`) : vars
   for (const [name, value] of Object.entries(values)) args.push('--var', `${name}:${value}`)
   const out = openSync(logFile, 'a')
@@ -1604,7 +1674,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(/no-store/.test(res.headers.get('cache-control') ?? '') && !res.headers.has('x-backgold-cache'), '/preview is no-store and never goes through the edge cache')
   res = await get(origin, `/preview?bg_preview=${PREVIEW_TOKEN}&path=/`)
   html = await res.text()
-  check(res.status === 200 && html.includes('Preview, not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
+  check(res.status === 200 && html.includes('Draft · not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
   check(/<meta name="robots" content="noindex"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'the preview is noindex and no-store')
   check(html.includes('<meta name="backgold-preview" content="sections">'), 'the preview carries <meta name="backgold-preview" content="sections">')
   const draft = fixture.data.page('home', '')
@@ -1691,6 +1761,92 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(fixture.count() > afterRevalidate, 'after revalidate the next read asks BackGold for the version again')
 }
 
+/**
+ * An organization at the blog base `news` (newsBaseData), on both templates:
+ * the list at /news with the intro page's sections above it, an entry at
+ * /news/<slug> with its breadcrumb, the links to the list (the Blog section's,
+ * the featured post's, the menu's), the feed, the sitemap, and nothing at
+ * /blog.
+ */
+async function checkNewsBase(origin, fixture) {
+  log('\nAn organization at /news')
+  let res = await get(origin, '/news')
+  let html = await res.text()
+  const h1s = tags(html, 'h1')
+  const firstRow = html.indexOf('The levy, explained')
+  check(
+    res.status === 200 &&
+      h1s.length === 1 &&
+      plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'From the party' &&
+      html.includes('Announcements and the occasional argument.') &&
+      html.includes('Open books, line by line'),
+    `/news lists the posts under the intro page's Hero, its headline the one <h1> (got ${res.status}, ${h1s.length} <h1>)`,
+  )
+  check(
+    html.includes('Hear it from us first') && firstRow !== -1 && html.indexOf('From the party') < firstRow && html.indexOf('Hear it from us first') < firstRow,
+    "the intro page's sections, its Hero then its call to action, are drawn above the list",
+  )
+  check(fixture.state.seen.some((s) => s.path === '/pages/news'), 'it read the intro page, GET /pages/news')
+  const crumbs = jsonLdBlocks(html).map((b) => JSON.parse(b)).flat().find((t) => t['@type'] === 'BreadcrumbList')
+  check(
+    crumbs?.itemListElement?.[1]?.name === 'News' && crumbs.itemListElement[1].item === `${origin}/news`,
+    `the list's breadcrumb is News at ${origin}/news (${JSON.stringify(crumbs?.itemListElement?.[1] ?? null)})`,
+  )
+  if (PARTY) {
+    check(/<form class="list-search"[^>]*action="\/news"/.test(html), 'the "Search news" box sends ?q= to /news')
+    res = await get(origin, '/news?q=levy')
+    html = await res.text()
+    check(res.status === 200 && plain(html).includes('1 result for ‘levy’') && html.includes('The levy, explained'), `/news?q=levy searches the posts (got ${res.status})`)
+  }
+
+  res = await get(origin, '/news/levy-explained')
+  html = await res.text()
+  check(res.status === 200 && /<h1[^>]*>The levy, explained<\/h1>/.test(html), `an entry renders at /news/<slug> (got ${res.status})`)
+  const entryCrumbs = jsonLdBlocks(html).map((b) => JSON.parse(b)).flat().find((t) => t['@type'] === 'BreadcrumbList')
+  check(
+    entryCrumbs?.itemListElement?.[1]?.name === 'News' && entryCrumbs.itemListElement[1].item === `${origin}/news`,
+    "the entry's breadcrumb goes back to News at /news",
+  )
+  if (PARTY) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
+
+  res = await get(origin, '/')
+  html = await res.text()
+  check(
+    res.status === 200 && (PARTY ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
+    `home's Blog section links ${PARTY ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
+  )
+  res = await get(origin, '/kitchen-sink')
+  html = await res.text()
+  check(res.status === 200 && html.includes('href="/news/levy-explained"') && !html.includes('href="/blog'), 'the featured post (ContentPost) links /news/<slug>')
+
+  for (const path of ['/blog', '/blog/levy-explained', '/blog/feed.xml']) {
+    res = await get(origin, path)
+    await res.text()
+    check(res.status === 404, `${path} is a 404 on an organization at /news (got ${res.status})`)
+  }
+  if (PARTY) {
+    res = await get(origin, '/no-such-page')
+    html = await res.text()
+    check(res.status === 404 && /<a class="button button-quiet" href="\/news"[^>]*>Read the news<\/a>/.test(html), 'the 404 offers Read the news at /news')
+  }
+
+  for (const path of ['/feed.xml', '/news/feed.xml']) {
+    res = await get(origin, path)
+    const feed = await res.text()
+    check(
+      res.status === 200 &&
+        wellFormedXml(feed) &&
+        feed.includes(`<link rel="self" type="application/atom+xml" href="${origin}/feed.xml"/>`) &&
+        feed.includes(`<link rel="alternate" type="text/html" href="${origin}/news"/>`) &&
+        feed.includes(`${origin}/news/levy-explained`),
+      `${path} is the merged feed: its self link ${origin}/feed.xml, its page /news, its entries under /news (got ${res.status})`,
+    )
+  }
+  res = await get(origin, '/sitemap.xml')
+  const sitemap = await res.text()
+  check(res.status === 200 && sitemap.includes(`${origin}/news/levy-explained`) && !sitemap.includes('/blog'), 'the sitemap lists the posts under /news')
+}
+
 async function checkSetup(origin) {
   log('\nUnconfigured site')
   const res = await get(origin, '/')
@@ -1726,16 +1882,116 @@ function builtId(siteDir) {
   throw new Error('No buildId in the built Worker')
 }
 
-/** The Chrome Lighthouse drives, or a failure that says why there is none. */
-function chromeForLighthouse() {
+/** The Chrome at CHROME_BIN, for what `why` names, or a failure that says why there is none. */
+function chromeBin(why) {
   const chrome = process.env.CHROME_BIN
-  if (!chrome) throw new CheckFailed('--lighthouse needs Chrome: set CHROME_BIN to a Chrome or Chromium executable (the starter-template CI image sets it)')
+  if (!chrome) throw new CheckFailed(`${why} needs Chrome: set CHROME_BIN to a Chrome or Chromium executable (the starter-template CI image sets it)`)
   try {
     accessSync(chrome, fsConstants.X_OK)
   } catch {
-    throw new CheckFailed(`--lighthouse needs Chrome: CHROME_BIN=${chrome} is not an executable file`)
+    throw new CheckFailed(`${why} needs Chrome: CHROME_BIN=${chrome} is not an executable file`)
   }
   return chrome
+}
+
+/**
+ * A headless Chrome driven over the DevTools protocol with node's own
+ * WebSocket, every https request blocked so it reads only the Worker and the
+ * fixture api. `open(url, scheme)` loads a page with the system's colour
+ * scheme (`light` or `dark`) and reduced motion emulated;
+ * `evaluate(expression)` is the expression's value there, awaited.
+ */
+async function headlessChrome(chrome) {
+  const profile = mkdtempSync(join(work, 'chrome-'))
+  const child = spawn(
+    chrome,
+    ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'],
+    { stdio: ['ignore', 'ignore', 'pipe'], detached: true },
+  )
+  children.add(child)
+  try {
+    const endpoint = await new Promise((resolveEndpoint, reject) => {
+      let output = ''
+      const timer = setTimeout(() => reject(new Error(`Chrome opened no DevTools port in 30 seconds\n${output}`)), 30000)
+      child.stderr.on('data', (chunk) => {
+        output += chunk
+        const found = /DevTools listening on (ws:\/\/\S+)/.exec(output)
+        if (found) {
+          clearTimeout(timer)
+          resolveEndpoint(found[1])
+        }
+      })
+      child.once('exit', (code) => {
+        clearTimeout(timer)
+        reject(new Error(`Chrome exited with ${code}\n${output}`))
+      })
+    })
+    const socket = new WebSocket(endpoint)
+    await new Promise((opened, failed) => {
+      socket.onopen = opened
+      socket.onerror = () => failed(new Error(`could not connect to Chrome at ${endpoint}`))
+    })
+    let nextId = 1
+    const pending = new Map()
+    const waiting = []
+    socket.onmessage = ({ data }) => {
+      const message = JSON.parse(data)
+      if (message.id !== undefined && pending.has(message.id)) {
+        const { done, failed } = pending.get(message.id)
+        pending.delete(message.id)
+        if (message.error) failed(new Error(`Chrome: ${message.error.message}`))
+        else done(message.result)
+        return
+      }
+      const waiter = waiting.find((w) => w.method === message.method && w.sessionId === message.sessionId)
+      if (waiter) {
+        waiting.splice(waiting.indexOf(waiter), 1)
+        waiter.done(message.params)
+      }
+    }
+    const send = (method, params = {}, sessionId) =>
+      new Promise((done, failed) => {
+        const id = nextId++
+        pending.set(id, { done, failed })
+        socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }))
+      })
+    const next = (method, sessionId, seconds) =>
+      new Promise((done, failed) => {
+        const waiter = { method, sessionId, done }
+        waiting.push(waiter)
+        setTimeout(() => {
+          if (!waiting.includes(waiter)) return
+          waiting.splice(waiting.indexOf(waiter), 1)
+          failed(new Error(`Chrome sent no ${method} in ${seconds} seconds`))
+        }, seconds * 1000)
+      })
+    const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
+    const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
+    await send('Page.enable', {}, sessionId)
+    await send('Network.enable', {}, sessionId)
+    await send('Network.setBlockedURLs', { urls: ['https://*'] }, sessionId)
+    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId)
+    return {
+      async open(url, scheme) {
+        await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }, { name: 'prefers-reduced-motion', value: 'reduce' }] }, sessionId)
+        const loaded = next('Page.loadEventFired', sessionId, 60)
+        await send('Page.navigate', { url }, sessionId)
+        await loaded
+      },
+      async evaluate(expression) {
+        const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId)
+        if (exceptionDetails) throw new Error(`in the page: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`)
+        return result.value
+      },
+      async close() {
+        socket.close()
+        await killTree(child)
+      },
+    }
+  } catch (error) {
+    await killTree(child)
+    throw error
+  }
 }
 
 /**
@@ -1951,23 +2207,40 @@ async function runLiveScript(html) {
   return { attributes, slots, reads: reads.length }
 }
 
-// Renders LiveCounts.astro alone with Astro's container through the copy's own
-// astro and vite (no astro.config, so no adapter), with a first-party
-// locals.backgold, and prints the markup as one JSON line.
-const FIRST_PARTY_PROBE = `import { createServer } from 'vite'
+/**
+ * Runs `body` as a module in the copy, where `server` is a vite server on the
+ * copy's own astro and vite (no astro.config, so no adapter) that loads the
+ * template's source, and returns what `body` prints as one `PROBE <json>` line.
+ */
+function probe(siteDir, name, body) {
+  const file = join(siteDir, `${name}-probe.mjs`)
+  writeFileSync(
+    file,
+    `import { createServer } from 'vite'
 import { getViteConfig } from 'astro/config'
 const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
 const server = await createServer({ ...config, configFile: false })
 try {
-  const { experimental_AstroContainer } = await server.ssrLoadModule('astro/container')
-  const { default: LiveCounts } = await server.ssrLoadModule('/src/components/sections/EventsList/LiveCounts.astro')
-  const container = await experimental_AstroContainer.create()
-  const html = await container.renderToString(LiveCounts, { locals: { backgold: { firstParty: true } } })
-  console.log('PROBE ' + JSON.stringify(html))
+${body}
 } finally {
   await server.close()
 }
-`
+`,
+  )
+  const result = spawnSync('node', [file], { cwd: siteDir, encoding: 'utf8', env: process.env })
+  rmSync(file, { force: true })
+  const line = (result.stdout ?? '').split('\n').find((l) => l.startsWith('PROBE '))
+  if (result.status !== 0 || !line) throw new Error(`the ${name} probe exited with ${result.status}\n${result.stdout}${result.stderr}`)
+  return JSON.parse(line.slice(6))
+}
+
+// Renders LiveCounts.astro alone with Astro's container, with a first-party
+// locals.backgold, and prints the markup.
+const FIRST_PARTY_PROBE = `  const { experimental_AstroContainer } = await server.ssrLoadModule('astro/container')
+  const { default: LiveCounts } = await server.ssrLoadModule('/src/components/sections/EventsList/LiveCounts.astro')
+  const container = await experimental_AstroContainer.create()
+  const html = await container.renderToString(LiveCounts, { locals: { backgold: { firstParty: true } } })
+  console.log('PROBE ' + JSON.stringify(html))`
 
 /**
  * First-party live counts, unit-level (the fixture api cannot answer on the
@@ -1977,13 +2250,7 @@ try {
  */
 async function checkFirstPartyLive(siteDir) {
   log('\nFirst-party live counts (LiveCounts rendered alone, first-party locals)')
-  const probe = join(siteDir, 'live-first-party-probe.mjs')
-  writeFileSync(probe, FIRST_PARTY_PROBE)
-  const result = spawnSync('node', [probe], { cwd: siteDir, encoding: 'utf8', env: process.env })
-  rmSync(probe, { force: true })
-  const line = (result.stdout ?? '').split('\n').find((l) => l.startsWith('PROBE '))
-  if (result.status !== 0 || !line) throw new Error(`the first-party probe exited with ${result.status}\n${result.stdout}${result.stderr}`)
-  const html = JSON.parse(line.slice(6))
+  const html = probe(siteDir, 'live-first-party', FIRST_PARTY_PROBE)
   const tag = /<script\b([^>]*\bdata-bg-live-api="[^"]*"[^>]*)>([\s\S]*?)<\/script>/.exec(html)
   check(tag !== null && /\bdata-bg-live-api="\/api\/content\/v1\/events\/live"/.test(tag[1]), 'first-party, the script asks the same-origin path /api/content/v1/events/live')
   check(!/data-bg-live-key/.test(tag[1]), 'and carries no key attribute')
@@ -2007,6 +2274,43 @@ async function checkFirstPartyLive(siteDir) {
   check(
     asked.length === 1 && asked[0].url === '/api/content/v1/events/live?ids=evt_w1' && !Object.keys(asked[0].headers).some((h) => h.toLowerCase() === 'authorization') && slot.textContent === '3 going',
     `run as a browser would, it asks /api/content/v1/events/live?ids=evt_w1 with no Authorization header and fills the slot (${JSON.stringify(asked)}, "${slot.textContent}")`,
+  )
+}
+
+/**
+ * First-party faces, unit-level (the Worker under test reads with a site key):
+ * src/lib/fonts.ts names each theme file by its same-origin path, as a hosted
+ * page does, with nothing to preconnect; a system face downloads nothing; a
+ * face it cannot read keeps the template's own face for that slot alone.
+ */
+function checkFirstPartyFonts(siteDir, theme) {
+  log('\nFirst-party faces (src/lib/fonts.ts alone)')
+  const fonts = probe(
+    siteDir,
+    'fonts-first-party',
+    `  const { siteFonts } = await server.ssrLoadModule('/src/lib/fonts.ts')
+  const theme = ${JSON.stringify(theme)}
+  const system = { ...theme, fonts: { ...theme.fonts, heading: { family: 'Georgia', stack: "Georgia,'Times New Roman',Times,serif", source: 'system', files: [] } } }
+  const unreadable = { ...theme, fonts: { ...theme.fonts, heading: { ...theme.fonts.heading, stack: '"Roboto Slab"}body{color:red' } } }
+  console.log('PROBE ' + JSON.stringify({ theme: siteFonts(theme, true), system: siteFonts(system, true), unreadable: siteFonts(unreadable, true) }))`,
+  )
+  const sources = (css) => [...css.matchAll(/src:url\(([^)]+)\)/g)].map((m) => m[1])
+  const paths = [theme.fonts.heading, theme.fonts.body].flatMap((face) => face.files.map((file) => new URL(file.url).pathname))
+  check(
+    JSON.stringify(sources(fonts.theme.css)) === JSON.stringify(paths) && paths.every((p) => /^\/lp-runtime\/[0-9a-f]{64}\.woff2$/.test(p)) && fonts.theme.preconnects.length === 0 && fonts.theme.stylesheet === null,
+    `first-party, every theme file loads from the site's own host at /lp-runtime/<hash>.woff2, as on a hosted page, with nothing preconnected (${paths.length} files)`,
+  )
+  check(
+    fonts.system.css.startsWith(`:root{--site-font-heading:Georgia,'Times New Roman',Times,serif;--site-font-body:${theme.fonts.body.stack}}`) &&
+      !fonts.system.css.includes('"Georgia"') &&
+      sources(fonts.system.css).length === theme.fonts.body.files.length,
+    'a system face sets its stack and downloads nothing',
+  )
+  check(
+    !fonts.unreadable.css.includes('Roboto Slab') && !fonts.unreadable.css.includes('}body') &&
+      fonts.unreadable.stylesheet === 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500&display=swap' &&
+      fonts.unreadable.css.includes(`--site-font-body:${theme.fonts.body.stack}`),
+    `a face it cannot read keeps the template's own for that slot alone (heading from ${fonts.unreadable.stylesheet}; body the theme's)`,
   )
 }
 
@@ -2264,20 +2568,22 @@ async function checkPartyBoards(origin, fixture) {
   res = await get(origin, '/endorsements')
   check(!/class="list-search"/.test(await res.text()), 'a list other than News has no search box')
 
-  // A4: the news list opens with the News page's Hero, and that page's own address is the list's.
+  // A4 on an organization still at /blog: no page can sit at /blog, so its
+  // list has no intro and carries its own name; the starter's `news` page is
+  // a page of its own at /news (the intro on an organization at /news is
+  // checkNewsBase's).
   res = await get(origin, '/blog')
   html = await res.text()
   check(
-    res.status === 200 &&
-      tags(html, 'h1').length === 1 &&
-      plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'From the party' &&
-      /<p class="kicker"[^>]*>News<\/p>/.test(html) &&
-      html.includes('Announcements and the occasional argument.'),
-    `the news list opens with the News page's Hero: its kicker, its headline as the one <h1>, its line (got ${res.status})`,
+    res.status === 200 && tags(html, 'h1').length === 1 && plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'Blog' && !html.includes('From the party'),
+    `the list at /blog has no intro and carries its name, Blog, as the one <h1> (got ${res.status})`,
   )
   res = await get(origin, '/news')
-  await res.text()
-  check(res.status === 302 && res.headers.get('location') === '/blog', `/news redirects to the news list (got ${res.status} ${res.headers.get('location')})`)
+  html = await res.text()
+  check(
+    res.status === 200 && plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'From the party' && !html.includes('post-rows'),
+    `on an organization at /blog, /news is the News page on its own, not a redirect (got ${res.status} ${res.headers.get('location') ?? ''})`,
+  )
 
   // A3: the leadership page.
   res = await get(origin, '/leadership')
@@ -2454,9 +2760,10 @@ async function checkPartyMap(origin, fixture) {
 /**
  * Boards A1 and A13 (the party template's home and its chrome): the Top
  * banner above the header (a takeover on home, the announcement strip on the
- * A1 page), the type the boards name, the cover hero's kicker, accent word
+ * A1 page), the cover hero's kicker, accent word
  * and caption, the compact roster's one row, the photo call to action's
- * caption, the email sign-up's band Above the footer, and the footer's
+ * caption, the email sign-up's band Above the footer (its kicker, heading
+ * and lede beside the frame), and the footer's
  * social circles and bottom row.
  */
 async function checkPartyChrome(origin) {
@@ -2466,7 +2773,6 @@ async function checkPartyChrome(origin) {
   const header = html.indexOf('<header class="site-header"')
   check(header > 0 && html.indexOf('data-bg-area="top_banner"') < header, 'the Top banner area is drawn above the header')
   check(/<section class="bg-section[^"]*\btakeover\b/.test(html), "home's TakeoverBanner is drawn as the full-screen takeover")
-  check(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Fraunces[^"]*Public\+Sans/.test(html), 'the page loads the faces the boards name (Fraunces, Public Sans)')
   check(/<a class="brand[^"]*" href="\/"[^>]*>\s*<img src="[^"]*" alt="Pine Valley for Liberty" class="brand-logo"/.test(html), 'the header brand is the logo, linking home, when the site has one')
   check(/<a href="https:\/\/facebook\.com\/pinevalleyliberty"[^>]*aria-label="Facebook"[^>]*>Fb<\/a>/.test(html), 'a social link is a circle with its short name and its full name for screen readers')
   check(/<span class="footer-powered"[^>]*>Powered by BackGold<\/span>/.test(html), 'the bottom row ends with Powered by BackGold')
@@ -2515,6 +2821,149 @@ async function checkPartyChrome(origin) {
     /class="bg-section[^"]*\bsignup-band\b/.test(signup) && /<h2[^>]*>One email a week\./.test(signup) && /<iframe\b[^>]*data-bg-embed/.test(signup),
     "an email sign-up Above the footer is A1's band: the heading beside BackGold's framed form",
   )
+  const words = /<div class="signup-words"[^>]*>([\s\S]*?)<\/div>/.exec(signup)?.[1] ?? ''
+  check(
+    /^<p class="kicker"[^>]*>The party letter<\/p>\s*<h2[^>]*>One email a week\.[^<]*<\/h2>\s*<p class="lede"[^>]*>Where the chapters met, what passed, and the next night to come along\.<\/p>$/.test(words.trim()),
+    `and C1's words beside it: the kicker in small capitals over the heading, the lede under it (${plain(words)})`,
+  )
+  res = await get(origin, '/kitchen-sink')
+  const sinkSignup = sectionsOf(await res.text()).find((s) => s.type === 'SignupCapture')?.html ?? ''
+  check(
+    /<h2[^>]*>Stay in touch<\/h2>/.test(sinkSignup) && !/class="(kicker|lede)"/.test(sinkSignup),
+    'a sign-up with only a heading draws no kicker and no lede',
+  )
+}
+
+/** A bright accent on gray (Libertarian gold on the LNC's gray, a near-white page), the brand the header-label and dark-accent defects showed on. */
+const BRIGHT_BRAND = { primary_color: '#56565a', secondary_color: '#f8f8f8', accent_color: '#fed000' }
+/** The template's own faces, as the layout links them for a site with no saved theme. */
+const OWN_FACES_STYLESHEET =
+  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap'
+
+/**
+ * Run in the page, once its faces have loaded: the header button's label and
+ * fill colours and their WCAG contrast ratio, the colour of the first element
+ * `kicker` selects, and the font-family of the <h1> and of the text.
+ */
+async function pageLook(kicker) {
+  await document.fonts.ready
+  const channels = (value) => {
+    const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(value)
+    if (!m) throw new Error(`not an sRGB colour: ${value}`)
+    return { rgb: [m[1], m[2], m[3]].map(Number), alpha: m[4] === undefined ? 1 : Number(m[4]) }
+  }
+  const luminance = (rgb) => {
+    const [r, g, b] = rgb.map((c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const hex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`
+  const button = document.querySelector('.site-header .header-button')
+  let header = null
+  if (button) {
+    const style = getComputedStyle(button)
+    const ink = channels(style.color)
+    const fill = channels(style.backgroundColor)
+    const [hi, lo] = [luminance(ink.rgb), luminance(fill.rgb)].sort((a, b) => b - a)
+    header = { label: button.textContent.trim(), ink: hex(ink.rgb), fill: hex(fill.rgb), opaque: ink.alpha === 1 && fill.alpha === 1, ratio: (hi + 0.05) / (lo + 0.05) }
+  }
+  const accent = kicker ? document.querySelector(kicker) : null
+  return {
+    header,
+    kicker: accent ? hex(channels(getComputedStyle(accent).color).rgb) : null,
+    heading: getComputedStyle(document.querySelector('h1') ?? document.body).fontFamily,
+    body: getComputedStyle(document.body).fontFamily,
+  }
+}
+
+/** The fixture site in another brand and saved theme, published as a new content version the Worker hears of by the webhook. */
+async function restyle(origin, fixture, { brand, theme }) {
+  fixture.data.site.brand = brand
+  fixture.data.site.theme = theme
+  const version = fixture.bump(fixture.state.headline)
+  const hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  if (hook.status !== 204) throw new Error(`the webhook for content version ${version} answered ${hook.status}`)
+}
+
+/**
+ * The party template's look in a browser, light and dark, for two brands: the
+ * fixture's (with its saved theme) and a bright accent on gray with no theme.
+ * The header button's label reads on its fill at AA (the header's link colour
+ * never reaches it); an accent that already reads stays itself; the faces are
+ * the theme's, declared as a hosted page declares them, else the template's
+ * own, linked as before. The fixture's brand and theme are put back after,
+ * and home read once under them, as Lighthouse expects to find it.
+ */
+async function checkPartyLook(origin, fixture, chrome) {
+  log('\nParty look: the header button, the accent, the faces (headless Chrome, light and dark)')
+  const own = { brand: fixture.data.site.brand, theme: fixture.data.site.theme }
+  const { heading, body } = own.theme.fonts
+  // The fixture serves the example's api.backgold.com files at its own origin.
+  const served = (url) => url.replace(/^https:\/\/api\.backgold\.com\//, `${fixture.origin}/`)
+  const KICKER = '[data-type="CandidateRoster"] .kicker'
+  /** The first family of a computed font-family, unquoted (the browser quotes only a name that needs it). */
+  const face = (fontFamily) => fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '')
+  const browser = await headlessChrome(chrome)
+  try {
+    let html = await (await get(origin, '/')).text()
+    const rules = [...html.matchAll(/@font-face\{font-family:"([^"]+)";font-style:normal;font-weight:(\d+);font-display:swap;src:url\(([^)]+)\) format\('woff2'\)\}/g)].map((m) => `${m[1]}|${m[2]}|${m[3]}`)
+    const declared = [heading, body].flatMap((face) => face.files.map((file) => `${face.family}|${file.weight}|${served(file.url)}`))
+    check(
+      JSON.stringify(rules) === JSON.stringify(declared),
+      `a site with a saved theme declares its faces as a hosted page does: an @font-face rule per weight, swapped in, from the api's /lp-runtime (${heading.family} ${heading.files.map((f) => f.weight).join('/')}, ${body.family} ${body.files.map((f) => f.weight).join('/')})`,
+    )
+    check(
+      html.includes(`:root{--site-font-heading:${heading.stack};--site-font-body:${body.stack}}`) &&
+        !html.includes('fonts.googleapis.com') &&
+        new RegExp(`<link rel="preconnect" href="${fixture.origin.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}" crossorigin`).test(html),
+      "it sets the theme's stacks, links nothing from Google Fonts and preconnects to the api, where the files are",
+    )
+    for (const scheme of ['light', 'dark']) {
+      await browser.open(`${origin}/`, scheme)
+      const home = await browser.evaluate(`(${pageLook})(null)`)
+      check(
+        home.header?.opaque && home.header.ratio >= 4.5,
+        `fixture brand, ${scheme}: the header button's label reads on its fill (${home.header?.label}: ${home.header?.ink} on ${home.header?.fill}, ${home.header?.ratio.toFixed(2)}:1)`,
+      )
+      if (scheme === 'light') {
+        check(face(home.heading) === heading.family && face(home.body) === body.family, `headings and text wear the theme's faces (${face(home.heading)}, ${face(home.body)})`)
+        const asked = (face) => face.files.filter((file) => (fixture.state.requests.get(new URL(served(file.url)).pathname) ?? 0) > 0).map((file) => file.weight)
+        check(asked(heading).length > 0 && asked(body).includes(400), `and the browser asked the api for their files (${heading.family} ${asked(heading).join('/')}, ${body.family} ${asked(body).join('/')})`)
+        await browser.open(`${origin}/a1-home`, scheme)
+        const a1 = await browser.evaluate(`(${pageLook})(${JSON.stringify(KICKER)})`)
+        check(a1.kicker === own.brand.accent_color, `an accent that already reads on the page is the accent itself, not taken darker (the roster's kicker: ${a1.kicker})`)
+      }
+    }
+
+    await restyle(origin, fixture, { brand: { ...own.brand, ...BRIGHT_BRAND }, theme: null })
+    html = await (await get(origin, '/')).text()
+    const stylesheet = /<link rel="stylesheet" href="([^"]+)" media="print" onload="this\.media='all'">/.exec(html)?.[1]
+    check(
+      decode(stylesheet ?? '') === OWN_FACES_STYLESHEET &&
+        /<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com">/.test(html) &&
+        /<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin(="")?>/.test(html) &&
+        !/@font-face|--site-font-/.test(html),
+      "a site with no saved theme keeps the template's own faces, linked as before: Fraunces and Public Sans from Google Fonts",
+    )
+    for (const scheme of ['light', 'dark']) {
+      await browser.open(`${origin}/`, scheme)
+      const home = await browser.evaluate(`(${pageLook})(null)`)
+      check(
+        home.header?.opaque && home.header.ratio >= 4.5,
+        `bright accent ${BRIGHT_BRAND.accent_color} on gray, ${scheme}: the header button's label reads on its fill (${home.header?.label}: ${home.header?.ink} on ${home.header?.fill}, ${home.header?.ratio.toFixed(2)}:1)`,
+      )
+      if (scheme === 'light') check(face(home.heading) === 'Fraunces' && face(home.body) === 'Public Sans', `headings and text wear the template's faces (${face(home.heading)}, ${face(home.body)})`)
+      if (scheme === 'dark') {
+        check(home.header.fill === BRIGHT_BRAND.accent_color, `dark: the main call's fill is the accent itself, which already holds 3:1 on the page (${home.header.fill})`)
+        await browser.open(`${origin}/a1-home`, scheme)
+        const a1 = await browser.evaluate(`(${pageLook})(${JSON.stringify(KICKER)})`)
+        check(a1.kicker === BRIGHT_BRAND.accent_color, `dark: an accent that already reads is the kicker's colour as it is, never lightened past it (${a1.kicker})`)
+      }
+    }
+  } finally {
+    await browser.close()
+    await restyle(origin, fixture, own)
+    await (await get(origin, '/')).text()
+  }
 }
 
 /**
@@ -2544,8 +2993,8 @@ function checkSectionsMap(chromeBlocks, areaBlocks) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  // Before the long build: --lighthouse without a Chrome fails now, never skips.
-  const chrome = LIGHTHOUSE ? chromeForLighthouse() : null
+  // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
+  const chrome = LIGHTHOUSE || PARTY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : '--template party') : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
   log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
@@ -2563,6 +3012,7 @@ async function main() {
   if (PARTY) await checkFirstPartyLive(siteDir)
 
   const examples = await loadExamples()
+  if (PARTY) checkFirstPartyFonts(siteDir, examples.SiteResponse.site.theme)
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks)
@@ -2584,9 +3034,24 @@ async function main() {
     if (PARTY) await checkPartyBoards(configured.origin, fixture)
     if (PARTY) await checkPartyMap(configured.origin, fixture)
     if (PARTY) await checkPartyChrome(configured.origin)
-    if (chrome) await checkLighthouse(configured.origin, chrome, fixture)
+    if (PARTY) await checkPartyLook(configured.origin, fixture, chrome)
+    if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)
+  }
+
+  // A second organization, at /news, on its own Worker and its own local KV.
+  const newsFixture = await startFixture(examples, kitchen.sections, 'news')
+  log(`Fixture Content API at /news: ${newsFixture.origin}`)
+  const atNews = await startWorker(siteDir, {
+    vars: (origin) => ({ BACKGOLD_SITE_KEY: SITE_KEY, BACKGOLD_API_ORIGIN: newsFixture.origin, SITE_URL: origin }),
+    logFile: join(work, 'wrangler-news.log'),
+    persist: '.wrangler-e2e-news',
+  })
+  try {
+    await checkNewsBase(atNews.origin, newsFixture)
+  } finally {
+    await killTree(atNews.child)
   }
 
   const unconfigured = await startWorker(siteDir, { vars: { BACKGOLD_API_ORIGIN: fixture.origin }, logFile: join(work, 'wrangler-setup.log') })
@@ -2626,7 +3091,7 @@ async function main() {
     await killTree(redeployed.child)
   }
 
-  const workerLog = ['configured', 'setup', 'redeployed'].map((name) => readFileSync(join(work, `wrangler-${name}.log`), 'utf8')).join('')
+  const workerLog = ['configured', 'news', 'setup', 'redeployed'].map((name) => readFileSync(join(work, `wrangler-${name}.log`), 'utf8')).join('')
   check(!workerLog.includes(SECRET_KEY) && !workerLog.includes(WEBHOOK_SECRET), 'no secret reached the Worker log')
   log('\nAll checks passed.')
 }

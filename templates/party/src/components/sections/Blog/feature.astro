@@ -1,7 +1,8 @@
 ---
 // Blog · Lead story (board A1, "Blog · Lead story"; A12 shows it beside Cards
 // and List): the section head (the kicker, the heading and its "All news"
-// link: the section's own link, else "All news" to /blog), then the newest
+// link: the section's own link, else "All news" to the news list at the
+// organization's blog base), then the newest
 // post large, with its cover, its category as an accent chip, its title,
 // summary and byline (the author's picture or initials, "Corinne Pell ·
 // Oct 2"), and the next ones as a short list beside it, each with its
@@ -13,15 +14,16 @@ import Band from '../Band.astro'
 import SectionHead from '../SectionHead.astro'
 import { links } from '../../../lib/section'
 import { text } from '../../../lib/format'
-import { latestEntries, shownOf, storyOf } from './latest'
+import { latestNews, shownOf, storyOf } from './latest'
 
 type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading) ?? 'Latest'
 const own = links(section)
-const more = own.length > 0 ? own : [{ label: 'All news', href: '/blog', rel: undefined }]
-const stories = (await latestEntries(Astro.locals.backgold, shownOf(section, 4))).map(storyOf)
+const { entries, listPath } = await latestNews(Astro.locals.backgold, shownOf(section, 4))
+const more = own.length > 0 ? own : listPath ? [{ label: 'All news', href: listPath, rel: undefined }] : []
+const stories = entries.map(storyOf)
 const [lead, ...rest] = stories
 ---
 {lead && (

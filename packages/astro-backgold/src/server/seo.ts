@@ -1,7 +1,7 @@
 import type { Author, BackgoldContent, ContentTypeSummary, EntryAuthor, EntryDetail, PageResponse, SiteResponse } from '@backgold/content'
 import { isUserAgent } from '../options.js'
 import type { BackgoldLocals } from './context.js'
-import { absoluteUrl, isBlogType, isoDate, sitePath, siteName, typeIndexPath, writtenBy, xmlEscape } from './format.js'
+import { absoluteUrl, baseLabel, isBlogType, isoDate, listBase, listIndexPath, sitePath, siteName, writtenBy, xmlEscape } from './format.js'
 import type { ResolvedType } from './resolve.js'
 
 type Site = SiteResponse['site']
@@ -50,13 +50,17 @@ export function robotsTxt(opts: { siteUrl: string; aiCrawlers: string[]; sitemap
 
 // ── JSON-LD ──────────────────────────────────────────────────────────────────
 
-/** What a page's JSON-LD is built from: the site, and what the path resolved to (a `Resolved` spreads in). */
+/**
+ * What a page's JSON-LD is built from: the site, and what the path resolved
+ * to (a `Resolved` spreads in). A list's `base` is the blog types' address for
+ * `'blog'` (without it, the legacy `blog`); its `intro` names that list.
+ */
 export type JsonLdInput = { site: Site; siteUrl: string } & (
   | { kind: 'page'; page: PageResponse['page'] }
-  | { kind: 'index'; type: ResolvedType }
+  | { kind: 'index'; type: ResolvedType; base?: string; intro?: PageResponse | null }
   | { kind: 'entry'; type: ContentTypeSummary; entry: EntryDetail }
   | { kind: 'author'; author: Author }
-  | { kind: 'term'; type: ResolvedType; taxonomy: { key: string; label: string }; term: { slug: string; label: string } }
+  | { kind: 'term'; type: ResolvedType; base?: string; taxonomy: { key: string; label: string }; term: { slug: string; label: string } }
 )
 
 type Thing = Record<string, unknown>
@@ -103,11 +107,17 @@ function breadcrumbs(siteUrl: string, trail: Array<{ name: string; path: string 
   }
 }
 
-/** The home step, then the type's index (the blog built-ins are one index at `/blog`). */
-function typeTrail(site: Site, type: ResolvedType): Array<{ name: string; path: string } | null> {
-  const path = typeIndexPath(type)
-  const name = type === 'blog' || isBlogType(type) ? 'Blog' : type.plural_label
-  return [{ name: siteName(site), path: '/' }, path === null ? null : { name, path }]
+/**
+ * The home step, then the type's index. The blog types are one index at the
+ * blog base, named by its intro page's title when it has one, else by the
+ * base ("News", or "Blog" at `/blog`); every other type's is its plural.
+ */
+function typeTrail(site: Site, type: ResolvedType, base?: string, intro?: PageResponse | null): Array<{ name: string; path: string } | null> {
+  const home = { name: siteName(site), path: '/' }
+  const segment = listBase(type, base)
+  if (segment === null) return [home, null]
+  const name = type === 'blog' || isBlogType(type) ? intro?.page.title?.trim() || baseLabel(segment) : type.plural_label
+  return [home, { name, path: `/${encodeURIComponent(segment)}` }]
 }
 
 function person(author: EntryAuthor | Author, siteUrl: string): Thing {
@@ -173,12 +183,12 @@ export function jsonLdFor(input: JsonLdInput): object[] {
     case 'page':
       break
     case 'index':
-      out.push(breadcrumbs(siteUrl, typeTrail(site, input.type)))
+      out.push(breadcrumbs(siteUrl, typeTrail(site, input.type, input.base, input.intro)))
       break
     case 'term': {
-      const base = typeIndexPath(input.type)
+      const base = listIndexPath(input.type, input.base)
       const path = base === null ? null : `${base}/${encodeURIComponent(input.taxonomy.key)}/${encodeURIComponent(input.term.slug)}`
-      out.push(breadcrumbs(siteUrl, [...typeTrail(site, input.type), path === null ? null : { name: input.term.label, path }]))
+      out.push(breadcrumbs(siteUrl, [...typeTrail(site, input.type, input.base), path === null ? null : { name: input.term.label, path }]))
       break
     }
     case 'entry': {

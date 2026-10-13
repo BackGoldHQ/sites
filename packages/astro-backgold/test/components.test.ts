@@ -282,7 +282,7 @@ describe('Disclaimer', () => {
 
 describe('PreviewBar', () => {
   it('says the page is a draft', async () => {
-    expect(await render(PreviewBar)).toMatch(/<div data-backgold-preview-bar role="status" class="bg-preview-bar"[^>]*>Preview, not published<\/div>/)
+    expect(await render(PreviewBar)).toMatch(/<div data-backgold-preview-bar role="status" class="bg-preview-bar"[^>]*>Draft · not published<\/div>/)
   })
 })
 

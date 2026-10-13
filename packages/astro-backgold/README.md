@@ -42,7 +42,7 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_API_ORIGIN` | var | no | Default `https://api.backgold.com`. |
 | `SITE_URL` | var | set it in production | The site's public origin, for canonicals, the sitemap and feeds. Default: the request's origin, which is whatever `Host` the visitor sent; each origin then gets its own edge-cache entries, so a page is never served with another host's canonical, but crawlers can see the site under more than one address. |
 | `BACKGOLD_CACHE` | KV binding | no | Where the client keeps its reads and the last content version it learned, shared by every isolate, so a new isolate starts warm and spares the api. Without it each isolate keeps its own copy in memory and reads everything from BackGold once. |
-| `BACKGOLD_SECRET_KEY` | secret | for preview | A secret key, `bg_site_sk_…`. Only `loadPreview` (your `/preview` page) reads it; it never reaches a page or a cache. |
+| `BACKGOLD_SECRET_KEY` | secret | for preview (key mode) | A secret key, `bg_site_sk_…`. Only `loadPreview` (your `/preview` page) reads it, and only without `BACKGOLD_API`; it never reaches a page or a cache. |
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
 | `BACKGOLD_SITE_ID` | var | single-site first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
@@ -81,7 +81,9 @@ header is trusted.
   (see [Caching](#caching)), so one site's page is never served to another.
 - **`SITE_URL` is not read**: every site's origin is the one its request
   arrived on, the site's own domain.
-- **Previews.** `loadPreview` reads the draft as the site the request names.
+- **Previews.** `loadPreview` reads the draft through `BACKGOLD_API` as the
+  site the request names, with no secret key. A preview request naming no
+  site answers the same `404 No site.`, with the preview headers.
 - **The webhook and revalidate routes are unreachable**: the api keeps
   `/api/*` on every domain it routes, so `/api/backgold/webhook` and
   `/api/backgold/revalidate` never reach the Worker, and BackGold purges
@@ -143,14 +145,16 @@ outside the site that has no content type or a form one.
 
 `/preview` is a page of the site's own, `src/pages/preview.astro`, so a draft
 renders in the site's layout. It is BackGold's "Preview on your site" link
-(`?bg_preview=<token>&path=<path>`). `loadPreview` reads the draft with the
-secret key (in first-party mode, through `BACKGOLD_API`). Every answer on the path, the draft or any error, carries
-`Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow` (the
-middleware adds them to whatever the page answers) and is never cached. No
-secret key: `503 PREVIEW_NOT_CONFIGURED`. A missing, malformed (`.`, `..`),
-bad or expired token: `400 BAD_PREVIEW_TOKEN`. BackGold not answering in 10
-seconds: `504 PREVIEW_UNAVAILABLE`; any other failure reading or rendering
-the draft: `502 PREVIEW_UNAVAILABLE`. None of them names anything internal.
+(`?bg_preview=<token>&path=<path>`). In first-party mode `loadPreview` reads
+the draft through `BACKGOLD_API` as the site, with no key: nothing to set up.
+Otherwise it reads with `BACKGOLD_SECRET_KEY`, and with no secret key answers
+`503 PREVIEW_NOT_CONFIGURED`. Every answer on the path, the draft or any
+error, carries `Cache-Control: private, no-store` and `X-Robots-Tag: noindex,
+nofollow` (the middleware adds them to whatever the page answers) and is
+never cached. A missing, malformed (`.`, `..`), bad or expired token: `400
+BAD_PREVIEW_TOKEN`. BackGold not answering in 10 seconds: `504
+PREVIEW_UNAVAILABLE`; any other failure reading or rendering the draft: `502
+PREVIEW_UNAVAILABLE`. None of them names anything internal.
 
 ```astro
 ---
@@ -195,7 +199,7 @@ like a page. Each route is one option to turn off.
 | `GET /robots.txt` | `User-agent: *` / `Allow: /` with `/preview` and `/api/` disallowed, then an `Allow: /` group for each name in `aiCrawlers`, then `Sitemap:` while the sitemap is on. | `robots: false` |
 | `GET /llms.txt` | The [llms.txt](https://llmstxt.org) file: the site's name, its description, the primary menu as links, then a section per routable type with its 20 newest entries as `- [title](url): summary`. | `llms: false` |
 | `GET /llms-full.txt` | The site's name and description, then every published page and entry as its own document: a `---` line, a header (`### <title>`, then `Type:`, `URL:` and, for an entry, `Published:`, `By:` and `Summary:` lines) ending at the first blank line, then the body: a page's section copy as text, an entry's markdown. See the format below. | `llms: false` |
-| `GET /feed.xml` | An Atom feed of the 50 newest entries of the blog types (posts, podcasts and videos, which share `/blog`), merged by date. | `feeds: false` |
+| `GET /feed.xml` | An Atom feed of the 50 newest entries of the blog types (posts, podcasts and videos, which share the organization's blog base), merged by date; its HTML link is the list at the blog base. | `feeds: false` |
 
 **AI crawlers are allowed by default.** `aiCrawlers` lists the user agents
 named as allowed (default `GPTBot`, `ClaudeBot`, `PerplexityBot`,
@@ -228,7 +232,7 @@ pages come first, then each routable type's entries, newest first:
 
 ### The levy, explained
 Type: Post
-URL: https://pinevalleyliberty.org/blog/levy-explained
+URL: https://pinevalleyliberty.org/news/levy-explained
 Published: 2026-09-29
 By: Dana K.
 Summary: Where the money goes.
@@ -251,12 +255,14 @@ cap is reached the file ends with one more block after a final `---` line:
 Each entry it writes is one read of the Content API (cached like every other
 read).
 
-**Per-type feeds.** Every routable type outside `/blog` (a type of your
-own, the newsletter) has its feed at
+**Per-type feeds.** Every routable type outside the blog types (a type of
+your own, the newsletter) has its feed at
 `/<url_base>/feed.xml`: `resolveRoute` answers that path with
 `{ kind: 'feed', type }`, and the template's catch-all page answers it with
-`atomFeed(client, siteUrl, type)`. Feeds carry the entry's title, summary,
-dates, authors and address, never its body.
+`atomFeed(client, siteUrl, type)`. `/<blog base>/feed.xml` resolves to
+`{ kind: 'feed', type: 'blog' }`, the same merged feed as `/feed.xml` (its
+self link). Feeds carry the entry's title, summary, dates, authors and
+address, never its body.
 
 ### `<Seo>`
 
@@ -296,12 +302,13 @@ writing its own head tags.
 ### JSON-LD
 
 `jsonLdFor({ site, siteUrl, kind, … })` takes what a path resolved to (spread
-a `resolveRoute` result into it) and returns schema.org objects:
+a `resolveRoute` result into it, so a list brings its `base` and `intro`) and
+returns schema.org objects:
 
 | Page | Objects |
 | --- | --- |
 | every page | `Organization` (name, logo, `sameAs` from the site's social links) and `WebSite` (name, description) |
-| type index, term | `BreadcrumbList` (the blog types' index is named "Blog") |
+| type index, term | `BreadcrumbList`. The blog types' list is at its `base` and named by its intro page's title, else by the base capitalised ("News" at `/news`, "Blog" at `/blog`); without a `base`, the blog types' list is taken to be at `/blog` |
 | entry | `BreadcrumbList`, then `BlogPosting` for a post, `PodcastEpisode` for a podcast (the media file as `associatedMedia`), `VideoObject` for a video, `Article` for every other type: title, summary, hero image, published and updated dates, the "Written by" and "Interview by" bylines as `Person`, the organization as publisher |
 | author | `BreadcrumbList` and `Person` (name, bio, avatar, link) |
 
@@ -394,24 +401,43 @@ takes the request's URL (or a pathname, with or without its query): the
 | Path | `kind` |
 | --- | --- |
 | `/`, or a published page's `url` | `page`: the page response, its `areas` inside it |
-| `/blog` (the blog built-ins, merged), `/<url_base>` | `index`: up to 50 entries, `cursor`, `next_cursor` and the list's `areas` |
-| `/blog/<slug>`, `/<url_base>/<slug>` | `entry`: the entry and its `areas` |
+| `/<blog base>` (the blog types, merged), `/<url_base>` | `index`: up to 50 entries, `cursor`, `next_cursor`, the list's `areas`, its `base` and its `intro` |
+| `/<blog base>/<slug>`, `/<url_base>/<slug>` | `entry`: the entry and its `areas` |
 | `/authors/<slug>` | `author`; `entries` is empty (the Content API lists entries by type and term only); no `areas` |
-| `/blog/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries, `cursor`, `next_cursor` and the list's `areas` |
-| `/blog/feed.xml`, `/<url_base>/feed.xml` | `feed` |
+| `/<blog base>/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries, `cursor`, `next_cursor`, the list's `areas` and its `base` |
+| `/<blog base>/feed.xml`, `/<url_base>/feed.xml` | `feed` |
 | anything else, or a malformed path | `not_found` |
 
-A type's address is the `url_base` `/types` reports for it. `/blog` merges
-the three blog built-ins, post, podcast and video, which all report `blog`;
-their entries live at `/blog/<slug>`. Every other routable type has its own
+A type's address is the `url_base` `/types` reports for it. The three blog
+types, post, podcast and video, list together: `/types` marks them
+`index: 'blog'` and reports the organization's **blog base** as each one's
+`url_base`, `news` for an organization made since the address became its own
+(`blog` for one made before, until it changes the address on its Posts type).
+`resolveRoute` merges them at that base, with `type: 'blog'` (the merged
+list, not an address) and `base` (the address, without slashes); their
+entries live at `/<blog base>/<slug>`. Every other routable type has its own
 list, entries, terms and feed at the base it reports, a custom type and the
 built-in newsletter (`/newsletters`) alike: a type that reports a base of its
-own is listed there, never under `/blog`.
+own is listed there, never with the blog types. `isBlogType(type)` and
+`blogBaseOf(types)` from `@backgold/astro/server` answer the same rule for
+a site's own code (a section that lists the newest posts, a link to the
+list).
 
-`/blog`'s `areas` are the first built-in type's: the rules that place a
+**The list's intro.** A published page whose address is the blog base (the
+`news` page a template starts with) is not a page of its own there: the
+blog base resolves to the merged list, with that page as `intro`, for the
+site to draw its sections above the list. `intro` is null on every other
+list, and when no page sits at the base. A term's list carries no intro.
+
+**An api older than this package** reports no `index`. Then the routable
+built-ins that report `blog` (or no base) are the blog types, merged at
+`/blog`, as before 0.4, so a site on 0.4 keeps working against it.
+
+The blog base's `areas` are the first blog type's: the rules that place a
 section on a list are per site, so every type's list answers the same areas.
 Pass them to `<Area>` as you would a page's. Redirects are the middleware's,
-before this runs.
+before this runs: an organization that moves its blog base gets 301s from
+the old address.
 
 ### Lists and paging
 
@@ -422,7 +448,7 @@ the same path reads the next page; a cursor the Content API would not accept
 (malformed, too long, or refused by the api) reads the first page, with
 `cursor` null.
 
-A cursor names one type's list, so `/blog` with more than one built-in type
+A cursor names one type's list, so the blog base with more than one blog type
 merges their first pages and reads no cursor: its `cursor` and `next_cursor`
 are both null. A site that wants a paged list links to a type's own address.
 
@@ -503,7 +529,7 @@ Each page is its own edge-cache entry (see [Caching](#caching)).
 - `<Disclaimer legal={legal} />`
   (verbatim, as text, on every page; when the organization has none set in
   BackGold it renders nothing, never a made-up line, and logs a warning
-  naming the site), `<PreviewBar />` ("Preview, not published").
+  naming the site), `<PreviewBar />` ("Draft · not published").
 - `<Embed embed={s.embed} title="Donate" />` places a money or consent module
   as BackGold serves it: the frame (lazy, `allow="payment"`, no `sandbox`),
   sized from its `givegold:resize` message by one script per page that
@@ -540,7 +566,7 @@ it just opens at the top.
 | Import | |
 | --- | --- |
 | `@backgold/astro` | `backgold(options)` and the types. |
-| `@backgold/astro/server` | `getBackgold(context)`, `menuOf`, `headerButtonOf` and their `MenuPage` and `MenuNode` types, `pagerOf` and its `Pager` type, `areaEntriesOf(areas, name)` (the items `<Area>` would draw, each with `needsWindow`, so a layout can tell whether an area has anything to draw) and its `AreaEntry` type, `visibleNow` (from `@backgold/content`), the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
+| `@backgold/astro/server` | `getBackgold(context)`, `menuOf`, `headerButtonOf` and their `MenuPage` and `MenuNode` types, `pagerOf` and its `Pager` type, `isBlogType`, `blogBaseOf`, `areaEntriesOf(areas, name)` (the items `<Area>` would draw, each with `needsWindow`, so a layout can tell whether an area has anything to draw) and its `AreaEntry` type, `visibleNow` (from `@backgold/content`), the route handlers (`handleWebhook`, `handleRevalidate`, `handlePreview`), `loadPreview` and `PREVIEW_HEADERS`, `resolveRoute`, `renderMarkdown`, `sanitizeRichText`, the link rule (`safeHref(value, { anchors? })` for a link: http(s), `mailto:`, `tel:` or a site path, `#anchor` only with `anchors: true`; `safeSrc(value)` for an image or file: http(s) or a site path; each null for anything else; `relFor(href)`, `noopener` for an absolute link), `sitemapXml`, `robotsTxt`, `llmsTxt`, `llmsFullTxt`, `atomFeed`, `jsonLdFor`, `seoHead`, `serializeJsonLd`, `SETUP_PATH`. |
 | `@backgold/astro/components` | `Section`, `DefaultSection`, `Embed`, `Menu`, `MenuButton`, `Area`, `Disclaimer`, `Seo`, `Analytics`, `PreviewBar` (Astro source). |
 | `@backgold/astro/middleware` | `onRequest`. |
 

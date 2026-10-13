@@ -20,9 +20,15 @@
 */
 
 :root {
-  /* Board A1's faces: Fraunces for display (headings, numerals, the wordmark), Public Sans for text. The layout loads both. */
-  --font: 'Public Sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  --font-display: 'Fraunces', ui-serif, Georgia, 'Iowan Old Style', serif;
+  /*
+    The faces: the site's own when it wears a saved theme in BackGold (its
+    heading and body stacks, which the layout sets as --site-font-heading and
+    --site-font-body and loads), else board A1's: Fraunces for display
+    (headings, numerals, the wordmark), Public Sans for text, which the layout
+    loads in their place.
+  */
+  --font: var(--site-font-body, 'Public Sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+  --font-display: var(--site-font-heading, 'Fraunces', ui-serif, Georgia, 'Iowan Old Style', serif);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Type scale, phone → desktop (A13 → A1): text 16, lede 17 → 19, h2 30 → 42, the cover headline 44 → 84. */
   --text-xs: 0.75rem;
@@ -360,7 +366,8 @@ main:focus {
   margin: 0;
   padding: 0;
 }
-.site-header a,
+/* The header's links take the page's ink; a button (the header button, in the bar and in the sheet) keeps its own. */
+.site-header a:not(.button),
 .site-header summary {
   color: var(--ink);
   text-decoration: none;

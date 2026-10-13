@@ -27,14 +27,15 @@
   "observability": {
     "enabled": true
   },
-  // BackGold's own staging deploy of this template: the Worker
-  // `template-party` in the Workers for Platforms dispatch namespace
-  // `sites-staging`, uploaded by the manual `deploy-party-staging` job in
-  // BackGold's .gitlab-ci.yml (`wrangler deploy --dispatch-namespace
-  // sites-staging`). Nothing above changes for the Deploy button; a copy of
-  // this template can delete this block. An env inherits main, compatibility,
-  // assets and observability from above, and none of vars, services or
-  // kv_namespaces.
+  // BackGold's own deploys of this template: the Worker `template-party` in
+  // a Workers for Platforms dispatch namespace, `sites-staging` (the manual
+  // `deploy-party-staging` job in BackGold's .gitlab-ci.yml) and
+  // `sites-production` (`deploy-party-production`), each uploaded with
+  // `wrangler deploy --dispatch-namespace <namespace>`. Nothing above changes
+  // for the Deploy button; a copy of this template can delete this block. An
+  // env inherits main, compatibility, assets and observability from above,
+  // and none of vars, services or kv_namespaces. The two envs differ only in
+  // the api they bind and read, and the cache's KV namespace.
   "env": {
     "staging": {
       // The staging api Worker (givegold-api-staging) answers every
@@ -62,6 +63,30 @@
       // namespace id. The namespace is created once, by hand:
       // `npx wrangler kv namespace create backgold-party-staging-cache`.
       "kv_namespaces": [{ "binding": "BACKGOLD_CACHE", "id": "__PARTY_STAGING_KV_ID__" }]
+    },
+    "production": {
+      // The production api Worker (backgold-api) answers every *.backgold.com
+      // host and each verified tenant custom domain, and dispatches a site on
+      // this template to the Worker `template-party` in the namespace
+      // `sites-production`, as the staging api does for `sites-staging`.
+      "name": "template-party",
+      // First-party reads through a service binding to the production api's
+      // `FirstParty` entrypoint, with no site key, as in staging. The site is
+      // the one X-BackGold-Site names and links use the request's own origin,
+      // so neither BACKGOLD_SITE_KEY nor SITE_URL is set (wrangler's warning
+      // that both are missing here is expected).
+      "services": [{ "binding": "BACKGOLD_API", "service": "backgold-api", "entrypoint": "FirstParty" }],
+      "vars": {
+        // The origin the client writes its Content API URLs on; the binding
+        // carries them.
+        "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
+      },
+      // The `deploy-party-production` job replaces the id below with the
+      // PARTY_PRODUCTION_KV_ID CI variable before it builds, and refuses to
+      // deploy when that variable is unset or is not a namespace id. The
+      // namespace is created once, by hand, and is not staging's:
+      // `npx wrangler kv namespace create backgold-party-production-cache`.
+      "kv_namespaces": [{ "binding": "BACKGOLD_CACHE", "id": "__PARTY_PRODUCTION_KV_ID__" }]
     }
   }
 }

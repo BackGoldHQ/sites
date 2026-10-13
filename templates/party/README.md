@@ -29,6 +29,12 @@ It never names a price, a plan, a section type outside the catalogue, or who
 may see what. The schema is `siteTemplateManifestSchema` in BackGold's
 `packages/shared/src/site-templates.ts`, and a test there parses this file.
 
+BackGold's api and app read this file through `@givegold/shared`, which holds
+a copy of it in `packages/shared/src/site-template-manifests.generated.ts`.
+After changing `template.json`, refresh the copy with
+`pnpm --filter @givegold/shared templates:build`;
+`pnpm --filter @givegold/shared lint` fails while the two differ.
+
 ## Layouts are files
 
 Each section type the template draws has a directory under
@@ -90,20 +96,25 @@ no change here. `src/pages/[...path].astro` picks the layout by the entry's
 type (an entry) or the list's type (a list, or a category's or tag's list),
 and `src/pages/preview.astro` draws a draft entry the same way.
 
-BackGold serves the built-in post, podcast and video types as one list at
-`/blog`, so that list, News, is drawn by the post list layout. The
-newsletter has its own address, `/newsletters`, drawn by the newsletter
-list layout, and the podcast and video list layouts are there for when one
-of those types reports an address of its own. Every list offers its
+BackGold serves the built-in post, podcast and video types as one list, News,
+at the organization's blog address: `/news` for an organization made since
+the address became its own, `/blog` for one that kept it (the Posts type's
+address in BackGold, which the operator can change; the old address then
+redirects). That list is drawn by the post list layout, and opens with its
+intro when a published page sits at its address (the starter's `news`
+page): the page's sections, its Hero's headline as the page's heading, above
+the list. The newsletter has its own address, `/newsletters`, drawn by the
+newsletter list layout, and the podcast and video list layouts are there for
+when one of those types reports an address of its own. Every list offers its
 categories (or its tags, when no listed entry has a category) as links to
 each term's list, only the terms a listed entry carries, taken from the
 list's first page. A list shows 50 entries a page, newest first: "Older"
 under it goes on to the next page (`?cursor=`), and "Newest" goes back to
 the first from any later page; a term's list pages the same way at its own
-address. `/blog` pages only on a site with one of those built-in types:
-when it merges more than one, it shows their newest 50 together and no
-pager (a cursor names one type's list). There is no search: the Content API
-has none.
+address. News is there only on a site with one of those built-in types: when
+it merges more than one, it shows their newest 50 together and no pager (a
+cursor names one type's list). News and its terms' lists carry a search box
+("Search news"), which lists the posts whose title or summary matches.
 
 Share under an entry is three plain links (Email, X, Facebook): an entry page
 loads no script of its own.
@@ -138,7 +149,9 @@ one).
   - Contact (`contact`): Hero · Statement, the form in its Wide layout,
     About · Photo left, Coverage map · Map.
 
-  News is the built-in post list at `/blog`, not a page.
+  News is the built-in post list at the organization's blog address
+  (`/news` for a new organization); the starter's `news` page is its intro,
+  a Hero · Statement drawn above the posts.
 - **Starter rows.** Sections whose rows an author types (Key issues, Stat
   cards, Press quotes, Platform planks) carry placeholder rows under their
   own `data.source`; every stat's value is the words "Your figure", never a
@@ -213,18 +226,28 @@ menu and is drawn at the right of the header on the pages its rule names.
 
 ## Restyle it
 
-- **Type and spacing are the template's.** `src/styles/site.css` sets the type
-  scale (Fraunces for headings and numerals, Public Sans for text, both from
-  Google Fonts, loaded in `Site.astro`), the spacing, the radii and every
-  component's shape.
+- **Spacing is the template's; the faces are the site's.** `src/styles/site.css`
+  sets the type scale, the spacing, the radii and every component's shape. The
+  faces are the site's saved theme in BackGold when it has one: `/site`'s
+  `theme.fonts` heading and body, which `src/lib/fonts.ts` declares as a hosted
+  BackGold page does (`@font-face` rules for the woff2 files BackGold serves
+  under `/lp-runtime`, on the site's own host first-party, else on the api's;
+  a system face downloads nothing) and sets as `--site-font-heading` and
+  `--site-font-body`. A site with no theme, or a slot its theme leaves empty,
+  keeps the template's own faces: Fraunces for headings and numerals, Public
+  Sans for text, both from Google Fonts. `Site.astro` loads whichever applies.
 - **Colours are the organization's.** `src/lib/brand.ts` turns the brand
   colours set in BackGold into CSS custom properties, a light set and a dark
   set: `--bg-brand-primary`,
   `--bg-brand-secondary`, `--bg-brand-accent`, and for each band `--band-<band>`
   with its `-ink`, `-muted`, `-accent`, `-link`, `-button`, `-button-ink`,
   `-button-2`, `-button-2-ink`, `-surface`, `-line` and `-line-strong`, each
-  text colour chosen to meet WCAG AA on its ground whatever the brand is.
-  `site.css` reads only these names; it has no colour of its own.
+  text colour chosen to meet WCAG AA on its ground whatever the brand is. A
+  brand colour that already reads stays itself: the accent is taken darker
+  (light grounds) or lighter (dark grounds) only as far as AA needs, and in
+  dark mode the main call's fill only as far as 3:1 against the page. A button
+  keeps its own ink wherever it sits, the header included. `site.css` reads
+  only these names; it has no colour of its own.
 - **Light and dark.** The site's appearance in BackGold picks the set: always
   light, always dark, or (the default) the visitor's device, with a switch in
   the header (`src/components/chrome/ModeToggle.astro`) that overrides it and
@@ -250,12 +273,13 @@ petitions, sign-ups, the store, events, the calendar, polls and contacting
 legislators arrive as BackGold's own module: a frame BackGold serves, placed
 through the package's `Embed`. The template draws only the frame around it,
 one component per layout like any section (`src/components/sections/Donate/`,
-`FormBlock/`, `SignupCapture/`, …): the section's heading, the card and the
-story beside a donate form. BackGold is credited once, as "Powered by
-BackGold" in the footer's bottom row, never per module. Each goes
-through `modules/ModuleFrame.astro`, which asks BackGold's frame to wear the
-site (BackGold's embed look): the layout, the colours where the module sits
-(`moduleLook` in `src/lib/brand.ts`, light and dark), the radius and the type.
+`FormBlock/`, `SignupCapture/`, …): the section's heading (and a sign-up's
+kicker and lede), the card and the story beside a donate form. BackGold is
+credited once, as "Powered by BackGold" in the footer's bottom row, never per
+module. Each goes through `modules/ModuleFrame.astro`, which asks BackGold's
+frame to wear the site (BackGold's embed look): the layout, the colours where
+the module sits (`moduleLook` in `src/lib/brand.ts`, light and dark), the
+radius and the type.
 The frame then draws no ground, card, heading or footer of its own, and
 follows the header's light and dark switch.
 
@@ -367,10 +391,9 @@ secret.
 
 **Merge order.**
 
-1. The `@backgold/astro` 0.3.0 release, which takes the site from
-   `X-BackGold-Site` and pages lists, goes to npm first. This template
-   pins `^0.3.0`, and the job's range check refuses to deploy until npm
-   has it.
+1. The `@backgold/astro` and `@backgold/content` releases this template's
+   ranges name (`^0.4.0` and `^0.3.0`) go to npm first. The job's range
+   check refuses to deploy until npm has them.
 2. This deploy (the `env.staging` block and the job).
 3. The api's dispatch, which sends party-template sites to the namespace.
 4. The seed with the Westmark site in template mode (`seed:staging`).
@@ -407,6 +430,89 @@ answers with the Westmark home page.
 **Content never needs a redeploy.** Publishing in BackGold bumps the site's
 content version, the client notices within a minute when it next checks the
 version, and a new version is a miss in the site's cache. Play the job again
+only for a template change or a package update.
+
+## Production deploy
+
+BackGold runs this template in production the same way as on staging: one
+Worker, `template-party`, in the Workers for Platforms dispatch namespace
+`sites-production` in BackGold's Cloudflare account. The production api Worker
+(`backgold-api`, which binds the namespace as `SITES`) answers every
+`*.backgold.com` host and each verified tenant custom domain; for a site on
+the party template it hands the request to the namespace's Worker
+`template-<template key>` with the site's id in the `X-BackGold-Site` header,
+and the Worker reads the Content API first-party through the `BACKGOLD_API`
+service binding to the api's `FirstParty` entrypoint, with no site key.
+
+**Until the Worker is deployed in `sites-production`, every production
+template site answers 503 "This site isn't ready yet."** (with a
+`Retry-After` of 60 seconds). The namespace holds no script before the first
+play of the job, and creating the namespace alone changes nothing a visitor
+sees. Play the job before, or at the same time as, the first production site
+is created in template mode.
+
+The `env.production` block in `wrangler.jsonc` holds that form: the name, the
+service binding (Worker `backgold-api`, entrypoint `FirstParty`),
+`BACKGOLD_API_ORIGIN` = `https://api.backgold.com`, and the cache's KV
+namespace. Like staging's it has no routes, Custom Domain or `workers.dev`
+address, and sets neither `BACKGOLD_SITE_KEY` nor `SITE_URL`: the dispatch
+names the site per request.
+
+**Once, before the first run**, in BackGold's account, in this order. There
+is more than one Cloudflare account on the operator's login, so every command
+below names the account (`247651947e3b35805b31daef5ab9eab9`):
+
+1. Make sure the dispatch namespace `sites-production` exists. The production
+   api's deploy binds it, so it may already be there: read it with
+   `CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace get sites-production`
+   (from `packages/api`, or anywhere wrangler runs). Only when that reports
+   it missing, create it, with the `cf` CLI
+   (`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 cf workers-for-platforms dispatch-namespaces create --name sites-production`)
+   or with wrangler
+   (`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace create sites-production`),
+   whichever the operator uses.
+2. Create the cache's KV namespace, a new one, never staging's
+   `backgold-party-staging-cache`:
+   `CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler kv namespace create backgold-party-production-cache`.
+   Copy the `id` it prints (32 hex characters).
+3. Put that id in the `PARTY_PRODUCTION_KV_ID` CI variable, a GitLab project
+   variable, masked and protected so only `main` pipelines see it:
+   `glab variable set PARTY_PRODUCTION_KV_ID <id> --masked --protected -R polyneural/backgold`.
+   It is the only variable production adds. Staging reads `PARTY_STAGING_KV_ID`
+   and nothing else of its own; both jobs use the `CLOUDFLARE_API_TOKEN` and
+   `CLOUDFLARE_ACCOUNT_ID` every deploy already uses, and need no site key
+   and no secrets.
+4. Check the two things the job cannot fix. The `@backgold/astro` and
+   `@backgold/content` ranges in `package.json` must resolve on npm (the job
+   stops with "publish it first" when one does not). And the production api
+   must already be deployed with the `FirstParty` entrypoint, because the
+   service binding names `backgold-api` and that export; if production's api
+   predates it, play `deploy-api-production` first.
+5. Play `deploy-party-production` on a `main` pipeline, the newest one.
+
+**The job.** `deploy-party-production` in BackGold's `.gitlab-ci.yml` is a
+manual job on every `main` pipeline (environment `production`, resource group
+`party-production`); it never runs by itself and never blocks the pipeline.
+It is `deploy-party-staging` with the production names, step for step (see
+Staging deploy above): it refuses to start without a `PARTY_PRODUCTION_KV_ID`
+that is a 32-character namespace id, checks the npm ranges, writes the id over
+the `__PARTY_PRODUCTION_KV_ID__` placeholder in `wrangler.jsonc`, installs
+from npm, reads the namespace `sites-production` and stops, saying it does not
+exist on this account, when step 1 was not done, builds with
+`CLOUDFLARE_ENV=production npm run build`, refuses to deploy unless the built
+configuration names `template-party`, and uploads with
+`npx wrangler deploy --dispatch-namespace sites-production`.
+
+**How to tell it worked.** The job's log ends with `Dispatch Namespace:
+sites-production` and the new version's id. The namespace now holds one
+script (`script_count: 1` in
+`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace get sites-production`;
+the list is
+`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 cf workers-for-platforms dispatch-namespaces scripts list --dispatch-namespace sites-production`),
+and a production site in template mode answers with its home page on its
+`*.backgold.com` address instead of the 503.
+
+**Content never needs a redeploy**, in production either; play the job again
 only for a template change or a package update.
 
 ## License

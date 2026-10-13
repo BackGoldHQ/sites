@@ -5,7 +5,7 @@
 
 import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadPreview } from '../src/server/preview.js'
+import { PREVIEW_HEADERS, loadPreview } from '../src/server/preview.js'
 import { API_ORIGIN, OTHER_SITE_ID, SITE_ID, fakeApi, type FakeApi } from './fixtures.js'
 
 const worker = vi.hoisted(() => ({ env: {} as Record<string, unknown> }))
@@ -30,6 +30,33 @@ describe('loadPreview in the dispatched form', () => {
       expect(api.headers.at(-1)!.get('X-BackGold-Site')).toBe(siteId)
       expect(api.headers.at(-1)!.has('Authorization')).toBe(false)
     }
+  })
+
+  it('needs no secret key: there is none here, and the draft renders', async () => {
+    expect(worker.env.BACKGOLD_SECRET_KEY).toBeUndefined()
+    const result = await loadPreview(asSite(SITE_ID, 'bg_preview=tok_good&path=%2F'))
+    expect(result.ok).toBe(true)
+  })
+
+  it('answers a request naming no site with No site and the preview headers, never the 503', async () => {
+    for (const request of [new Request('https://pinevalleyliberty.org/preview?bg_preview=tok_good'), asSite('not a site!', 'bg_preview=tok_good')]) {
+      const result = await loadPreview(request)
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.response.status).toBe(404)
+      expect(await result.response.text()).toBe('No site.')
+      for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
+    }
+    expect(api.calls).toHaveLength(0)
+  })
+
+  it('keeps the 400 for a bad or expired token', async () => {
+    const result = await loadPreview(asSite(SITE_ID, 'bg_preview=tok_forged'))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(400)
+    expect((await result.response.json()).code).toBe('BAD_PREVIEW_TOKEN')
+    for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
   })
 
   it('lets BACKGOLD_SITE_ID win over the header', async () => {

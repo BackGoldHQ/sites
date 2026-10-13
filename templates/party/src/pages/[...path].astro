@@ -7,16 +7,20 @@
 // An entry is drawn by its type's entry layout and a list (a type's list, or
 // a term's) by its type's list layout, as template.json's `entryLayouts`
 // names them (src/components/entries); a type it does not name, and the
-// built-in types' shared list at /blog, use the post layouts. A list shows
+// news list (the blog types' shared list at the organization's blog base,
+// `/news` for one made since the address became its own, `/blog` for one that
+// kept it), use the post layouts. A list shows
 // one page of up to 50 entries: `?cursor=` asks for a later one, and the
 // layout draws "Older" on to the next page and "Newest" back to the first
 // (the api names no previous page, so there is no "Newer").
 //
-// The news list (/blog) opens with the Hero of the site's `news` page when
-// there is one (board A4), and that page's own address redirects to the list.
+// The news list opens with its intro when a published page sits at its
+// address (resolveRoute's `intro`; the starter's `news` page, board A4): that
+// page's sections, its Hero's headline the one <h1>, above the list. Such a
+// page is the list's opening, never a page of its own.
 //
-// The news list (/blog) and its terms' lists carry a search box that sends
-// `?q=` to /blog. There a search of 2 to 80 characters lists the matching
+// The news list and its terms' lists carry a search box that sends `?q=` to
+// the news list. There a search of 2 to 80 characters lists the matching
 // posts (the Content API's `?q=`, at most 20 a type) in place of the list,
 // with no pager; anything else under `q` shows the list. A response to a
 // request with `q` is never stored: the edge cache keys a list by its cursor
@@ -51,7 +55,7 @@ import PageSections from '../components/PageSections.astro'
 import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { sections } from '../components/sections'
-import { NEWS_INTRO_SLUG, filterOf, listName, listPath, searchNews, searchQuery } from '../lib/entries'
+import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
 import { entryCard } from '../lib/section'
 
@@ -75,8 +79,6 @@ if (calendarSlug !== null) {
 let resolved: Resolved = await resolveRoute(client, Astro.url)
 const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
 if (typed) resolved = { kind: 'page', page: typed.page }
-// The page that holds the news list's intro is not a page to read on its own: its address is the news list's.
-if (resolved.kind === 'page' && resolved.page.page.slug === NEWS_INTRO_SLUG && !resolved.page.page.is_home) return Astro.redirect('/blog', 302)
 const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
 const rawQuery = Astro.url.searchParams.get('q')
 const calendar = Astro.url.searchParams.has(MONTH_PARAM) || (resolved.kind === 'page' && resolved.page.sections.some(drawsCalendar))
@@ -105,7 +107,11 @@ switch (resolved.kind) {
     break
   }
   case 'index':
-    head = { title: `${listName(resolved.type)} · ${siteName}`, canonicalPath: pathname, jsonLd: jsonLdFor({ site, siteUrl, kind: 'index', type: resolved.type }) }
+    head = {
+      title: `${listName(resolved.type, resolved.base, resolved.intro)} · ${siteName}`,
+      canonicalPath: pathname,
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'index', type: resolved.type, base: resolved.base, intro: resolved.intro }),
+    }
     break
   case 'entry': {
     const { entry, type } = resolved
@@ -130,7 +136,7 @@ switch (resolved.kind) {
     head = {
       title: `${resolved.term.label} · ${siteName}`,
       canonicalPath: pathname,
-      jsonLd: jsonLdFor({ site, siteUrl, kind: 'term', type: resolved.type, taxonomy: resolved.taxonomy, term: resolved.term }),
+      jsonLd: jsonLdFor({ site, siteUrl, kind: 'term', type: resolved.type, base: resolved.base, taxonomy: resolved.taxonomy, term: resolved.term }),
     }
     break
   default:
@@ -154,20 +160,21 @@ const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && a
 let list: { Layout: ReturnType<typeof listLayoutFor>; props: ListLayoutProps } | null = null
 if (resolved.kind === 'index' || resolved.kind === 'term') {
   const key = resolved.type === 'blog' ? 'post' : resolved.type.key
-  const base = listPath(resolved.type)
-  const whole = resolved.kind === 'index' && resolved.cursor === null ? resolved : base ? await resolveRoute(client, base) : null
-  const news = resolved.type === 'blog' && base !== null
+  const base = basePath(resolved.base)
+  const whole = resolved.kind === 'index' && resolved.cursor === null ? resolved : await resolveRoute(client, base)
+  const news = resolved.type === 'blog'
   const q = news && resolved.kind === 'index' ? searchQuery(rawQuery) : null
   list = {
     Layout: listLayoutFor(key),
     props: {
       type: resolved.type,
+      base: resolved.base,
       entries: q === null ? resolved.entries : await searchNews(client, q),
       pager: q === null ? pagerOf(resolved, pathname) : { newest: null, older: null },
       filter: whole?.kind === 'index' ? filterOf(whole.entries) : null,
       term: resolved.kind === 'term' ? { taxonomy: resolved.taxonomy, term: resolved.term } : null,
       search: news ? { action: base, q } : null,
-      intro: news && resolved.kind === 'index' ? ((await client.page(NEWS_INTRO_SLUG))?.sections.find((sec) => sec.type === 'Hero' && typeof sec.copy.headline === 'string' && sec.copy.headline.trim() !== '') ?? null) : null,
+      intro: resolved.kind === 'index' ? resolved.intro : null,
     },
   }
 }

@@ -1,12 +1,13 @@
-// What every Blog layout lists: the newest entries of the types /blog lists
-// (posts, podcasts, videos: the built-in types that share it, never one with
-// an address of its own like the newsletter), newest first. The section
-// carries no rows of its own; its `maxItems` caps the count, else the
-// layout's own number.
+// What every Blog layout lists: the newest entries of the blog types (posts,
+// podcasts, videos: the types the news list shows together at the
+// organization's blog base, never one with an address of its own like the
+// newsletter), newest first, and that list's address for its "All news"
+// link. The section carries no rows of its own; its `maxItems` caps the
+// count, else the layout's own number.
 
 import type { Entry, Section } from '@backgold/content'
-import { safeHref, safeSrc } from '@backgold/astro/server'
-import { sharesBlog } from '../../../lib/entries'
+import { blogBaseOf, isBlogType, safeHref, safeSrc } from '@backgold/astro/server'
+import { basePath } from '../../../lib/entries'
 import { formatDay, formatShortDay, listOf } from '../../../lib/format'
 import { initials } from '../CandidateRoster/candidates'
 
@@ -16,15 +17,17 @@ export function shownOf(section: Section, fallback: number): number {
   return typeof max === 'number' && Number.isFinite(max) && max > 0 ? Math.floor(max) : fallback
 }
 
-export async function latestEntries(bg: App.Locals['backgold'], count: number): Promise<Entry[]> {
-  if (bg.setup !== null) return []
+/** The newest `count` entries of the blog types, and the news list's path (null on a site with no blog type). */
+export async function latestNews(bg: App.Locals['backgold'], count: number): Promise<{ entries: Entry[]; listPath: string | null }> {
+  if (bg.setup !== null) return { entries: [], listPath: null }
   const { types } = await bg.client.types()
-  const blogTypes = types.filter(sharesBlog)
-  const lists = await Promise.all(blogTypes.map((t) => bg.client.entries(t.key, { limit: count })))
-  return lists
+  const base = blogBaseOf(types)
+  const lists = await Promise.all(types.filter(isBlogType).map((t) => bg.client.entries(t.key, { limit: count })))
+  const entries = lists
     .flatMap((list) => list?.entries ?? [])
     .sort((a, b) => (b.publish_at ?? '').localeCompare(a.publish_at ?? ''))
     .slice(0, count)
+  return { entries, listPath: base === null ? null : basePath(base) }
 }
 
 /** One post as the Lead story and List layouts draw it. */
