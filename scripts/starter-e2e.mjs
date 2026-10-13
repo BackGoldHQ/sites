@@ -176,6 +176,9 @@ function filesUnder(dir) {
 
 // ── The kitchen sink: one block of every type, through the api's own projection ──
 
+/** The kitchen sink's membership program's benefits, on every one of its rows. */
+const MEMBER_BENEFITS = ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts']
+
 /**
  * A Puck document with one block of every non-chrome type in
  * CONTENT_API_BLOCKS, its props as the hosted builder writes them
@@ -470,7 +473,8 @@ function kitchenSinkDocument() {
         staff: [{ name: 'Sam Ortiz', role: 'Organizer', dept: 'Field' }],
         open: [{ role: 'Data volunteer', dept: 'Research', blurb: 'Help us post the checks.', linkUrl: '/volunteer' }],
       }),
-      // Baked from the org's membership program: one row per path it offers.
+      // Baked from the org's membership program: one row per offer its join
+      // page sells, here a tiered program's three tiers.
       block('Membership', {
         kicker: 'Membership',
         heading: 'Become a member',
@@ -480,9 +484,9 @@ function kitchenSinkDocument() {
         benefitsHeading: 'What members get',
         note: 'Cancel a monthly membership any time.',
         paths: [
-          { kind: 'monthly', min_cents: 1000, benefits: ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts'] },
-          { kind: 'annual', min_cents: 10000, benefits: ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts'] },
-          { kind: 'lifetime', min_cents: 50000, benefits: ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts'] },
+          { model: 'tiered', name: 'Neighbor', monthly_cents: 2500, annual_cents: 2500, lifetime_cents: null, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
+          { model: 'tiered', name: 'Spirit of ’71', monthly_cents: 1971, annual_cents: 1971, lifetime_cents: null, onetime_cents: null, symbolic: true, benefits: MEMBER_BENEFITS },
+          { model: 'tiered', name: 'Founder', monthly_cents: null, annual_cents: null, lifetime_cents: 50000, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
         ],
       }),
       // Compliance: each frames what BackGold serves, or carries only its heading.
@@ -2212,8 +2216,8 @@ const ROW_TEXT = {
   VoterTools: (i) => [i.label],
   SampleBallot: (i) => [i.name ?? i.office],
   Scorecard: (i) => [i.bill ?? i.name],
-  // Prices are the template's own words over min_cents; the benefits are the program's.
-  Membership: (i) => (i.benefits ?? []).slice(0, 1),
+  // The offer's name and the program's first benefit; prices are the template's own words over the *_cents columns.
+  Membership: (i) => [i.name, ...(i.benefits ?? []).slice(0, 1)],
   Faq: (i) => [i.question],
   Comparison: (i) => [i.issue],
   Stories: (i) => [i.title],
