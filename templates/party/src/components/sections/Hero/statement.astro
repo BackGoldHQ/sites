@@ -1,7 +1,7 @@
 ---
 // Hero, 'statement' layout (boards A3-leadership and A11-contact, section 1):
-// one wide headline and the line under it, with no photo, for a page that
-// opens on words. A button or a signup form the Hero carries follows the
+// the kicker, one wide headline and the line under it, with no photo, for a
+// page that opens on words. A button or a signup form the Hero carries follows the
 // line. The page-opening Hero's headline is the page's <h1> (`level={1}`);
 // any other Hero's is an <h2>. The signup form is BackGold's own (`embed`).
 import type { ComponentProps } from 'astro/types'
@@ -15,12 +15,14 @@ type Props = ComponentProps<typeof Default>
 
 const { section, level = 2 } = Astro.props
 const Heading = level === 1 ? 'h1' : 'h2'
+const kicker = text(section.copy.kicker)
 const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
 const buttons = links(section)
 ---
 <Band section={section} class="hero-statement">
   <div class="statement">
+    {kicker && <p class="kicker">{kicker}</p>}
     {headline && <Heading class="statement-headline">{headline}</Heading>}
     {subheadline && <p class="statement-lede">{subheadline}</p>}
     {buttons.length > 0 && (

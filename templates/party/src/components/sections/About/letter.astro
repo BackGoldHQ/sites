@@ -1,30 +1,39 @@
 ---
 // About, 'letter' layout (Signed letter; board A2-about-platform, section 2):
-// the story set as a letter, in the display serif at a reading measure, with
-// the writer's photo beside it and their signature (`copy.signature`) under
-// it. On a phone the photo sits above the letter, smaller. Without a photo
-// the letter is one centred column; without a signature it ends on the story.
+// the story set as a letter, in the display serif at a reading measure with a
+// drop cap, under its kicker and heading, with the writer's photo beside it
+// (their initials on the brand's colours when there is a signature and no
+// photo) and their signature and role (`copy.signature`, `copy.role`) under
+// it. On a phone the picture sits above the letter, smaller. With neither a
+// photo nor a signature the letter is one centred column.
 import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
 import type Default from './index.astro'
 import { media } from '../../../lib/section'
 import { text } from '../../../lib/format'
+import { initials } from '../../../lib/entries'
 
 type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
 const signature = text(section.copy.signature)
+const role = text(section.copy.role)
 const photo = media(section, 'photoUrl')
+const tile = !photo && signature ? initials(signature) : null
 ---
 <Band section={section} class="about">
-  <div class:list={['letter', photo && 'letter-with-photo']}>
+  <div class:list={['letter', (photo || tile) && 'letter-with-photo']}>
     {photo && <img class="letter-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+    {tile && <div class="letter-image letter-tile" aria-hidden="true">{tile}</div>}
     <div class="letter-words">
+      {kicker && <p class="kicker">{kicker}</p>}
       {heading && <h2>{heading}</h2>}
       <Prose value={section.copy.body} class="letter-body" />
       {signature && <p class="letter-signature">{signature}</p>}
+      {role && <p class="letter-role">{role}</p>}
     </div>
   </div>
 </Band>
@@ -61,7 +70,30 @@ const photo = media(section, 'photoUrl')
     font-style: italic;
     font-size: clamp(1.5rem, 1.2rem + 1vw, 1.875rem);
     line-height: 1.2;
-    color: var(--link);
+    color: var(--accent);
+  }
+  .letter-role {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .letter-tile {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(155deg, var(--bg-brand-primary), var(--bg-brand-accent));
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 2rem + 2vw, 3.75rem);
+    font-weight: 800;
+  }
+  /* A2's drop cap: the letter's first letter, three lines deep, in the accent. */
+  .letter-words :global(.letter-body p:first-child::first-letter) {
+    float: left;
+    margin: 0.3rem 0.5rem 0 0;
+    color: var(--accent);
+    font-size: 3.4em;
+    font-weight: 800;
+    line-height: 0.8;
   }
   @media (min-width: 48rem) {
     .letter-with-photo {

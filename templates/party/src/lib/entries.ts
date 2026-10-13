@@ -138,3 +138,10 @@ export async function searchNews(client: BackgoldContent, q: string): Promise<En
     .flatMap((page) => page?.entries ?? [])
     .sort((a, b) => ((a.publish_at ?? '') !== (b.publish_at ?? '') ? ((a.publish_at ?? '') < (b.publish_at ?? '') ? 1 : -1) : a.id < b.id ? 1 : -1))
 }
+
+/**
+ * The slug of the page whose Hero opens the news list (board A4: the kicker,
+ * "From the party" and its line over the posts). The page is content, written
+ * in BackGold like any other; its own address leads to the news list.
+ */
+export const NEWS_INTRO_SLUG = 'news'

@@ -260,6 +260,10 @@
 
 /* ── Lists ── */
 
+/* The news list's intro is a Hero drawn inside the list's own column: no second gutter. */
+.list-intro .bg-section {
+  padding-inline: 0;
+}
 .list-header {
   margin-bottom: 1.5rem;
 }
