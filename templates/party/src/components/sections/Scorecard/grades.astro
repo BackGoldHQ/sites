@@ -1,0 +1,10 @@
+---
+// Scorecard, 'grades' layout. A stub for the design pass: draws the default
+// layout with the same props. Replace this file's contents to give the layout
+// its design; sections/index.ts already points at it.
+import type { ComponentProps } from 'astro/types'
+import Default from './index.astro'
+
+type Props = ComponentProps<typeof Default>
+---
+<Default {...Astro.props} />
