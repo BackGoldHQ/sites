@@ -1,10 +1,341 @@
 ---
-// EventsList, 'shifts' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// EventsList · Shifts (board 06, A, "Shift list with filters"): the section
+// head (the kicker, the heading and the "All events" link), then a row per
+// event on the band's surface: a date tile at the left (the month in small
+// capitals over the day in the display face, the weekday under it, all in the
+// event's own time zone), the title linking to the event's page on this site
+// with the time and the place under it, the type as a chip, the live counts
+// ("8 going · 4 seats left", filled in by LiveCounts after the page loads;
+// empty without scripts) and whether it still takes registrations, then the
+// row's one button to the same page, which frames BackGold's RSVP and
+// tickets: "RSVP", "Get tickets" when the event sells tickets, "Details" in
+// the outline once registration has closed. Every row has its button,
+// whatever `options.actions` says.
+//
+// Over the rows, chips narrow the list: All, one per event type the rows
+// carry (when they carry more than one), and This weekend. The chips are
+// drawn hidden and shown by the section's script, so with scripts off every
+// row shows and nothing is offered that cannot work. The page is cached, so
+// the weekend is worked out by the script in the visitor's own time: the
+// coming Saturday and Sunday (on a Sunday, that day), matched against each
+// event's own day; its chip shows only when it would narrow the list.
+//
+// On a phone the tile and the title come first, the chip and counts under
+// the title, the button full width under them. With no events the head
+// stands over the section's empty-events line ("No upcoming events right
+// now." when it has none); with neither events nor a heading nothing is drawn.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import LiveCounts from './LiveCounts.astro'
+import SectionHead from '../SectionHead.astro'
+import { eventsOf, type EventRow } from './events'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const invitation = text(section.copy.eventsEmptyCta)
+const events = eventsOf(section)
+const types = [...new Set(events.map((e) => e.type).filter((t): t is string => t !== null))]
+const listId = `${section.id}-shifts`.replace(/[^A-Za-z0-9_-]/g, '-')
+const pad = (n: number) => String(n).padStart(2, '0')
+// The event's own calendar day, "2026-10-17", which the weekend chip matches.
+const dayOf = (e: EventRow) => (e.when ? `${e.when.year}-${pad(e.when.monthIndex + 1)}-${pad(Number(e.when.day))}` : '')
 ---
-<Default {...Astro.props} />
+{(heading || events.length > 0) && (
+  <Band section={section} class="events events-shifts">
+    <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
+    {events.length > 0 ? (
+      <div class="shifts" data-shifts>
+        <div class="sh-filters" role="group" aria-label="Filter events" data-shifts-filters hidden>
+          <button type="button" aria-pressed="true" aria-controls={listId} data-shifts-filter="">All</button>
+          {types.length > 1 && types.map((type) => (
+            <button type="button" aria-pressed="false" aria-controls={listId} data-shifts-filter={`type:${type}`}>{type}</button>
+          ))}
+          <button type="button" aria-pressed="false" aria-controls={listId} data-shifts-filter="weekend" hidden>This weekend</button>
+        </div>
+        <ul class="sh-list" id={listId} role="list">
+          {events.map((event) => (
+            <li class="sh-row" data-shift data-type={event.type ?? ''} data-day={dayOf(event)}>
+              {event.when && event.startsAt ? (
+                <time class="sh-tile" datetime={event.startsAt}>
+                  <span class="sh-month" aria-hidden="true">{event.when.monthShort}</span>
+                  <b aria-hidden="true">{event.when.day}</b>
+                  {event.when.weekday && <span class="sh-weekday" aria-hidden="true">{event.when.weekday}</span>}
+                  <span class="visually-hidden">{event.when.full}</span>
+                </time>
+              ) : (
+                <span class="sh-tile" aria-hidden="true"><b>–</b></span>
+              )}
+              <div class="sh-body">
+                <h3 class="sh-title">{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
+                {(event.when?.time || event.place) && <p class="sh-meta">{[event.when?.time, event.place].filter(Boolean).join(' · ')}</p>}
+              </div>
+              {(event.type || event.id || event.closed) && (
+                <p class="sh-facts">
+                  {event.type && <span class="chip chip-wash">{event.type}</span>}
+                  {event.id && <span class="sh-live" data-bg-live={event.id}></span>}
+                  {event.closed && <span class="sh-closed">Registration closed</span>}
+                </p>
+              )}
+              {event.action && (
+                <p class="sh-action">
+                  <a class:list={['button', 'button-small', event.closed ? 'button-quiet' : 'button-2']} href={event.action.href} rel={event.action.rel}>
+                    {event.action.label}<span class="visually-hidden">: {event.title}</span>
+                  </a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+        <p class="visually-hidden" role="status" data-shifts-showing></p>
+        <script is:inline>
+          (function (root) {
+            if (!root) return
+            var group = root.querySelector('[data-shifts-filters]')
+            var chips = group.querySelectorAll('[data-shifts-filter]')
+            var rows = root.querySelectorAll('[data-shift]')
+            var showing = root.querySelector('[data-shifts-showing]')
+            var pad = function (n) {
+              return (n < 10 ? '0' : '') + n
+            }
+            var key = function (d) {
+              return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            }
+            // The coming Saturday and Sunday in the visitor's own time; on a Sunday, that day.
+            var now = new Date()
+            var weekday = now.getDay()
+            var weekend = []
+            if (weekday === 0) weekend.push(key(now))
+            else for (var d = 6 - weekday; d <= 7 - weekday; d++) weekend.push(key(new Date(now.getFullYear(), now.getMonth(), now.getDate() + d)))
+            var matches = function (row, filter) {
+              if (!filter) return true
+              if (filter === 'weekend') return weekend.indexOf(row.getAttribute('data-day')) >= 0
+              return 'type:' + row.getAttribute('data-type') === filter
+            }
+            var count = function (n) {
+              return n + (n === 1 ? ' event' : ' events')
+            }
+            var choose = function (chip) {
+              var filter = chip.getAttribute('data-shifts-filter')
+              var shown = 0
+              for (var c = 0; c < chips.length; c++) chips[c].setAttribute('aria-pressed', chips[c] === chip ? 'true' : 'false')
+              for (var r = 0; r < rows.length; r++) {
+                var match = matches(rows[r], filter)
+                rows[r].hidden = !match
+                if (match) shown++
+              }
+              showing.textContent = filter
+                ? 'Showing ' + shown + ' of ' + count(rows.length) + ': ' + (filter === 'weekend' ? 'this weekend' : chip.textContent) + '.'
+                : 'Showing all ' + count(rows.length) + '.'
+            }
+            // This weekend is offered only when it would narrow the list.
+            var weekendChip = group.querySelector('[data-shifts-filter="weekend"]')
+            var onWeekend = 0
+            for (var r = 0; r < rows.length; r++) if (matches(rows[r], 'weekend')) onWeekend++
+            weekendChip.hidden = onWeekend === 0 || onWeekend === rows.length
+            var offered = 0
+            for (var c = 0; c < chips.length; c++) {
+              if (chips[c].getAttribute('data-shifts-filter') && !chips[c].hidden) offered++
+              chips[c].addEventListener('click', function (event) {
+                choose(event.currentTarget)
+              })
+            }
+            group.hidden = offered === 0
+          })(document.currentScript.closest('[data-shifts]'))
+        </script>
+      </div>
+    ) : (
+      <p class="sh-empty">{invitation ?? 'No upcoming events right now.'}</p>
+    )}
+    <LiveCounts />
+  </Band>
+)}
+
+<style>
+  .sh-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+  }
+  .sh-filters[hidden],
+  .sh-filters button[hidden] {
+    display: none;
+  }
+  .sh-filters button {
+    min-height: 2.75rem;
+    padding: 0.375rem 1rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sh-filters button:hover {
+    border-color: var(--ink);
+  }
+  .sh-filters button[aria-pressed='true'] {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+  .sh-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* A phone: the tile beside the title, the chip and counts under the title, the button across the bottom. */
+  .sh-row {
+    display: grid;
+    grid-template-columns: 3.75rem minmax(0, 1fr);
+    grid-template-areas:
+      'tile body'
+      'tile facts'
+      'action action';
+    gap: 0.5rem 1rem;
+    align-items: center;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .sh-row[hidden] {
+    display: none;
+  }
+  .sh-row > * {
+    margin: 0;
+  }
+  .sh-tile {
+    grid-area: tile;
+    align-self: start;
+    display: grid;
+    justify-items: center;
+    padding: 0.5rem 0 0.5625rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    line-height: 1;
+    text-align: center;
+  }
+  .sh-tile b {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .sh-month {
+    margin-bottom: 0.3125rem;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .sh-weekday {
+    margin-top: 0.3125rem;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sh-body {
+    grid-area: body;
+    min-width: 0;
+  }
+  .sh-body > * {
+    margin: 0;
+  }
+  .sh-title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .sh-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .sh-title a:hover {
+    text-decoration: underline;
+  }
+  .sh-meta {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .sh-facts {
+    grid-area: facts;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    font-size: var(--text-sm);
+  }
+  .sh-live {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .sh-live:empty {
+    display: none;
+  }
+  .sh-closed {
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .sh-action {
+    grid-area: action;
+  }
+  .sh-action .button {
+    width: 100%;
+  }
+  .sh-empty {
+    margin: 0;
+    padding: 1.125rem 1.25rem;
+    border: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: var(--radius);
+    color: var(--muted);
+  }
+  /* Wider: one line per event, the chip and counts and the button at the right. */
+  @media (min-width: 48rem) {
+    .sh-row {
+      grid-template-columns: 4.25rem minmax(0, 1fr) auto auto;
+      grid-template-areas: 'tile body facts action';
+      gap: 0 1.5rem;
+      padding: 1rem 1.25rem;
+    }
+    .sh-tile {
+      align-self: center;
+    }
+    .sh-tile b {
+      font-size: 2rem;
+    }
+    .sh-facts {
+      justify-content: flex-end;
+      max-width: 16rem;
+      text-align: right;
+    }
+    .sh-action .button {
+      width: auto;
+      min-width: 7.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .sh-filters button {
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+    }
+  }
+</style>
