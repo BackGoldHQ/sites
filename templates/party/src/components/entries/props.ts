@@ -1,7 +1,7 @@
 // What every entry layout and every list layout is given, by
 // src/pages/[...path].astro and src/pages/preview.astro.
 
-import type { Areas, ContentTypeSummary, Entry, EntryDetail, TermsResponse } from '@backgold/content'
+import type { Areas, ContentTypeSummary, Entry, EntryDetail, Section, TermsResponse } from '@backgold/content'
 import type { Pager, ResolvedType } from '@backgold/astro/server'
 import type { ListFilter } from '../../lib/entries'
 
@@ -25,6 +25,12 @@ export interface ListLayoutProps {
   term: { taxonomy: TermsResponse['taxonomy']; term: TermsResponse['terms'][number] } | null
   /** The search box, on the news list and its terms' lists; null on every other list. */
   search: ListSearch | null
+  /**
+   * The list's own opening, in place of its plain title: the Hero of the
+   * site's page with the slug `news`, on the whole news list only (board A4's
+   * "From the party"). Null everywhere else, and when there is no such page.
+   */
+  intro?: Section | null
 }
 
 export interface ListSearch {

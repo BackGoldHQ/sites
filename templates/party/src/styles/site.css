@@ -880,7 +880,7 @@ main:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .grid-3 {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
   }
   .stat-list,
   .quotes .grid {

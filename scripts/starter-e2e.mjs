@@ -950,10 +950,20 @@ function fixtureData(ex, kitchenSections) {
       { id: 'lp_events', slug: 'events', title: 'Events', url: '/events', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       { id: 'lp_leadership', slug: 'leadership', title: 'Leadership', url: '/leadership', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
       { id: 'lp_a1', slug: 'a1-home', title: 'A1 home', url: '/a1-home', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' },
+      // The party template opens its news list with this page's Hero (board A4).
+      ...(PARTY ? [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' }] : []),
     ],
     page: (slug, headline) =>
       slug === 'home'
         ? { ...ex.PageResponse, sections: homeSections(headline), areas: homeAreas }
+        : slug === 'news' && PARTY
+          ? boardPage('lp_news', 'news', 'News', [
+              {
+                id: 'Hero-news', type: 'Hero', band: 'plain', bleed: 'full', variant: 'statement',
+                copy: { kicker: 'News', headline: 'From the party', subheadline: 'Announcements and the occasional argument.' },
+                media: {}, links: [], options: {},
+              },
+            ])
         : slug === 'issues'
           ? {
               page: { ...ex.PageResponse.page, id: 'lp_issues', slug: 'issues', title: 'Issues', url: '/issues', is_home: false, meta: { title: null, description: 'What we will do.', image_url: null } },
@@ -2145,6 +2155,21 @@ async function checkPartyBoards(origin, fixture) {
   check(!/results? for|Nothing matches/.test(plain(html)), 'the bare list shows no search sentence')
   res = await get(origin, '/endorsements')
   check(!/class="list-search"/.test(await res.text()), 'a list other than News has no search box')
+
+  // A4: the news list opens with the News page's Hero, and that page's own address is the list's.
+  res = await get(origin, '/blog')
+  html = await res.text()
+  check(
+    res.status === 200 &&
+      tags(html, 'h1').length === 1 &&
+      plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'From the party' &&
+      /<p class="kicker"[^>]*>News<\/p>/.test(html) &&
+      html.includes('Announcements and the occasional argument.'),
+    `the news list opens with the News page's Hero: its kicker, its headline as the one <h1>, its line (got ${res.status})`,
+  )
+  res = await get(origin, '/news')
+  await res.text()
+  check(res.status === 302 && res.headers.get('location') === '/blog', `/news redirects to the news list (got ${res.status} ${res.headers.get('location')})`)
 
   // A3: the leadership page.
   res = await get(origin, '/leadership')

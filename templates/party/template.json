@@ -282,6 +282,22 @@
         ]
       },
       {
+        "slug": "news",
+        "title": "News",
+        "sections": [
+          {
+            "id": "Hero-news", "type": "Hero", "band": "plain", "bleed": "full", "variant": "statement",
+            "copy": {
+              "kicker": "News",
+              "headline": "From the party",
+              "subheadline": "Announcements, candidate news and the occasional argument, from the state committee and our county chapters."
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
         "slug": "events",
         "title": "Events",
         "sections": [
