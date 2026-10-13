@@ -9,7 +9,7 @@
 // Pages are cached until content changes, so the server writes the end of
 // the match and a few lines of script count it down each second in the
 // visitor's browser; once it has passed the tiles give way to "The match has
-// ended". Without script the end reads plainly ("Ends Sunday, October 18,
+// ended" and the chip ("2× match active") goes. Without script the end reads plainly ("Ends Sunday, October 18,
 // 2026 at 11:59 PM"). The clock is drawn only for an end that is a date.
 // Nothing is drawn without a raised figure.
 import type { ComponentProps } from 'astro/types'
@@ -43,7 +43,7 @@ const units = [
   <Band section={section} class="progress progress-match">
     <div class:list={['match', (ends || give) && 'match-split']}>
       <div class="match-main">
-        {chip && <p class="chip chip-accent match-chip">{chip}</p>}
+        {chip && <p class="chip chip-accent match-chip" data-match-chip>{chip}</p>}
         {heading && <h2 class="match-heading">{heading}</h2>}
         {percent !== null && (
           <div class="meter match-meter" role="img" aria-label={`${percent}% of the goal`}>
@@ -81,6 +81,8 @@ const units = [
                   var left = clock.querySelector('[data-match-left]')
                   var plain = clock.querySelector('[data-match-ends]')
                   var over = clock.querySelector('[data-match-over]')
+                  var card = clock.closest('.bg-section')
+                  var chip = card && card.querySelector('[data-match-chip]')
                   var slots = {}
                   clock.querySelectorAll('[data-match-unit]').forEach(function (slot) {
                     slots[slot.getAttribute('data-match-unit')] = slot
@@ -94,6 +96,7 @@ const units = [
                       left.hidden = true
                       plain.hidden = true
                       over.hidden = false
+                      if (chip) chip.hidden = true
                       return false
                     }
                     var s = Math.floor(ms / 1000)
@@ -135,6 +138,9 @@ const units = [
   }
   .match-main > :last-child {
     margin-bottom: 0;
+  }
+  .match-chip[hidden] {
+    display: none;
   }
   .match-chip {
     margin: 0 0 0.875rem;
