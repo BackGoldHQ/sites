@@ -1,13 +1,21 @@
 ---
-// Stories, 'spotlight' layout, the default. A stub for the design pass: the
-// kicker and heading, the body, each row's text fields on one line, and the
-// section's links as buttons, so the section renders with its words before
-// it has a design. Replace this file's contents to give the layout its design.
+// Stories · Spotlight, the default (board 10, A): the kicker and heading,
+// the line of copy, then the featured story: its picture large at the left
+// with rounded corners and, at the right, its label as a chip, its title in
+// the display face, the summary, the status in the accent chip beside the
+// outcome in the plain chip, and the read link as the section's one button.
+// With a watch link the whole picture is that link, a play mark and the
+// watch label laid over its corner; without a picture the watch link sits
+// beside the button and the words take the full width on the band's surface.
+// The title is an <h2>, or an <h3> under the section's own heading. The
+// stories in the list follow as the story cards under a thin rule. With no
+// story, no featured title and no heading it draws nothing.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import SectionHead from '../SectionHead.astro'
 import Prose from '../../Prose.astro'
-import { links, rows } from '../../../lib/section'
+import StoryCards from './StoryCards.astro'
+import { featuredOf, storiesOf } from './stories'
 import { text } from '../../../lib/format'
 
 interface Props {
@@ -18,22 +26,213 @@ interface Props {
 const { section } = Astro.props
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const lines = rows(section)
-  .map((row) => Object.values(row).map(text).filter((value): value is string => value !== null).join(' · '))
-  .filter(Boolean)
-const ctas = links(section)
+const featured = featuredOf(section)
+const stories = storiesOf(section)
+const Title = heading ? 'h3' : 'h2'
 ---
-<Band section={section} class="stories-stub">
-  <SectionHead kicker={kicker} heading={heading} more={[]} />
-  <Prose value={section.copy.body} />
-  {lines.length > 0 && (
-    <ul role="list">
-      {lines.map((line) => <li>{line}</li>)}
-    </ul>
-  )}
-  {ctas.length > 0 && (
-    <p class="actions">
-      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
-    </p>
-  )}
-</Band>
+{(heading || featured || stories.length > 0) && (
+  <Band section={section} class="stories stories-spotlight">
+    <div class="stories-intro">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {featured && (
+      <article class:list={['spotlight', featured.picture ? 'spotlight-pictured' : 'spotlight-words-only']}>
+        {featured.picture && (featured.watch ? (
+          <a class="spotlight-media spotlight-watch" href={featured.watch.href} rel={featured.watch.rel}>
+            <span class="spotlight-play">
+              <span class="play-mark" aria-hidden="true"></span>
+              {featured.watch.label}
+            </span>
+            <img class="spotlight-photo" src={featured.picture.url} alt={featured.picture.alt} loading="lazy" decoding="async" />
+          </a>
+        ) : (
+          <div class="spotlight-media">
+            <img class="spotlight-photo" src={featured.picture.url} alt={featured.picture.alt} loading="lazy" decoding="async" />
+          </div>
+        ))}
+        <div class="spotlight-words">
+          {featured.label && <p class="spotlight-label"><span class="chip">{featured.label}</span></p>}
+          <Title class="spotlight-title">{featured.title}</Title>
+          {featured.summary && <p class="spotlight-summary">{featured.summary}</p>}
+          {(featured.status || featured.outcome) && (
+            <p class="spotlight-chips">
+              {featured.status && <span class="chip chip-accent">{featured.status}</span>}
+              {featured.outcome && <span class="chip">{featured.outcome}</span>}
+            </p>
+          )}
+          {(featured.read || (featured.watch && !featured.picture)) && (
+            <p class="actions spotlight-actions">
+              {featured.read && <a class="button" href={featured.read.href} rel={featured.read.rel}>{featured.read.label}</a>}
+              {featured.watch && !featured.picture && (
+                <a class="spotlight-watch-link" href={featured.watch.href} rel={featured.watch.rel}>
+                  <span class="play-mark" aria-hidden="true"></span>
+                  {featured.watch.label}
+                </a>
+              )}
+            </p>
+          )}
+        </div>
+      </article>
+    )}
+    {stories.length > 0 && (
+      <div class:list={['spotlight-more', featured && 'spotlight-more-ruled']}>
+        <StoryCards stories={stories} />
+      </div>
+    )}
+  </Band>
+)}
+
+<style>
+  .stories-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .stories-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+  .spotlight {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .spotlight-media {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+  .spotlight-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+  .spotlight-watch {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .spotlight-play {
+    position: absolute;
+    z-index: 1;
+    left: 0.875rem;
+    bottom: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    max-width: calc(100% - 1.75rem);
+    padding: 0.375rem 1rem 0.375rem 0.375rem;
+    border-radius: var(--pill);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: var(--shadow);
+  }
+  .spotlight-watch:hover .spotlight-play {
+    text-decoration: underline;
+  }
+  .spotlight-watch:focus-visible {
+    outline-offset: 4px;
+    border-radius: var(--radius-card);
+  }
+  /* The play mark: a disc in the button colour with a triangle cut in the button's ink. */
+  .play-mark {
+    position: relative;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--button);
+  }
+  .play-mark::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 54%;
+    border-style: solid;
+    border-width: 0.4375rem 0 0.4375rem 0.6875rem;
+    border-color: transparent transparent transparent var(--button-ink);
+    transform: translate(-50%, -50%);
+  }
+  .spotlight-words > * {
+    margin: 0;
+  }
+  .spotlight-words .spotlight-title {
+    margin-top: 0.875rem;
+    font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.08;
+  }
+  .spotlight-words > .spotlight-title:first-child {
+    margin-top: 0;
+  }
+  .spotlight-words .spotlight-summary {
+    margin-top: 0.875rem;
+    color: var(--muted);
+    font-size: var(--text-lg);
+    max-width: var(--measure);
+  }
+  .spotlight-words .spotlight-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.125rem;
+  }
+  .spotlight-chips .chip {
+    white-space: normal;
+  }
+  .spotlight-words .spotlight-actions {
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .spotlight-watch-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .spotlight-watch-link:hover {
+    text-decoration: underline;
+  }
+  .spotlight-watch-link .play-mark {
+    width: 2rem;
+    height: 2rem;
+  }
+  .spotlight-words-only .spotlight-words {
+    padding: 1.5rem 1.25rem 1.625rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .spotlight-more-ruled {
+    margin-top: clamp(2rem, 1.5rem + 1.5vw, 2.75rem);
+    padding-top: clamp(2rem, 1.5rem + 1.5vw, 2.75rem);
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 48rem) {
+    .spotlight-pictured {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: clamp(2rem, 4vw, 3rem);
+      align-items: center;
+    }
+    .spotlight-play {
+      left: 1.125rem;
+      bottom: 1.125rem;
+      max-width: calc(100% - 2.25rem);
+    }
+    .spotlight-words-only .spotlight-words {
+      padding: 2.25rem 2.5rem 2.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .spotlight-photo {
+      transition: transform 0.3s ease;
+    }
+    .spotlight-watch:hover .spotlight-photo {
+      transform: scale(1.02);
+    }
+  }
+</style>

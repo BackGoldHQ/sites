@@ -1,10 +1,42 @@
 ---
-// Stories, 'cards' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Stories · Cards (board 10, B): the kicker and heading, the line of copy,
+// then every story in the list as a card on the band's surface, three across
+// on a wide screen and one on a phone: the picture (or the label large on a
+// soft panel), the status word as its tone sets it, the title, linked when
+// the row has an address, and the body. The featured story in the copy
+// belongs to the Spotlight and is not drawn here. With no story and no
+// heading it draws nothing.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import StoryCards from './StoryCards.astro'
+import { storiesOf } from './stories'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const stories = storiesOf(section)
 ---
-<Default {...Astro.props} />
+{(heading || stories.length > 0) && (
+  <Band section={section} class="stories stories-cards">
+    <div class="stories-intro">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {stories.length > 0 && <StoryCards stories={stories} />}
+  </Band>
+)}
+
+<style>
+  .stories-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .stories-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+</style>

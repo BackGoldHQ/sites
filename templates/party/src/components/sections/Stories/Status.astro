@@ -1,0 +1,42 @@
+---
+// A story's status word, set by its tone (board 10, B's pills): a win in the
+// accent chip, a story in progress in the plain chip, a loss in a muted
+// outline chip, and a story with no tone as the bare word in the muted ink.
+// The word carries the meaning; the chip only sets it. Draws nothing
+// without a status.
+import type { Tone } from './stories'
+
+interface Props {
+  status: string | null
+  tone: Tone
+}
+
+const { status, tone } = Astro.props
+---
+{status && (
+  tone === 'none'
+    ? <p class="story-status story-status-none">{status}</p>
+    : <p class="story-status"><span class:list={['chip', tone === 'won' && 'chip-accent', tone === 'lost' && 'story-status-lost']}>{status}</span></p>
+)}
+
+<style>
+  .story-status {
+    margin: 0;
+    line-height: 1.2;
+  }
+  .story-status .chip {
+    white-space: normal;
+  }
+  .story-status-none {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .story-status .story-status-lost {
+    padding-block: calc(0.1875rem - 1px);
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--muted);
+  }
+</style>
