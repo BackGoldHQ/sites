@@ -300,6 +300,11 @@ export interface EventDetail {
   venue: string | null
   address: string | null
   image_url: string | null
+  /** The venue's coordinates, for the map; null without them. */
+  lat: number | null
+  lng: number | null
+  /** A maps link out to the venue; null for an online event or one with no place. */
+  directions_url: string | null
   embed: SectionEmbed
 }
 
@@ -310,6 +315,7 @@ function detailOf(body: unknown): { event: EventDetail; areas: Areas } | null {
   if (typeof e.id !== 'string' || typeof e.slug !== 'string' || typeof e.title !== 'string' || typeof e.starts_at !== 'string') return null
   if (!isRecord(embed) || typeof embed.script !== 'string' || !(typeof embed.iframe === 'string' || embed.iframe === null)) return null
   const str = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v : null)
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
   return {
     event: {
       id: e.id,
@@ -326,6 +332,9 @@ function detailOf(body: unknown): { event: EventDetail; areas: Areas } | null {
       venue: str(e.venue),
       address: str(e.address),
       image_url: str(e.image_url),
+      lat: num(e.lat),
+      lng: num(e.lng),
+      directions_url: str(e.directions_url),
       embed: { iframe: embed.iframe as string | null, script: embed.script },
     },
     areas: body.areas as Areas,
@@ -351,4 +360,56 @@ export async function eventPage(client: BackgoldContent, pathname: string): Prom
     throw error
   }
   return detailOf(body)
+}
+
+/** The address of an event's calendar file on this site: `/events/<slug>.ics`. */
+export const eventCalendarPath = (slug: string): string => `${EVENTS_PATH}/${encodeURIComponent(slug)}.ics`
+
+/** The slug `/events/<slug>.ics` names, or null for any other path. */
+export function calendarSlugOf(pathname: string): string | null {
+  const m = /^\/events\/([^/]+)\.ics$/.exec(pathname)
+  if (!m) return null
+  try {
+    return decodeURIComponent(m[1]!)
+  } catch {
+    return null
+  }
+}
+
+/** Text as an iCalendar value: backslash, comma, semicolon and line breaks escaped. */
+const icsText = (value: string): string => value.replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1').replace(/\r?\n/g, '\\n')
+
+/** An instant as iCalendar UTC, `20261101T013000Z`; null when it does not parse. */
+function icsInstant(value: string | null): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+}
+
+/**
+ * The event as a one-event iCalendar file (Add to calendar): its title, start
+ * and end (an hour when it has no end), place and its page on this site. Null
+ * when the start does not parse.
+ */
+export function eventCalendar(event: EventDetail, pageUrl: string, host: string): string | null {
+  const start = icsInstant(event.starts_at)
+  if (!start) return null
+  const end = icsInstant(event.ends_at) ?? icsInstant(new Date(new Date(event.starts_at).getTime() + 3_600_000).toISOString())
+  const place = [event.venue ?? event.location, event.venue ? event.address : null].filter(Boolean).join(', ')
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//BackGold//Party template//EN',
+    'BEGIN:VEVENT',
+    `UID:${icsText(event.id)}@${icsText(host)}`,
+    `DTSTAMP:${start}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${icsText(event.title)}`,
+    ...(place ? [`LOCATION:${icsText(place)}`] : []),
+    `URL:${pageUrl}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+  return `${lines.join('\r\n')}\r\n`
 }

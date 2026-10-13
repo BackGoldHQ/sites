@@ -32,6 +32,10 @@
 //   panel     the card colour
 //   wash      the primary colour washed over white
 //   contrast  the primary itself (dark mode: the secondary), flat
+//   brand     not a band an organization picks: the primary colour as a
+//             ground in both modes (dark mode: lifted a step), for the
+//             footer, the announcement strip and a solid card (A1's footer,
+//             top bar and the sidebar's call to action)
 //   photo     not a band an organization picks: the dark scrim the template
 //             lays over a photo (Hero · Full photo), the same in both modes
 // Every band gets an ink, a muted ink, an accent, a link colour, two button
@@ -145,7 +149,7 @@ interface Band {
   lineStrong: string
 }
 
-type BandName = 'plain' | 'tint' | 'panel' | 'wash' | 'contrast' | 'photo'
+type BandName = 'plain' | 'tint' | 'panel' | 'wash' | 'contrast' | 'brand' | 'photo'
 
 /** One mode's inks and brand colours, which every band of that mode starts from. */
 interface Mode {
@@ -187,8 +191,8 @@ function band(ground: string, m: Mode): Band {
     buttonInk: callReads ? buttonInk : inkOn(button),
     button2,
     button2Ink: inkOn(button2, m.darkText, m.lightText),
-    surface: light ? m.surface : mix(LIGHT_INK, ground, 0.06),
-    line: light ? m.line : mix(LIGHT_INK, ground, 0.12),
+    surface: light ? m.surface : mix(LIGHT_INK, ground, 0.035),
+    line: light ? m.line : mix(LIGHT_INK, ground, 0.1),
     lineStrong: light ? m.lineStrong : mix(LIGHT_INK, ground, 0.2),
   }
 }
@@ -238,6 +242,7 @@ function lightPalette(brand: BrandColors | null | undefined): Palette {
       panel: band(m.surface, m),
       wash: band(mix(primary, LIGHT_INK, 0.11), m),
       contrast: band(contrastGround, m),
+      brand: band(contrastGround, m),
       photo: band(darkGround(mix(primary, BLACK, 0.4)), m),
     },
   }
@@ -274,6 +279,7 @@ function darkPalette(brand: BrandColors | null | undefined): Palette {
       panel: band(mix(primary, BLACK, 0.66), m),
       wash: band(mix(primary, BLACK, 0.72), m),
       contrast: band(contrastGround, m),
+      brand: band(darkGround(mix(primary, LIGHT_INK, 0.94)), m),
       // A photo does not change with the visitor's theme: its scrim and words are light mode's.
       photo: { ...lightModeColors.bands.photo, button: m.call, buttonInk: inkOn(m.call, INK, LIGHT_INK) },
     },
@@ -286,7 +292,8 @@ function lines(p: Palette): string[] {
     `--bg-brand-secondary:${p.secondary}`,
     `--bg-brand-accent:${p.accent}`,
     `--page:${p.page}`,
-    `--shadow-ink:${p.bands.plain.ink}`,
+    // A shadow is the page's ink on a light page and black on a dark one (a light shadow reads as a glow).
+    `--shadow-ink:${isLight(p.page) ? p.bands.plain.ink : BLACK}`,
   ]
   for (const [name, b] of Object.entries(p.bands)) {
     out.push(

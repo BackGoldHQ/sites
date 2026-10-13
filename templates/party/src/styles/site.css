@@ -110,9 +110,8 @@ body,
   --line: var(--band-wash-line);
   --line-strong: var(--band-wash-line-strong);
 }
-/* Flat, as A1 draws the ribbon, the photo call to action and the footer. */
-.bg-band-contrast,
-.site-footer {
+/* Flat, as A1 draws the ribbon and the photo call to action. */
+.bg-band-contrast {
   --bg-band-background: var(--band-contrast);
   --bg-band-color: var(--band-contrast-ink);
   --ink: var(--band-contrast-ink);
@@ -126,6 +125,28 @@ body,
   --surface: var(--band-contrast-surface);
   --line: var(--band-contrast-line);
   --line-strong: var(--band-contrast-line-strong);
+}
+/*
+  The brand ground: the primary colour in both modes (A1's footer, its
+  announcement strip above the header and the sidebar's call to action),
+  whatever band the section was given.
+*/
+.site-footer,
+.bg-section.cta-strip,
+.rail .bg-section.cta {
+  --bg-band-background: var(--band-brand);
+  --bg-band-color: var(--band-brand-ink);
+  --ink: var(--band-brand-ink);
+  --muted: var(--band-brand-muted);
+  --accent: var(--band-brand-accent);
+  --link: var(--band-brand-link);
+  --button: var(--band-brand-button);
+  --button-ink: var(--band-brand-button-ink);
+  --button-2: var(--band-brand-button-2);
+  --button-2-ink: var(--band-brand-button-2-ink);
+  --surface: var(--band-brand-surface);
+  --line: var(--band-brand-line);
+  --line-strong: var(--band-brand-line-strong);
 }
 /* Words laid over a photo (Hero · Full photo): the photo band's inks, which read on its scrim. */
 .on-photo {

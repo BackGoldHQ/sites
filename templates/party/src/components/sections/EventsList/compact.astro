@@ -1,0 +1,120 @@
+---
+// EventsList · Compact (boards A4 and A6, the sidebar's "Coming up"): a small
+// card with the heading, then a row per event: its day as a numeral over the
+// month ("14 / OCT") in the accent, the title linking to the event's page on
+// this site, and the place and time on one line; the section's "All events"
+// link closes the card. With no events it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { eventsOf } from './events'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const events = eventsOf(section)
+const more = links(section)
+---
+{events.length > 0 && (
+  <Band section={section} class="events events-compact">
+    {heading && <h2>{heading}</h2>}
+    <ul class="compact-events" role="list">
+      {events.map((event) => (
+        <li>
+          {event.when && event.startsAt && (
+            <time class="compact-day" datetime={event.startsAt}>
+              <b aria-hidden="true">{event.when.day}</b>
+              <span aria-hidden="true">{event.when.monthShort}</span>
+              <span class="visually-hidden">{event.when.full}</span>
+            </time>
+          )}
+          <div>
+            <h3>{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
+            {(event.place || event.when?.time) && <p>{[event.place, event.when?.time].filter(Boolean).join(' · ')}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+    {more.length > 0 && <p class="compact-more">{more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}</p>}
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.events-compact) {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  :global(.events-compact h2) {
+    margin: 0 0 0.75rem;
+    font-size: var(--h3);
+  }
+  .compact-events {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .compact-events li {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .compact-events li:first-child {
+    border-top: 0;
+    padding-top: 0.25rem;
+  }
+  .compact-day {
+    display: grid;
+    justify-items: center;
+    line-height: 1;
+  }
+  .compact-day b {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 800;
+  }
+  .compact-day span[aria-hidden] {
+    margin-top: 0.25rem;
+    color: var(--accent);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .compact-events h3 {
+    margin: 0;
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .compact-events h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .compact-events h3 a:hover {
+    text-decoration: underline;
+  }
+  .compact-events p {
+    margin: 0.125rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .compact-more {
+    margin: 0.5rem 0 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .compact-more a {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>

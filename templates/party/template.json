@@ -19,7 +19,7 @@
     "Leaderboard": ["table"],
     "SocialFeed": ["grid"],
     "MovementTicker": ["ticker"],
-    "EventsList": ["list", "cards", "agenda", "calendar"],
+    "EventsList": ["list", "cards", "agenda", "compact", "calendar"],
     "Blog": ["cards", "list", "feature"],
     "Collection": ["cards", "list", "compact"],
     "ContentPost": ["card"],
@@ -227,7 +227,7 @@
             "id": "Hero-leadership", "type": "Hero", "band": "plain", "bleed": "full", "variant": "statement",
             "copy": {
               "headline": "The people who answer the phone.",
-              "subheadline": "Our officers and state committee, elected by members at convention, and the candidates members chose to run."
+              "subheadline": "Our officers and state committee, elected by members at convention."
             },
             "media": {},
             "links": []
@@ -243,13 +243,6 @@
             "links": [{ "label": "Ask about running", "target": { "kind": "page", "slug": "contact" }, "url": "/contact" }]
           },
           {
-            "id": "CandidateRoster-leadership", "type": "CandidateRoster", "band": "tint", "bleed": "full", "variant": "ballot",
-            "copy": { "heading": "On your ballot", "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set." },
-            "media": {},
-            "links": [],
-            "options": { "showFilters": true }
-          },
-          {
             "id": "Cta-leadership", "type": "Cta", "band": "contrast", "bleed": "full", "variant": "banner",
             "copy": {
               "eyebrow": "Run with us",
@@ -263,6 +256,28 @@
               { "label": "Become a member", "target": { "kind": "surface", "path": "/join" }, "url": "/join" },
               { "label": "Talk to us", "target": { "kind": "page", "slug": "contact" }, "url": "/contact" }
             ]
+          }
+        ]
+      },
+      {
+        "slug": "candidates",
+        "title": "Candidates",
+        "sections": [
+          {
+            "id": "Hero-candidates", "type": "Hero", "band": "plain", "bleed": "full", "variant": "statement",
+            "copy": {
+              "headline": "On your ballot.",
+              "subheadline": "Members chose every one of them at convention. Find who is running where you live."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "CandidateRoster-candidates", "type": "CandidateRoster", "band": "plain", "bleed": "full", "variant": "ballot",
+            "copy": { "heading": "On your ballot", "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set." },
+            "media": {},
+            "links": [],
+            "options": { "showFilters": true }
           }
         ]
       },
@@ -418,7 +433,8 @@
           "children": [
             { "label": "About", "kind": "page", "target": { "slug": "about" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
             { "label": "Platform", "kind": "section", "target": { "slug": "about", "anchor": "platform" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
-            { "label": "Leadership", "kind": "page", "target": { "slug": "leadership" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] }
+            { "label": "Leadership", "kind": "page", "target": { "slug": "leadership" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
+            { "label": "Candidates", "kind": "page", "target": { "slug": "candidates" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] }
           ]
         },
         { "label": "News", "kind": "blog", "target": {}, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
@@ -435,6 +451,7 @@
             { "label": "About", "kind": "page", "target": { "slug": "about" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
             { "label": "Platform", "kind": "section", "target": { "slug": "about", "anchor": "platform" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
             { "label": "Leadership", "kind": "page", "target": { "slug": "leadership" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
+            { "label": "Candidates", "kind": "page", "target": { "slug": "candidates" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] },
             { "label": "Contact", "kind": "page", "target": { "slug": "contact" }, "shows_on": { "rule": "every_page" }, "header_button": false, "children": [] }
           ]
         },
@@ -462,7 +479,7 @@
         "kind": "sidebar",
         "document": [
           {
-            "id": "EventsList-blog-sidebar", "type": "EventsList", "band": "plain", "bleed": "full", "variant": "list",
+            "id": "EventsList-blog-sidebar", "type": "EventsList", "band": "plain", "bleed": "full", "variant": "compact",
             "copy": { "heading": "Coming up", "eventsEmptyCta": "New events show here as soon as they are posted." },
             "media": {},
             "links": [],
