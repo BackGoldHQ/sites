@@ -1,0 +1,95 @@
+---
+// The island every QuickDonate layout places right after its picker (the
+// element marked `data-quick-donate`). Without script each amount is a plain
+// link to the donate page with its `?amount=`, Other links there with none,
+// and the button carries the amount that starts selected. With script an
+// amount is a toggle (`aria-pressed`) instead: picking one marks it, and the
+// button's address and words ("Donate $50") follow it. The monthly switch
+// and the bar's Dismiss are hidden until the script shows them: the switch
+// sets `&frequency=monthly` on every address, and Dismiss hides the section
+// and remembers that in `sessionStorage` for the rest of the visit.
+---
+<script is:inline>
+  ;(function () {
+    var root = document.currentScript && document.currentScript.previousElementSibling
+    if (!root || !root.hasAttribute('data-quick-donate')) return
+    var base = root.getAttribute('data-href')
+    var label = root.getAttribute('data-label')
+    var amounts = Array.prototype.slice.call(root.querySelectorAll('[data-amount]'))
+    var other = root.querySelector('[data-other]')
+    var give = root.querySelector('[data-give]')
+    var monthly = root.querySelector('[data-monthly]')
+    var dismiss = root.querySelector('[data-dismiss]')
+    var selected = null
+    var recurring = false
+
+    if (dismiss) {
+      var band = root.closest('.bg-section') || root
+      var key = 'bg-quick-donate-dismissed:' + root.getAttribute('data-dismiss-key')
+      try {
+        if (sessionStorage.getItem(key)) {
+          band.hidden = true
+          return
+        }
+      } catch (e) {}
+      dismiss.hidden = false
+      dismiss.addEventListener('click', function () {
+        band.hidden = true
+        try {
+          sessionStorage.setItem(key, '1')
+        } catch (e) {}
+      })
+    }
+
+    function address(amount) {
+      var url = new URL(base, location.href)
+      url.searchParams.delete('amount')
+      url.searchParams.delete('frequency')
+      if (amount) url.searchParams.set('amount', amount)
+      if (recurring) url.searchParams.set('frequency', 'monthly')
+      return url.href
+    }
+
+    function paint() {
+      amounts.forEach(function (a) {
+        var value = a.getAttribute('data-amount')
+        var on = value === selected
+        a.setAttribute('aria-pressed', on ? 'true' : 'false')
+        if (on) a.setAttribute('data-selected', '')
+        else a.removeAttribute('data-selected')
+        a.href = address(value)
+      })
+      if (other) other.href = address(null)
+      if (give) {
+        give.href = address(selected)
+        give.textContent = selected ? label + ' $' + Number(selected).toLocaleString('en-US') : label
+      }
+      if (monthly) monthly.setAttribute('aria-checked', recurring ? 'true' : 'false')
+    }
+
+    function pick(a, e) {
+      e.preventDefault()
+      selected = a.getAttribute('data-amount')
+      paint()
+    }
+
+    amounts.forEach(function (a) {
+      if (a.hasAttribute('data-selected')) selected = a.getAttribute('data-amount')
+      a.setAttribute('role', 'button')
+      a.addEventListener('click', function (e) {
+        pick(a, e)
+      })
+      a.addEventListener('keydown', function (e) {
+        if (e.key === ' ') pick(a, e)
+      })
+    })
+    if (monthly) {
+      monthly.hidden = false
+      monthly.addEventListener('click', function () {
+        recurring = !recurring
+        paint()
+      })
+    }
+    paint()
+  })()
+</script>

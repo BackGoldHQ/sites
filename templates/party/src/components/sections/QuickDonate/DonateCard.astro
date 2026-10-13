@@ -1,0 +1,149 @@
+---
+// The donate card the grid and hero layouts place beside their words: a
+// raised card on the band's surface holding the amounts three across (each in
+// the display face, Other last), the monthly switch when the section offers
+// it, the one button, and the note small under it. Picker.astro, right after
+// it, makes the amounts a choice the button follows.
+import Picker from './Picker.astro'
+import { amountHref, dollars, giveLabel, type QuickDonate } from './donate'
+
+interface Props {
+  qd: QuickDonate
+}
+
+const { qd } = Astro.props
+---
+<div class="qd-card" data-quick-donate data-href={qd.donate.href} data-label={qd.donate.label}>
+  <ul class="qd-amounts" role="list" aria-label="Choose an amount">
+    {qd.amounts.map((amount) => (
+      <li>
+        <a class="qd-amount" href={amountHref(qd.donate.href, amount)} rel={qd.donate.rel} data-amount={amount} data-selected={amount === qd.selected ? '' : undefined}>
+          {dollars(amount)}
+        </a>
+      </li>
+    ))}
+    <li>
+      <a class="qd-amount qd-other" href={amountHref(qd.donate.href, null)} rel={qd.donate.rel} data-other>Other<span class="visually-hidden"> amount</span></a>
+    </li>
+  </ul>
+  {qd.monthly && (
+    <button type="button" class="qd-switch" role="switch" aria-checked="false" data-monthly hidden>
+      <span class="qd-switch-track" aria-hidden="true"><span class="qd-switch-thumb"></span></span>
+      <span>{qd.monthly}</span>
+    </button>
+  )}
+  <a class="button qd-give" href={amountHref(qd.donate.href, qd.selected)} rel={qd.donate.rel} data-give>{giveLabel(qd)}</a>
+  {qd.note && <p class="fine qd-note">{qd.note}</p>}
+</div>
+<Picker />
+
+<style>
+  .qd-card {
+    padding: clamp(1.25rem, 0.9rem + 1.2vw, 1.75rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+  }
+  .qd-amounts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .qd-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.5rem;
+    padding: 0 0.5rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+  .qd-amount:hover {
+    border-color: var(--ink);
+  }
+  .qd-amount[data-selected] {
+    background: var(--button-2);
+    border-color: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .qd-other {
+    font-family: var(--font);
+    font-size: var(--text);
+  }
+  .qd-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    margin: 0.875rem 0 0;
+    padding: 0 0.25rem 0 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .qd-switch[hidden] {
+    display: none;
+  }
+  .qd-switch-track {
+    position: relative;
+    flex: 0 0 auto;
+    width: 2.75rem;
+    height: 1.5rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--pill);
+  }
+  .qd-switch-thumb {
+    position: absolute;
+    top: 0.1875rem;
+    left: 0.1875rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .qd-switch[aria-checked='true'] .qd-switch-track {
+    background: var(--button-2);
+    border-color: var(--button-2);
+  }
+  .qd-switch[aria-checked='true'] .qd-switch-thumb {
+    background: var(--button-2-ink);
+    transform: translateX(1.25rem);
+  }
+  .qd-give {
+    display: flex;
+    width: 100%;
+    margin-top: 0.875rem;
+    font-size: var(--text);
+  }
+  .qd-note {
+    margin: 0.75rem 0 0;
+    text-align: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .qd-amount,
+    .qd-switch-track,
+    .qd-switch-thumb {
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
+    }
+  }
+</style>
