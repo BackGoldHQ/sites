@@ -19,7 +19,7 @@
     "Leaderboard": ["table"],
     "SocialFeed": ["grid"],
     "MovementTicker": ["ticker"],
-    "EventsList": ["list", "cards", "agenda"],
+    "EventsList": ["list", "cards", "agenda", "calendar"],
     "Blog": ["cards", "list", "feature"],
     "Collection": ["cards", "list", "compact"],
     "ContentPost": ["card"],
@@ -29,13 +29,13 @@
     "Donate": ["form", "story"],
     "Petition": ["none", "image", "map", "coverage"],
     "FormBlock": ["card", "wide"],
-    "SignupCapture": ["card"],
-    "Store": ["grid"],
-    "Event": ["detail"],
-    "Calendar": ["month"],
+    "SignupCapture": ["card", "band", "inline"],
+    "Store": ["grid", "featured"],
+    "Event": ["detail", "card"],
+    "Calendar": ["month", "agenda"],
     "PollBlock": ["card"],
     "SocialFrame": ["ring"],
-    "Advocacy": ["full"]
+    "Advocacy": ["full", "compact"]
   },
   "areas": {
     "top_banner": "Above the header",
@@ -280,8 +280,8 @@
             "links": []
           },
           {
-            "id": "EventsList-events", "type": "EventsList", "band": "plain", "bleed": "full", "variant": "agenda",
-            "copy": { "heading": "Upcoming events", "eventsEmptyCta": "Hosting a chapter meeting, a forum or a holiday party? Tell us and we will put it here." },
+            "id": "EventsList-events", "type": "EventsList", "band": "plain", "bleed": "full", "variant": "calendar",
+            "copy": { "heading": "On the calendar", "eventsEmptyCta": "Hosting a chapter meeting, a forum or a holiday party? Tell us and we will put it here." },
             "media": {},
             "links": []
           }
@@ -481,8 +481,7 @@
         ],
         "rules": [
           { "area_key": "sidebar", "shows_on": "entry_types", "content_types": ["post"] },
-          { "area_key": "sidebar", "shows_on": "type_lists", "content_types": ["post"] },
-          { "area_key": "sidebar", "shows_on": "pages", "pages": ["events"] }
+          { "area_key": "sidebar", "shows_on": "type_lists", "content_types": ["post"] }
         ]
       },
       {

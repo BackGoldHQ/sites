@@ -1,0 +1,131 @@
+---
+// Donate (boards A8, A12): the organization's one donate form, BackGold's
+// frame (ModuleFrame) on a raised card.
+//   form   (the default) the heading, then the checkout card, centred
+//   story  (A8) the form's story at the left: its picture, the heading as the
+//          kicker, the story's headline and words, and Share / Copy link;
+//          the checkout card at the right (under it on a phone)
+// The asks, the fields, the attestation, the limits and the receipt are
+// BackGold's; the layout only places the story beside them.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const heading = text(section.copy.heading)
+const storyHeadline = text(section.copy.storyHeadline)
+const photo = media(section, 'storyImageUrl')
+const story = variant === 'story' && (storyHeadline || text(section.copy.storyBody) || photo)
+const layout = story ? 'story' : 'form'
+---
+{section.embed && (
+  <Band section={section} class:list={['donate', `donate-${layout}`]}>
+    {story ? (
+      <div class="donate-story">
+        <div class="donate-words">
+          {photo && <img class="donate-photo" src={photo.url} alt={photo.alt} loading="lazy" />}
+          {heading && <p class="kicker">{heading}</p>}
+          {storyHeadline && <h2>{storyHeadline}</h2>}
+          <Prose value={section.copy.storyBody} class="lede" />
+          <p class="donate-share" data-share>
+            <a href="#" data-share-native hidden>Share</a>
+            <a href="#" data-share-copy>Copy link</a>
+          </p>
+        </div>
+        <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="story" card title={heading ?? 'Donate'} height="64rem" />
+      </div>
+    ) : (
+      <div class="donate-form">
+        {heading && <h2>{heading}</h2>}
+        <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="form" card title={heading ?? 'Donate'} height="64rem" />
+      </div>
+    )}
+  </Band>
+)}
+
+{story && (
+  <script is:inline>
+    ;(function () {
+      var row = document.currentScript && document.currentScript.previousElementSibling
+      var bar = row && row.querySelector('[data-share]')
+      if (!bar) return
+      var native = bar.querySelector('[data-share-native]')
+      var copy = bar.querySelector('[data-share-copy]')
+      if (navigator.share && native) {
+        native.hidden = false
+        native.addEventListener('click', function (e) {
+          e.preventDefault()
+          navigator.share({ title: document.title, url: location.href }).catch(function () {})
+        })
+      }
+      copy.addEventListener('click', function (e) {
+        e.preventDefault()
+        if (!navigator.clipboard) return
+        navigator.clipboard.writeText(location.href).then(function () {
+          copy.textContent = 'Link copied'
+        })
+      })
+    })()
+  </script>
+)}
+
+<style>
+  .donate-form {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+  .donate-form h2 {
+    margin: 0 0 1.5rem;
+    text-align: center;
+  }
+  .donate-story {
+    display: grid;
+    gap: 1.75rem;
+    align-items: start;
+  }
+  .donate-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+    margin-bottom: 1.625rem;
+  }
+  .donate-words h2 {
+    margin: 0 0 0.875rem;
+    font-size: clamp(2rem, 1.3rem + 2vw, 2.875rem);
+    line-height: 1.04;
+    font-weight: 800;
+  }
+  .donate-share {
+    display: flex;
+    gap: 0.625rem;
+    margin: 1.25rem 0 0;
+  }
+  .donate-share a {
+    padding: 0.4375rem 0.875rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--pill);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .donate-share [hidden] {
+    display: none;
+  }
+  @media (min-width: 56rem) {
+    .donate-story {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+      gap: 2.75rem;
+    }
+  }
+</style>

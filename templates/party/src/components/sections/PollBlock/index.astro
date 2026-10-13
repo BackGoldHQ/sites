@@ -1,0 +1,31 @@
+---
+// PollBlock · Card (board A12): one question on a raised card, its title
+// inside the card, narrow and centred. The poll, its answers and its live
+// results are BackGold's frame (ModuleFrame).
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+---
+{section.embed && (
+  <Band section={section} class="poll-module">
+    <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="card" card title={heading ?? 'Poll'} height="30rem">
+      {heading && <h3>{heading}</h3>}
+    </ModuleFrame>
+  </Band>
+)}
+
+<style>
+  .poll-module :global(.module) {
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+</style>

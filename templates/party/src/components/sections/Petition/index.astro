@@ -1,0 +1,14 @@
+---
+// Petition · Plain (board A12, the default): the heading, then BackGold's
+// sheet with its live count and the sign form.
+import type { Section } from '@backgold/content'
+import Headed from '../modules/Headed.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Headed section={section} layout="none" height="56rem" />

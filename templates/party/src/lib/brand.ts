@@ -1,8 +1,14 @@
 // The site's colours as CSS custom properties, from the brand in BackGold
 // (`/site.brand`): the template's token sheet. The layout writes them into
-// `:root`, a light set and a dark set (under `prefers-color-scheme: dark`);
-// src/styles/site.css reads only these names, so restyling starts here or
-// there.
+// `:root`, a light set and a dark set; src/styles/site.css reads only these
+// names, so restyling starts here or there.
+//
+// Which set shows is the site's appearance (`/site.style`'s `appearance`, the
+// same pin a hosted BackGold site keeps): `light` or `dark` pins one set and
+// the header has no toggle; `auto`, or none, follows the visitor's system and
+// the header's toggle overrides it, by `data-gg-mode` on <html> (the attribute
+// and the `gg-mode` storage key a hosted BackGold site's toggle uses, so a
+// visitor's choice carries over when a site moves to the template).
 //
 // The derivations follow boards A1 and A13 (docs/design/sites-unification-
 // 2026-10/mockups), drawn for a brand of indigo (primary), parchment
@@ -301,13 +307,62 @@ function lines(p: Palette): string[] {
   return out
 }
 
+export type Appearance = 'light' | 'dark' | 'auto'
+
 /**
- * The palettes as CSS: a `:root { … }` rule for the light set and the same
- * names again under `prefers-color-scheme: dark`. Every value is a `#rrggbb`
- * built above, never text from BackGold.
+ * The site's appearance from `/site.style` (a JSON string, or null): its
+ * `appearance` when it is `light` or `dark`, else `auto`.
  */
-export function brandCss(brand: BrandColors | null | undefined): string {
+export function appearanceOf(style: string | null | undefined): Appearance {
+  if (!style) return 'auto'
+  try {
+    const parsed: unknown = JSON.parse(style)
+    const value = parsed && typeof parsed === 'object' ? (parsed as { appearance?: unknown }).appearance : null
+    return value === 'light' || value === 'dark' ? value : 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+
+/**
+ * The palettes as CSS. A pinned appearance is one `:root` rule. Auto is the
+ * light set on `:root`, the dark set under `prefers-color-scheme: dark`
+ * unless the visitor chose light, and the dark set when the visitor chose
+ * dark. Every value is a `#rrggbb` built above, never text from BackGold.
+ */
+export function brandCss(brand: BrandColors | null | undefined, appearance: Appearance = 'auto'): string {
   const light = lines(lightPalette(brand)).join(';')
   const dark = lines(darkPalette(brand)).join(';')
-  return `:root{color-scheme:light dark;${light}}@media (prefers-color-scheme:dark){:root{${dark}}}`
+  if (appearance === 'light') return `:root{color-scheme:light;${light}}`
+  if (appearance === 'dark') return `:root{color-scheme:dark;${dark}}`
+  return (
+    `:root{color-scheme:light;${light}}` +
+    `@media (prefers-color-scheme:dark){:root:not([data-gg-mode="light"]){color-scheme:dark;${dark}}}` +
+    `:root[data-gg-mode="dark"]{color-scheme:dark;${dark}}`
+  )
+}
+
+/** The grounds a section may sit on, as BackGold names them. */
+export const SECTION_BANDS = ['plain', 'tint', 'panel', 'wash', 'contrast'] as const
+export type SectionBand = (typeof SECTION_BANDS)[number]
+
+/** One band's colours as a BackGold module's `look` value: eleven hex colours, no '#', joined by '.'. */
+function lookValue(b: Band): string {
+  return [b.ink, b.muted, b.accent, b.link, b.button, b.buttonInk, b.button2, b.button2Ink, b.surface, b.line, b.lineStrong]
+    .map((c) => c.slice(1))
+    .join('.')
+}
+
+/**
+ * The query a BackGold module's frame takes to wear this site where it sits
+ * (BackGold's embed look: `look`, `look_dark`): the colours of `band`, the
+ * light set, and the dark set unless the appearance pins one. A module drawn
+ * in a card sits on the card colour, which is the panel band's ground.
+ */
+export function moduleLook(brand: BrandColors | null | undefined, band: SectionBand, appearance: Appearance): Record<string, string> {
+  const light = lookValue(lightPalette(brand).bands[band])
+  const dark = lookValue(darkPalette(brand).bands[band])
+  if (appearance === 'light') return { look: light }
+  if (appearance === 'dark') return { look: dark }
+  return { look: light, look_dark: dark }
 }

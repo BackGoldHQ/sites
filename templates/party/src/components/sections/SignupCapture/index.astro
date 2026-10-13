@@ -1,0 +1,86 @@
+---
+// SignupCapture (board A12): an email sign-up with its consent, BackGold's
+// frame (ModuleFrame) in one of three layouts.
+//   card    (the default) the kicker and heading over the sign-up on a raised
+//           card, narrow and centred
+//   band    (A1, Above the footer) the kicker and heading at the left and the
+//           fields straight on the band at the right: first name, last name
+//           and email in a row (the three a sign-up is matched to a person
+//           by), the button under them, the consent line
+//   inline  the heading and a one-line sign-up side by side, for a slim strip
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const layout = variant === 'band' || variant === 'inline' ? variant : 'card'
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+---
+{(heading || section.embed) && (
+  <Band section={section} class:list={['signup', `signup-${layout}`]}>
+    <div class="signup-grid">
+      {(kicker || heading) && (
+        <div class="signup-words">
+          {kicker && <p class="kicker">{kicker}</p>}
+          {heading && <h2>{heading}</h2>}
+        </div>
+      )}
+      <ModuleFrame
+        embed={section.embed}
+        band={section.band}
+        type={section.type}
+        layout={layout}
+       
+        card={layout === 'card'}
+        title={heading ?? 'Sign up'}
+        height={layout === 'inline' ? '7rem' : layout === 'band' ? '13rem' : '24rem'}
+      />
+    </div>
+  </Band>
+)}
+
+<style>
+  /* A1's .sec.tight: 48px of band above and below (32px on a phone). */
+  :global(.bg-section.signup-band),
+  :global(.bg-section.signup-inline) {
+    --bg-section-padding: clamp(2rem, 1.4rem + 1.6vw, 3rem) var(--gutter);
+  }
+  .signup-grid {
+    display: grid;
+    gap: 1.625rem;
+    align-items: center;
+  }
+  .signup-words h2 {
+    max-width: 16em;
+    margin: 0;
+    font-size: clamp(1.75rem, 1.4rem + 1vw, 2.125rem);
+    line-height: 1.08;
+  }
+  .signup-card .signup-grid {
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+  .signup-card .signup-words {
+    text-align: center;
+  }
+  .signup-card .signup-words h2 {
+    margin-inline: auto;
+  }
+  @media (min-width: 48rem) {
+    .signup-band .signup-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+    .signup-inline .signup-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 2rem;
+    }
+  }
+</style>

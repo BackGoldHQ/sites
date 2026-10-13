@@ -1,0 +1,14 @@
+---
+// Petition · Image: BackGold's sheet under its own picture header, which
+// carries the title, so no heading here.
+import type { Section } from '@backgold/content'
+import Headed from '../modules/Headed.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Headed section={section} layout="image" height="64rem" head={false} />

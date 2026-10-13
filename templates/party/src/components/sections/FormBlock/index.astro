@@ -1,0 +1,34 @@
+---
+// FormBlock · Card (board A12, the default): one of the organization's forms
+// on a raised card, its title inside the card, one field to a row, narrow and
+// centred. FormBlock · Wide (A11) is the same card at the full content width,
+// where BackGold lays the fields two to a row. The form is BackGold's frame
+// (ModuleFrame); this draws the card and the title.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const layout = variant === 'wide' ? 'wide' : 'card'
+const heading = text(section.copy.heading)
+---
+{section.embed && (
+  <Band section={section} class:list={['form-module', `form-module-${layout}`]}>
+    <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout={layout} card title={heading ?? 'Form'} height={layout === 'wide' ? '34rem' : '40rem'}>
+      {heading && <h3>{heading}</h3>}
+    </ModuleFrame>
+  </Band>
+)}
+
+<style>
+  .form-module-card :global(.module) {
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+</style>

@@ -17,31 +17,39 @@
 // posts (the Content API's `?q=`, at most 20 a type) in place of the list,
 // with no pager; anything else under `q` shows the list. A response to a
 // request with `q` is never stored: the edge cache keys a list by its cursor
-// alone, so a stored search would answer the bare list's address.
+// alone, so a stored search would answer the bare list's address. Neither is
+// a response with a calendar's `?month=`, nor a page with a calendar section
+// at all: the month it shows and its today move with the clock.
 //
-// `/events/<type>` is the events page with its Agenda section's rows read
-// from the Content API's `GET /events?type=` (src/lib/events.ts), when the
-// path is not already a page or an entry; a type with no upcoming event, or
-// one that does not exist, is a 404.
+// `/events/<type>` is the events page with its Agenda and Calendar sections
+// narrowed to that type (the Agenda's rows read from the Content API's `GET
+// /events?type=`, src/lib/events.ts; the Calendar reads its month by type
+// itself), when the path is not already a page or an entry; a type with no upcoming event, or
+// one that does not exist, is a 404. Any other `/events/<slug>` that is not
+// a page or an entry is that event's own page (src/components/EventPage.astro),
+// read from `GET /events/<slug>`; a slug the api has no event for is a 404. A
+// type's tab wins over an event slugged like the type while the type has an
+// upcoming event.
 //
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
-// page, an entry, a list and a term pass their areas to the layout (Top
-// banner and Above the footer), and draw their Sidebar beside the main
-// column when it has an item (under it on a phone); with none they are one
-// column.
+// page, an entry, a list, a term and an event pass their areas to the layout
+// (Top banner and Above the footer); all but the event draw their Sidebar
+// beside the main column when it has an item (under it on a phone); with none
+// they are one column.
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
 import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryCard from '../components/EntryCard.astro'
+import EventPage from '../components/EventPage.astro'
 import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
 import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { sections } from '../components/sections'
 import { filterOf, listName, listPath, searchNews, searchQuery } from '../lib/entries'
-import { typedEventsPage } from '../lib/events'
+import { MONTH_PARAM, drawsCalendar, eventPage, typedEventsPage } from '../lib/events'
 import { entryCard } from '../lib/section'
 
 const bg = Astro.locals.backgold
@@ -54,15 +62,17 @@ const pathname = Astro.url.pathname
 let resolved: Resolved = await resolveRoute(client, Astro.url)
 const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
 if (typed) resolved = { kind: 'page', page: typed.page }
+const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
 const rawQuery = Astro.url.searchParams.get('q')
-if (rawQuery !== null) Astro.response.headers.set('Cache-Control', 'no-store')
+const calendar = Astro.url.searchParams.has(MONTH_PARAM) || (resolved.kind === 'page' && resolved.page.sections.some(drawsCalendar))
+if (rawQuery !== null || calendar) Astro.response.headers.set('Cache-Control', 'no-store')
 
 if (resolved.kind === 'feed') {
   return new Response(await atomFeed(client, siteUrl, resolved.type), {
     headers: { 'Content-Type': 'application/atom+xml; charset=utf-8' },
   })
 }
-if (resolved.kind === 'not_found') Astro.response.status = 404
+if (resolved.kind === 'not_found' && !event) Astro.response.status = 404
 
 let head: { title?: string; description?: string; image?: string; canonicalPath: string; noindex?: boolean; jsonLd?: object[] }
 switch (resolved.kind) {
@@ -109,7 +119,9 @@ switch (resolved.kind) {
     }
     break
   default:
-    head = { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
+    head = event
+      ? { title: `${event.event.title} · ${siteName}`, image: safeSrc(event.event.image_url) ?? undefined, canonicalPath: pathname }
+      : { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
 }
 const menuPage: MenuPage | null =
   resolved.kind === 'page' ? { id: resolved.page.page.id, takes_donations: resolved.page.page.takes_donations } : null
@@ -118,7 +130,7 @@ const areas: Areas | null =
     ? resolved.page.areas
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term'
       ? resolved.areas
-      : null
+      : event?.areas ?? null
 const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
 
 // A list, or a term's list: its layout and what it is given. The filter comes
@@ -163,7 +175,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'not_found' && <NotFound />}
+  {resolved.kind === 'not_found' && (event ? <EventPage event={event.event} /> : <NotFound />)}
 
   {resolved.kind !== 'author' && resolved.kind !== 'not_found' && (
     <div class:list={['layout', sidebar && 'layout-split']}>

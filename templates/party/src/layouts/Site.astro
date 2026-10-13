@@ -7,8 +7,9 @@
 //                    a TakeoverBanner fills the first screen.
 //   the header bar   the brand (the logo, else the template's mark and the
 //                    name as a two-line wordmark) at the left; the header
-//                    menu, each group a dropdown; the header button at the
-//                    right. On a phone the menu opens as a sheet under the
+//                    menu, each group a dropdown; the light and dark switch
+//                    (ModeToggle, unless the site's appearance is pinned);
+//                    the header button at the right. On a phone the menu opens as a sheet under the
 //                    bar (its groups open in place, the header button again
 //                    full width, the legal line under it) and the button
 //                    stays beside Menu in the bar until the sheet opens.
@@ -45,9 +46,10 @@ import { menuOf, relFor, safeHref, type MenuPage } from '@backgold/astro/server'
 import Brand from '../components/chrome/Brand.astro'
 import FooterColumns from '../components/chrome/FooterColumns.astro'
 import MenuList from '../components/chrome/MenuList.astro'
+import ModeToggle from '../components/chrome/ModeToggle.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
 import { sections } from '../components/sections'
-import { brandCss } from '../lib/brand'
+import { appearanceOf, brandCss } from '../lib/brand'
 import '../styles/site.css'
 
 interface Props {
@@ -87,6 +89,8 @@ const social = site.social.flatMap(({ platform, url }) => {
 })
 /** The area map Above the footer: an email sign-up there takes A1's band. */
 const aboveFooter = { ...sections, SignupCapture: SignupBand }
+/** Light, dark, or auto (the visitor's system, with the header's switch). */
+const appearance = appearanceOf(site.style)
 const FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap'
 ---
 <!doctype html>
@@ -102,7 +106,15 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@
         a plain stylesheet. */}
     <link rel="stylesheet" href={FONTS} media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href={FONTS} /></noscript>
-    <style is:inline set:html={brandCss(site.brand)}></style>
+    <style is:inline set:html={brandCss(site.brand, appearance)}></style>
+    {appearance === 'auto' && (
+      <script is:inline>
+        try {
+          var mode = localStorage.getItem('gg-mode')
+          if (mode === 'dark' || mode === 'light') document.documentElement.setAttribute('data-gg-mode', mode)
+        } catch (e) {}
+      </script>
+    )}
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -127,6 +139,7 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@
             </details>
           </>
         )}
+        {appearance === 'auto' && <ModeToggle />}
         <MenuButton items={headerItems} page={page} class="button button-small header-button" />
       </div>
     </header>
