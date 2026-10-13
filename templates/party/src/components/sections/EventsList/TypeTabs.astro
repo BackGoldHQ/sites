@@ -1,0 +1,52 @@
+---
+// The events page's type tabs (board A6), as the Agenda and the Calendar
+// draw them: All, then each event type with an upcoming event, each an
+// address (/events, /events/<type>) so they work with scripts off; the one
+// being shown is marked current. `query` (the calendar's `?month=`) follows
+// every tab, so a tab keeps the month in view.
+import { EVENTS_PATH, eventTypePath, type EventType } from '../../../lib/events'
+
+interface Props {
+  tabs: { tabs: EventType[]; active: string | null }
+  query?: string
+}
+
+const { tabs, query = '' } = Astro.props
+---
+<nav class="agenda-tabs" aria-label="Event types">
+  <ul role="list">
+    <li><a href={`${EVENTS_PATH}${query}`} aria-current={tabs.active === null ? 'page' : undefined}>All</a></li>
+    {tabs.tabs.map((t) => (
+      <li><a href={`${eventTypePath(t.key)}${query}`} aria-current={tabs.active === t.key ? 'page' : undefined}>{t.label}</a></li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .agenda-tabs ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .agenda-tabs a {
+    display: inline-block;
+    padding: 0.4375rem 0.875rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border-radius: var(--pill);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .agenda-tabs a:hover {
+    border-color: var(--ink);
+  }
+  .agenda-tabs a[aria-current='page'] {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+</style>

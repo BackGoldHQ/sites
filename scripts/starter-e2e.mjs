@@ -390,6 +390,13 @@ function exampleEventsList(ex) {
   return section
 }
 
+/** The month (and day) `date` falls in in Denver, the calendar rows' zone. */
+function calendarMonthOf(date) {
+  const parts = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Denver' }).formatToParts(date)
+  const part = (type) => Number(parts.find((p) => p.type === type).value)
+  return { year: part('year'), monthIndex: part('month') - 1, day: part('day') }
+}
+
 function fixtureData(ex, kitchenSections) {
   const legal = ex.SiteResponse.legal
   const site = ex.SiteResponse.site
@@ -704,6 +711,19 @@ function fixtureData(ex, kitchenSections) {
   ]
   // GET /events/live: a count, a count with seats left, a zero, and evt_w2 left out.
   const live = { evt_w1: { going: 142, seats_left: null }, evt_w3: { going: 88, seats_left: 12 }, evt_w4: { going: 0, seats_left: null } }
+  // The calendar's month (GET /events?from=&to=): rows of their own, placed in
+  // the month it is now in Denver (the rows' zone), so the agenda's checks
+  // keep their rows. evt_c2 starts on the 28th in UTC and the 27th in Denver;
+  // evt_c3 starts on the next month's 1st in UTC and this month's last day
+  // in Denver; evt_c4 is next month's.
+  const calendarMonth = calendarMonthOf(new Date())
+  const utc = (monthOffset, day, hour) => new Date(Date.UTC(calendarMonth.year, calendarMonth.monthIndex + monthOffset, day, hour)).toISOString()
+  const calendar = [
+    eventRow({ id: 'evt_c1', title: 'Chapter supper', starts_at: utc(0, 1, 18), type: 'meeting', location: 'Fenwick Grange', url: 'https://events.example.org/chapter-supper' }),
+    eventRow({ id: 'evt_c2', title: 'Phone bank night', starts_at: utc(0, 28, 2), type: 'volunteer', url: 'https://events.example.org/phone-bank-night' }),
+    eventRow({ id: 'evt_c3', title: 'Month-end mixer', starts_at: utc(1, 1, 3), type: 'meeting', url: 'https://events.example.org/month-end-mixer' }),
+    eventRow({ id: 'evt_c4', title: 'Next-month canvass', starts_at: utc(1, 15, 18), type: 'volunteer', url: 'https://events.example.org/next-month-canvass' }),
+  ]
   const eventsSections = [
     {
       id: 'EventsList-agenda',
@@ -729,6 +749,20 @@ function fixtureData(ex, kitchenSections) {
       links: [],
       options: { max: 3, actions: 'buttons' },
       data: { source: 'events', items: [upcoming[0], upcoming[2]] },
+    },
+    {
+      // Its baked rows name the zone the calendar reads today in; it draws
+      // the month from the window read.
+      id: 'EventsList-calendar',
+      type: 'EventsList',
+      band: 'plain',
+      bleed: 'full',
+      variant: 'calendar',
+      copy: { heading: 'On the calendar', eventsEmptyCta: 'Tell us and we will put it here.' },
+      media: {},
+      links: [],
+      options: { max: 1 },
+      data: { source: 'events', items: [calendar[0]] },
     },
   ]
   // TeamGrid rows by seat: two bodies (the officers' first, sharing a term),
@@ -894,7 +928,7 @@ function fixtureData(ex, kitchenSections) {
     legal,
     site,
     types,
-    events: { upcoming, types: eventTypes, live },
+    events: { upcoming, calendar, types: eventTypes, live },
     menus: {
       primary: {
         ...ex.MenuResponse,
@@ -1094,6 +1128,26 @@ function startFixture(examples, kitchenSections) {
         break
       }
       case 'events': {
+        // GET /events/:slug: an upcoming row whose url ends in the slug, with
+        // its page's words and BackGold's RSVP frame; any other slug is a 404.
+        if (parts.length === 2) {
+          const row = data.events.upcoming.find((e) => new URL(e.url).pathname.split('/').filter(Boolean).at(-1) === parts[1])
+          body = row
+            ? {
+                event: {
+                  ...row,
+                  slug: parts[1],
+                  description: '<p>Dinner with every candidate on the ballot.</p>',
+                  venue: row.location,
+                  address: null,
+                  image_url: null,
+                  embed: { iframe: `https://secure.backgold.com/embed/e/pine-valley/${parts[1]}`, script: 'https://secure.backgold.com/embed.js' },
+                },
+                areas: { top_banner: [], sidebar: [], above_footer: [] },
+              }
+            : undefined
+          break
+        }
         // GET /events?type=&cursor=&limit=: upcoming, soonest first; every
         // type with its count, whatever the filter. The cursor is base64url
         // of the offset of the next row. A limit outside 1 to 50 is 400
@@ -1109,8 +1163,23 @@ function startFixture(examples, kitchenSections) {
         if (type && !data.events.types.some((t) => t.key === type)) {
           return send(400, { error: `type must be one of ${data.events.types.map((t) => t.key).join(', ')}`, code: 'BAD_TYPE' })
         }
+        // With from and to (YYYY-MM-DD, both, at most 42 days first to last,
+        // else 400 BAD_RANGE): the calendar's rows starting on those UTC days.
+        const from = url.searchParams.get('from')
+        const to = url.searchParams.get('to')
+        let rows = data.events.upcoming
+        if (from !== null || to !== null) {
+          const day = (v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) ? Date.parse(`${v}T00:00:00Z`) : null)
+          const start = day(from)
+          const end = day(to)
+          if (start === null || end === null || end < start || (end - start) / 86400000 + 1 > 42) {
+            return send(400, { error: 'from and to must be ISO dates together, at most 42 days', code: 'BAD_RANGE' })
+          }
+          const until = new Date(end + 86400000).toISOString()
+          rows = data.events.calendar.filter((e) => e.starts_at >= from && e.starts_at < until)
+        }
         const offset = Number(Buffer.from(url.searchParams.get('cursor') ?? '', 'base64url').toString('utf8')) || 0
-        const matching = data.events.upcoming.filter((e) => !type || e.type === type).sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1))
+        const matching = rows.filter((e) => !type || e.type === type).sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1))
         const shown = matching.slice(offset, offset + limit)
         body = {
           events: shown,
@@ -1263,7 +1332,12 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(/<link rel="canonical" href="[^"]+"/.test(html), 'home has a canonical link')
   const ld = jsonLdBlocks(html)
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
-  check(/<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html), "the Donate section is BackGold's embed iframe")
+  check(
+    PARTY
+      ? /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"/.test(html)
+      : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
+    PARTY ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
+  )
   check(!html.includes('auto:total'), 'a live (auto:) stat is not printed')
   check(
     html.includes('The levy, explained') && !html.includes('The October letter'),
@@ -1299,19 +1373,23 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(html.includes('href="/#volunteer"') && !html.includes('href="/issues"'), 'an entry page shows Volunteer and leaves out Issues')
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published entry carries no section markers and no preview meta')
   // An entry loads no script but JSON-LD, the areas' one window script because
-  // its areas hold a dated item, and the frames' one resize script because an
-  // area's sign-up is framed by its reusable section.
+  // its areas hold a dated item, the frames' one resize script because an
+  // area's sign-up is framed by its reusable section, and on the party
+  // template the light and dark switch's two (the head's kept choice, the
+  // header button's).
   const areaItems = Object.values(fixture.data.entryAreas).flat()
   const dated = areaItems.some((item) => item.from !== null || item.until !== null)
   const framed = areaItems.some((item) => item.sections.some((section) => section.embed?.iframe))
   const scripts = tags(html, 'script').filter((s) => !/type="application\/ld\+json"/.test(s))
   const entryWindowScripts = html.split('[data-bg-area-item][data-from]').length - 1
   const entryResizeScripts = html.split("data.type !== 'givegold:resize'").length - 1
+  const entryModeScripts = html.split("localStorage.getItem('gg-mode')").length - 1 + (html.split("querySelector('[data-mode-toggle]')").length - 1)
   check(
-    scripts.length === entryWindowScripts + entryResizeScripts &&
+    scripts.length === entryWindowScripts + entryResizeScripts + entryModeScripts &&
       entryWindowScripts === (dated ? 1 : 0) &&
-      entryResizeScripts === (framed ? 1 : 0),
-    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''} (${scripts.length} other script tag(s))`,
+      entryResizeScripts === (framed ? 1 : 0) &&
+      entryModeScripts === (PARTY ? 2 : 0),
+    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${PARTY ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
   )
   const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
   check(
@@ -1672,7 +1750,9 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (own) failures.push(`${type}: renders a <${own[1]}> of its own`)
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
-        if (frames.length !== 1 || !frames[0].includes(`src="${src}"`)) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
+        // The party template asks the frame to wear the site: the same address with its layout and look appended.
+        const placed = PARTY ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"`) : null
+        if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
         if (frames.length !== 0 || !mount || !markup.includes(`src="${section.embed.script}"`)) failures.push(`${type}: expected its mount container and script`)
@@ -1829,15 +1909,17 @@ async function checkPartyBoards(origin, fixture) {
     `each agenda row and card has an empty data-bg-live slot named by its event id (${slotIds(agenda).join(', ')} / ${slotIds(cards).join(', ')})`,
   )
   const liveScripts = html.split('data-bg-live-api=').length - 1
-  check(liveScripts === 1, `the live-counts script is on the page once for two event sections (found ${liveScripts})`)
+  check(liveScripts === 1, `the live-counts script is on the page once for three event sections (found ${liveScripts})`)
   const ran = await runLiveScript(html)
   check(
     ran.attributes['data-bg-live-api'] === `${fixture.origin}/api/content/v1/events/live` && ran.attributes['data-bg-live-key'] === SITE_KEY,
     "the script reads the api's /events/live with the publishable key",
   )
   const read = liveReads().at(-1)
+  // The calendar's month adds its own events, after the agenda's and the cards'.
+  const pageIds = [...upcomingIds, 'evt_c1', 'evt_c2', 'evt_c3']
   check(
-    ran.reads === 1 && read && read.key === SITE_KEY && decodeURIComponent(read.search) === `?ids=${upcomingIds.join(',')}`,
+    ran.reads === 1 && read && read.key === SITE_KEY && decodeURIComponent(read.search) === `?ids=${pageIds.join(',')}`,
     `run as a browser would, it asks once for every id on the page (${read ? decodeURIComponent(read.search) : 'no read'})`,
   )
   const filled = Object.fromEntries(upcomingIds.map((id) => [id, ran.slots.filter((s) => s.id === id).map((s) => s.textContent)]))
@@ -1853,14 +1935,14 @@ async function checkPartyBoards(origin, fixture) {
   const actions = (markup) => [...markup.matchAll(/<a class="button" href="([^"]*)"[^>]*>([^<]*)<span class="visually-hidden"[^>]*>: ([^<]*)<\/span>/g)].map((m) => [decode(m[3]), m[2], decode(m[1])])
   const agendaActions = Object.fromEntries(actions(agenda).map(([title, label, href]) => [title, `${label} ${href}`]))
   check(
-    agendaActions['Get-out-the-vote dinner'] === 'Get tickets https://events.example.org/gotv-dinner/tickets' &&
-      agendaActions['Harlow County candidate forum'] === 'RSVP https://events.example.org/candidate-forum' &&
-      agendaActions['New member night'] === 'Details https://events.example.org/new-member-night',
-    `the agenda's buttons: Get tickets to the tickets address, RSVP, Details once registration closed (${JSON.stringify(agendaActions)})`,
+    agendaActions['Get-out-the-vote dinner'] === 'Get tickets /events/gotv-dinner' &&
+      agendaActions['Harlow County candidate forum'] === 'RSVP /events/candidate-forum' &&
+      agendaActions['New member night'] === 'Details /events/new-member-night',
+    `the agenda's buttons open each event's page on the site: Get tickets, RSVP, Details once registration closed (${JSON.stringify(agendaActions)})`,
   )
   check(
-    actions(cards).some(([title, label, href]) => title === 'Get-out-the-vote dinner' && label === 'Get tickets' && href === 'https://events.example.org/gotv-dinner/tickets'),
-    'the cards draw Get tickets on the event that sells tickets',
+    actions(cards).some(([title, label, href]) => title === 'Get-out-the-vote dinner' && label === 'Get tickets' && href === '/events/gotv-dinner'),
+    'the cards draw Get tickets on the event that sells tickets, to its page on the site',
   )
   const tabsOf = (markup) => [...(/<nav class="agenda-tabs[^"]*"[^>]*>([\s\S]*?)<\/nav>/.exec(markup)?.[1] ?? '').matchAll(/<a href="([^"]*)"([^>]*)>([^<]*)<\/a>/g)].map((m) => ({ href: m[1], current: /aria-current="page"/.test(m[2]), label: decode(m[3]) }))
   let tabs = tabsOf(agenda)
@@ -1869,6 +1951,92 @@ async function checkPartyBoards(origin, fixture) {
     `the agenda's type tabs: All (current), then each type with an upcoming event; no tab for Rallies (${tabs.map((t) => t.label).join(', ')})`,
   )
   check(!cards.includes('agenda-tabs'), 'the Cards section draws no tabs')
+
+  // Ruling 32: the Calendar, a month at a time.
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const now = calendarMonthOf(new Date())
+  const monthAt = (offset) => {
+    const d = new Date(Date.UTC(now.year, now.monthIndex + offset, 1))
+    return { year: d.getUTCFullYear(), monthIndex: d.getUTCMonth(), param: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}` }
+  }
+  const [prevMonth, thisMonth, nextMonth] = [monthAt(-1), monthAt(0), monthAt(1)]
+  const lastDay = new Date(Date.UTC(now.year, now.monthIndex + 1, 0)).getUTCDate()
+  /** The grid's days of the month, each with the event pages its chips open. */
+  const gridDays = (markup) =>
+    [...markup.matchAll(/<td\b([^>]*\bclass="cal-day[^"]*"[^>]*)>([\s\S]*?)<\/td>/g)].map((m) => ({
+      day: Number(/class="cal-dn"[^>]*>(\d+)</.exec(m[2])?.[1]),
+      today: /aria-current="date"/.test(m[1]),
+      links: [...m[2].matchAll(/<a class="cal-chip" href="([^"]*)"/g)].map((l) => decode(l[1])),
+    }))
+  const monthLinks = (markup) => [...(/<nav class="cal-nav"[^>]*>([\s\S]*?)<\/nav>/.exec(markup)?.[1] ?? '').matchAll(/<a\b[^>]*href="([^"]*)"[^>]*>/g)].map((m) => decode(m[1]))
+  const phoneOf = (markup) => (markup.includes('class="cal-phone"') ? markup.slice(markup.indexOf('class="cal-phone"')) : '')
+  const calendarReads = () => fixture.state.seen.filter((s) => s.path === '/events' && new URLSearchParams(s.search).has('from'))
+
+  check(/\bno-store\b/.test(res.headers.get('cache-control') ?? ''), `a page with a calendar is never stored by the edge (Cache-Control: ${res.headers.get('cache-control')})`)
+  const cal = sectionWith(html, 'EventsList', 'class="cal"')
+  check(cal !== '' && /<table class="cal-grid"/.test(cal) && tags(cal, 'th').length === 7, 'the events page draws its Calendar: a month grid of seven weekday columns')
+  check(plain(cal).includes(`${MONTH_NAMES[thisMonth.monthIndex]} ${thisMonth.year}`), `with no ?month= it shows this month, ${MONTH_NAMES[thisMonth.monthIndex]} ${thisMonth.year}`)
+  let days = gridDays(cal)
+  const byDay = Object.fromEntries(days.map((d) => [d.day, d]))
+  check(
+    days.length === lastDay && days.filter((d) => d.today).length === 1 && days.find((d) => d.today)?.day === now.day,
+    `every day of the month is a cell, and today (the ${now.day}th) is marked aria-current="date"`,
+  )
+  check(
+    JSON.stringify(byDay[1]?.links) === JSON.stringify(['/events/chapter-supper']) &&
+      JSON.stringify(byDay[27]?.links) === JSON.stringify(['/events/phone-bank-night']) &&
+      (byDay[28]?.links ?? []).length === 0 &&
+      (byDay[lastDay]?.links ?? []).includes('/events/month-end-mixer') &&
+      !cal.includes('next-month-canvass'),
+    "each event is a chip in its day in the event's own zone (the 28th's 02:00 UTC is the 27th in Denver), linking to /events/<slug>; next month's events are not here",
+  )
+  check(
+    JSON.stringify(monthLinks(cal)) === JSON.stringify([`/events?month=${prevMonth.param}`, `/events?month=${nextMonth.param}`]),
+    `the month arrows are addresses on the page: ?month=${prevMonth.param} and ?month=${nextMonth.param}, and no "This month" on this month (${monthLinks(cal).join(', ')})`,
+  )
+  const phone = phoneOf(cal)
+  check(
+    phone !== '' &&
+      JSON.stringify(slotIds(phone)) === JSON.stringify(['evt_c1', 'evt_c2', 'evt_c3']) &&
+      [...phone.matchAll(/class="agenda-title"[^>]*><a href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
+    "on a phone the same month is the agenda's rows, each with its live slot and its title linking to /events/<slug>",
+  )
+  check(
+    calendarReads().some((s) => {
+      const q = new URLSearchParams(s.search)
+      return q.get('from') === new Date(Date.UTC(now.year, now.monthIndex, 0)).toISOString().slice(0, 10) && q.get('to') === new Date(Date.UTC(now.year, now.monthIndex + 1, 1)).toISOString().slice(0, 10) && !q.has('type')
+    }),
+    'it read the month from GET /events?from=&to=, a day either side of the month',
+  )
+  tabs = tabsOf(cal)
+  check(tabs.map((t) => t.href).join(' ') === '/events /events/meeting /events/volunteer /events/fundraiser' && tabs[0].current, "the calendar draws the agenda's type tabs, All current")
+
+  res = await get(origin, `/events?month=${nextMonth.param}`)
+  html = await res.text()
+  const nextCal = sectionWith(html, 'EventsList', 'class="cal"')
+  days = gridDays(nextCal)
+  check(
+    res.status === 200 && /\bno-store\b/.test(res.headers.get('cache-control') ?? '') && plain(nextCal).includes(`${MONTH_NAMES[nextMonth.monthIndex]} ${nextMonth.year}`),
+    `/events?month=${nextMonth.param} shows ${MONTH_NAMES[nextMonth.monthIndex]} ${nextMonth.year}, never stored under the bare address`,
+  )
+  check(
+    days.every((d) => !d.today) && JSON.stringify(days.find((d) => d.day === 15)?.links) === JSON.stringify(['/events/next-month-canvass']) && !nextCal.includes('month-end-mixer'),
+    "there next month's event is on its day, and no day is today",
+  )
+  check(
+    monthLinks(nextCal).join(' ') === `/events?month=${thisMonth.param} /events /events?month=${monthAt(2).param}`,
+    `its arrows go back to ${thisMonth.param}, home to "This month" at /events, and on (${monthLinks(nextCal).join(', ')})`,
+  )
+  check(
+    tabsOf(nextCal).map((t) => t.href).join(' ') === `/events?month=${nextMonth.param} /events/meeting?month=${nextMonth.param} /events/volunteer?month=${nextMonth.param} /events/fundraiser?month=${nextMonth.param}`,
+    'each type tab keeps the month in view',
+  )
+  res = await get(origin, '/events?month=1999-01')
+  html = await res.text()
+  check(
+    res.status === 200 && plain(sectionWith(html, 'EventsList', 'class="cal"')).includes(`${MONTH_NAMES[thisMonth.monthIndex]} ${thisMonth.year}`),
+    'a ?month= out of reach (or not a month) shows this month',
+  )
 
   res = await get(origin, '/events/volunteer')
   html = await res.text()
@@ -1883,6 +2051,15 @@ async function checkPartyBoards(origin, fixture) {
     `/events/volunteer draws the agenda with the volunteer events from GET /events?type=volunteer (got ${res.status})`,
   )
   check(tabs.find((t) => t.current)?.label === 'Volunteer', 'and marks the Volunteer tab current')
+  const typedCal = sectionWith(html, 'EventsList', 'class="cal"')
+  check(
+    typedCal.includes('/events/phone-bank-night') && !typedCal.includes('/events/chapter-supper') && tabsOf(typedCal).find((t) => t.current)?.label === 'Volunteer',
+    "there the calendar's month is the volunteer events, its Volunteer tab current",
+  )
+  check(
+    fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).has('from') && new URLSearchParams(s.search).get('type') === 'volunteer'),
+    'it read the month with GET /events?from=&to=&type=volunteer',
+  )
   check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
   check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
   check(
@@ -1892,8 +2069,29 @@ async function checkPartyBoards(origin, fixture) {
   for (const path of ['/events/rally', '/events/no-such-type']) {
     res = await get(origin, path)
     await res.text()
-    check(res.status === 404, `${path} (no upcoming event, or no such type) is a 404 (got ${res.status})`)
+    check(res.status === 404, `${path} (no upcoming event, or no such type, or no such event) is a 404 (got ${res.status})`)
   }
+
+  // A7: one event's page on the site.
+  res = await get(origin, '/events/gotv-dinner')
+  html = await res.text()
+  const main = html.slice(html.indexOf('<main'), html.lastIndexOf('</main>'))
+  check(res.status === 200, `GET /events/gotv-dinner is 200 (got ${res.status})`)
+  check(
+    tags(html, 'h1').length === 1 && plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '') === 'Get-out-the-vote dinner' && /<title>Get-out-the-vote dinner · /.test(html),
+    "the event's title is the page's one <h1> and leads its <title>",
+  )
+  check(
+    /<nav class="crumbs"[^>]*>[\s\S]*?<a href="\/events"[^>]*>Events<\/a>[\s\S]*?November[\s\S]*?<\/nav>/.test(main),
+    'a breadcrumb leads back to Events and names the month, in the event\'s own zone',
+  )
+  check(
+    /<iframe[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/e\/pine-valley\/gotv-dinner\?layout=detail&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"/.test(main) &&
+      main.indexOf('data-bg-embed') > main.indexOf('</h1>') &&
+      !/(Tickets|Form|Sign-up|Petition|Secure giving) by BackGold/.test(main),
+    "BackGold's RSVP and tickets sit beside the event's facts, asked to wear the site (layout detail, its colours light and dark, radius, type), with no per-module credit (the footer's Powered by BackGold is the one)",
+  )
+  check(/<link rel="canonical" href="[^"]*\/events\/gotv-dinner"/.test(html), '/events/gotv-dinner is its own canonical address')
 
   // A4: the news list's search.
   const searchForm = (page) => /<form class="list-search"[^>]*>([\s\S]*?)<\/form>/.exec(page)
@@ -1989,6 +2187,17 @@ async function checkPartyChrome(origin) {
   check(/<a href="https:\/\/facebook\.com\/pinevalleyliberty"[^>]*aria-label="Facebook"[^>]*>Fb<\/a>/.test(html), 'a social link is a circle with its short name and its full name for screen readers')
   check(/<span class="footer-powered"[^>]*>Powered by BackGold<\/span>/.test(html), 'the bottom row ends with Powered by BackGold')
   check(/<summary[^>]*><span class="sheet-open"[^>]*>Menu<\/span><span class="sheet-close"[^>]*>Close<\/span><\/summary>/.test(html), 'the phone sheet opens from Menu and reads Close while open')
+  check(
+    /<button class="mode-toggle"[^>]*data-mode-toggle[^>]*aria-pressed="false"[^>]*hidden/.test(html) &&
+      html.indexOf('data-mode-toggle') < html.indexOf('header-button'),
+    'the header carries the light and dark switch before the header button, hidden until its script shows it',
+  )
+  check(
+    /:root\[data-gg-mode="dark"\]\{color-scheme:dark;/.test(html) &&
+      /@media \(prefers-color-scheme:dark\)\{:root:not\(\[data-gg-mode="light"\]\)\{/.test(html) &&
+      html.indexOf("localStorage.getItem('gg-mode')") < html.indexOf('</head>'),
+    'the dark set follows the system unless the visitor chose light, a chosen dark wins, and the head applies a kept choice before paint',
+  )
 
   res = await get(origin, '/a1-home')
   html = await res.text()
@@ -2025,21 +2234,27 @@ async function checkPartyChrome(origin) {
 }
 
 /**
- * Every non-chrome, non-compliance block type has a component of its own in
- * the template. A block the api projects only inside an area (areaBlocks)
- * counts with its area role.
+ * Every non-chrome block type has a component of its own in the template (the
+ * starter: every non-chrome, non-compliance one). The party template draws the
+ * compliance modules for their frame (heading and card around
+ * BackGold's own frame), all but SocialFrame, which has no frame a site can
+ * place. A block the api projects only inside an area (areaBlocks) counts with
+ * its area role.
  */
 function checkSectionsMap(chromeBlocks, areaBlocks) {
   const blocks = { ...chromeBlocks, ...areaBlocks }
   const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
+  const unframed = ['SocialFrame']
   const missing = Object.entries(blocks)
-    .filter(([type, spec]) => spec.role !== 'chrome' && spec.role !== 'compliance' && !keys.has(type))
+    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !keys.has(type))
     .map(([type]) => type)
-  const extra = [...keys].filter((key) => !(key in blocks) || ['chrome', 'compliance'].includes(blocks[key].role))
-  check(missing.length === 0, `the template has a section component for every presentational and data block${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`)
-  check(extra.length === 0, `and none for a chrome or compliance block, or a type BackGold does not have${extra.length ? ` (${extra.join(', ')})` : ''}`)
+  const extra = [...keys].filter(
+    (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!PARTY && blocks[key].role === 'compliance'),
+  )
+  check(missing.length === 0, `the template has a section component for every presentational, data and compliance block${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`)
+  check(extra.length === 0, `and none for a chrome block, SocialFrame, or a type BackGold does not have${extra.length ? ` (${extra.join(', ')})` : ''}`)
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────

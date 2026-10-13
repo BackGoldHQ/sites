@@ -126,7 +126,8 @@ one).
     Platform planks · Long read (anchored `platform`), Press quotes · Single.
   - Leadership (`leadership`): Hero · Statement, Team · Board, Candidate
     roster · Ballot, Call to action · Banner.
-  - Events (`events`): Hero · Statement, Upcoming events · Agenda.
+  - Events (`events`): Hero · Statement, Upcoming events · Calendar (a month
+    grid on a desktop, the month as the Agenda's rows on a phone).
   - Donate (`donate`): the donation form in its Story layout, then Key issues
     · Cards with other ways to give.
   - Join (`join`): a call to action whose button goes to the organization's
@@ -150,7 +151,8 @@ one).
 - **The footer menu**: The party (About, Platform, Leadership, Contact),
   Take part (Join, Events, Sign the petition), Read (News, Newsletter).
 - **Reusable sections**: *Blog sidebar* (Upcoming events, then a call to
-  become a member) in the Sidebar on every post, on News and on Events; and
+  become a member) in the Sidebar on every post and on News (the Events
+  page's calendar is its own list of what is coming up); and
   *Join the newsletter* (BackGold's email sign-up) Above the footer on every
   page.
 
@@ -217,12 +219,17 @@ menu and is drawn at the right of the header on the pages its rule names.
   component's shape.
 - **Colours are the organization's.** `src/lib/brand.ts` turns the brand
   colours set in BackGold into CSS custom properties, a light set and a dark
-  set (for visitors whose device is in dark mode): `--bg-brand-primary`,
+  set: `--bg-brand-primary`,
   `--bg-brand-secondary`, `--bg-brand-accent`, and for each band `--band-<band>`
   with its `-ink`, `-muted`, `-accent`, `-link`, `-button`, `-button-ink`,
   `-button-2`, `-button-2-ink`, `-surface`, `-line` and `-line-strong`, each
   text colour chosen to meet WCAG AA on its ground whatever the brand is.
   `site.css` reads only these names; it has no colour of its own.
+- **Light and dark.** The site's appearance in BackGold picks the set: always
+  light, always dark, or (the default) the visitor's device, with a switch in
+  the header (`src/components/chrome/ModeToggle.astro`) that overrides it and
+  is remembered in the browser as `data-gg-mode` on `<html>`, the same
+  attribute and storage key a hosted BackGold site's switch uses.
 - **Bands.** Each section has a `band` (`plain`, `tint`, `panel`, `wash`,
   `contrast`) and a `bleed` (`full` or `contained`), as the classes
   `bg-band-<band>` and `bg-bleed-<bleed>`. Inside a section use the short
@@ -239,17 +246,34 @@ sanitizer. Keep that in every component you write.
 ## Donations, forms and petitions are BackGold's
 
 **Money and consent never pass through template code.** Donate, forms,
-petitions, sign-ups, the store, events, the calendar, polls, profile frames
-and contacting legislators arrive as BackGold's own module and render through
-the package's `Embed`, which places BackGold's frame and sizes it. That is why
-`src/components/sections/` has no directory for them and `index.ts` registers
-none: the package draws them. Their layouts in `template.json` (Donate's
-`form` and `story`, Petition's header choices) are how BackGold frames its
-own module; the template never draws the module itself.
+petitions, sign-ups, the store, events, the calendar, polls and contacting
+legislators arrive as BackGold's own module: a frame BackGold serves, placed
+through the package's `Embed`. The template draws only the frame around it,
+one component per layout like any section (`src/components/sections/Donate/`,
+`FormBlock/`, `SignupCapture/`, …): the section's heading, the card and the
+story beside a donate form. BackGold is credited once, as "Powered by
+BackGold" in the footer's bottom row, never per module. Each goes
+through `modules/ModuleFrame.astro`, which asks BackGold's frame to wear the
+site (BackGold's embed look): the layout, the colours where the module sits
+(`moduleLook` in `src/lib/brand.ts`, light and dark), the radius and the type.
+The frame then draws no ground, card, heading or footer of its own, and
+follows the header's light and dark switch.
 
-Style the section around the frame (its heading, its band, its spacing) but
-never cover, restyle or imitate what is inside it, and never collect
-donations, signatures, sign-ups or consent in a form of your own.
+Never cover, restyle or imitate what is inside the frame, and never collect
+donations, signatures, sign-ups or consent in a form of your own. Profile
+frames (SocialFrame) have no frame a site can place and are not drawn.
+
+**Each event's page** is `/events/<slug>` on the site (board A7's address):
+every events list links there, and `src/components/EventPage.astro` draws a
+breadcrumb back to Events over BackGold's event frame (its details, RSVP and
+tickets), read from the Content API's `GET /events/<slug>`.
+
+**The events calendar** (Upcoming events · Calendar) shows a month at a
+time: `?month=YYYY-MM` on the page's address, else this month. It reads the
+month from the Content API's `GET /events?from=&to=` (past days included),
+and its arrows and type tabs are plain addresses. A page with a calendar is
+never stored in the edge cache, because the month in view and today move
+with the clock and `?month=` is not part of the cache's key.
 
 **The Join page** is a call to action (a `Cta` section) whose button goes to
 the organization's join address in BackGold, until BackGold has a Membership

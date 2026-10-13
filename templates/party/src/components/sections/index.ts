@@ -13,10 +13,13 @@
 // registered below; a layout BackGold stores that is not listed falls back to
 // `<Type>/index.astro`, which gets the layout as its `variant` prop.
 //
-// Money and consent modules (Donate, FormBlock, PollBlock, Petition, Store,
-// Event, Calendar, SignupCapture, SocialFrame, Advocacy) are deliberately
-// not listed: they render as BackGold's own embed, which keeps contribution
-// limits, receipts and consent on BackGold's side. Do not add them here.
+// BackGold's money and consent modules (Donate, FormBlock, PollBlock,
+// Petition, Store, Event, Calendar, SignupCapture, Advocacy) are listed for
+// their frame only: each draws its section's heading and its card around
+// BackGold's own frame (modules/ModuleFrame.astro),
+// which it asks to wear the site in the chosen layout. The fields, limits,
+// receipts and consent stay inside BackGold's frame; never draw them here.
+// SocialFrame has no frame a site can place and stays unlisted.
 
 import About from './About/index.astro'
 import Blog from './Blog/index.astro'
@@ -54,6 +57,7 @@ import CtaPhoto from './Cta/photo.astro'
 import CtaStrip from './Cta/strip.astro'
 import EventsListCards from './EventsList/cards.astro'
 import EventsListAgenda from './EventsList/agenda.astro'
+import EventsListCalendar from './EventsList/calendar.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
 import HeroStatement from './Hero/statement.astro'
@@ -70,6 +74,26 @@ import VideoEmbedLandscape from './VideoEmbed/landscape.astro'
 import VideoEmbedPortrait from './VideoEmbed/portrait.astro'
 import VideoEmbedSquare from './VideoEmbed/square.astro'
 import TakeoverBanner from '../chrome/TakeoverBanner.astro'
+import Donate from './Donate/index.astro'
+import DonateStory from './Donate/story.astro'
+import FormBlock from './FormBlock/index.astro'
+import FormBlockWide from './FormBlock/wide.astro'
+import PollBlock from './PollBlock/index.astro'
+import SignupCapture from './SignupCapture/index.astro'
+import SignupCaptureBand from './SignupCapture/band.astro'
+import SignupCaptureInline from './SignupCapture/inline.astro'
+import Petition from './Petition/index.astro'
+import PetitionImage from './Petition/image.astro'
+import PetitionMap from './Petition/map.astro'
+import PetitionCoverage from './Petition/coverage.astro'
+import Event from './Event/index.astro'
+import EventCard from './Event/card.astro'
+import Store from './Store/index.astro'
+import StoreFeatured from './Store/featured.astro'
+import Calendar from './Calendar/index.astro'
+import CalendarAgenda from './Calendar/agenda.astro'
+import Advocacy from './Advocacy/index.astro'
+import AdvocacyCompact from './Advocacy/compact.astro'
 
 export const sections = {
   Hero,
@@ -108,6 +132,7 @@ export const sections = {
   EventsList,
   'EventsList:cards': EventsListCards,
   'EventsList:agenda': EventsListAgenda,
+  'EventsList:calendar': EventsListCalendar,
   Blog,
   'Blog:list': BlogList,
   'Blog:feature': BlogFeature,
@@ -123,4 +148,24 @@ export const sections = {
   TeamGrid,
   'TeamGrid:board': TeamGridBoard,
   TakeoverBanner,
+  Donate,
+  'Donate:story': DonateStory,
+  FormBlock,
+  'FormBlock:wide': FormBlockWide,
+  PollBlock,
+  SignupCapture,
+  'SignupCapture:band': SignupCaptureBand,
+  'SignupCapture:inline': SignupCaptureInline,
+  Petition,
+  'Petition:image': PetitionImage,
+  'Petition:map': PetitionMap,
+  'Petition:coverage': PetitionCoverage,
+  Event,
+  'Event:card': EventCard,
+  Store,
+  'Store:featured': StoreFeatured,
+  Calendar,
+  'Calendar:agenda': CalendarAgenda,
+  Advocacy,
+  'Advocacy:compact': AdvocacyCompact,
 }

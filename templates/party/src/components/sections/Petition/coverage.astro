@@ -1,0 +1,14 @@
+---
+// Petition · Coverage (board A10): BackGold's sheet under its county coverage
+// header and legend, which carry the title, so no heading here.
+import type { Section } from '@backgold/content'
+import Headed from '../modules/Headed.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Headed section={section} layout="coverage" height="72rem" head={false} />

@@ -1,7 +1,7 @@
 // An EventsList's rows as its layouts draw them: each event's id (for its
 // live counts), title, start, place, type, whether it still takes
-// registrations, its page, and the action a button offers on it, at most the
-// section's `max` of them. Dates are lib/format.ts's, in the event's own time
+// registrations, its page on this site (`/events/<slug>`, lib/events.ts), and
+// the action a button offers on it, at most the section's `max` of them. Dates are lib/format.ts's, in the event's own time
 // zone: the parts below are read off the string formatWhen writes, so every
 // layout shows (and the agenda groups by) the same day and time the list
 // layout does.
@@ -9,6 +9,7 @@
 import type { Section } from '@backgold/content'
 import { linkOf, rows, type Link } from '../../../lib/section'
 import { formatWhen, text } from '../../../lib/format'
+import { eventPagePath } from '../../../lib/events'
 
 interface When {
   /** "Tuesday, October 14, 2026 at 7:00 PM CDT", as formatWhen writes it. */
@@ -41,12 +42,11 @@ export interface EventRow {
   type: string | null
   /** The event has stopped taking registrations. */
   closed: boolean
-  /** The event's own page, labelled with its title. */
+  /** The event's own page on this site, labelled with its title. */
   link: Link | null
   /**
-   * The button's link: "Details" to the event's page once registration has
-   * closed, else "Get tickets" (to `tickets_url`, else the event's page) when
-   * the event sells tickets, else "RSVP" to the event's page.
+   * The button's link to the event's page: "Details" once registration has
+   * closed, else "Get tickets" when the event sells tickets, else "RSVP".
    */
   action: Link | null
 }
@@ -87,7 +87,8 @@ export function actionsOf(section: Section): 'buttons' | 'link' {
   return section.options?.actions === 'buttons' ? 'buttons' : 'link'
 }
 
-function typeLabel(value: unknown): string | null {
+/** An event type as a label ("Rally"), or null for none or `blank`. */
+export function typeLabel(value: unknown): string | null {
   const raw = text(value)?.trim().replace(/[_-]+/g, ' ')
   if (!raw || raw === 'blank') return null
   return raw[0]!.toUpperCase() + raw.slice(1)
@@ -103,6 +104,7 @@ export function eventsOf(section: Section): EventRow[] {
       const startsAt = text(row.starts_at)
       const closed = row.registration_closed === true
       const tickets = !closed && row.sells_tickets === true
+      const page = eventPagePath(row.url)
       return [
         {
           id: text(row.id),
@@ -112,8 +114,8 @@ export function eventsOf(section: Section): EventRow[] {
           place: text(row.location) ?? (row.is_virtual === true ? 'Online' : null),
           type: typeLabel(row.type),
           closed,
-          link: linkOf(title, row.url),
-          action: tickets ? (linkOf('Get tickets', row.tickets_url) ?? linkOf('Get tickets', row.url)) : linkOf(closed ? 'Details' : 'RSVP', row.url),
+          link: linkOf(title, page),
+          action: linkOf(closed ? 'Details' : tickets ? 'Get tickets' : 'RSVP', page),
         },
       ]
     })

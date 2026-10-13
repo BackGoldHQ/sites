@@ -1,0 +1,94 @@
+---
+// BackGold's own module (donate, a form, a sign-up, a petition, an event's
+// RSVP and tickets, the store, the calendar, a poll, contacting legislators)
+// as the boards draw it "first-party, in the site's tokens" (A7–A12): the
+// module's frame, asked to wear this site (BackGold's embed look: the section's
+// layout, the colours where it sits, light and dark, the radius and the type)
+// so it draws no ground, card, heading or platform footer of its own. The
+// site credits BackGold once, as "Powered by BackGold" in the footer's bottom
+// row, never per module.
+//
+// The fields, limits, receipts, consent and every write stay BackGold's, in
+// its frame: nothing here builds, covers or imitates a field. `card` sets the
+// module on a raised card (its frame then sits on the card colour, the panel
+// band's); without it the module sits straight on the section's band. The
+// default slot is drawn inside the card above the module (a form's title).
+// Advocacy has no frame, only a container its script fills: it is placed as
+// BackGold sends it.
+import type { SectionEmbed } from '@backgold/content'
+import { Embed } from '@backgold/astro/components'
+import { SECTION_BANDS, appearanceOf, moduleLook, type SectionBand } from '../../../lib/brand'
+
+interface Props {
+  /** The section's (or the event page's) embed, as BackGold sends it. */
+  embed: SectionEmbed | null | undefined
+  /** The ground the module sits on when it has no card: the section's band. */
+  band: string
+  /** The module's type, kept as `data-module`. */
+  type: string
+  /** The layout the frame arranges itself for (the section's, else the type's default). */
+  layout: string
+  card?: boolean
+  /** The frame's accessible name. */
+  title: string
+  /** How tall the frame starts before it reports its own height. */
+  height?: string
+  class?: string
+}
+
+const { embed: sent, band: sectionBand, type, layout, card = false, title, height = '32rem', class: className } = Astro.props
+const bg = Astro.locals.backgold
+const brand = bg.setup === null ? bg.site.brand : null
+const appearance = bg.setup === null ? appearanceOf(bg.site.style) : 'auto'
+const band: SectionBand = card ? 'panel' : SECTION_BANDS.includes(sectionBand as SectionBand) ? (sectionBand as SectionBand) : 'plain'
+
+/** The module's address with the look query, or as sent when it is not one we can read. */
+function framed(iframe: string | null): string | null {
+  if (!iframe) return iframe
+  let url: URL
+  try {
+    url = new URL(iframe)
+  } catch {
+    return iframe
+  }
+  url.searchParams.set('layout', layout)
+  for (const [key, value] of Object.entries(moduleLook(brand, band, appearance))) url.searchParams.set(key, value)
+  url.searchParams.set('radius', '12')
+  url.searchParams.set('font', 'public-sans')
+  return url.toString()
+}
+
+const embed = sent ? { ...sent, iframe: framed(sent.iframe) } : null
+const hasHead = Astro.slots.has('default')
+---
+{embed && (
+  <div class:list={['module', card && 'module-card', className]} data-module={type} style={`--bg-embed-height:${height}`}>
+    {hasHead && <div class="module-head"><slot /></div>}
+    <Embed embed={embed} title={title} />
+  </div>
+)}
+
+<style>
+  .module {
+    min-width: 0;
+  }
+  .module-card {
+    padding: clamp(1.25rem, 1rem + 0.8vw, 1.75rem);
+    border: 1px solid var(--band-panel-line);
+    border-radius: var(--radius-card);
+    background: var(--band-panel);
+    color: var(--band-panel-ink);
+    box-shadow: var(--shadow);
+  }
+  .module-head :global(h3) {
+    margin: 0 0 0.875rem;
+    font-size: var(--h3);
+    font-weight: 600;
+  }
+  .module :global(.bg-embed) {
+    display: block;
+    width: 100%;
+    background: transparent;
+    color-scheme: light dark;
+  }
+</style>

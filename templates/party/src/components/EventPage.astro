@@ -1,0 +1,163 @@
+---
+// One event's page at /events/<slug> (board A7, One event · Full). At the
+// left, the event as the site draws it: a breadcrumb back to Events and the
+// event's month, its type and place as chips, the title as the page's one
+// <h1>, its description, and its facts (the day and the time in the event's
+// own zone, the venue and address, the live "going" and "seats left"). At the
+// right (under it on a phone), BackGold's RSVP and tickets on a raised card
+// (ModuleFrame, layout `detail`), whose fields, limits, receipts and consent
+// stay BackGold's.
+import ModuleFrame from './sections/modules/ModuleFrame.astro'
+import LiveCounts from './sections/EventsList/LiveCounts.astro'
+import Prose from './Prose.astro'
+import { typeLabel } from './sections/EventsList/events'
+import { EVENTS_PATH, type EventDetail } from '../lib/events'
+import { formatWhen } from '../lib/format'
+
+interface Props {
+  event: EventDetail
+}
+
+const { event } = Astro.props
+
+/** "November", in the event's own zone (UTC without one); null for a start that does not parse. */
+function monthOf(startsAt: string, timeZone: string | null): string | null {
+  const date = new Date(startsAt)
+  if (Number.isNaN(date.getTime())) return null
+  try {
+    return new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: timeZone ?? 'UTC' }).format(date)
+  } catch {
+    return new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date)
+  }
+}
+
+/** formatWhen's "Saturday, November 1, 2026 at 6:30 PM MDT" as its day and its time. */
+function split(value: string | null): { day: string; time: string | null } | null {
+  const full = formatWhen(value, event.timezone)
+  if (!full) return null
+  const at = full.lastIndexOf(' at ')
+  return at < 0 ? { day: full, time: null } : { day: full.slice(0, at), time: full.slice(at + 4) }
+}
+
+const month = monthOf(event.starts_at, event.timezone)
+const start = split(event.starts_at)
+const end = split(event.ends_at)
+// "6:30 PM to 9:00 PM MDT" on one day; the end's own day when it ends on another.
+const time =
+  start?.time && end?.time
+    ? end.day === start.day
+      ? `${start.time.replace(/ [A-Z]{2,5}$/, '')} to ${end.time}`
+      : `${start.time} to ${end.day}, ${end.time}`
+    : (start?.time ?? null)
+const type = typeLabel(event.type)
+const place = event.is_virtual && !event.venue && !event.location ? 'Online' : (event.venue ?? event.location)
+const where = event.venue ? event.address : null
+const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Online' : null].filter((c): c is string => !!c)
+---
+<div class="event-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href={EVENTS_PATH}>Events</a>
+    {month && <><span aria-hidden="true"> › </span><span>{month}</span></>}
+  </nav>
+  <div class="event-grid">
+    <div class="event-words">
+      {chips.length > 0 && (
+        <p class="event-chips">{chips.map((chip, i) => <span class:list={['chip', i === 0 ? 'chip-accent' : 'chip-wash']}>{chip}</span>)}</p>
+      )}
+      <h1>{event.title}</h1>
+      <Prose value={event.description} class="lede" />
+      <ul class="event-facts" role="list">
+        {start && (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+            <div>
+              <time datetime={event.starts_at}><b>{start.day}</b></time>
+              {time && <span>{time}</span>}
+            </div>
+          </li>
+        )}
+        {place && (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+            <div>
+              <b>{place}</b>
+              {where && <span>{where}</span>}
+            </div>
+          </li>
+        )}
+        <li class="event-live-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" /></svg>
+          <div><span class="event-live" data-bg-live={event.id}></span></div>
+        </li>
+      </ul>
+    </div>
+    <ModuleFrame embed={event.embed} band="plain" type="Event" layout="detail" card title={`RSVP and tickets: ${event.title}`} height="44rem" />
+  </div>
+  <LiveCounts />
+</div>
+
+<style>
+  .event-page {
+    max-width: var(--content);
+    margin: 0 auto;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2.25rem) var(--gutter) var(--space);
+  }
+  .event-page .crumbs {
+    margin-bottom: 1.125rem;
+  }
+  .event-grid {
+    display: grid;
+    gap: 1.75rem;
+    align-items: start;
+  }
+  .event-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .event-words h1 {
+    margin: 0.875rem 0 1rem;
+    font-size: clamp(2.375rem, 1.6rem + 2.4vw, 3.375rem);
+    line-height: 1.02;
+    font-weight: 800;
+  }
+  .event-facts {
+    display: grid;
+    gap: 0.875rem;
+    margin: 1.375rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .event-facts li {
+    display: grid;
+    grid-template-columns: 1.75rem 1fr;
+    gap: 0.625rem;
+  }
+  .event-facts svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .event-facts b {
+    display: block;
+  }
+  .event-facts span {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  /* The live counts are empty with scripts off, or for an event no one has joined yet. */
+  .event-live-row:has(.event-live:empty) {
+    display: none;
+  }
+  @media (min-width: 56rem) {
+    .event-grid {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+</style>

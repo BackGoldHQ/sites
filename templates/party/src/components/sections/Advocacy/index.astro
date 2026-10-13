@@ -1,0 +1,14 @@
+---
+// Contact your legislators · Full (board A12, the default): the heading, then
+// BackGold's lookup and letters on a raised card.
+import type { Section } from '@backgold/content'
+import Headed from '../modules/Headed.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Headed section={section} layout="full" card height="40rem" />

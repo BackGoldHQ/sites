@@ -1,0 +1,40 @@
+---
+// A BackGold module under its section head: the kicker and heading the
+// section carries, then the module's frame (ModuleFrame). Petition, One event,
+// Store, Calendar and Contact your legislators draw through this, each with
+// its own card and starting height.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import ModuleFrame from './ModuleFrame.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  layout: string
+  card?: boolean
+  height?: string
+  /** Draw the heading (false where the module draws its own header, a petition's image, map or coverage). */
+  head?: boolean
+  /** The width the module keeps on a wide screen; none is the full content width. */
+  narrow?: boolean
+}
+
+const { section, layout, card = false, height, head = true, narrow = false } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+---
+{section.embed && (
+  <Band section={section} class:list={['headed-module', narrow && 'headed-module-narrow']}>
+    {head && <SectionHead kicker={kicker} heading={heading} more={[]} />}
+    <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout={layout} card={card} title={heading ?? section.type} height={height} />
+  </Band>
+)}
+
+<style>
+  .headed-module-narrow :global(.section-head),
+  .headed-module-narrow :global(.module) {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+</style>

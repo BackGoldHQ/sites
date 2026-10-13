@@ -1,0 +1,14 @@
+---
+// Store · Grid (board A12, the default): the heading, then BackGold's store as
+// a grid, its checkout BackGold's.
+import type { Section } from '@backgold/content'
+import Headed from '../modules/Headed.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Headed section={section} layout="grid" height="48rem" />
