@@ -1,6 +1,6 @@
 ---
 // Membership, 'card' layout, the default. A stub for the design pass: the
-// kicker and heading, the body, each row's text fields on one line, and the
+// kicker and heading, the body, each row's text fields (a list's items too) on one line, and the
 // section's links as buttons, so the section renders with its words before
 // it has a design. Replace this file's contents to give the layout its design.
 import type { Section } from '@backgold/content'
@@ -19,7 +19,13 @@ const { section } = Astro.props
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
 const lines = rows(section)
-  .map((row) => Object.values(row).map(text).filter((value): value is string => value !== null).join(' · '))
+  .map((row) =>
+    Object.values(row)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .map(text)
+      .filter((value): value is string => value !== null)
+      .join(' · '),
+  )
   .filter(Boolean)
 const ctas = links(section)
 ---
