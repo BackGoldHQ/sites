@@ -1,10 +1,177 @@
 ---
-// StatCards, 'wall' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// StatCards, 'wall' layout (board 09, A "Impact wall"): every figure on one
+// filled panel in the contrast band's colours (on a section that is already
+// on the contrast band, a tint of its ink), the heading at its top left, then
+// the figures four across (two on a phone, as many as there are when there
+// are fewer than four): each a large numeral in the display face, its label
+// bold under it and its note small and muted. A card marked `accent` in
+// BackGold shows its figure in the panel's accent, else in its ink. The
+// figures are in the page as written; once the panel comes into view the
+// script under it counts each figure's number up from zero over about a
+// second, keeping what is written around the number ("$", "k", "%", "+",
+// the commas), and ends on the figure exactly as written. A figure with no
+// number, a visitor who asks for reduced motion and a browser without the
+// observer get no count. Nothing is drawn without a figure.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { rows } from '../../../lib/section'
+import { literalStat, text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const stats = rows(section)
+  .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note), accent: row.accent === true }))
+  .filter((stat) => stat.value !== null)
+const across = Math.min(stats.length, 4)
 ---
-<Default {...Astro.props} />
+{stats.length > 0 && (
+  <Band section={section} class="stats stats-wall">
+    <div class="wall bg-band-contrast">
+      {heading && <h2 class="wall-heading">{heading}</h2>}
+      <ul class:list={['wall-grid', `wall-grid-${across}`]} role="list">
+        {stats.map((stat) => (
+          <li class="wall-stat">
+            <p class:list={['wall-value', stat.accent && 'wall-accent']} data-count>{stat.value}</p>
+            {stat.label && <p class="wall-label">{stat.label}</p>}
+            {stat.note && <p class="wall-note">{stat.note}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
+    <script is:inline>
+      (function (wall) {
+        if (!wall || !('IntersectionObserver' in window)) return
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+        var counts = []
+        wall.querySelectorAll('[data-count]').forEach(function (el) {
+          var written = el.textContent
+          var m = /\d[\d,]*(?:\.\d+)?/.exec(written)
+          if (!m) return
+          var digits = m[0].replace(/,/g, '')
+          var target = Number(digits)
+          if (!isFinite(target) || target <= 0) return
+          counts.push({
+            el: el,
+            written: written,
+            before: written.slice(0, m.index),
+            after: written.slice(m.index + m[0].length),
+            target: target,
+            decimals: (digits.split('.')[1] || '').length,
+            grouped: m[0].indexOf(',') !== -1,
+          })
+        })
+        if (counts.length === 0) return
+        function show(count, n) {
+          count.el.textContent =
+            count.before +
+            n.toLocaleString('en-US', { minimumFractionDigits: count.decimals, maximumFractionDigits: count.decimals, useGrouping: count.grouped }) +
+            count.after
+        }
+        function finish() {
+          counts.forEach(function (count) {
+            count.el.textContent = count.written
+          })
+        }
+        counts.forEach(function (count) {
+          show(count, 0)
+        })
+        window.addEventListener('beforeprint', finish)
+        var seen = new IntersectionObserver(
+          function (entries) {
+            if (!entries.some(function (entry) { return entry.isIntersecting })) return
+            seen.disconnect()
+            var start = null
+            function step(now) {
+              if (start === null) start = now
+              var t = Math.min(1, (now - start) / 1200)
+              if (t >= 1) return finish()
+              var eased = 1 - Math.pow(1 - t, 3)
+              counts.forEach(function (count) {
+                show(count, count.target * eased)
+              })
+              requestAnimationFrame(step)
+            }
+            requestAnimationFrame(step)
+          },
+          { threshold: 0.25 },
+        )
+        seen.observe(wall)
+      })(document.currentScript.previousElementSibling)
+    </script>
+  </Band>
+)}
+
+<style>
+  .wall {
+    padding: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .wall {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .wall-heading {
+    max-width: var(--measure);
+    margin-bottom: clamp(1.25rem, 0.9rem + 1.2vw, 2rem);
+    font-size: calc(var(--h2) * 0.8);
+  }
+  .wall-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1.5rem, 1rem + 1.5vw, 2.25rem) clamp(1rem, 0.75rem + 1vw, 1.75rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .wall-grid-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wall-stat {
+    min-width: 0;
+  }
+  .wall-stat p {
+    margin: 0;
+  }
+  .wall-value {
+    font-family: var(--font-display);
+    font-size: clamp(2.125rem, 1.6rem + 2.2vw, 3.5rem);
+    font-weight: 800;
+    font-variant-numeric: lining-nums tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+  .wall-accent {
+    color: var(--accent);
+  }
+  .wall-stat .wall-label {
+    margin-top: 0.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .wall-stat .wall-note {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+  }
+  @media (min-width: 48rem) {
+    .wall-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .wall-grid-1 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .wall-grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .wall-grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,10 +1,227 @@
 ---
-// Progress, 'match' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Progress, 'match' layout (board 09, B "Match deadline"): one raised card on
+// the band's surface. At the left, the kicker as an accent chip (else, when
+// the section sets a multiplier, "2× match"), the heading, the bar at the
+// share of the goal raised and the figures under it, as BackGold last counted
+// them when the page was published. At the right (under it, below 56rem), the
+// time left until the match ends as four tiles, days, hours, minutes and
+// seconds, and the one button, the section's donate link under its own label.
+// Pages are cached until content changes, so the server writes the end of
+// the match and a few lines of script count it down each second in the
+// visitor's browser; once it has passed the tiles give way to "The match has
+// ended". Without script the end reads plainly ("Ends Sunday, October 18,
+// 2026 at 11:59 PM"). The clock is drawn only for an end that is a date.
+// Nothing is drawn without a raised figure.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { formatCents, formatWhen, text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const [row] = rows(section)
+const raised = typeof row?.raised_cents === 'number' ? row.raised_cents : null
+const goal = typeof row?.goal_cents === 'number' && row.goal_cents > 0 ? row.goal_cents : null
+const percent = raised !== null && goal !== null ? Math.min(100, Math.round((raised / goal) * 100)) : null
+const multiplier = section.options?.matchMultiplier
+const times = typeof multiplier === 'number' && Number.isInteger(multiplier) && multiplier >= 2 && multiplier <= 10 ? multiplier : null
+const chip = text(section.copy.kicker) ?? (times !== null ? `${times}× match` : null)
+const heading = text(section.copy.heading)
+const [give] = links(section)
+const until = text(section.options?.matchUntil)?.trim() ?? null
+const ends = until !== null && !Number.isNaN(Date.parse(until)) ? formatWhen(until) : null
+const units = [
+  { key: 'days', label: 'days' },
+  { key: 'hours', label: 'hrs' },
+  { key: 'minutes', label: 'min' },
+  { key: 'seconds', label: 'sec' },
+]
 ---
-<Default {...Astro.props} />
+{raised !== null && (
+  <Band section={section} class="progress progress-match">
+    <div class:list={['match', (ends || give) && 'match-split']}>
+      <div class="match-main">
+        {chip && <p class="chip chip-accent match-chip">{chip}</p>}
+        {heading && <h2 class="match-heading">{heading}</h2>}
+        {percent !== null && (
+          <div class="meter match-meter" role="img" aria-label={`${percent}% of the goal`}>
+            <span class="meter-fill" style={`width:${percent}%`}></span>
+          </div>
+        )}
+        <p class="match-figures">
+          <strong class="match-raised">{formatCents(raised)}</strong> raised
+          {goal !== null && <span> of a {formatCents(goal)} goal</span>}
+        </p>
+      </div>
+      {(ends || give) && (
+        <div class="match-side">
+          {ends && until && (
+            <>
+              <div class="match-clock" data-match-until={until}>
+                <div class="match-left" aria-live="off" data-match-left hidden>
+                  <p class="visually-hidden">Ends {ends}</p>
+                  <ol class="match-tiles" role="list" aria-hidden="true">
+                    {units.map((unit) => (
+                      <li class="match-tile">
+                        <span class="match-number" data-match-unit={unit.key}></span>
+                        <span class="match-unit">{unit.label}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <p class="match-ends" data-match-ends>Ends <time datetime={until}>{ends}</time></p>
+                <p class="match-over" data-match-over hidden>The match has ended</p>
+              </div>
+              <script is:inline>
+                (function (clock) {
+                  var end = Date.parse(clock.getAttribute('data-match-until'))
+                  if (isNaN(end)) return
+                  var left = clock.querySelector('[data-match-left]')
+                  var plain = clock.querySelector('[data-match-ends]')
+                  var over = clock.querySelector('[data-match-over]')
+                  var slots = {}
+                  clock.querySelectorAll('[data-match-unit]').forEach(function (slot) {
+                    slots[slot.getAttribute('data-match-unit')] = slot
+                  })
+                  function two(n) {
+                    return n < 10 ? '0' + n : String(n)
+                  }
+                  function tick() {
+                    var ms = end - Date.now()
+                    if (ms <= 0) {
+                      left.hidden = true
+                      plain.hidden = true
+                      over.hidden = false
+                      return false
+                    }
+                    var s = Math.floor(ms / 1000)
+                    slots.days.textContent = two(Math.floor(s / 86400))
+                    slots.hours.textContent = two(Math.floor((s % 86400) / 3600))
+                    slots.minutes.textContent = two(Math.floor((s % 3600) / 60))
+                    slots.seconds.textContent = two(s % 60)
+                    return true
+                  }
+                  if (!tick()) return
+                  plain.hidden = true
+                  left.hidden = false
+                  var timer = setInterval(function () {
+                    if (!tick()) clearInterval(timer)
+                  }, 1000)
+                })(document.currentScript.previousElementSibling)
+              </script>
+            </>
+          )}
+          {give && <a class="button match-give" href={give.href} rel={give.rel}>{give.label}</a>}
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .match {
+    display: grid;
+    gap: 1.75rem;
+    padding: clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .match-main {
+    min-width: 0;
+  }
+  .match-main > :last-child {
+    margin-bottom: 0;
+  }
+  .match-chip {
+    margin: 0 0 0.875rem;
+    text-transform: uppercase;
+  }
+  .match-heading {
+    margin: 0;
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+  }
+  .match-meter {
+    height: 1.125rem;
+    margin: 1.25rem 0 0.875rem;
+  }
+  .match-figures {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+  .match-heading + .match-figures {
+    margin-top: 1rem;
+  }
+  .match-raised {
+    font-family: var(--font-display);
+    font-size: 1.25em;
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+    letter-spacing: -0.01em;
+  }
+  .match-side {
+    display: grid;
+    gap: 0.875rem;
+    min-width: 0;
+  }
+  .match-side p {
+    margin: 0;
+  }
+  .match-left[hidden],
+  .match-ends[hidden],
+  .match-over[hidden] {
+    display: none;
+  }
+  .match-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .match-tile {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.25rem 0.625rem;
+    border-radius: var(--radius);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .match-number {
+    font-family: var(--font-display);
+    font-size: clamp(1.625rem, 1.35rem + 1vw, 2.125rem);
+    font-weight: 800;
+    font-variant-numeric: lining-nums tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .match-unit {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .match-ends,
+  .match-over {
+    font-weight: 600;
+  }
+  .match-over {
+    color: var(--muted);
+  }
+  .match-give {
+    display: flex;
+    width: 100%;
+    font-size: var(--text);
+  }
+  @media (min-width: 56rem) {
+    .match-split {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 2.5rem;
+      align-items: center;
+    }
+  }
+</style>
