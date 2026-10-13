@@ -1141,6 +1141,9 @@ function startFixture(examples, kitchenSections) {
                   venue: row.location,
                   address: null,
                   image_url: null,
+                  lat: 39.5,
+                  lng: -105.25,
+                  directions_url: 'https://www.google.com/maps/dir/?api=1&destination=39.5%2C-105.25',
                   embed: { iframe: `https://secure.backgold.com/embed/e/pine-valley/${parts[1]}`, script: 'https://secure.backgold.com/embed.js' },
                 },
                 areas: { top_banner: [], sidebar: [], above_footer: [] },
@@ -2092,6 +2095,23 @@ async function checkPartyBoards(origin, fixture) {
     "BackGold's RSVP and tickets sit beside the event's facts, asked to wear the site (layout detail, its colours light and dark, radius, type), with no per-module credit (the footer's Powered by BackGold is the one)",
   )
   check(/<link rel="canonical" href="[^"]*\/events\/gotv-dinner"/.test(html), '/events/gotv-dinner is its own canonical address')
+  check(
+    /<a href="\/events\/gotv-dinner\.ics"[^>]*>Add to calendar<\/a>/.test(main) &&
+      /<a href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=39\.5%2C-105\.25"[^>]*>Get directions<\/a>/.test(main) &&
+      /<iframe class="event-map"[^>]*src="https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=[^"]*marker=39\.50000%2C-105\.25000"/.test(main),
+    'the event page offers Add to calendar and Get directions, and frames a map of the venue from its coordinates',
+  )
+  res = await get(origin, '/events/gotv-dinner.ics')
+  const ics = await res.text()
+  check(
+    res.status === 200 &&
+      /^text\/calendar/.test(res.headers.get('content-type') ?? '') &&
+      /BEGIN:VEVENT\r\n[\s\S]*DTSTART:20261101T183000Z\r\n[\s\S]*SUMMARY:Get-out-the-vote dinner\r\n[\s\S]*URL:[^\r]*\/events\/gotv-dinner\r\nEND:VEVENT/.test(ics),
+    `/events/gotv-dinner.ics is the event as a calendar file (got ${res.status})`,
+  )
+  res = await get(origin, '/events/no-such-event.ics')
+  await res.text()
+  check(res.status === 404, `a calendar file for no event is a 404 (got ${res.status})`)
 
   // A4: the news list's search.
   const searchForm = (page) => /<form class="list-search"[^>]*>([\s\S]*?)<\/form>/.exec(page)

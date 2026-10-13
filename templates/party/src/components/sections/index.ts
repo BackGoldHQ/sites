@@ -58,6 +58,7 @@ import CtaStrip from './Cta/strip.astro'
 import EventsListCards from './EventsList/cards.astro'
 import EventsListAgenda from './EventsList/agenda.astro'
 import EventsListCalendar from './EventsList/calendar.astro'
+import EventsListCompact from './EventsList/compact.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
 import HeroStatement from './Hero/statement.astro'
@@ -133,6 +134,7 @@ export const sections = {
   'EventsList:cards': EventsListCards,
   'EventsList:agenda': EventsListAgenda,
   'EventsList:calendar': EventsListCalendar,
+  'EventsList:compact': EventsListCompact,
   Blog,
   'Blog:list': BlogList,
   'Blog:feature': BlogFeature,

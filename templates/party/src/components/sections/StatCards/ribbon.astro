@@ -2,7 +2,9 @@
 // StatCards, 'ribbon' layout (board A1-home, section 2; A13 on a phone):
 // every figure in one band-wide row, each a large display-serif numeral with
 // its label (and note) under it in the muted ink, divided by thin rules and
-// with no cards; the band hugs the row (no section padding of its own).
+// with no cards; the band hugs the row (no section padding of its own) and
+// runs the page's full width flush under the section above it, whatever
+// width the section was given: A1 draws the ribbon as a band, never a card.
 // Two by two on a phone. The heading, when there is one, sits small above
 // the row. A card marked `accent` in BackGold shows its figure in the band's
 // accent. Nothing is drawn when there is neither a heading nor a figure.
@@ -41,6 +43,11 @@ const stats = rows(section)
   /* A1's ribbon: 30px above and below the figures, the band no deeper than that. */
   :global(.bg-section.stats-ribbon) {
     --bg-section-padding: 0.5rem var(--gutter);
+  }
+  :global(.bg-section.stats-ribbon.bg-bleed-contained) {
+    width: auto;
+    margin: 0;
+    border-radius: 0;
   }
   .ribbon-heading {
     font-size: var(--h3);

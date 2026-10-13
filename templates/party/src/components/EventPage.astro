@@ -2,8 +2,11 @@
 // One event's page at /events/<slug> (board A7, One event · Full). At the
 // left, the event as the site draws it: a breadcrumb back to Events and the
 // event's month, its type and place as chips, the title as the page's one
-// <h1>, its description, and its facts (the day and the time in the event's
-// own zone, the venue and address, the live "going" and "seats left"). At the
+// <h1>, its description, its facts (the day and the time in the event's own
+// zone with Add to calendar, which is the event's .ics file on this site; the
+// venue and address with Get directions; the live "going" and "seats left"),
+// and, when the event has coordinates, OpenStreetMap's map of the venue in a
+// frame (no map script runs on this page). At the
 // right (under it on a phone), BackGold's RSVP and tickets on a raised card
 // (ModuleFrame, layout `detail`), whose fields, limits, receipts and consent
 // stay BackGold's.
@@ -11,7 +14,7 @@ import ModuleFrame from './sections/modules/ModuleFrame.astro'
 import LiveCounts from './sections/EventsList/LiveCounts.astro'
 import Prose from './Prose.astro'
 import { typeLabel } from './sections/EventsList/events'
-import { EVENTS_PATH, type EventDetail } from '../lib/events'
+import { EVENTS_PATH, eventCalendarPath, type EventDetail } from '../lib/events'
 import { formatWhen } from '../lib/format'
 
 interface Props {
@@ -52,6 +55,14 @@ const time =
 const type = typeLabel(event.type)
 const place = event.is_virtual && !event.venue && !event.location ? 'Online' : (event.venue ?? event.location)
 const where = event.venue ? event.address : null
+/** OpenStreetMap's embeddable map around the venue, its marker on it; null without coordinates. */
+function mapSrc(lat: number | null, lng: number | null): string | null {
+  if (lat === null || lng === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null
+  const d = 0.006
+  const bbox = [lng - d, lat - d / 2, lng + d, lat + d / 2].map((n) => n.toFixed(5)).join(',')
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(`${lat.toFixed(5)},${lng.toFixed(5)}`)}`
+}
+const map = event.is_virtual ? null : mapSrc(event.lat, event.lng)
 const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Online' : null].filter((c): c is string => !!c)
 ---
 <div class="event-page">
@@ -72,7 +83,10 @@ const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Onli
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
             <div>
               <time datetime={event.starts_at}><b>{start.day}</b></time>
-              {time && <span>{time}</span>}
+              <span>
+                {time && <>{time} · </>}
+                <a href={eventCalendarPath(event.slug)}>Add to calendar</a>
+              </span>
             </div>
           </li>
         )}
@@ -81,7 +95,13 @@ const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Onli
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
             <div>
               <b>{place}</b>
-              {where && <span>{where}</span>}
+              {(where || event.directions_url) && (
+                <span>
+                  {where}
+                  {where && event.directions_url && ' · '}
+                  {event.directions_url && <a href={event.directions_url} rel="noopener">Get directions</a>}
+                </span>
+              )}
             </div>
           </li>
         )}
@@ -90,6 +110,7 @@ const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Onli
           <div><span class="event-live" data-bg-live={event.id}></span></div>
         </li>
       </ul>
+      {map && <iframe class="event-map" src={map} title={`Map: ${place ?? event.title}`} loading="lazy" referrerpolicy="no-referrer"></iframe>}
     </div>
     <ModuleFrame embed={event.embed} band="plain" type="Event" layout="detail" card title={`RSVP and tickets: ${event.title}`} height="44rem" />
   </div>
@@ -149,6 +170,21 @@ const chips = [event.sells_tickets ? 'Ticketed' : type, event.is_virtual ? 'Onli
   .event-facts span {
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  .event-facts a {
+    color: var(--link);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .event-map {
+    display: block;
+    width: 100%;
+    max-width: 28rem;
+    aspect-ratio: 2 / 1;
+    margin-top: 1.625rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
   }
   /* The live counts are empty with scripts off, or for an event no one has joined yet. */
   .event-live-row:has(.event-live:empty) {

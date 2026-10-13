@@ -4,8 +4,9 @@
 // it; then it shows the other set and keeps the choice in this browser
 // (`gg-mode`, as `data-gg-mode` on <html>). src/layouts/Site.astro applies a
 // kept choice in the <head>, before the page paints, so a dark page never
-// flashes light. BackGold's module frames on the page follow along: a chosen
-// mode is sent to each (`backgold:mode`) when it loads and on every press.
+// flashes light. BackGold's module frames on the page follow along: the
+// page's mode is sent to each (`backgold:mode`) when it loads, when it reports
+// its height, and on every press.
 // Without scripts the button stays hidden and the system decides.
 ---
 <button class="mode-toggle" type="button" data-mode-toggle aria-pressed="false" hidden>
@@ -29,18 +30,21 @@
       button.setAttribute('aria-pressed', current() === 'dark' ? 'true' : 'false')
     }
     function tell(frame) {
-      var chosen = root.getAttribute('data-gg-mode')
-      if (chosen !== 'dark' && chosen !== 'light') return
       var origin
       try {
         origin = new URL(frame.src).origin
       } catch (e) {
         return
       }
-      if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'backgold:mode', mode: chosen }, origin)
+      if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'backgold:mode', mode: current() }, origin)
     }
-    // The frames are further down the page than this script: catch each one's
-    // load as it happens (load does not bubble, so in the capture phase).
+    function frames() {
+      return document.querySelectorAll('iframe[data-bg-embed]')
+    }
+    // A frame is told the page's mode when it loads (the frames are further
+    // down the page than this script, and load does not bubble: capture), and
+    // again each time it reports its height, since a module that draws itself
+    // after its document loads is only listening by then.
     document.addEventListener(
       'load',
       function (e) {
@@ -49,9 +53,21 @@
       },
       true,
     )
+    addEventListener('message', function (e) {
+      var sent = e.data
+      if (!sent || sent.type !== 'givegold:resize') return
+      var all = frames()
+      for (var i = 0; i < all.length; i++) if (all[i].contentWindow === e.source) tell(all[i])
+    })
     button.hidden = false
     show()
-    if (system && system.addEventListener) system.addEventListener('change', show)
+    if (system && system.addEventListener) {
+      system.addEventListener('change', function () {
+        show()
+        var all = frames()
+        for (var k = 0; k < all.length; k++) tell(all[k])
+      })
+    }
     button.addEventListener('click', function () {
       var next = current() === 'dark' ? 'light' : 'dark'
       root.setAttribute('data-gg-mode', next)
@@ -59,8 +75,8 @@
         localStorage.setItem('gg-mode', next)
       } catch (e) {}
       show()
-      var frames = document.querySelectorAll('iframe[data-bg-embed]')
-      for (var j = 0; j < frames.length; j++) tell(frames[j])
+      var all = frames()
+      for (var j = 0; j < all.length; j++) tell(all[j])
     })
   })()
 </script>

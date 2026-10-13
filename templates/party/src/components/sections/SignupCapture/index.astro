@@ -63,22 +63,22 @@ const heading = text(section.copy.heading)
     font-size: clamp(1.75rem, 1.4rem + 1vw, 2.125rem);
     line-height: 1.08;
   }
-  .signup-card .signup-grid {
+  :global(.signup-card) .signup-grid {
     max-width: 38rem;
     margin-inline: auto;
   }
-  .signup-card .signup-words {
+  :global(.signup-card) .signup-words {
     text-align: center;
   }
-  .signup-card .signup-words h2 {
+  :global(.signup-card) .signup-words h2 {
     margin-inline: auto;
   }
   @media (min-width: 48rem) {
-    .signup-band .signup-grid {
+    :global(.signup-band) .signup-grid {
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       gap: 2.5rem;
     }
-    .signup-inline .signup-grid {
+    :global(.signup-inline) .signup-grid {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
       gap: 2rem;
     }
