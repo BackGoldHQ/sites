@@ -26,6 +26,8 @@ import Blog from './Blog/index.astro'
 import CandidateRoster from './CandidateRoster/index.astro'
 import Collection from './Collection/index.astro'
 import ContentPost from './ContentPost/index.astro'
+import ContentPostPlayer from './ContentPost/player.astro'
+import ContentPostTheater from './ContentPost/theater.astro'
 import Countdown from './Countdown/index.astro'
 import Cta from './Cta/index.astro'
 import EventsList from './EventsList/index.astro'
@@ -46,12 +48,17 @@ import VideoEmbed from './VideoEmbed/index.astro'
 
 import AboutLeft from './About/left.astro'
 import AboutLetter from './About/letter.astro'
+import AboutPortrait from './About/portrait.astro'
+import AboutBooks from './About/books.astro'
 import BlogList from './Blog/list.astro'
 import BlogFeature from './Blog/feature.astro'
 import CandidateRosterBallot from './CandidateRoster/ballot.astro'
 import CandidateRosterCompact from './CandidateRoster/compact.astro'
 import CollectionList from './Collection/list.astro'
 import CollectionCompact from './Collection/compact.astro'
+import CollectionLibrary from './Collection/library.astro'
+import CollectionShelves from './Collection/shelves.astro'
+import CollectionOutline from './Collection/outline.astro'
 import CtaBanner from './Cta/banner.astro'
 import CtaPhoto from './Cta/photo.astro'
 import CtaStrip from './Cta/strip.astro'
@@ -61,17 +68,23 @@ import EventsListCalendar from './EventsList/calendar.astro'
 import EventsListCompact from './EventsList/compact.astro'
 import EventsListShifts from './EventsList/shifts.astro'
 import EventsListWeek from './EventsList/week.astro'
+import EventsListCohorts from './EventsList/cohorts.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
 import HeroStatement from './Hero/statement.astro'
 import IssuesSteps from './Issues/steps.astro'
 import IssuesNumbered from './Issues/numbered.astro'
+import IssuesRows from './Issues/rows.astro'
+import IssuesChecklist from './Issues/checklist.astro'
 import MapSectionMap from './Map/map.astro'
 import PdfEmbedMedium from './PdfEmbed/medium.astro'
 import PdfEmbedTall from './PdfEmbed/tall.astro'
 import PlatformPlanksLongread from './PlatformPlanks/longread.astro'
 import ProgressMatch from './Progress/match.astro'
 import QuoteStripSingle from './QuoteStrip/single.astro'
+import QuoteStripLogos from './QuoteStrip/logos.astro'
+import QuoteStripCarousel from './QuoteStrip/carousel.astro'
+import QuoteStripWall from './QuoteStrip/wall.astro'
 import StatCardsRibbon from './StatCards/ribbon.astro'
 import StatCardsFeature from './StatCards/feature.astro'
 import StatCardsWall from './StatCards/wall.astro'
@@ -103,6 +116,8 @@ import AdvocacyCompact from './Advocacy/compact.astro'
 import QuickDonate from './QuickDonate/index.astro'
 import QuickDonateHero from './QuickDonate/hero.astro'
 import QuickDonateBar from './QuickDonate/bar.astro'
+import QuickDonateJar from './QuickDonate/jar.astro'
+import QuickDonateBand from './QuickDonate/band.astro'
 import VoterTools from './VoterTools/index.astro'
 import VoterToolsPolling from './VoterTools/polling.astro'
 import VoterToolsDates from './VoterTools/dates.astro'
@@ -124,6 +139,26 @@ import ComparisonSpectrum from './Comparison/spectrum.astro'
 import Stories from './Stories/index.astro'
 import StoriesCards from './Stories/cards.astro'
 import StoriesTimeline from './Stories/timeline.astro'
+import Services from './Services/index.astro'
+import ServicesList from './Services/list.astro'
+import ServicesCompare from './Services/compare.astro'
+import CaseStudies from './CaseStudies/index.astro'
+import CaseStudiesGrid from './CaseStudies/grid.astro'
+import CaseStudiesBeforeafter from './CaseStudies/beforeafter.astro'
+import Resources from './Resources/index.astro'
+import ResourcesFeatured from './Resources/featured.astro'
+import ResourcesBand from './Resources/band.astro'
+import Pathways from './Pathways/index.astro'
+import PathwaysTabs from './Pathways/tabs.astro'
+import PathwaysQuiz from './Pathways/quiz.astro'
+import Portfolio from './Portfolio/index.astro'
+import PortfolioFeatured from './Portfolio/featured.astro'
+import PortfolioStrip from './Portfolio/strip.astro'
+import MediaKit from './MediaKit/index.astro'
+import MediaKitSpeaker from './MediaKit/speaker.astro'
+import MediaKitPress from './MediaKit/press.astro'
+import Booking from './Booking/index.astro'
+import BookingList from './Booking/list.astro'
 
 export const sections = {
   Hero,
@@ -133,9 +168,13 @@ export const sections = {
   About,
   'About:left': AboutLeft,
   'About:letter': AboutLetter,
+  'About:portrait': AboutPortrait,
+  'About:books': AboutBooks,
   Issues,
   'Issues:steps': IssuesSteps,
   'Issues:numbered': IssuesNumbered,
+  'Issues:rows': IssuesRows,
+  'Issues:checklist': IssuesChecklist,
   StatCards,
   'StatCards:ribbon': StatCardsRibbon,
   'StatCards:feature': StatCardsFeature,
@@ -146,6 +185,9 @@ export const sections = {
   'Cta:photo': CtaPhoto,
   QuoteStrip,
   'QuoteStrip:single': QuoteStripSingle,
+  'QuoteStrip:logos': QuoteStripLogos,
+  'QuoteStrip:carousel': QuoteStripCarousel,
+  'QuoteStrip:wall': QuoteStripWall,
   Map: MapSection,
   'Map:map': MapSectionMap,
   MovementMap,
@@ -169,13 +211,19 @@ export const sections = {
   'EventsList:compact': EventsListCompact,
   'EventsList:shifts': EventsListShifts,
   'EventsList:week': EventsListWeek,
+  'EventsList:cohorts': EventsListCohorts,
   Blog,
   'Blog:list': BlogList,
   'Blog:feature': BlogFeature,
   Collection,
   'Collection:list': CollectionList,
   'Collection:compact': CollectionCompact,
+  'Collection:library': CollectionLibrary,
+  'Collection:shelves': CollectionShelves,
+  'Collection:outline': CollectionOutline,
   ContentPost,
+  'ContentPost:player': ContentPostPlayer,
+  'ContentPost:theater': ContentPostTheater,
   PlatformPlanks,
   'PlatformPlanks:longread': PlatformPlanksLongread,
   CandidateRoster,
@@ -207,6 +255,8 @@ export const sections = {
   QuickDonate,
   'QuickDonate:hero': QuickDonateHero,
   'QuickDonate:bar': QuickDonateBar,
+  'QuickDonate:jar': QuickDonateJar,
+  'QuickDonate:band': QuickDonateBand,
   VoterTools,
   'VoterTools:polling': VoterToolsPolling,
   'VoterTools:dates': VoterToolsDates,
@@ -228,4 +278,24 @@ export const sections = {
   Stories,
   'Stories:cards': StoriesCards,
   'Stories:timeline': StoriesTimeline,
+  Services,
+  'Services:list': ServicesList,
+  'Services:compare': ServicesCompare,
+  CaseStudies,
+  'CaseStudies:grid': CaseStudiesGrid,
+  'CaseStudies:beforeafter': CaseStudiesBeforeafter,
+  Resources,
+  'Resources:featured': ResourcesFeatured,
+  'Resources:band': ResourcesBand,
+  Pathways,
+  'Pathways:tabs': PathwaysTabs,
+  'Pathways:quiz': PathwaysQuiz,
+  Portfolio,
+  'Portfolio:featured': PortfolioFeatured,
+  'Portfolio:strip': PortfolioStrip,
+  MediaKit,
+  'MediaKit:speaker': MediaKitSpeaker,
+  'MediaKit:press': MediaKitPress,
+  Booking,
+  'Booking:list': BookingList,
 }
