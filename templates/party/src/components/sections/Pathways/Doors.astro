@@ -1,0 +1,147 @@
+---
+// The doors (mock 11, A), drawn by the Doors layout and by the Quiz layout
+// while the quiz's script has not run: a card per pathway on the band's
+// surface, as many across as there are pathways up to five on a wide screen
+// (three on a tablet, two on a phone, one when there is one). Each card has
+// the pathway's title, the line about who it is for in the muted ink, a bold
+// "Leave with:" before its outcome, and `programsLabel` with an arrow at the
+// foot in the link colour. The whole card is one link to the pathway's
+// programs, named by its title; a pathway with no address is a card with no
+// link and no label.
+import type { Pathway } from './pathways'
+
+interface Props {
+  pathways: Pathway[]
+  programsLabel: string | null
+}
+
+const { pathways, programsLabel } = Astro.props
+const across = Math.min(pathways.length, 5)
+---
+{pathways.length > 0 && (
+  <ul class:list={['doors', `doors-${across}`]} role="list">
+    {pathways.map((p) => (
+      <li class:list={['door', p.link && 'door-linked']}>
+        <h3 class="door-title">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.title}</a> : p.title}</h3>
+        {p.summary && <p class="door-summary">{p.summary}</p>}
+        {p.outcome && (
+          <p class="door-outcome"><b>Leave with:</b> {p.outcome}</p>
+        )}
+        {p.link && programsLabel && (
+          <p class="door-more">{programsLabel}<span aria-hidden="true"> →</span></p>
+        )}
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .doors {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .doors-1 {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 24rem;
+    margin-inline: auto;
+  }
+  .door {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 1rem 1rem 1.125rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .door > * {
+    margin: 0;
+  }
+  .door-title {
+    font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  .door-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .door-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .door-title a:focus-visible {
+    outline: none;
+  }
+  .door-linked:hover {
+    border-color: var(--line-strong);
+  }
+  .door-linked:hover .door-more {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  .door-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .door-summary {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  .door-outcome {
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  .door-outcome b {
+    font-weight: 700;
+  }
+  .door .door-more {
+    margin-top: auto;
+    padding-top: 0.25rem;
+    color: var(--link);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  @media (min-width: 40rem) {
+    .doors {
+      gap: 1rem;
+    }
+    .doors-3,
+    .doors-4,
+    .doors-5 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .doors-2 {
+      max-width: 44rem;
+      margin-inline: auto;
+    }
+    .door {
+      padding: 1.25rem 1.25rem 1.375rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .doors-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .doors-5 {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .door {
+      transition: border-color 0.15s ease;
+    }
+  }
+</style>

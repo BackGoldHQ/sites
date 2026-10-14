@@ -1,13 +1,13 @@
 ---
-// Pathways, 'doors' layout, the default. A stub for the design pass: the
-// kicker and heading, the body, each row's text fields (a list's items too) on one line, and the
-// section's links as buttons, so the section renders with its words before
-// it has a design. Replace this file's contents to give the layout its design.
+// Pathways · Doors, the default (mock 11, A, "Five doors"): the kicker,
+// heading and body centred ("Which one is you?"), then a card per pathway,
+// as many across as there are up to five, each one link to that pathway's
+// programs (Doors.astro). With no pathways and no heading it draws nothing.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
-import SectionHead from '../SectionHead.astro'
-import Prose from '../../Prose.astro'
-import { links, rows } from '../../../lib/section'
+import Doors from './Doors.astro'
+import Head from './Head.astro'
+import { pathwaysOf } from './pathways'
 import { text } from '../../../lib/format'
 
 interface Props {
@@ -16,30 +16,12 @@ interface Props {
 }
 
 const { section } = Astro.props
-const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const lines = rows(section)
-  .map((row) =>
-    Object.values(row)
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .map(text)
-      .filter((value): value is string => value !== null)
-      .join(' · '),
-  )
-  .filter(Boolean)
-const ctas = links(section)
+const pathways = pathwaysOf(section)
 ---
-<Band section={section} class="pathways-stub">
-  <SectionHead kicker={kicker} heading={heading} more={[]} />
-  <Prose value={section.copy.body} />
-  {lines.length > 0 && (
-    <ul role="list">
-      {lines.map((line) => <li>{line}</li>)}
-    </ul>
-  )}
-  {ctas.length > 0 && (
-    <p class="actions">
-      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
-    </p>
-  )}
-</Band>
+{(pathways.length > 0 || heading) && (
+  <Band section={section} class="pathways pathways-doors">
+    <Head kicker={text(section.copy.kicker)} heading={heading} body={section.copy.body} />
+    <Doors pathways={pathways} programsLabel={text(section.copy.programsLabel)} />
+  </Band>
+)}

@@ -469,16 +469,18 @@ function kitchenSinkDocument() {
       block('Pathways', {
         kicker: 'Liberty Leadership Lab',
         heading: 'Which one is you?',
-        body: 'Pick the path that sounds like you, and start with its first program.',
+        body: 'Pick the one that sounds like your week, and start with its first program.',
         programsLabel: 'See programs',
         quizHeading: 'Find your pathway',
         resultLabel: 'Your recommended pathway',
         startLabel: 'Start this pathway',
         layout: 'doors',
         items: [
-          { title: 'First-time candidates', summary: 'From deciding to run to filing day.', outcome: 'Leave with: a filing plan and a first budget', icon: 'lightbulb', href: '/paths/candidates', programs: ['Deciding to run · 45 min', 'Filing and fees · 30 min', 'Your first budget · 60 min'], fits: ['I am thinking about running', 'I have never filed for office', 'I need to raise my first dollar'] },
-          { title: 'Campaign staff', summary: 'For the people who run the race behind the candidate.', outcome: 'Leave with: a field plan', icon: 'users', href: '/paths/staff', programs: ['Managing volunteers · 45 min', 'Walk lists that work · 30 min'], fits: ['I manage volunteers', 'I build walk lists', 'I keep the calendar'] },
-          { title: 'County party officers', summary: 'Grow a county party between elections.', outcome: 'Leave with: a precinct chair drive', icon: 'home', href: '/paths/officers', programs: ['Recruiting precinct chairs · 45 min', 'Running a convention · 60 min'], fits: ['I chair a county party', 'Our precincts are empty', 'I run our convention'] },
+          { title: 'Candidate', summary: 'You are exploring a run, have declared, or are already on the ballot.', outcome: 'Leave with: a message, a plan and the habits to reach election day', icon: 'ballot', href: '/paths/candidate', programs: ['Deciding to run · 45 min', 'Filing and fees · 30 min', 'Candidate Training Day · Full day · Austin'], fits: ['I am thinking about running', 'I want to knock doors as the candidate', 'I need to raise my first dollar'] },
+          { title: 'Campaign Staff', summary: 'You run the operation: field, finance, comms.', outcome: 'A field plan and the skills to manage volunteers and money', icon: 'clipboard', href: '/paths/staff', programs: ['Managing volunteers · 45 min', 'Walk lists that work · 30 min'], fits: ['I manage volunteers', 'I want to run a campaign for someone else', 'I keep the calendar'] },
+          { title: 'Organizer', summary: 'You move people around a cause or a local fight.', outcome: 'A growth plan that turns attention into commitment', icon: 'megaphone', href: '/paths/organizer', programs: ['From petition to coalition · 40 min', 'One-on-ones · 25 min'], fits: ['I organize people around an issue', 'I want to lead a local coalition', 'I want more people to show up'] },
+          { title: 'Civic Leader', summary: 'You serve on a board, a commission or a party body.', outcome: 'Run meetings, hold a position and get decisions made', icon: 'building', href: '/paths/civic', programs: ['Robert’s Rules in an hour · 60 min', 'Reading a budget · 50 min'], fits: ['I sit on a board or commission', 'I want to serve on a board', 'I chair our county party'] },
+          { title: 'Career Readiness', summary: 'You want a resume, an interview and a voice that works at work.', outcome: 'A finished resume and a 90-day plan', icon: 'briefcase', href: '/paths/career', programs: ['The one-page resume · 30 min', 'Interview practice · Live · Online'], fits: ['I want a job in politics or policy', 'I want to speak up at work', 'I am looking for my next role'] },
         ],
       }),
       block('Portfolio', {
