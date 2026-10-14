@@ -1,0 +1,71 @@
+---
+// The Share kit's island, placed once per section as the last child of the
+// element marked `data-share-kit`. For each post (`[data-share-item]`, its
+// words in `data-share-text`) it shows the Copy button where the browser can
+// write the clipboard and the Share button where it has a share sheet, both
+// drawn hidden (Buttons.astro). Copy writes the post's words, nothing else;
+// its label reads "Copied" for two seconds and the status line says which
+// post was copied. Share opens the device's own sheet with the words alone.
+// The row's link is never copied or shared: any address the post carries is
+// written into its words by the operator. Nothing is counted,
+// stored or sent anywhere: the visitor's device does the sharing. Without
+// script nothing here runs and each post is its words and its plain link.
+---
+<p class="visually-hidden" role="status" aria-live="polite" data-share-status></p>
+<script is:inline>
+  ;(function (root) {
+    if (!root) return
+    var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText)
+    var canShare = typeof navigator.share === 'function'
+    if (!canCopy && !canShare) return
+    var status = root.querySelector('[data-share-status]')
+    var say = function (words) {
+      status.textContent = ''
+      setTimeout(function () {
+        status.textContent = words
+      }, 50)
+    }
+    var arm = function (item) {
+      var words = item.getAttribute('data-share-text') || ''
+      var name = item.getAttribute('data-share-name') || 'the post'
+      var buttons = item.querySelector('[data-share-buttons]')
+      var copy = item.querySelector('[data-share-copy]')
+      var share = item.querySelector('[data-share-share]')
+      if (!words || !buttons) return
+      if (canCopy && copy) {
+        var label = copy.querySelector('[data-share-copy-label]')
+        var word = label.textContent
+        var timer = 0
+        copy.addEventListener('click', function () {
+          navigator.clipboard.writeText(words).then(
+            function () {
+              label.textContent = 'Copied'
+              copy.setAttribute('data-copied', '')
+              say('Copied ' + name + '.')
+              clearTimeout(timer)
+              timer = setTimeout(function () {
+                label.textContent = word
+                copy.removeAttribute('data-copied')
+              }, 2000)
+            },
+            function () {
+              say('Could not copy. Select the words and copy them instead.')
+            },
+          )
+        })
+        copy.hidden = false
+      }
+      if (canShare && share) {
+        share.addEventListener('click', function () {
+          navigator.share({ text: words }).catch(function (e) {
+            if (!e || e.name !== 'AbortError') say('Could not open the share sheet. Copy the post instead.')
+          })
+        })
+        share.hidden = false
+      }
+      buttons.hidden = false
+    }
+    var items = root.querySelectorAll('[data-share-item]')
+    for (var i = 0; i < items.length; i++) arm(items[i])
+  })(document.currentScript && document.currentScript.closest('[data-share-kit]'))
+</script>

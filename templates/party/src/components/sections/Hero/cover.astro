@@ -76,6 +76,10 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
   :global(.bg-section.hero-cover-photo) > :global(.bg-section-inner) {
     width: 100%;
   }
+  /* The photo is not the band's ground: the band after it keeps its own top padding. */
+  :global(.bg-section.bg-bleed-full.hero-cover-photo + .bg-section.bg-bleed-full) {
+    padding-top: var(--space);
+  }
 
   .cover-image {
     position: absolute;

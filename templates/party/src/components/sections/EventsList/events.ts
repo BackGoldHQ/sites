@@ -1,7 +1,9 @@
 // An EventsList's rows as its layouts draw them: each event's id (for its
 // live counts), title, start, place, type, whether it still takes
-// registrations, its page on this site (`/events/<slug>`, lib/events.ts), and
-// the action a button offers on it, at most the section's `max` of them. Dates are lib/format.ts's, in the event's own time
+// registrations, its page on this site (`/events/<slug>`, lib/events.ts), the
+// action a button offers on it, its calendar file (`/events/<slug>.ics`, which
+// the event page's route serves) and its pinned location, at most the
+// section's `max` of them. Dates are lib/format.ts's, in the event's own time
 // zone: the parts below are read off the string formatWhen writes, so every
 // layout shows (and the agenda groups by) the same day and time the list
 // layout does.
@@ -49,6 +51,16 @@ export interface EventRow {
    * closed, else "Get tickets" when the event sells tickets, else "RSVP".
    */
   action: Link | null
+  /**
+   * "Add to calendar": the event's calendar file on this site, the event
+   * page's `.ics`. Null without a page or a start that parses, since the
+   * route has no file to serve then.
+   */
+  calendar: Link | null
+  /** The pinned location's latitude, or null when the event has no pin. */
+  lat: number | null
+  /** The pinned location's longitude, or null when the event has no pin. */
+  lng: number | null
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) =>
@@ -94,6 +106,11 @@ export function typeLabel(value: unknown): string | null {
   return raw[0]!.toUpperCase() + raw.slice(1)
 }
 
+/** A finite number within ±`limit`, or null. */
+function degrees(value: unknown, limit: number): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= limit ? value : null
+}
+
 export function eventsOf(section: Section): EventRow[] {
   const max = section.options?.max
   const cap = typeof max === 'number' && Number.isFinite(max) && max > 0 ? Math.floor(max) : Infinity
@@ -105,6 +122,9 @@ export function eventsOf(section: Section): EventRow[] {
       const closed = row.registration_closed === true
       const tickets = !closed && row.sells_tickets === true
       const page = eventPagePath(row.url)
+      const lat = degrees(row.lat, 90)
+      const lng = degrees(row.lng, 180)
+      const dated = startsAt !== null && !Number.isNaN(Date.parse(startsAt))
       return [
         {
           id: text(row.id),
@@ -116,6 +136,10 @@ export function eventsOf(section: Section): EventRow[] {
           closed,
           link: linkOf(title, page),
           action: linkOf(closed ? 'Details' : tickets ? 'Get tickets' : 'RSVP', page),
+          calendar: page && dated ? linkOf('Add to calendar', `${page}.ics`) : null,
+          // A pin needs both halves.
+          lat: lat !== null && lng !== null ? lat : null,
+          lng: lat !== null && lng !== null ? lng : null,
         },
       ]
     })

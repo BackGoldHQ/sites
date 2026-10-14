@@ -202,6 +202,8 @@ function kitchenSinkDocument() {
         showSignup: true,
         signupButtonText: 'Count me in',
         pageId: 'lp_ks',
+        // The rotating layout's words (sections batch 3); split draws none.
+        words: [{ title: 'Fewer excuses.' }, { title: 'Lower taxes.' }, { title: 'Open books.' }],
       }),
       block('About', {
         heading: 'About the committee',
@@ -311,6 +313,12 @@ function kitchenSinkDocument() {
         note: 'Contributions are not tax deductible.',
         imageUrl: asset('canvass.webp'),
         layout: 'grid',
+        // The ladder layout's rungs (sections batch 3); grid draws the amounts.
+        ladder: [
+          { amount: 25, impact: '50 doors knocked' },
+          { amount: 100, impact: 'A precinct’s mail' },
+          { amount: 250, impact: 'A canvass Saturday' },
+        ],
       }),
       block('VoterTools', {
         kicker: 'November 3',
@@ -414,6 +422,36 @@ function kitchenSinkDocument() {
           { label: '2024', title: 'Permit fee repealed', body: 'Forty neighbors at the hearing; the fee is gone.', status: 'Won', tone: 'won', href: '/stories/bakery' },
           { label: '2025', title: 'Open checkbook', body: 'The county now posts payments, a month late.', status: 'In progress', tone: 'progress' },
           { label: '2026', title: 'Library bond', body: 'On the ballot as Proposition A.', status: 'On the ballot', tone: 'none' },
+        ],
+      }),
+      // Sections batch 3 (CONTRACT §2, added 2026-10-14), each on its default layout.
+      block('ShareKit', {
+        kicker: 'Spread the word',
+        heading: 'Share the levy facts',
+        body: 'Copy a post, or share it from your phone. Every post links to the plan.',
+        copyLabel: 'Copy',
+        shareLabel: 'Share',
+        layout: 'cards',
+        items: [
+          { network: 'X', text: 'The Pine Valley levy went up three years running. Freeze it: pinevalleyliberty.org/levy', href: 'https://x.com/intent/post?text=Freeze%20the%20Pine%20Valley%20levy&url=https%3A%2F%2Fpinevalleyliberty.org%2Flevy', imageUrl: asset('share-x.webp') },
+          { network: 'Facebook', text: 'Our county posts its checks a month late. We want them online within a week. Read the plan and pass it on.', href: 'https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fpinevalleyliberty.org%2Fplan', imageUrl: asset('share-facebook.webp') },
+          { network: 'Text a friend', text: 'Coming to budget night Thursday? Main Street Library, 6 p.m. Bring a neighbor.', href: 'https://pinevalleyliberty.org/events', imageUrl: '' },
+        ],
+      }),
+      block('Financials', {
+        kicker: 'Open books',
+        heading: 'Where the money went',
+        body: 'Every dollar we raised last year, as our annual report states it.',
+        year: '2025',
+        sourceNote: 'From our 2025 annual report',
+        reportLabel: 'Read the full report',
+        reportHref: asset('annual-report.pdf'),
+        layout: 'bars',
+        rows: [
+          { category: 'Candidates and field', share: 62, amount: '$412,000', note: 'Doors, mail and filing fees' },
+          { category: 'Mail and digital', share: 21, amount: '$139,000', note: '' },
+          { category: 'Staff', share: 11, amount: '$73,000', note: '' },
+          { category: 'Overhead', share: 6, amount: '$40,000', note: '' },
         ],
       }),
       // The services sections (CONTRACT §2, added 2026-10-14), each on its
@@ -540,11 +578,12 @@ function kitchenSinkDocument() {
         max: 6,
         actions: 'buttons',
         events: [
-          { id: 'evt_1', title: 'Budget night', startsAt: '2026-10-15T23:00:00.000Z', endsAt: '2026-10-16T01:00:00.000Z', location: 'Main Street Library', type: 'meeting', timezone: 'America/Chicago', href: 'https://events.example.org/budget-night?via=page&via_page=lp_ks' },
-          { id: 'evt_2', title: 'Saturday canvass', startsAt: '2026-10-17T14:00:00.000Z', location: 'Riverside Park', timezone: 'America/Chicago', href: 'https://events.example.org/saturday-canvass?via=page&via_page=lp_ks' },
+          // Each pinned location is the map layout's pin (sections batch 3); the online events have none.
+          { id: 'evt_1', title: 'Budget night', startsAt: '2026-10-15T23:00:00.000Z', endsAt: '2026-10-16T01:00:00.000Z', location: 'Main Street Library', type: 'meeting', timezone: 'America/Chicago', href: 'https://events.example.org/budget-night?via=page&via_page=lp_ks', lat: 32.7791, lng: -96.8003 },
+          { id: 'evt_2', title: 'Saturday canvass', startsAt: '2026-10-17T14:00:00.000Z', location: 'Riverside Park', timezone: 'America/Chicago', href: 'https://events.example.org/saturday-canvass?via=page&via_page=lp_ks', lat: 32.7628, lng: -96.8241 },
           { id: 'evt_3', title: 'Online phone bank', startsAt: '2026-10-20T00:00:00.000Z', isVirtual: true, timezone: 'America/Chicago', registrationClosed: true, href: 'https://events.example.org/phone-bank?via=page&via_page=lp_ks' },
           // Standard time, then a zone Intl does not know (shown in UTC).
-          { id: 'evt_4', title: 'Winter potluck', startsAt: '2027-01-14T00:30:00.000Z', location: 'Grange Hall', timezone: 'America/Chicago', href: 'https://events.example.org/winter-potluck?via=page&via_page=lp_ks' },
+          { id: 'evt_4', title: 'Winter potluck', startsAt: '2027-01-14T00:30:00.000Z', location: 'Grange Hall', timezone: 'America/Chicago', href: 'https://events.example.org/winter-potluck?via=page&via_page=lp_ks', lat: 32.8113, lng: -96.7695 },
           { id: 'evt_5', title: 'Mars mixer', startsAt: '2026-10-22T23:00:00.000Z', isVirtual: true, timezone: 'Mars/Olympus', href: 'https://events.example.org/mars-mixer?via=page&via_page=lp_ks' },
         ],
       }),
@@ -599,7 +638,7 @@ function kitchenSinkDocument() {
         heading: 'Candidates we back',
         showFilters: false,
         entries: [
-          { name: 'Jordan Vale', office: 'School Board', region: 'District 3', status: 'On the ballot', webUrl: 'https://example.org/vale', photoUrl: asset('vale.webp') },
+          { name: 'Jordan Vale', office: 'School Board', region: 'District 3', status: 'On the ballot', webUrl: 'https://example.org/vale', photoUrl: asset('vale.webp'), endorsed: true },
           { name: 'Casey Reed', office: 'County Commission', region: 'Precinct 2', status: 'Running' },
         ],
       }),
@@ -1900,7 +1939,17 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(html.includes(banner.sections[0].copy.headline) && html.includes(banner.sections[0].copy.pitch), "the Top banner's TakeoverBanner shows its headline and pitch")
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'published home carries no section markers and no preview meta')
   check(html.indexOf('data-bg-area="top_banner"') < html.indexOf('<main'), 'the Top banner sits above the main column')
-  check(html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('<footer'), 'Above the footer sits between the main column and the footer')
+  if (PARTY) {
+    // The party template's footer is `giving`: an Above-the-footer item made
+    // only of email sign-ups (home's) is drawn inside the footer, above the
+    // legal line.
+    check(
+      html.indexOf('data-bg-area="above_footer"') > html.indexOf('<footer') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('class="disclaimer"'),
+      'the sign-up Above the footer sits inside the footer, above the legal line (giving footer)',
+    )
+  } else {
+    check(html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('<footer'), 'Above the footer sits between the main column and the footer')
+  }
   const windowScripts = html.split('[data-bg-area-item][data-from]').length - 1
   check(windowScripts === 1, `the areas' window script is on the page once (found ${windowScripts})`)
   check(/<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html), 'home (it takes donations) shows the Donate header button')
@@ -2461,6 +2510,12 @@ const ROW_TEXT = {
   Faq: (i) => [i.question],
   Comparison: (i) => [i.issue, i.us, i.them, i.them2],
   Stories: (i) => [i.title],
+  // Sections batch 3: the Hero's words are its rotating layout's and the
+  // ladder's rungs QuickDonate's ladder layout's; the defaults draw neither.
+  Hero: () => [],
+  QuickDonate: () => [],
+  ShareKit: (i) => [i.network, i.text],
+  Financials: (i) => [i.category, i.amount],
   // About's credential rows are its portrait and books layouts' words; the default draws none.
   About: () => [],
   Services: (i) => [i.name],

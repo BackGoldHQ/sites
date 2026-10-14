@@ -2,7 +2,10 @@
 // with the office, its level (the label BackGold sends: Federal, State,
 // County, …), the place, the issues, the headshot, and links to their site
 // and, when the record has one, their donate address (followed as given; a
-// donation never happens here).
+// donation never happens here). A row carries `endorsed` when the party has
+// endorsed the candidate: the bake writes the flag from the record's
+// endorsement once one exists, and every layout draws an "Endorsed" chip on a
+// row that has it and nothing on a row that does not.
 
 import type { Section } from '@backgold/content'
 import { safeSrc } from '@backgold/astro/server'
@@ -20,6 +23,8 @@ export interface Candidate {
   photo: string | null
   site: Link | null
   donate: Link | null
+  /** The party endorses this candidate; false unless the row says so. */
+  endorsed: boolean
 }
 
 export function candidatesOf(section: Section): Candidate[] {
@@ -38,6 +43,7 @@ export function candidatesOf(section: Section): Candidate[] {
         photo: safeSrc(row.image_url),
         site: linkOf('Website', row.web_url),
         donate: linkOf('Donate', row.donate_url),
+        endorsed: row.endorsed === true,
       },
     ]
   })

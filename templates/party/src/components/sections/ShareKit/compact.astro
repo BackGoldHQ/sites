@@ -1,0 +1,123 @@
+---
+// Share kit · Compact (REPORT §2 G18): the kicker and heading, the body,
+// then the posts as a list on the band's surface, one row each under a thin
+// rule and no pictures: the network as a chip, the post's words and the
+// row's link reading "Open" (a screen reader hears "Open on X") at the left, Copy and Share side by side at the
+// right. On a phone the buttons drop under the words. Copy and Share are
+// drawn hidden and shown by the section's island where the browser can do
+// them; without script each row is its words and its link. No counts. The
+// section's own links follow the list as its buttons. Nothing is drawn with
+// no post and no heading.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import Actions from './Actions.astro'
+import Buttons from './Buttons.astro'
+import { labelsOf, postsOf } from './share'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const posts = postsOf(section)
+const labels = labelsOf(section)
+const ctas = links(section)
+---
+{(heading || posts.length > 0) && (
+  <Band section={section} class="sharekit sharekit-compact">
+    <div data-share-kit>
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede sharekit-lede" />
+      {posts.length > 0 && (
+        <ul class="share-list" role="list">
+          {posts.map((post) => (
+            <li class="share-row" data-share-item data-share-text={post.text} data-share-name={post.name}>
+              <div class="share-row-words">
+                {post.network && <p class="share-row-network"><span class="chip">{post.network}</span></p>}
+                <p class="share-row-text">{post.text}</p>
+                {post.href && <p class="share-row-open"><a href={post.href} rel={post.rel}>Open<span class="visually-hidden">{post.openHint}</span><span aria-hidden="true"> →</span></a></p>}
+              </div>
+              <Buttons post={post} labels={labels} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {ctas.length > 0 && (
+        <p class="actions">
+          {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+        </p>
+      )}
+      {posts.length > 0 && <Actions />}
+    </div>
+  </Band>
+)}
+
+<style>
+  .sharekit-compact :global(.sharekit-lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .share-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .share-row {
+    display: grid;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+  }
+  .share-row + .share-row {
+    border-top: 1px solid var(--line);
+  }
+  .share-row-words {
+    display: grid;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  .share-row-words > p {
+    margin: 0;
+  }
+  /* The network chip sits on the card's surface, so it takes its ground from the ink: the band's own chip ground can match the surface in a dark band. */
+  .share-row-network .chip {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+    white-space: normal;
+  }
+  .share-row-words .share-row-text {
+    max-width: 68ch;
+    line-height: 1.55;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+  .share-row-open {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .share-row-open a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  @media (min-width: 40rem) {
+    .share-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1.125rem 1.5rem;
+    }
+    .share-row :global(.share-buttons) {
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
+  }
+</style>

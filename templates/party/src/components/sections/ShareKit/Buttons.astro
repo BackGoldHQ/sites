@@ -1,0 +1,62 @@
+---
+// A post's Copy and Share buttons, drawn inside its `[data-share-item]` by
+// every Share kit layout. Both are drawn `hidden`: the section's island
+// (Actions.astro) shows Copy where the browser can write the clipboard and
+// Share where it has a share sheet (`navigator.share`), so with scripts off,
+// or on a browser without either, no button is offered that cannot work and
+// the post is its words and its plain link. A screen reader hears which
+// post each button acts on ("Copy the X post").
+import type { Post } from './share'
+
+interface Props {
+  post: Post
+  labels: { copy: string; share: string }
+}
+
+const { post, labels } = Astro.props
+---
+<p class="share-buttons" data-share-buttons hidden>
+  <button type="button" class="button button-small button-quiet share-button" data-share-copy hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path d="M9 9h10v11H9zM5 15V4h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+    </svg>
+    <span data-share-copy-label>{labels.copy}</span><span class="visually-hidden"> {post.name}</span>
+  </button>
+  <button type="button" class="button button-small button-quiet share-button" data-share-share hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path d="M12 15V3M7 8l5-5 5 5M5 12v8h14v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <span>{labels.share}</span><span class="visually-hidden"> {post.name}</span>
+  </button>
+</p>
+
+<style>
+  .share-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .share-buttons[hidden],
+  .share-button[hidden] {
+    display: none;
+  }
+  .share-button {
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .share-button svg {
+    flex: 0 0 auto;
+  }
+  /* "Copied": the button wears the band's soft ground for as long as it says so. */
+  .share-button[data-copied] {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .share-button {
+      transition: background-color 0.15s ease;
+    }
+  }
+</style>

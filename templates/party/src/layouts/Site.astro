@@ -21,11 +21,21 @@
 //                    #above-the-footer (the newsletter issue's closing call
 //                    links there when the area holds a sign-up). An email
 //                    sign-up there is drawn in A1's band (SignupBand): its
-//                    kicker and heading beside BackGold's form.
-//   the footer       the brand, the site's description and social links,
-//                    the footer menu as columns (a column per group), the
+//                    kicker and heading beside BackGold's form. Under the
+//                    `giving` footer an item that is only email sign-ups is
+//                    drawn inside the footer instead, over the legal line,
+//                    and #above-the-footer moves with it.
+//   the footer       the layout template.json's `chrome.footer` names.
+//                    `giving` (this template's): a donate strip across its
+//                    top (DonateStrip: the footer menu's first Donate link,
+//                    else the bottom row's, else the header button when it
+//                    is Donate; no strip without one), the brand, the site's
+//                    description and social links, the footer menu as
+//                    columns (a column per group), the Above-the-footer
+//                    area's email sign-ups in A1's band (SignupBand), the
 //                    legal line, and the bottom row: the utility menu and
-//                    "Powered by BackGold".
+//                    "Powered by BackGold". Any other name draws the same
+//                    footer with no strip and the sign-ups left above it.
 //
 // The Sidebar (`sidebar`) is drawn beside the page by the routes, in
 // src/pages/[...path].astro and preview.astro. The takeover banner is the
@@ -45,11 +55,14 @@
 // tag, the 404); the menus apply each link's Shows on rule against it.
 // Every route here passes it: left out, every link and the button show.
 // `areas` is the response's `areas`; null draws no area.
-import type { Areas } from '@backgold/content'
+import type { AreaItem, Areas } from '@backgold/content'
 import { Analytics, Area, Disclaimer, MenuButton, Seo } from '@backgold/astro/components'
-import { menuOf, relFor, safeHref, type MenuPage } from '@backgold/astro/server'
+import { headerButtonOf, menuOf, relFor, safeHref, type MenuNode, type MenuPage } from '@backgold/astro/server'
+import manifest from '../../template.json'
 import Brand from '../components/chrome/Brand.astro'
+import DonateStrip from '../components/chrome/DonateStrip.astro'
 import FooterColumns from '../components/chrome/FooterColumns.astro'
+import FooterSignup from '../components/chrome/FooterSignup.astro'
 import MenuList from '../components/chrome/MenuList.astro'
 import ModeToggle from '../components/chrome/ModeToggle.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
@@ -95,6 +108,24 @@ const social = site.social.flatMap(({ platform, url }) => {
 })
 /** The area map Above the footer: an email sign-up there takes A1's band. */
 const aboveFooter = { ...sections, SignupCapture: SignupBand }
+/** The giving footer: a donate strip on top, the area's email sign-ups inside it. */
+const giving = manifest.chrome.footer === 'giving'
+/** The first Donate link in a menu, groups included, that has a safe address. */
+const donateIn = (nodes: MenuNode[]): MenuNode | null => {
+  for (const node of nodes) {
+    const found = node.kind === 'donate' && node.href ? node : donateIn(node.children)
+    if (found) return found
+  }
+  return null
+}
+const headerButton = headerButtonOf(headerItems, pathname, page)
+const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (headerButton?.kind === 'donate' ? headerButton : null)) : null
+/** An Above-the-footer item that is only email sign-ups: the giving footer draws it over the legal line. */
+const signupOnly = (item: AreaItem) => item.sections.length > 0 && item.sections.every((section) => section.type === 'SignupCapture')
+const aboveItems = areas?.above_footer ?? []
+const footerSignups: Areas | null = giving && areas ? { above_footer: aboveItems.filter(signupOnly) } : null
+const aboveAreas: Areas | null = giving && areas ? { ...areas, above_footer: aboveItems.filter((item) => !signupOnly(item)) } : areas
+const signupInFooter = (footerSignups?.above_footer.length ?? 0) > 0
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
 /** The theme's faces, else the template's own (src/lib/fonts.ts). */
@@ -161,11 +192,12 @@ const fonts = siteFonts(site.theme, bg.firstParty)
     </main>
 
     {otherAreas.map((key) => <Area name={key} areas={areas} components={sections} class="bg-area-after-page" />)}
-    <div id="above-the-footer">
-      <Area name="above_footer" areas={areas} components={aboveFooter} />
+    <div id={signupInFooter ? undefined : 'above-the-footer'}>
+      <Area name="above_footer" areas={aboveAreas} components={aboveFooter} />
     </div>
     <footer class="site-footer">
       <div class="site-footer-inner">
+        <DonateStrip link={donateLink} />
         <div class="footer-grid">
           <div class="footer-brand">
             <Brand name={name} logoUrl={site.brand.logo_url} />
@@ -178,6 +210,9 @@ const fonts = siteFonts(site.theme, bg.firstParty)
           </div>
           <FooterColumns nodes={footerNodes} />
         </div>
+        {signupInFooter && (
+          <FooterSignup areas={footerSignups} components={aboveFooter} />
+        )}
         {/*
           The legal line ("Paid for by …") must appear on every page, as text in
           the HTML the server sends. It is required by law, and BackGold checks

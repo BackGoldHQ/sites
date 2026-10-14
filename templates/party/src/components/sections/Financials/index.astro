@@ -1,0 +1,148 @@
+---
+// Financials, 'bars' layout, the default (REPORT §2 G15, "where the money
+// goes"): the head (the kicker, the heading with the year as a chip, the
+// body), then the figures on the band's surface, one row each: the category
+// with its note small under it, a bar across a track whose fill is the
+// row's `share` percent of the track, then the share ("62%") and the
+// amount beside it. A figure with no share has no bar and no share, only
+// its words. Under the figures, `sourceNote` as a fine line and the report
+// link as the one button.
+//
+// Every number is the organization's own, drawn as given: a bar is as long
+// as its share says, the bars are never scaled to one another, and nothing
+// is summed or derived. On a phone the category and the numbers share a line
+// over the bar. Nothing is drawn with neither a heading nor a figure.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import { text } from '../../../lib/format'
+import Head from './Head.astro'
+import Foot from './Foot.astro'
+import { rowsOf, shareLabel } from './financials'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const figures = rowsOf(section)
+---
+{(heading || figures.length > 0) && (
+  <Band section={section} class="financials financials-bars">
+    <Head section={section} />
+    {figures.length > 0 && (
+      <ul class="figures" role="list">
+        {figures.map((figure) => (
+          <li class="figure">
+            <div class="figure-words">
+              {figure.category && <p class="figure-category">{figure.category}</p>}
+              {figure.note && <p class="figure-note">{figure.note}</p>}
+            </div>
+            {figure.share !== null && (
+              <span class="figure-track" aria-hidden="true">
+                <span class="figure-fill" style={`--share: ${figure.share}`}></span>
+              </span>
+            )}
+            {(figure.share !== null || figure.amount) && (
+              <p class="figure-numbers">
+                {figure.share !== null && <strong class="figure-share">{shareLabel(figure.share)}</strong>}
+                {figure.amount && <span class="figure-amount">{figure.amount}</span>}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+    <Foot section={section} />
+  </Band>
+)}
+
+<style>
+  .figures {
+    margin: 0;
+    padding: 0.25rem clamp(1rem, 0.5rem + 2vw, 1.75rem);
+    list-style: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  /*
+    A figure: the words at the left, the track in the middle, the numbers at
+    the right; the track takes the room the other two leave.
+  */
+  .figure {
+    display: grid;
+    grid-template-columns: minmax(9rem, 17rem) minmax(0, 1fr) minmax(7.5rem, auto);
+    grid-template-areas: 'words track numbers';
+    align-items: center;
+    gap: 0.375rem clamp(1rem, 0.5rem + 2vw, 2rem);
+    padding: 1.125rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .figure:last-child {
+    border-bottom: 0;
+  }
+  .figure-words {
+    grid-area: words;
+    min-width: 0;
+  }
+  .figure-category {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .figure-note {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+  }
+  .figure-track {
+    grid-area: track;
+    display: block;
+    height: 0.875rem;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    overflow: hidden;
+  }
+  .figure-fill {
+    display: block;
+    width: calc(var(--share) * 1%);
+    height: 100%;
+    border-radius: var(--pill);
+    background: var(--button);
+  }
+  .figure-numbers {
+    grid-area: numbers;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .figure-share {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  .figure-amount {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  /* A phone: the words and the numbers on one line, the track under them. */
+  @media (max-width: 39.99rem) {
+    .figure {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'words numbers'
+        'track track';
+      align-items: start;
+      gap: 0.625rem 1rem;
+    }
+  }
+</style>

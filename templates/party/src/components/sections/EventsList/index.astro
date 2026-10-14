@@ -3,8 +3,9 @@
 // (/events/<slug>), which frames BackGold's RSVP and tickets (never build an
 // RSVP form here). `options.actions` is how each event links: 'buttons'
 // adds a "Details and RSVP" button under the event; 'link' (or none) makes
-// the title the link. With no events listed, the section places BackGold's
-// own events-list frame instead, when it has one.
+// the title the link. Under the time and place, a quiet "Add to calendar"
+// link to the event's calendar file on this site. With no events listed, the
+// section places BackGold's own events-list frame instead, when it has one.
 import type { Section } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
@@ -30,6 +31,7 @@ const events = eventsOf(section)
           <h3 class="event-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
           {event.when && event.startsAt && <p class="event-when"><time datetime={event.startsAt}>{event.when.full}</time></p>}
           {event.place && <p class="event-where">{event.place}</p>}
+          {event.calendar && <p class="fine"><a href={event.calendar.href} rel={event.calendar.rel}>{event.calendar.label}<span class="visually-hidden">: {event.title}</span></a></p>}
           {event.link && buttons && <p class="event-action"><a class="button" href={event.link.href} rel={event.link.rel}>Details and RSVP<span class="visually-hidden">: {event.title}</span></a></p>}
         </li>
       ))}

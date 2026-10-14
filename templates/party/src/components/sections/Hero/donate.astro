@@ -1,0 +1,195 @@
+---
+// Hero, 'donate' layout (REPORT §3 Hero, "Donate-hero", the amount grid
+// built into the hero as WinRed's pages and bernie.org do): the kicker, the
+// headline (its last word in the accent, as the cover sets it), the line
+// under it and the Hero's second link as a quiet button at the left; at the
+// right the donate card QuickDonate draws (QuickDonate/DonateCard.astro: the
+// amounts, the monthly switch when the Hero offers it, the one button, the
+// note). The Hero's first link is the donate link, so it is the card's button
+// and is not drawn again. Every amount is a link to the organization's donate
+// page in BackGold; nothing is collected here and no figure is raised or
+// counted. With a photo, the photo fills the band behind both and the words
+// sit on the cover's scrim in the photo band's inks (deep under the words, so
+// they read on any photo); on a phone the photo shows above the words and the
+// card follows them. Without a photo the words and the card sit on the band.
+// Without a donate link there is nothing to give through: it draws the cover.
+// The page-opening Hero's headline is the page's <h1> (`level={1}`); any
+// other Hero's is an <h2>. A Hero with its signup form on carries an `embed`:
+// BackGold's own form, framed under the words.
+import type { ComponentProps } from 'astro/types'
+import { Embed } from '@backgold/astro/components'
+import Band from '../Band.astro'
+import DonateCard from '../QuickDonate/DonateCard.astro'
+import { quickDonate } from '../QuickDonate/donate'
+import Cover from './cover.astro'
+import type Default from './index.astro'
+import { links, media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, level = 2 } = Astro.props
+const qd = quickDonate(section)
+const Heading = level === 1 ? 'h1' : 'h2'
+const kicker = text(section.copy.kicker)
+const headline = text(section.copy.headline)?.trim() ?? null
+const subheadline = text(section.copy.subheadline)
+const picture = media(section, 'imageUrl', 'photoUrl')
+const [, second] = links(section)
+// "More freedom. Fewer " and "excuses.": the last word apart, for the accent.
+const split = headline ? /^(.*\s)(\S+)$/su.exec(headline) : null
+const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
+---
+{qd ? (
+  <Band section={section} class:list={['hero-donate', picture && 'hero-donate-photo']}>
+    {picture && (
+      <>
+        <img
+          class="donate-image"
+          src={picture.url}
+          alt={picture.alt}
+          loading={level === 1 ? 'eager' : 'lazy'}
+          fetchpriority={level === 1 ? 'high' : undefined}
+          decoding="async"
+        />
+        <div class="donate-scrim" aria-hidden="true"></div>
+      </>
+    )}
+    <div class:list={['donate-grid', picture && 'donate-grid-photo']}>
+      <div class:list={['donate-words', picture && 'on-photo']}>
+        {kicker && <p class="kicker">{kicker}</p>}
+        {headline && <Heading class="donate-headline">{lead}{last && <em>{last}</em>}</Heading>}
+        {subheadline && <p class="donate-lede">{subheadline}</p>}
+        {second && (
+          <p class="actions">
+            <a class="button button-quiet" href={second.href} rel={second.rel}>{second.label}</a>
+          </p>
+        )}
+        {section.embed && <Embed embed={section.embed} title="Sign up" />}
+      </div>
+      <DonateCard qd={qd} />
+    </div>
+  </Band>
+) : (
+  <Cover {...Astro.props} />
+)}
+
+<style>
+  /* With a photo, the band is its frame, on the photo band's ground. */
+  :global(.bg-section.hero-donate-photo) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: var(--band-photo);
+  }
+  /* A frame is not the band's ground: the band after it keeps its own top padding. */
+  :global(.bg-section.bg-bleed-full.hero-donate-photo + .bg-section.bg-bleed-full) {
+    padding-top: var(--space);
+  }
+
+  .donate-image {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  /* The cover's scrim on a phone: light at the top where the photo shows, deep from where the words start (the grid's top padding) down. */
+  .donate-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--band-photo) 10%, transparent) 0%,
+      color-mix(in srgb, var(--band-photo) 40%, transparent) 5rem,
+      color-mix(in srgb, var(--band-photo) 85%, transparent) 11rem,
+      color-mix(in srgb, var(--band-photo) 92%, transparent) 100%
+    );
+  }
+
+  .donate-grid {
+    display: grid;
+    gap: 2rem;
+  }
+  .donate-grid-photo {
+    padding-top: clamp(9rem, 32vw, 14rem);
+  }
+  .donate-words {
+    min-width: 0;
+  }
+  .donate-words .kicker {
+    margin-bottom: 0.875rem;
+  }
+  .donate-headline {
+    font-size: clamp(2.5rem, 1.5rem + 3.6vw, 4.5rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    max-width: 11em;
+    margin: 0;
+  }
+  .donate-headline em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .donate-lede {
+    font-size: var(--text-lg);
+    color: var(--muted);
+    max-width: 32em;
+    margin: 1.25rem 0 0;
+  }
+  .on-photo .donate-lede {
+    color: color-mix(in srgb, var(--ink) 92%, transparent);
+  }
+  .donate-words .actions {
+    margin-top: 1.75rem;
+  }
+  .donate-words > :global(.bg-embed) {
+    margin-top: 1.5rem;
+  }
+  .donate-grid > :global(.qd-card) {
+    width: 100%;
+    max-width: 30rem;
+  }
+
+  @media (min-width: 56rem) {
+    .donate-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+      gap: clamp(2.5rem, 4.5vw, 4.5rem);
+      align-items: center;
+    }
+    .donate-grid-photo {
+      align-items: end;
+      min-height: 30rem;
+      padding-top: 4rem;
+    }
+    /* On a wide band the words sit at the left: deep there, the photo clearer towards the card. */
+    .donate-scrim {
+      background:
+        linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--band-photo) 88%, transparent) 0%,
+          color-mix(in srgb, var(--band-photo) 70%, transparent) 45%,
+          color-mix(in srgb, var(--band-photo) 20%, transparent) 80%
+        ),
+        linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--band-photo) 45%, transparent) 100%);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .donate-headline,
+    .donate-lede {
+      animation: donate-rise 0.4s ease-out both;
+    }
+  }
+  /* A1's motion note, as the cover has it: the headline and lede rise 12px and fade in once on load. */
+  @keyframes donate-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+  }
+</style>

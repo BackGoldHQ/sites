@@ -8,7 +8,7 @@
 // Null when the section has no donate link: there is nothing to give through.
 
 import type { Section } from '@backgold/content'
-import { links, type Link } from '../../../lib/section'
+import { links, rows, type Link } from '../../../lib/section'
 import { formatCents, text } from '../../../lib/format'
 
 /** The amounts when the section names none the donate page would take. */
@@ -40,11 +40,16 @@ function amountsOf(value: unknown): number[] {
   return amounts.length > 0 ? amounts.slice(0, MAX_AMOUNTS) : DEFAULT_AMOUNTS
 }
 
+/** The section's default amount in whole dollars, when the donate page would take it. */
+export function presetOf(section: Section): number | null {
+  return wholeDollars(section.options?.defaultAmount)
+}
+
 export function quickDonate(section: Section): QuickDonate | null {
   const [donate] = links(section)
   if (!donate) return null
   const amounts = amountsOf(section.options?.amounts)
-  const preset = wholeDollars(section.options?.defaultAmount)
+  const preset = presetOf(section)
   return {
     donate,
     amounts,
@@ -91,4 +96,31 @@ export function jarOf(section: Section, qd: QuickDonate): Jar {
   const unit = wholeDollars(section.options?.defaultAmount) ?? qd.amounts[0]
   const choices = JAR_COUNTS.map((count) => ({ count, amount: unit * count })).filter((c) => wholeDollars(c.amount) !== null)
   return { unit, choices }
+}
+
+/** The contract holds the ladder to eight rows. */
+const MAX_RUNGS = 8
+
+/** One rung of the ladder layout: what a gift of `amount` does. */
+export interface Rung {
+  /** Whole dollars, as the donate page takes them. */
+  amount: number
+  impact: string
+}
+
+/**
+ * The ladder layout's rungs: the section's `ladder` rows with an amount the
+ * donate page would take and words for what it does, in the order the
+ * section lists them; a second row for the same amount is left out.
+ */
+export function ladderOf(section: Section): Rung[] {
+  const rungs: Rung[] = []
+  for (const row of rows(section)) {
+    const amount = wholeDollars(row.amount)
+    const impact = text(row.impact)
+    if (amount === null || !impact || rungs.some((r) => r.amount === amount)) continue
+    rungs.push({ amount, impact })
+    if (rungs.length === MAX_RUNGS) break
+  }
+  return rungs
 }

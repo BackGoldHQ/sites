@@ -1,0 +1,237 @@
+---
+// Issues, 'drawer' layout (REPORT §3, "Issue cards with a 'read the plan'
+// drawer"): the kicker, the heading and the lead, then the issues as cards,
+// three to a row on a wide screen and one on a phone. A card is on the band's
+// surface: the issue's two-digit number in the accent with its note as a chip
+// beside it, the title, the first paragraph of its line, and under them
+// "Read the plan", a native <details> that opens the rest of the line and
+// what the issue includes (a checked list) in place, under the words it
+// opened from. The browser opens and closes it, with the keyboard too, so it
+// works with scripts off. An issue with nothing past its first paragraph and
+// nothing it includes has no "Read the plan". While a card is open the cards
+// in its row keep their own height. The section's links follow as buttons,
+// the first the main one. With no issue, heading, kicker or lead nothing is
+// drawn.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { issuesOf, numeral } from './issues'
+import { links } from '../../../lib/section'
+import { prose, text, type Prose as ProseValue } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const issues = issuesOf(section)
+const ctas = links(section)
+const drawn = heading || kicker || prose(section.copy.lead) || issues.length > 0
+
+// A line's first paragraph, which the card shows, and the rest, which the
+// drawer opens. Rich text that opens with words outside a paragraph is all
+// shown on the card.
+const FIRST_PARAGRAPH = /^\s*(<p\b[^>]*>[\s\S]*?<\/p>)([\s\S]*)$/i
+const split = (value: unknown): { lead: ProseValue | null; rest: ProseValue | null } => {
+  const body = prose(value)
+  if (!body) return { lead: null, rest: null }
+  if ('paragraphs' in body) {
+    const [first, ...more] = body.paragraphs
+    return { lead: { paragraphs: [first] }, rest: more.length > 0 ? { paragraphs: more } : null }
+  }
+  const m = FIRST_PARAGRAPH.exec(body.html)
+  if (!m) return { lead: body, rest: null }
+  return { lead: { html: m[1] }, rest: m[2].trim() ? { html: m[2] } : null }
+}
+const cards = issues.map((issue, i) => ({ ...issue, ...split(issue.body), name: issue.title ?? numeral(i) }))
+---
+{drawn && (
+  <Band section={section} class="issues issues-drawer">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    <Prose value={section.copy.lead} class="lede" />
+    {cards.length > 0 && (
+      <ul class="grid grid-3 dr-grid" role="list">
+        {cards.map((card, i) => (
+          <li class="dr-card">
+            <p class="dr-top">
+              <span class="dr-number" aria-hidden="true">{numeral(i)}</span>
+              {card.note && <span class="chip">{card.note}</span>}
+            </p>
+            {card.title && <h3>{card.title}</h3>}
+            {card.lead && ('html' in card.lead ? (
+              <div class="prose dr-lead" set:html={card.lead.html} />
+            ) : (
+              <div class="prose dr-lead">{card.lead.paragraphs.map((p) => <p>{p}</p>)}</div>
+            ))}
+            {(card.rest || card.includes.length > 0) && (
+              <details class="dr-plan">
+                <summary>
+                  <span>Read the plan<span class="visually-hidden">: {card.name}</span></span>
+                </summary>
+                <div class="dr-rest">
+                  {card.rest && ('html' in card.rest ? (
+                    <div class="prose dr-body" set:html={card.rest.html} />
+                  ) : (
+                    <div class="prose dr-body">{card.rest.paragraphs.map((p) => <p>{p}</p>)}</div>
+                  ))}
+                  {card.includes.length > 0 && (
+                    <ul class="dr-includes" role="list">
+                      {card.includes.map((line) => (
+                        <li>
+                          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+    {ctas.length > 0 && (
+      <p class="actions">
+        {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+)}
+
+<style>
+  .dr-grid {
+    margin-top: 2rem;
+  }
+  /* A card open: the cards beside it keep their own height rather than stretching to its. */
+  .dr-grid:has(.dr-plan[open]) {
+    align-items: start;
+  }
+  .dr-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .dr-card > * {
+    margin: 0;
+  }
+  .dr-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .dr-number {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: clamp(1.625rem, 1.4rem + 0.6vw, 2rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .dr-card h3 {
+    margin-top: 0.875rem;
+  }
+  .dr-card .dr-lead {
+    margin-top: 0.5rem;
+    color: var(--muted);
+  }
+  .dr-lead > :global(:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* "Read the plan": a text link with a chevron that points down, and up while the plan is open. */
+  .dr-card .dr-plan {
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+  .dr-plan summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.75rem;
+    color: var(--link);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+    list-style: none;
+    cursor: pointer;
+  }
+  .dr-plan summary::-webkit-details-marker {
+    display: none;
+  }
+  .dr-plan summary:hover {
+    text-decoration-thickness: 2.5px;
+  }
+  .dr-plan summary::after {
+    content: '';
+    flex: 0 0 auto;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-top: -0.25rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+  .dr-plan[open] summary::after {
+    margin-top: 0.25rem;
+    transform: rotate(225deg);
+  }
+  .dr-rest {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+  .dr-body {
+    color: var(--muted);
+  }
+  .dr-body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .dr-includes {
+    display: grid;
+    gap: 0.375rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+  .dr-rest > .dr-includes:first-child {
+    margin-top: 0;
+  }
+  .dr-includes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.45;
+  }
+  .dr-includes svg {
+    flex: 0 0 auto;
+    margin-top: 0.15em;
+    color: var(--accent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .dr-plan summary::after {
+      transition:
+        transform 0.2s ease,
+        margin 0.2s ease;
+    }
+    .dr-plan[open] .dr-rest {
+      animation: dr-open 0.2s ease-out;
+    }
+  }
+  @keyframes dr-open {
+    from {
+      opacity: 0;
+      transform: translateY(-0.375rem);
+    }
+  }
+</style>

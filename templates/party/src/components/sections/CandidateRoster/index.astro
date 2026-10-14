@@ -1,7 +1,9 @@
 ---
 // CandidateRoster: the candidates the organization backs, each with the
 // office, the place, the issues, and links to their site and their donate
-// page in BackGold (follow it as given; never take a donation here).
+// page in BackGold (follow it as given; never take a donation here). An
+// endorsed candidate carries an "Endorsed" chip beside the status badge (alone
+// when there is no status).
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import { text } from '../../../lib/format'
@@ -22,7 +24,12 @@ const candidates = candidatesOf(section).map((c) => ({ ...c, office: [c.office, 
     <ul class="grid grid-3" role="list">
       {candidates.map((c) => (
         <li class="tile">
-          {c.status && <p class="badge">{c.status}</p>}
+          {(c.status || c.endorsed) && (
+            <p class="roster-tags">
+              {c.status && <span class="badge">{c.status}</span>}
+              {c.endorsed && <span class="chip chip-accent">Endorsed</span>}
+            </p>
+          )}
           <h3>{c.name}</h3>
           {c.office && <p class="muted">{c.office}</p>}
           {c.issues.length > 0 && <p class="fine">{c.issues.join(' · ')}</p>}
@@ -39,3 +46,12 @@ const candidates = candidatesOf(section).map((c) => ({ ...c, office: [c.office, 
     <p class="empty">No candidates listed yet.</p>
   )}
 </Band>
+
+<style>
+  .roster-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>

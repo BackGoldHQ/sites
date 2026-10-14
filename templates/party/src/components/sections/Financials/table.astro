@@ -1,0 +1,157 @@
+---
+// Financials, 'table' layout (REPORT §2 G15, "where the money goes"): the
+// head (the kicker, the heading with the year as a chip, the body), then the
+// figures as a table on the band's surface, Category · Share · Amount ·
+// Note, then `sourceNote` as a fine line and the report link as the one
+// button. A column no figure fills is left out. The share ("62%") and the
+// amount sit right-aligned in tabular figures, each as the organization
+// published it: no total row, nothing summed or derived. The caption, for a
+// screen reader, is the heading and the year.
+//
+// On a phone each figure is a block: the category with the share and the
+// amount at its right, the note under them. Nothing is drawn with neither a
+// heading nor a figure.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { text } from '../../../lib/format'
+import Head from './Head.astro'
+import Foot from './Foot.astro'
+import { rowsOf, shareLabel } from './financials'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const year = text(section.copy.year)
+const figures = rowsOf(section)
+const has = {
+  category: figures.some((f) => f.category),
+  share: figures.some((f) => f.share !== null),
+  amount: figures.some((f) => f.amount),
+  note: figures.some((f) => f.note),
+}
+const caption = [heading, year].filter(Boolean).join(', ')
+---
+{(heading || figures.length > 0) && (
+  <Band section={section} class="financials financials-table">
+    <Head section={section} />
+    {figures.length > 0 && (
+      <div class="ledger-frame">
+        <table class="ledger">
+          {caption && <caption class="visually-hidden">{caption}</caption>}
+          <thead>
+            <tr>
+              {has.category && <th scope="col">Category</th>}
+              {has.share && <th scope="col" class="ledger-number">Share</th>}
+              {has.amount && <th scope="col" class="ledger-number">Amount</th>}
+              {has.note && <th scope="col">Note</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {figures.map((figure) => (
+              <tr class="ledger-row">
+                {has.category && <th scope="row" class="ledger-category">{figure.category}</th>}
+                {has.share && <td class="ledger-number ledger-share">{figure.share !== null ? shareLabel(figure.share) : ''}</td>}
+                {has.amount && <td class="ledger-number ledger-amount">{figure.amount}</td>}
+                {has.note && <td class="ledger-note">{figure.note}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    <Foot section={section} />
+  </Band>
+)}
+
+<style>
+  .ledger-frame {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .ledger {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ledger th,
+  .ledger td {
+    padding: 0.9375rem 1.125rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: baseline;
+  }
+  .ledger thead th {
+    padding-block: 0.75rem;
+    border-bottom-color: var(--line-strong);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ledger-row:last-child > * {
+    border-bottom: 0;
+  }
+  .ledger .ledger-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ledger .ledger-category {
+    font-weight: 700;
+  }
+  .ledger-share {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
+  .ledger-amount {
+    font-weight: 600;
+  }
+  .ledger-note {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  /* A phone: each figure a block, the category and its numbers on a line, the note under them. */
+  @media (max-width: 39.99rem) {
+    .ledger thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .ledger,
+    .ledger tbody {
+      display: block;
+    }
+    .ledger-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: baseline;
+      gap: 0.25rem 1rem;
+      padding: 1rem 1.125rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .ledger-row:last-child {
+      border-bottom: 0;
+    }
+    .ledger .ledger-row > * {
+      display: block;
+      padding: 0;
+      border: 0;
+    }
+    .ledger .ledger-note {
+      grid-column: 1 / -1;
+    }
+    .ledger .ledger-note:empty,
+    .ledger .ledger-share:empty {
+      display: none;
+    }
+  }
+</style>

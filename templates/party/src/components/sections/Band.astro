@@ -1,7 +1,11 @@
 ---
 // The band every section sits in: the same classes and data attributes
 // @backgold/astro's DefaultSection emits, so src/styles/site.css styles a
-// section of yours and a block type BackGold adds later the same way.
+// section of yours and a block type BackGold adds later the same way. A
+// section with an anchor id (`options.anchorId`, the renderer's rule: a
+// letter, then up to 40 letters, digits, hyphens or underscores) carries it
+// as its `id`, so a menu link to `/about#platform` lands on it; any other
+// value is left off.
 import type { Section } from '@backgold/content'
 
 interface Props {
@@ -12,11 +16,17 @@ interface Props {
 const BANDS = ['plain', 'tint', 'panel', 'wash', 'contrast']
 const BLEEDS = ['full', 'contained']
 
+/** packages/site urls.ts SAFE_ANCHOR_ID_RE: what the hosted renderer accepts as a section's id. */
+const SAFE_ANCHOR_ID = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/
+
 const { section, class: className } = Astro.props
 const band = BANDS.includes(section.band) ? section.band : 'plain'
 const bleed = BLEEDS.includes(section.bleed) ? section.bleed : 'full'
+const anchorId = section.options?.anchorId
+const id = typeof anchorId === 'string' && SAFE_ANCHOR_ID.test(anchorId) ? anchorId : undefined
 ---
 <section
+  id={id}
   class:list={['bg-section', `bg-band-${band}`, `bg-bleed-${bleed}`, className]}
   data-type={section.type}
   data-band={band}

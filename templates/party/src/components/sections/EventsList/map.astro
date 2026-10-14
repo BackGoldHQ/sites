@@ -1,0 +1,436 @@
+---
+// EventsList · Map (REPORT §3, "Upcoming events: add a Map view"): the
+// section head (the kicker, the heading and the "All events" link), then the
+// events as a list beside a map with a numbered pin for each event that has a
+// pinned location. Each row is the shifts idiom: a date tile, the event's
+// number when it has a pin, the title linking to the event's page on this
+// site (which frames BackGold's RSVP and tickets), the time and the place with
+// a quiet "Add to calendar" link to its calendar file, the type as a chip, the
+// live counts (filled in by LiveCounts after the page loads; empty without
+// scripts) and whether it still takes registrations. `options.actions`
+// 'buttons' adds the row's button to the same page ("RSVP", "Get tickets",
+// "Details" in the outline once registration has closed); 'link' (or none)
+// leaves the title the only link. Each pin is a link to its event's page,
+// named by the event's title.
+//
+// The map is a mosaic of OpenStreetMap's own tiles, worked out here on the
+// server: the template's map runtime (Map/RegionMap.astro, lib/geo.ts) draws
+// county and district outlines in their own drawing space with no projection,
+// so a latitude and longitude cannot be placed on it. In Web Mercator, the
+// map is a 3:2 window 512 tile pixels across, centred on the pins at the
+// highest zoom (3 to 16; 14 for a single pin) that holds them all with about
+// 15% room around them; it never touches more than 3 by 3 tiles. Each tile is
+// an image the browser loads lazily from tile.openstreetmap.org, and each pin
+// is placed by its projected position within the window. Nothing is fetched
+// here and no script runs: OpenStreetMap is already the event page's map
+// source. Its licence asks for the "© OpenStreetMap contributors" line under
+// the map, which links to their copyright page.
+//
+// Wider screens put the list at the left and the map at the right, where it
+// stays in view as the list scrolls; a phone shows the map first, then the
+// list. An event with no pin is in the list only, unnumbered, as is a pin
+// left outside the window when the pins spread wider than zoom 3 can hold.
+// With no pinned event the list is drawn alone: no empty map. With no events
+// the head stands over the section's empty-events line ("No upcoming events
+// right now." when it has none); with neither events nor a heading nothing is
+// drawn. While the tiles load, or when they cannot, the pins stand on the
+// band's surface in their places.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import LiveCounts from './LiveCounts.astro'
+import SectionHead from '../SectionHead.astro'
+import { actionsOf, eventsOf, type EventRow } from './events'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const invitation = text(section.copy.eventsEmptyCta)
+const buttons = actionsOf(section) === 'buttons'
+const events = eventsOf(section)
+
+const TILE = 256
+const MIN_ZOOM = 3
+const MAX_ZOOM = 16
+const SINGLE_ZOOM = 14
+/**
+ * The map's window in tile pixels, 3:2. At most 512 across and down, so it
+ * never touches more than 3 tiles each way wherever it falls on the grid.
+ */
+const VIEW_W = 512
+const VIEW_H = 344
+/** Room left around the pins: 15% of their spread, and never less than a pin's width at the smallest scale. */
+const PAD_SHARE = 0.15
+const PAD_MIN = 32
+
+const worldX = (lng: number, z: number) => ((lng + 180) / 360) * TILE * 2 ** z
+const worldY = (lat: number, z: number) => {
+  const s = Math.sin((Math.max(-85.0511, Math.min(85.0511, lat)) * Math.PI) / 180)
+  return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * TILE * 2 ** z
+}
+const fits = (min: number, max: number, view: number) => max - min + 2 * Math.max((max - min) * PAD_SHARE, PAD_MIN) <= view
+
+type Placed = EventRow & { lat: number; lng: number }
+
+interface Pin {
+  n: number
+  event: EventRow
+  /** The pin's place within the window, as percentages from its left and top. */
+  left: number
+  top: number
+}
+
+interface Mosaic {
+  cols: number
+  /** Where the tile grid sits within the window, and how wide it is, as percentages of the window. */
+  left: number
+  top: number
+  width: number
+  tiles: { src: string | null }[]
+  pins: Pin[]
+}
+
+/**
+ * The window centred on the pins at the highest zoom that holds them all
+ * with room around them. Pins spread too far for zoom 3 get its window
+ * centred on them, and the ones outside it stay in the list unnumbered.
+ */
+function mosaicOf(points: Placed[]): Mosaic | null {
+  if (points.length === 0) return null
+  const project = (z: number) => ({ xs: points.map((p) => worldX(p.lng, z)), ys: points.map((p) => worldY(p.lat, z)) })
+  let z = points.length === 1 ? SINGLE_ZOOM : MAX_ZOOM
+  let { xs, ys } = project(z)
+  while (z > MIN_ZOOM && !(fits(Math.min(...xs), Math.max(...xs), VIEW_W) && fits(Math.min(...ys), Math.max(...ys), VIEW_H))) {
+    z -= 1
+    ;({ xs, ys } = project(z))
+  }
+  const world = 2 ** z
+  const left = (Math.min(...xs) + Math.max(...xs)) / 2 - VIEW_W / 2
+  // Across, the world wraps; down, it ends at the poles.
+  const top = Math.max(0, Math.min(world * TILE - VIEW_H, (Math.min(...ys) + Math.max(...ys)) / 2 - VIEW_H / 2))
+  const tx = Math.floor(left / TILE)
+  const ty = Math.floor(top / TILE)
+  const cols = Math.floor((left + VIEW_W - 1) / TILE) - tx + 1
+  const rows = Math.floor((top + VIEW_H - 1) / TILE) - ty + 1
+  const tiles = Array.from({ length: cols * rows }, (_, i) => {
+    const x = (((tx + (i % cols)) % world) + world) % world
+    const y = ty + Math.floor(i / cols)
+    return { src: y >= 0 && y < world ? `https://tile.openstreetmap.org/${z}/${x}/${y}.png` : null }
+  })
+  const pins: Pin[] = []
+  points.forEach((event, i) => {
+    const x = xs[i]! - left
+    const y = ys[i]! - top
+    if (x >= 0 && x <= VIEW_W && y >= 0 && y <= VIEW_H) pins.push({ n: pins.length + 1, event, left: (x / VIEW_W) * 100, top: (y / VIEW_H) * 100 })
+  })
+  if (pins.length === 0) return null
+  return {
+    cols,
+    left: ((tx * TILE - left) / VIEW_W) * 100,
+    top: ((ty * TILE - top) / VIEW_H) * 100,
+    width: ((cols * TILE) / VIEW_W) * 100,
+    tiles,
+    pins,
+  }
+}
+
+const mosaic = mosaicOf(events.filter((e): e is Placed => e.lat !== null && e.lng !== null))
+const numberOf = new Map<EventRow, number>(mosaic?.pins.map((p) => [p.event, p.n]) ?? [])
+const pct = (n: number) => `${n.toFixed(3)}%`
+---
+{(heading || events.length > 0) && (
+  <Band section={section} class="events events-map">
+    <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
+    {events.length > 0 ? (
+      <div class:list={['evm', { 'evm-with-map': mosaic }]}>
+        {mosaic && (
+          <figure class="evm-map" aria-label="Map of the events">
+            <div class="evm-mosaic">
+              <div class="evm-tiles" aria-hidden="true" style={`--cols: ${mosaic.cols}; left: ${pct(mosaic.left)}; top: ${pct(mosaic.top)}; width: ${pct(mosaic.width)}`}>
+                {mosaic.tiles.map((tile) => (tile.src ? <img src={tile.src} width="256" height="256" loading="lazy" decoding="async" alt="" /> : <span></span>))}
+              </div>
+              {mosaic.pins.map((pin) =>
+                pin.event.link ? (
+                  <a class="evm-pin" href={pin.event.link.href} rel={pin.event.link.rel} aria-label={pin.event.title} style={`left: ${pct(pin.left)}; top: ${pct(pin.top)}`}>{pin.n}</a>
+                ) : (
+                  <span class="evm-pin" aria-hidden="true" style={`left: ${pct(pin.left)}; top: ${pct(pin.top)}`}>{pin.n}</span>
+                ),
+              )}
+            </div>
+            <figcaption class="evm-credit">
+              <a href="https://www.openstreetmap.org/copyright" rel="noopener">© OpenStreetMap contributors</a>
+            </figcaption>
+          </figure>
+        )}
+        <ul class="evm-list" role="list">
+          {events.map((event) => (
+            <li class="evm-row">
+              {event.when && event.startsAt ? (
+                <time class="evm-tile" datetime={event.startsAt}>
+                  <span class="evm-month" aria-hidden="true">{event.when.monthShort}</span>
+                  <b aria-hidden="true">{event.when.day}</b>
+                  {event.when.weekday && <span class="evm-weekday" aria-hidden="true">{event.when.weekday}</span>}
+                  <span class="visually-hidden">{event.when.full}</span>
+                </time>
+              ) : (
+                <span class="evm-tile" aria-hidden="true"><b>–</b></span>
+              )}
+              <div class="evm-body">
+                <h3 class="evm-title">
+                  {mosaic && numberOf.has(event) && <span class="evm-num" aria-hidden="true">{numberOf.get(event)}</span>}
+                  {event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}
+                </h3>
+                {(event.when?.time || event.place || event.calendar) && (
+                  <p class="evm-meta">
+                    {[event.when?.time, event.place].filter(Boolean).join(' · ')}
+                    {event.calendar && (
+                      <>
+                        {(event.when?.time || event.place) && ' · '}
+                        <a href={event.calendar.href} rel={event.calendar.rel}>{event.calendar.label}<span class="visually-hidden">: {event.title}</span></a>
+                      </>
+                    )}
+                  </p>
+                )}
+                {(event.type || event.id || event.closed) && (
+                  <p class="evm-facts">
+                    {event.type && <span class="chip chip-wash">{event.type}</span>}
+                    {event.id && <span class="evm-live" data-bg-live={event.id}></span>}
+                    {event.closed && <span class="evm-closed">Registration closed</span>}
+                  </p>
+                )}
+                {buttons && event.action && (
+                  <p class="evm-action">
+                    <a class:list={['button', 'button-small', event.closed ? 'button-quiet' : 'button-2']} href={event.action.href} rel={event.action.rel}>
+                      {event.action.label}<span class="visually-hidden">: {event.title}</span>
+                    </a>
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <p class="evm-empty">{invitation ?? 'No upcoming events right now.'}</p>
+    )}
+    <LiveCounts />
+  </Band>
+)}
+
+<style>
+  /* A phone: the map first, then the list. */
+  .evm {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .evm-map {
+    min-width: 0;
+    margin: 0;
+  }
+  /* The window onto the tiles: 3:2, as wide as its column. */
+  .evm-mosaic {
+    position: relative;
+    aspect-ratio: 512 / 344;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .evm-tiles {
+    position: absolute;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  }
+  .evm-tiles > * {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  /* A numbered pin in the band's button inks, centred on its place, with a hairline of the surface so it reads on any tile. */
+  .evm-pin {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--surface);
+    border-radius: var(--pill);
+    background: var(--button);
+    box-shadow: var(--shadow);
+    color: var(--button-ink);
+    font-size: var(--text-sm);
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    transform: translate(-50%, -50%);
+  }
+  /* A 44px target around the 28px pin. */
+  a.evm-pin::before {
+    content: '';
+    position: absolute;
+    inset: -0.5rem;
+  }
+  a.evm-pin:hover,
+  a.evm-pin:focus-visible {
+    z-index: 1;
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .evm-credit {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+  .evm-credit a {
+    color: inherit;
+  }
+  .evm-list {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .evm-row {
+    display: grid;
+    grid-template-columns: 3.75rem minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .evm-tile {
+    display: grid;
+    justify-items: center;
+    padding: 0.5rem 0 0.5625rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    line-height: 1;
+    text-align: center;
+  }
+  .evm-tile b {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .evm-month {
+    margin-bottom: 0.3125rem;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .evm-weekday {
+    margin-top: 0.3125rem;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .evm-body {
+    display: grid;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  .evm-body > * {
+    margin: 0;
+  }
+  .evm-title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .evm-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .evm-title a:hover {
+    text-decoration: underline;
+  }
+  /* The row's number, the pin's twin. */
+  .evm-num {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: 0.5rem;
+    border-radius: var(--pill);
+    background: var(--button);
+    color: var(--button-ink);
+    font-family: var(--font);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    letter-spacing: 0;
+    vertical-align: 0.125em;
+  }
+  .evm-meta {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .evm-meta a {
+    white-space: nowrap;
+  }
+  .evm-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    font-size: var(--text-sm);
+  }
+  .evm-live {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .evm-live:empty {
+    display: none;
+  }
+  .evm-closed {
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .evm-action {
+    padding-top: 0.25rem;
+  }
+  .evm-empty {
+    margin: 0;
+    padding: 1.125rem 1.25rem;
+    border: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: var(--radius);
+    color: var(--muted);
+  }
+  /* Wider: the list at the left, the map at the right, held in view while the list scrolls. */
+  @media (min-width: 56rem) {
+    .evm-with-map {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 2rem;
+      align-items: start;
+    }
+    .evm-with-map .evm-map {
+      position: sticky;
+      top: 1.5rem;
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .evm-with-map .evm-credit {
+      text-align: right;
+    }
+    .evm-with-map .evm-list {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+</style>

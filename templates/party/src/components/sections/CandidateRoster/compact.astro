@@ -4,7 +4,8 @@
 // heading and its "All N candidates" link), then one row of four candidates
 // from the top of the ballot (by level, BackGold's order within a level),
 // each with a square headshot (their initials on the brand's gradient when
-// there is none), the name, the office and the place as a chip. The name
+// there is none), the name, the office and the place as a chip, with an
+// "Endorsed" chip under the office when the candidate is endorsed. The name
 // links to the candidate's own site when the record has one. Two across on
 // a phone. With no candidates it draws nothing.
 import type { ComponentProps } from 'astro/types'
@@ -40,6 +41,7 @@ const candidates = candidatesOf(section)
           )}
           <h3 class="compact-name">{c.site ? <a href={c.site.href} rel={c.site.rel}>{c.name}</a> : c.name}</h3>
           {c.office && <p class="compact-office">{c.office}</p>}
+          {c.endorsed && <p class="compact-endorsed"><span class="chip chip-accent">Endorsed</span></p>}
           {c.region && <p class="compact-region"><span class="chip chip-wash">{c.region}</span></p>}
         </li>
       ))}
@@ -95,6 +97,7 @@ const candidates = candidatesOf(section)
     color: var(--muted);
     font-size: var(--text-sm);
   }
+  .compact-item .compact-endorsed,
   .compact-item .compact-region {
     margin-top: 0.5rem;
   }

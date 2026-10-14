@@ -1,0 +1,322 @@
+---
+// Issues, 'tabs' layout (REPORT §3, "Issue tabs"): the kicker, the heading
+// and the lead, then one tab per issue over the issue's panel. A tab reads
+// the issue's two-digit number in the accent and its title; the chosen tab is
+// filled in the band's second button colour. The panel is a card on the
+// band's surface: the issue's picture (16:10) beside its words on a wide
+// screen and over them on a phone, then its title, its line, its note as a
+// chip and what it includes as a checked list. The section's links follow as
+// buttons, the first the main one.
+//
+// Every panel has its own address, `#<anchor>-<the title's words>`
+// ("#platform-freeze-the-levy"), the anchor being the section's anchor id or,
+// without one, its block id; an issue whose title has no words takes its
+// number. The tabs are drawn hidden and shown by the section's script, so with
+// scripts off (and with a single issue) every panel shows, one under the
+// other, each under its own heading, and a link to a panel's address scrolls
+// to it. With the script: the arrow keys move between the tabs (Home and End
+// to the first and last), choosing a tab writes its panel's address into the
+// page's address without adding a step to the history, an address that names
+// a panel opens that tab when the page loads or the address changes. With no
+// issue, heading, kicker or lead nothing is drawn.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { issuesOf, numeral } from './issues'
+import { links } from '../../../lib/section'
+import { prose, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const issues = issuesOf(section)
+const ctas = links(section)
+const drawn = heading || kicker || prose(section.copy.lead) || issues.length > 0
+
+// The renderer's rule for an anchor id; a block id is made safe the way the
+// other islands make theirs.
+const SAFE_ANCHOR = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/
+const anchorId = section.options?.anchorId
+const base = typeof anchorId === 'string' && SAFE_ANCHOR.test(anchorId) ? anchorId : section.id.replace(/[^A-Za-z0-9_-]/g, '-')
+// Addresses read as words so a shared link says what it opens; a repeat gets a number.
+const taken = new Set<string>()
+const panelId = (title: string | null, i: number) => {
+  const slug =
+    (title ?? '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || numeral(i)
+  let id = `${base}-${slug}`
+  for (let n = 2; taken.has(id); n++) id = `${base}-${slug}-${n}`
+  taken.add(id)
+  return id
+}
+const panels = issues.map((issue, i) => ({ ...issue, id: panelId(issue.title, i), name: issue.title ?? numeral(i) }))
+---
+{drawn && (
+  <Band section={section} class="issues issues-tabs">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    <Prose value={section.copy.lead} class="lede" />
+    {panels.length > 0 && (
+      <div class="it" data-issue-tabs>
+        <div class="it-list" role="tablist" aria-label={heading ?? 'Issues'} data-it-list hidden>
+          {panels.map((p, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`${p.id}-tab`}
+              aria-controls={p.id}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+              data-it-tab
+            >
+              <span class="it-tab-number" aria-hidden="true">{numeral(i)}</span>
+              <span>{p.name}</span>
+            </button>
+          ))}
+        </div>
+        <div class="it-panels">
+          {panels.map((p, i) => (
+            <div class:list={['it-panel', p.picture && 'it-panel-pictured']} id={p.id} data-it-panel>
+              {p.picture && <img class="it-picture" src={p.picture} alt="" loading="lazy" decoding="async" />}
+              <div class="it-words">
+                <p class="it-number" aria-hidden="true">{numeral(i)}</p>
+                <h3>{p.name}</h3>
+                <Prose value={p.body} class="it-body" />
+                {p.includes.length > 0 && (
+                  <ul class="it-includes" role="list">
+                    {p.includes.map((line) => (
+                      <li>
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {p.note && <p class="it-note"><span class="chip">{p.note}</span></p>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <script is:inline>
+          (function (root) {
+            if (!root) return
+            var list = root.querySelector('[data-it-list]')
+            var tabs = list.querySelectorAll('[data-it-tab]')
+            var panels = root.querySelectorAll('[data-it-panel]')
+            // One issue needs no tabs: its panel stands as it is drawn.
+            if (tabs.length < 2) return
+            var chosen = 0
+            var choose = function (i, how) {
+              chosen = i
+              for (var t = 0; t < tabs.length; t++) {
+                tabs[t].setAttribute('aria-selected', t === i ? 'true' : 'false')
+                tabs[t].tabIndex = t === i ? 0 : -1
+                panels[t].hidden = t !== i
+              }
+              if (how.focus) tabs[i].focus()
+              if (how.write && window.history && history.replaceState) history.replaceState(history.state, '', '#' + panels[i].id)
+              if (how.scroll) root.scrollIntoView({ block: 'start' })
+            }
+            // The panel the address names, or -1.
+            var named = function () {
+              var id = location.hash.slice(1)
+              try {
+                id = decodeURIComponent(id)
+              } catch (e) {}
+              for (var p = 0; p < panels.length; p++) if (panels[p].id === id) return p
+              return -1
+            }
+            for (var p = 0; p < panels.length; p++) {
+              panels[p].setAttribute('role', 'tabpanel')
+              panels[p].setAttribute('aria-labelledby', tabs[p].id)
+              panels[p].tabIndex = 0
+            }
+            for (var t = 0; t < tabs.length; t++) {
+              tabs[t].addEventListener('click', function (event) {
+                for (var t = 0; t < tabs.length; t++) if (tabs[t] === event.currentTarget) choose(t, { write: true })
+              })
+            }
+            list.addEventListener('keydown', function (event) {
+              var last = tabs.length - 1
+              var next = { ArrowLeft: chosen === 0 ? last : chosen - 1, ArrowRight: chosen === last ? 0 : chosen + 1, Home: 0, End: last }[event.key]
+              if (next === undefined) return
+              event.preventDefault()
+              choose(next, { focus: true, write: true })
+            })
+            window.addEventListener('hashchange', function () {
+              var p = named()
+              if (p >= 0) choose(p, { scroll: true })
+            })
+            list.hidden = false
+            root.setAttribute('data-it-live', '')
+            // An address that names a panel: the browser scrolls to the panel as the page
+            // loads, so once it has, the tabs are brought back into view over it.
+            var start = named()
+            choose(start >= 0 ? start : 0, {})
+            if (start >= 0)
+              window.addEventListener('load', function () {
+                if (named() === start) root.scrollIntoView({ block: 'start' })
+              })
+          })(document.currentScript.closest('[data-issue-tabs]'))
+        </script>
+      </div>
+    )}
+    {ctas.length > 0 && (
+      <p class="actions">
+        {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+)}
+
+<style>
+  .it {
+    margin-top: 2rem;
+  }
+  .it-list[hidden],
+  .it-panel[hidden] {
+    display: none;
+  }
+
+  /* The tabs: a wrapped row of pills, the chosen one filled. */
+  .it-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .it-list button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.375rem 1.125rem 0.375rem 0.875rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+  }
+  .it-list button:hover {
+    border-color: var(--ink);
+  }
+  .it-tab-number {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+  .it-list button[aria-selected='true'] {
+    border-color: var(--button-2);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .it-list button[aria-selected='true'] .it-tab-number {
+    color: inherit;
+  }
+
+  /* The panels: cards on the band's surface, one under the other until the script makes them tabs. */
+  .it-panels {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .it-panel {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .it-picture {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--radius);
+    background: var(--line);
+  }
+  .it-words {
+    min-width: 0;
+  }
+  .it-words > * {
+    margin: 0;
+  }
+  .it-number {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.5rem + 0.8vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .it-words h3 {
+    margin-top: 0.5rem;
+  }
+  .it-words :global(.it-body) {
+    margin-top: 0.5rem;
+    color: var(--muted);
+  }
+  .it-words :global(.it-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .it-words .it-includes {
+    display: grid;
+    gap: 0.375rem;
+    margin-top: 1rem;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+  .it-includes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.45;
+  }
+  .it-includes svg {
+    flex: 0 0 auto;
+    margin-top: 0.15em;
+    color: var(--accent);
+  }
+  .it-words .it-note {
+    margin-top: 1rem;
+  }
+  /* Tabs live: the panel's number is already on its tab. */
+  [data-it-live] .it-number {
+    display: none;
+  }
+  [data-it-live] .it-words h3 {
+    margin-top: 0;
+  }
+  @media (min-width: 48rem) {
+    .it-panel-pictured {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: clamp(1.75rem, 4vw, 3rem);
+      align-items: center;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-it-live] .it-panel {
+      animation: it-panel-in 0.2s ease-out;
+    }
+  }
+  @keyframes it-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.375rem);
+    }
+  }
+</style>

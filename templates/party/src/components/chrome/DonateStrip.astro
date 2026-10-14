@@ -1,0 +1,61 @@
+---
+// The giving footer's donate strip (template.json `chrome.footer: "giving"`),
+// in the slim strip's manner (Cta · Strip): one line across the top of the
+// footer, a dot in the button's colour, the template's own words ("Chip in ·
+// Keep the lights on.") and the donate link at the right as the footer's one
+// button, its label the menu's. Site.astro passes the link it found (the
+// footer menu's first Donate link, else the bottom row's, else the header
+// button when it is Donate); with none it draws nothing. No amount, no
+// count, no total: those are BackGold's, on the donate page the button
+// opens. On a phone the button goes full width under the words.
+import type { MenuNode } from '@backgold/astro/server'
+
+interface Props {
+  link: MenuNode | null
+}
+
+const { link } = Astro.props
+---
+{link?.href && (
+  <div class="donate-strip">
+    <p class="donate-strip-words">
+      <span class="donate-strip-dot" aria-hidden="true"></span>
+      <span><b>Chip in</b> · Keep the lights on.</span>
+    </p>
+    <a class="button" href={link.href} rel={link.rel}>{link.label}</a>
+  </div>
+)}
+
+<style>
+  .donate-strip {
+    display: grid;
+    gap: 0.875rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem);
+    border-bottom: 1px solid var(--line);
+  }
+  .donate-strip-words {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .donate-strip-words b {
+    font-weight: 700;
+  }
+  .donate-strip-dot {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--button);
+  }
+  @media (min-width: 48rem) {
+    .donate-strip {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 2rem;
+    }
+  }
+</style>

@@ -4,9 +4,9 @@
   "audience": "party",
   "version": 1,
   "variants": {
-    "Hero": ["centered", "cover", "split", "statement"],
+    "Hero": ["centered", "cover", "split", "statement", "donate", "video", "rotating"],
     "About": ["right", "left", "letter", "portrait", "books"],
-    "Issues": ["cards", "steps", "numbered", "rows", "checklist"],
+    "Issues": ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"],
     "StatCards": ["row", "ribbon", "feature", "wall"],
     "Cta": ["card", "banner", "strip", "photo"],
     "QuoteStrip": ["row", "single", "logos", "carousel", "wall"],
@@ -19,7 +19,7 @@
     "Leaderboard": ["table"],
     "SocialFeed": ["grid"],
     "MovementTicker": ["ticker"],
-    "EventsList": ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts"],
+    "EventsList": ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts", "map"],
     "Blog": ["cards", "list", "feature"],
     "Collection": ["cards", "list", "compact", "library", "shelves", "outline"],
     "ContentPost": ["card", "player", "theater"],
@@ -36,7 +36,7 @@
     "PollBlock": ["card"],
     "SocialFrame": ["ring"],
     "Advocacy": ["full", "compact"],
-    "QuickDonate": ["grid", "hero", "bar", "jar", "band"],
+    "QuickDonate": ["grid", "hero", "bar", "jar", "band", "ladder"],
     "VoterTools": ["register", "polling", "dates"],
     "SampleBallot": ["slate", "cards", "measures"],
     "Scorecard": ["table", "grades", "promise"],
@@ -44,6 +44,8 @@
     "Faq": ["accordion", "topics", "cards"],
     "Comparison": ["table", "cards", "spectrum"],
     "Stories": ["spotlight", "cards", "timeline"],
+    "ShareKit": ["cards", "strip", "compact"],
+    "Financials": ["bars", "donut", "table"],
     "Services": ["packages", "list", "compare"],
     "CaseStudies": ["featured", "grid", "beforeafter"],
     "Resources": ["library", "featured", "band"],
@@ -66,7 +68,7 @@
   },
   "chrome": {
     "header": "bar",
-    "footer": "columns",
+    "footer": "giving",
     "takeoverBanner": true,
     "legalLine": true
   },
@@ -545,6 +547,24 @@
           }
         ],
         "rules": [{ "area_key": "above_footer", "shows_on": "every_page" }]
+      },
+      {
+        "key": "live-moment",
+        "label": "Live moment",
+        "kind": "announcement",
+        "document": [
+          {
+            "id": "Cta-live-moment", "type": "Cta", "band": "contrast", "bleed": "full", "variant": "strip",
+            "copy": {
+              "eyebrow": "Tonight",
+              "heading": "Watch the candidate forum live at 7",
+              "donateButtonText": "Watch live"
+            },
+            "media": {},
+            "links": [{ "label": "Watch live", "target": { "kind": "page", "slug": "events" }, "url": "/events" }]
+          }
+        ],
+        "rules": []
       }
     ]
   }

@@ -1,0 +1,38 @@
+---
+// The foot every Financials layout closes with: `sourceNote` as a fine line
+// saying where the figures come from, then the report link (`reportLabel` to
+// `reportHref`, the filing or annual report) as the section's one button.
+// No button without the link; nothing drawn with neither.
+import type { Section } from '@backgold/content'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+}
+
+const { section } = Astro.props
+const sourceNote = text(section.copy.sourceNote)
+const [report] = links(section)
+---
+{(sourceNote || report) && (
+  <div class="financials-foot">
+    {sourceNote && <p class="fine financials-source">{sourceNote}</p>}
+    {report && <a class="button" href={report.href} rel={report.rel}>{report.label}</a>}
+  </div>
+)}
+
+<style>
+  .financials-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-top: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  }
+  .financials-source {
+    margin: 0;
+    max-width: 48ch;
+  }
+</style>

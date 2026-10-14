@@ -4,7 +4,8 @@
 // event on the band's surface: a date tile at the left (the month in small
 // capitals over the day in the display face, the weekday under it, all in the
 // event's own time zone), the title linking to the event's page on this site
-// with the time and the place under it, the type as a chip, the live counts
+// with the time and the place under it and a quiet "Add to calendar" link to
+// the event's calendar file beside them, the type as a chip, the live counts
 // ("8 going · 4 seats left", filled in by LiveCounts after the page loads;
 // empty without scripts) and whether it still takes registrations, then the
 // row's one button to the same page, which frames BackGold's RSVP and
@@ -72,7 +73,17 @@ const dayOf = (e: EventRow) => (e.when ? `${e.when.year}-${pad(e.when.monthIndex
               )}
               <div class="sh-body">
                 <h3 class="sh-title">{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
-                {(event.when?.time || event.place) && <p class="sh-meta">{[event.when?.time, event.place].filter(Boolean).join(' · ')}</p>}
+                {(event.when?.time || event.place || event.calendar) && (
+                  <p class="sh-meta">
+                    {[event.when?.time, event.place].filter(Boolean).join(' · ')}
+                    {event.calendar && (
+                      <>
+                        {(event.when?.time || event.place) && ' · '}
+                        <a href={event.calendar.href} rel={event.calendar.rel}>{event.calendar.label}<span class="visually-hidden">: {event.title}</span></a>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
               {(event.type || event.id || event.closed) && (
                 <p class="sh-facts">
@@ -273,6 +284,9 @@ const dayOf = (e: EventRow) => (e.when ? `${e.when.year}-${pad(e.when.monthIndex
     margin-top: 0.25rem;
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  .sh-meta a {
+    white-space: nowrap;
   }
   .sh-facts {
     grid-area: facts;

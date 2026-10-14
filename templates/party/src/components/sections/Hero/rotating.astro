@@ -1,0 +1,30 @@
+---
+// Hero, 'rotating' layout (REPORT §3 Hero, "Rotating issues"): the cover,
+// its headline's last word giving way to each of the Hero's own `words`
+// ("Lower taxes.", "Open books.") in turn, every 3 s with a short fade.
+// The words are the Hero's authored rows (titles, blank ones dropped, at most
+// eight), never a sibling Issues section's. video.astro draws it (the cover
+// with one thing moving): the first word is in the HTML, so without script
+// the page shows it; under reduced motion it stays; a corner button pauses
+// it; the <h1>'s accessible name is the headline with the first word, its
+// turning word hidden from assistive technology. Without words, or without a
+// headline for them to finish, it is the cover as typed.
+import type { ComponentProps } from 'astro/types'
+import Cover from './cover.astro'
+import Video from './video.astro'
+import type Default from './index.astro'
+import { rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const MAX_WORDS = 8
+
+const { section } = Astro.props
+const words = rows(section)
+  .map((row) => text(row.title)?.trim())
+  .filter((word): word is string => !!word)
+  .slice(0, MAX_WORDS)
+const headline = text(section.copy.headline)
+---
+{headline && words.length > 0 ? <Video {...Astro.props} words={words} /> : <Cover {...Astro.props} />}

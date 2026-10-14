@@ -1,0 +1,160 @@
+---
+// Share kit · Cards, the default (REPORT §2 G18): pre-written posts and
+// graphics a supporter carries off and posts as their own. The kicker and
+// heading, the body, then one card per post on the band's surface, three
+// across on a wide screen, two on a tablet and one on a phone: the graphic
+// at 16:9 (the shape the networks show a shared picture) when the post has
+// one, the network as a chip in the operator's own word, the post's words
+// on a soft panel as the supporter will paste them, the row's link (to the
+// network's compose page or a page to open) reading "Open" with an arrow
+// (a screen reader hears "Open on X"; the chip already shows the word), then
+// Copy and Share, which carry the words alone. Copy and Share are drawn
+// hidden and shown by the section's island where the browser can do them,
+// so without script a card is its words and its link. No counts, no tallies,
+// no sign-in. The section's own links follow the cards as its buttons.
+// Nothing is drawn with no post and no heading.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import Actions from './Actions.astro'
+import Buttons from './Buttons.astro'
+import { labelsOf, postsOf } from './share'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const posts = postsOf(section)
+const labels = labelsOf(section)
+const ctas = links(section)
+---
+{(heading || posts.length > 0) && (
+  <Band section={section} class="sharekit sharekit-cards">
+    <div data-share-kit>
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede sharekit-lede" />
+      {posts.length > 0 && (
+        <ul class="share-cards" role="list">
+          {posts.map((post) => (
+            <li class="share-card" data-share-item data-share-text={post.text} data-share-name={post.name}>
+              {post.image && (
+                <div class="share-frame">
+                  <img class="share-photo" src={post.image} alt="" loading="lazy" decoding="async" />
+                </div>
+              )}
+              <div class="share-body">
+                {post.network && <p class="share-network"><span class="chip">{post.network}</span></p>}
+                <p class="share-text">{post.text}</p>
+                {post.href && <p class="share-open"><a href={post.href} rel={post.rel}>Open<span class="visually-hidden">{post.openHint}</span><span aria-hidden="true"> →</span></a></p>}
+                <Buttons post={post} labels={labels} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {ctas.length > 0 && (
+        <p class="actions">
+          {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+        </p>
+      )}
+      {posts.length > 0 && <Actions />}
+    </div>
+  </Band>
+)}
+
+<style>
+  .sharekit-cards :global(.sharekit-lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .share-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .share-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .share-frame {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .share-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .share-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.875rem;
+    padding: 1.125rem 1.25rem 1.25rem;
+  }
+  .share-body > p {
+    margin: 0;
+  }
+  /* The network chip sits on the card's surface, so it takes its ground from the ink: the band's own chip ground can match the surface in a dark band. */
+  .share-network .chip {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+    white-space: normal;
+  }
+  /* The post as it will be pasted: its own words on a soft panel, the line breaks kept. */
+  .share-body .share-text {
+    align-self: stretch;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    font-size: var(--text);
+    line-height: 1.55;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+  .share-open {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .share-open a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  /* Copy and Share sit at the card's foot, level across a row of cards. */
+  .share-body :global(.share-buttons) {
+    margin-top: auto;
+  }
+  @media (min-width: 40rem) {
+    .share-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .share-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+  }
+</style>

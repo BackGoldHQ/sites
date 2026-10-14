@@ -69,13 +69,19 @@ import EventsListCompact from './EventsList/compact.astro'
 import EventsListShifts from './EventsList/shifts.astro'
 import EventsListWeek from './EventsList/week.astro'
 import EventsListCohorts from './EventsList/cohorts.astro'
+import EventsListMap from './EventsList/map.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
 import HeroStatement from './Hero/statement.astro'
+import HeroDonate from './Hero/donate.astro'
+import HeroVideo from './Hero/video.astro'
+import HeroRotating from './Hero/rotating.astro'
 import IssuesSteps from './Issues/steps.astro'
 import IssuesNumbered from './Issues/numbered.astro'
 import IssuesRows from './Issues/rows.astro'
 import IssuesChecklist from './Issues/checklist.astro'
+import IssuesTabs from './Issues/tabs.astro'
+import IssuesDrawer from './Issues/drawer.astro'
 import MapSectionMap from './Map/map.astro'
 import PdfEmbedMedium from './PdfEmbed/medium.astro'
 import PdfEmbedTall from './PdfEmbed/tall.astro'
@@ -118,6 +124,7 @@ import QuickDonateHero from './QuickDonate/hero.astro'
 import QuickDonateBar from './QuickDonate/bar.astro'
 import QuickDonateJar from './QuickDonate/jar.astro'
 import QuickDonateBand from './QuickDonate/band.astro'
+import QuickDonateLadder from './QuickDonate/ladder.astro'
 import VoterTools from './VoterTools/index.astro'
 import VoterToolsPolling from './VoterTools/polling.astro'
 import VoterToolsDates from './VoterTools/dates.astro'
@@ -139,6 +146,12 @@ import ComparisonSpectrum from './Comparison/spectrum.astro'
 import Stories from './Stories/index.astro'
 import StoriesCards from './Stories/cards.astro'
 import StoriesTimeline from './Stories/timeline.astro'
+import ShareKit from './ShareKit/index.astro'
+import ShareKitStrip from './ShareKit/strip.astro'
+import ShareKitCompact from './ShareKit/compact.astro'
+import Financials from './Financials/index.astro'
+import FinancialsDonut from './Financials/donut.astro'
+import FinancialsTable from './Financials/table.astro'
 import Services from './Services/index.astro'
 import ServicesList from './Services/list.astro'
 import ServicesCompare from './Services/compare.astro'
@@ -165,6 +178,9 @@ export const sections = {
   'Hero:cover': HeroCover,
   'Hero:split': HeroSplit,
   'Hero:statement': HeroStatement,
+  'Hero:donate': HeroDonate,
+  'Hero:video': HeroVideo,
+  'Hero:rotating': HeroRotating,
   About,
   'About:left': AboutLeft,
   'About:letter': AboutLetter,
@@ -175,6 +191,8 @@ export const sections = {
   'Issues:numbered': IssuesNumbered,
   'Issues:rows': IssuesRows,
   'Issues:checklist': IssuesChecklist,
+  'Issues:tabs': IssuesTabs,
+  'Issues:drawer': IssuesDrawer,
   StatCards,
   'StatCards:ribbon': StatCardsRibbon,
   'StatCards:feature': StatCardsFeature,
@@ -212,6 +230,7 @@ export const sections = {
   'EventsList:shifts': EventsListShifts,
   'EventsList:week': EventsListWeek,
   'EventsList:cohorts': EventsListCohorts,
+  'EventsList:map': EventsListMap,
   Blog,
   'Blog:list': BlogList,
   'Blog:feature': BlogFeature,
@@ -257,6 +276,7 @@ export const sections = {
   'QuickDonate:bar': QuickDonateBar,
   'QuickDonate:jar': QuickDonateJar,
   'QuickDonate:band': QuickDonateBand,
+  'QuickDonate:ladder': QuickDonateLadder,
   VoterTools,
   'VoterTools:polling': VoterToolsPolling,
   'VoterTools:dates': VoterToolsDates,
@@ -278,6 +298,12 @@ export const sections = {
   Stories,
   'Stories:cards': StoriesCards,
   'Stories:timeline': StoriesTimeline,
+  ShareKit,
+  'ShareKit:strip': ShareKitStrip,
+  'ShareKit:compact': ShareKitCompact,
+  Financials,
+  'Financials:donut': FinancialsDonut,
+  'Financials:table': FinancialsTable,
   Services,
   'Services:list': ServicesList,
   'Services:compare': ServicesCompare,

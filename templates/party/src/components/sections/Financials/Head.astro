@@ -1,0 +1,47 @@
+---
+// The head every Financials layout opens with: the kicker over the heading,
+// the `year` the figures are for as a chip beside the heading (under it when
+// the line runs out), then the body. Draws nothing it has no words for.
+import type { Section } from '@backgold/content'
+import Prose from '../../Prose.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const year = text(section.copy.year)
+---
+{(kicker || heading || year) && (
+  <div class="section-head">
+    <div>
+      {kicker && <p class="kicker">{kicker}</p>}
+      {(heading || year) && (
+        <div class="financials-title">
+          {heading && <h2>{heading}</h2>}
+          {year && <span class="chip chip-accent financials-year">{year}</span>}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+<Prose value={section.copy.body} class="lede financials-body" />
+
+<style>
+  .financials-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.875rem;
+  }
+  .financials-year {
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .financials-body {
+    margin-bottom: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+  }
+</style>
