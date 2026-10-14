@@ -1,0 +1,180 @@
+---
+// Collection · Lead story (A12, "Lead story", beside Cards and List): the
+// heading with the "See all" link to the type's index at the right, then the
+// first entry large, with its picture at 16:10, its first term as an accent
+// chip, its title (the link to its page), its summary and its byline ("By A
+// and B · Oct 2"), and the rest as a list beside it, each with its first
+// term, title, date and a small square picture. Every row the bake sent is
+// drawn, in its order; a single entry stands alone at a reading width. With
+// no entries the heading stands over "Nothing here yet.", as the Cards
+// layout says it; with neither, nothing is drawn.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import { entriesOf, seeAllOf } from './entries'
+import { formatShortDay, listOf, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const entries = entriesOf(section).map((entry) => ({
+  ...entry,
+  shortDay: formatShortDay(entry.date),
+  byline: entry.authors.length > 0 ? `By ${listOf(entry.authors)}` : null,
+}))
+const [lead, ...rest] = entries
+const Title = heading ? 'h3' : 'h2'
+---
+{(heading || lead) && (
+  <Band section={section} class="entries entries-feature">
+    <SectionHead kicker={null} heading={heading} more={seeAllOf(section, entries)} />
+    {lead ? (
+      <div class:list={['lead', { 'lead-alone': rest.length === 0 }]}>
+        <article class="lead-story">
+          {lead.image && <img class="lead-cover" src={lead.image} alt="" loading="lazy" decoding="async" />}
+          {lead.term && <p class="lead-chips"><span class="chip chip-accent">{lead.term}</span></p>}
+          <Title class="lead-title">{lead.href ? <a href={lead.href}>{lead.title}</a> : lead.title}</Title>
+          {lead.summary && <p class="lead-summary">{lead.summary}</p>}
+          {(lead.byline || lead.shortDay) && (
+            <p class="lead-byline">
+              {lead.byline}
+              {lead.byline && lead.shortDay && ' · '}
+              {lead.shortDay && <time datetime={lead.date}>{lead.shortDay}</time>}
+            </p>
+          )}
+        </article>
+        {rest.length > 0 && (
+          <ul class="lead-rest" role="list">
+            {rest.map((entry) => (
+              <li class:list={['lead-item', { 'lead-item-pictured': entry.image }]}>
+                <div>
+                  {entry.term && <p class="lead-chips"><span class="chip">{entry.term}</span></p>}
+                  <Title class="lead-item-title">{entry.href ? <a href={entry.href}>{entry.title}</a> : entry.title}</Title>
+                  {entry.shortDay && <p class="lead-byline"><time datetime={entry.date}>{entry.shortDay}</time></p>}
+                </div>
+                {entry.image && <img class="lead-thumb" src={entry.image} alt="" loading="lazy" decoding="async" />}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+  </Band>
+)}
+
+<style>
+  .lead {
+    display: grid;
+    gap: 2rem;
+  }
+  .lead-story > *,
+  .lead-item p,
+  .lead-item .lead-item-title {
+    margin: 0;
+  }
+  .lead-chips .chip {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  /* The accent's own ink on its tint sits near 4:1 at this size; a fifth of
+     the band's ink carries it past 4.5:1 in both modes. */
+  .lead-chips .chip-accent {
+    color: color-mix(in srgb, var(--accent) 80%, var(--ink));
+  }
+  .lead-story .lead-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+    margin-bottom: 1.125rem;
+  }
+  .lead-story .lead-title {
+    margin: 0.75rem 0 0.625rem;
+    font-size: clamp(1.625rem, 1.2rem + 1.3vw, 2.125rem);
+    font-weight: 800;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .lead-story .lead-title:first-child,
+  .lead-story .lead-cover + .lead-title {
+    margin-top: 0;
+  }
+  .lead-title a,
+  .lead-item-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .lead-title a:hover,
+  .lead-item-title a:hover {
+    text-decoration: underline;
+  }
+  .lead-story .lead-summary {
+    color: var(--muted);
+    font-size: 1.0625rem;
+    max-width: var(--measure);
+  }
+  .lead-byline {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .lead-story .lead-byline {
+    margin-top: 0.875rem;
+  }
+  .lead-rest {
+    display: grid;
+    align-content: start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lead-item {
+    display: grid;
+    gap: 1rem;
+    padding: 1.125rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .lead-item-pictured {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+  }
+  .lead-item:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .lead-item .lead-item-title {
+    margin-top: 0.375rem;
+    font-size: 1.1875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .lead-item .lead-item-title:first-child {
+    margin-top: 0;
+  }
+  .lead-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+  @media (min-width: 52rem) {
+    .lead {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 2.25rem;
+    }
+    .lead-alone {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 48rem;
+    }
+    .lead-item-pictured {
+      grid-template-columns: minmax(0, 1fr) 6.875rem;
+    }
+  }
+</style>

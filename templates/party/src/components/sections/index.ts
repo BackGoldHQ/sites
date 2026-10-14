@@ -27,6 +27,7 @@ import CandidateRoster from './CandidateRoster/index.astro'
 import Collection from './Collection/index.astro'
 import ContentPost from './ContentPost/index.astro'
 import ContentPostPlayer from './ContentPost/player.astro'
+import ContentPostBanner from './ContentPost/banner.astro'
 import ContentPostTheater from './ContentPost/theater.astro'
 import Countdown from './Countdown/index.astro'
 import Cta from './Cta/index.astro'
@@ -56,6 +57,7 @@ import CandidateRosterBallot from './CandidateRoster/ballot.astro'
 import CandidateRosterCompact from './CandidateRoster/compact.astro'
 import CollectionList from './Collection/list.astro'
 import CollectionCompact from './Collection/compact.astro'
+import CollectionFeature from './Collection/feature.astro'
 import CollectionLibrary from './Collection/library.astro'
 import CollectionShelves from './Collection/shelves.astro'
 import CollectionOutline from './Collection/outline.astro'
@@ -72,6 +74,7 @@ import EventsListCohorts from './EventsList/cohorts.astro'
 import EventsListMap from './EventsList/map.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
+import HeroOverlap from './Hero/overlap.astro'
 import HeroStatement from './Hero/statement.astro'
 import HeroDonate from './Hero/donate.astro'
 import HeroVideo from './Hero/video.astro'
@@ -83,11 +86,17 @@ import IssuesChecklist from './Issues/checklist.astro'
 import IssuesTabs from './Issues/tabs.astro'
 import IssuesDrawer from './Issues/drawer.astro'
 import MapSectionMap from './Map/map.astro'
+import MapSectionBar from './Map/bar.astro'
 import PdfEmbedMedium from './PdfEmbed/medium.astro'
 import PdfEmbedTall from './PdfEmbed/tall.astro'
+import PdfEmbedCard from './PdfEmbed/card.astro'
 import PlatformPlanksLongread from './PlatformPlanks/longread.astro'
+import PlatformPlanksColumns from './PlatformPlanks/columns.astro'
 import ProgressMatch from './Progress/match.astro'
+import ProgressRing from './Progress/ring.astro'
+import ProgressCompact from './Progress/compact.astro'
 import QuoteStripSingle from './QuoteStrip/single.astro'
+import QuoteStripTicker from './QuoteStrip/ticker.astro'
 import QuoteStripLogos from './QuoteStrip/logos.astro'
 import QuoteStripCarousel from './QuoteStrip/carousel.astro'
 import QuoteStripWall from './QuoteStrip/wall.astro'
@@ -95,6 +104,7 @@ import StatCardsRibbon from './StatCards/ribbon.astro'
 import StatCardsFeature from './StatCards/feature.astro'
 import StatCardsWall from './StatCards/wall.astro'
 import TeamGridBoard from './TeamGrid/board.astro'
+import TeamGridList from './TeamGrid/list.astro'
 import VideoEmbedLandscape from './VideoEmbed/landscape.astro'
 import VideoEmbedPortrait from './VideoEmbed/portrait.astro'
 import VideoEmbedSquare from './VideoEmbed/square.astro'
@@ -177,6 +187,7 @@ export const sections = {
   Hero,
   'Hero:cover': HeroCover,
   'Hero:split': HeroSplit,
+  'Hero:overlap': HeroOverlap,
   'Hero:statement': HeroStatement,
   'Hero:donate': HeroDonate,
   'Hero:video': HeroVideo,
@@ -203,11 +214,13 @@ export const sections = {
   'Cta:photo': CtaPhoto,
   QuoteStrip,
   'QuoteStrip:single': QuoteStripSingle,
+  'QuoteStrip:ticker': QuoteStripTicker,
   'QuoteStrip:logos': QuoteStripLogos,
   'QuoteStrip:carousel': QuoteStripCarousel,
   'QuoteStrip:wall': QuoteStripWall,
   Map: MapSection,
   'Map:map': MapSectionMap,
+  'Map:bar': MapSectionBar,
   MovementMap,
   VideoEmbed,
   'VideoEmbed:landscape': VideoEmbedLandscape,
@@ -216,7 +229,10 @@ export const sections = {
   PdfEmbed,
   'PdfEmbed:medium': PdfEmbedMedium,
   'PdfEmbed:tall': PdfEmbedTall,
+  'PdfEmbed:card': PdfEmbedCard,
   Progress,
+  'Progress:ring': ProgressRing,
+  'Progress:compact': ProgressCompact,
   'Progress:match': ProgressMatch,
   Countdown,
   Leaderboard,
@@ -237,19 +253,23 @@ export const sections = {
   Collection,
   'Collection:list': CollectionList,
   'Collection:compact': CollectionCompact,
+  'Collection:feature': CollectionFeature,
   'Collection:library': CollectionLibrary,
   'Collection:shelves': CollectionShelves,
   'Collection:outline': CollectionOutline,
   ContentPost,
+  'ContentPost:banner': ContentPostBanner,
   'ContentPost:player': ContentPostPlayer,
   'ContentPost:theater': ContentPostTheater,
   PlatformPlanks,
+  'PlatformPlanks:columns': PlatformPlanksColumns,
   'PlatformPlanks:longread': PlatformPlanksLongread,
   CandidateRoster,
   'CandidateRoster:ballot': CandidateRosterBallot,
   'CandidateRoster:compact': CandidateRosterCompact,
   TeamGrid,
   'TeamGrid:board': TeamGridBoard,
+  'TeamGrid:list': TeamGridList,
   TakeoverBanner,
   Donate,
   'Donate:story': DonateStory,

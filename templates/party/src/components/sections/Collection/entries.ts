@@ -1,9 +1,10 @@
-// A Collection's rows as its library, shelves and outline layouts draw them:
-// each entry's title, its page on this site, its summary, its picture, and
-// its first term (the one a library's chips and a shelf group by), in the
-// order the bake listed them. The "See all" link to the type's index reads
-// "See all <plural>" as BackGold's own Collection block words it, and only
-// while there are entries to see.
+// A Collection's rows as its library, shelves, outline and feature layouts
+// draw them: each entry's title, its page on this site, its summary, its
+// picture, its first term (the one a library's chips and a shelf group by),
+// its publish date and its authors' names, in the order the bake listed
+// them. The "See all" link to the type's index reads "See all <plural>" as
+// BackGold's own Collection block words it, and only while there are entries
+// to see.
 
 import type { Section } from '@backgold/content'
 import { safeHref, safeSrc } from '@backgold/astro/server'
@@ -17,6 +18,10 @@ export interface CollectionEntry {
   image: string | null
   /** The entry's first term's label, or null when it has none. */
   term: string | null
+  /** The row's `publish_at` as the bake sent it, or null. */
+  date: string | null
+  /** The authors' names, in the row's order; empty without one. */
+  authors: string[]
 }
 
 export function entriesOf(section: Section): CollectionEntry[] {
@@ -31,6 +36,8 @@ export function entriesOf(section: Section): CollectionEntry[] {
         summary: text(row.summary),
         image: safeSrc(row.image_url),
         term: text(first?.label)?.trim() ?? null,
+        date: text(row.publish_at),
+        authors: nested(row, 'authors').map((a) => text(a.name)).filter((n): n is string => n !== null),
       },
     ]
   })

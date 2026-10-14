@@ -1,0 +1,157 @@
+---
+// Hero, 'overlap' layout (board A12, the Hero row's Overlap): the picture
+// across the band's width, then the words on a card that overlaps the
+// picture's lower edge, centred and inset from its sides (nearly full width
+// on a phone). Without a picture the card sits centred on the band with no
+// overlap. The card holds the kicker, the headline, the line under it and
+// the buttons (the first is the main call, the rest outlines). The
+// picture's caption, when the section carries one (`copy.caption`), sits at
+// the picture's lower left beside the card on a wide screen and at its
+// upper left where the card covers that corner. The page-opening Hero's
+// headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>.
+// A Hero with its signup form on carries an `embed`: BackGold's own form,
+// framed under the buttons.
+import type { ComponentProps } from 'astro/types'
+import { Embed } from '@backgold/astro/components'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, level = 2 } = Astro.props
+const Heading = level === 1 ? 'h1' : 'h2'
+const kicker = text(section.copy.kicker)
+const headline = text(section.copy.headline)
+const subheadline = text(section.copy.subheadline)
+const caption = text(section.copy.caption)
+const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const buttons = links(section)
+---
+<Band section={section} class:list={['hero-overlap', picture && 'hero-overlap-photo']}>
+  {picture && (
+    <figure class="overlap-frame">
+      <img
+        class="overlap-image"
+        src={picture.url}
+        alt={picture.alt}
+        loading={level === 1 ? 'eager' : 'lazy'}
+        fetchpriority={level === 1 ? 'high' : undefined}
+        decoding="async"
+      />
+      {caption && <figcaption class="overlap-caption">{caption}</figcaption>}
+    </figure>
+  )}
+  <div class="overlap-panel">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {headline && <Heading class="overlap-headline">{headline}</Heading>}
+    {subheadline && <p class="overlap-lede">{subheadline}</p>}
+    {buttons.length > 0 && (
+      <p class="actions">
+        {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+    {section.embed && <Embed embed={section.embed} title="Sign up" />}
+  </div>
+  {!picture && caption && <p class="overlap-caption">{caption}</p>}
+</Band>
+
+<style>
+  /* How far the card rises over the picture: about a third of it on a wide screen. */
+  :global(.bg-section.hero-overlap) {
+    --overlap-rise: clamp(2.5rem, 0.75rem + 6vw, 7.5rem);
+    --overlap-inset: clamp(0.75rem, 0.25rem + 2.5vw, 2.5rem);
+  }
+
+  .overlap-frame {
+    position: relative;
+    margin: 0;
+  }
+  .overlap-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+  .overlap-caption {
+    margin: 0;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+  /* On the picture, a small chip in the photo band's inks; where the card covers the lower left, at the upper left. */
+  .overlap-frame .overlap-caption {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.625rem;
+    max-width: calc(100% - 1.5rem);
+    padding: 0.1875rem 0.5rem;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--band-photo) 70%, transparent);
+    color: var(--band-photo-ink);
+  }
+  /* With no picture the caption has nothing to sit on, so it follows the card. */
+  .overlap-panel + .overlap-caption {
+    max-width: 40rem;
+    margin: 1rem auto 0;
+    color: var(--muted);
+  }
+
+  .overlap-panel {
+    position: relative;
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .overlap-frame + .overlap-panel {
+    margin: calc(-1 * var(--overlap-rise)) var(--overlap-inset) 0;
+  }
+  .overlap-panel .kicker {
+    margin: 0 0 0.75rem;
+  }
+  .overlap-headline {
+    font-size: clamp(2.125rem, 1.5rem + 2.2vw, 3.375rem);
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .overlap-lede {
+    font-size: var(--text-lg);
+    color: var(--muted);
+    margin: 1.125rem 0 0;
+  }
+  .overlap-panel .actions {
+    margin: 1.625rem 0 0;
+  }
+  .overlap-panel > :global(.bg-embed) {
+    margin-top: 1.5rem;
+  }
+  .overlap-panel > :last-child {
+    margin-bottom: 0;
+  }
+
+  @media (min-width: 48rem) {
+    .overlap-image {
+      aspect-ratio: 16 / 9;
+    }
+    /* Centred under the picture, as the board's mini insets it evenly from both sides. */
+    .overlap-frame + .overlap-panel {
+      margin-inline: auto;
+      width: calc(100% - 2 * var(--overlap-inset));
+    }
+  }
+  /* Wide enough that the card leaves the picture's lower left free: the caption goes back there. */
+  @media (min-width: 72rem) {
+    .overlap-frame .overlap-caption {
+      top: auto;
+      bottom: 0.625rem;
+      max-width: calc((100% - 40rem) / 2 - 1.5rem);
+    }
+  }
+</style>

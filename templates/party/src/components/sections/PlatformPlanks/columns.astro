@@ -1,0 +1,171 @@
+---
+// PlatformPlanks · Columns (A12, "Platform planks · Columns"): the platform
+// side by side, one column per section, three across on a wide screen, two
+// on a tablet, one on a phone. The heading sits over them with the link to
+// the platform as a file, when there is one, quiet beneath it. Each column
+// has its number in the display face, its title and ethos, then its planks as
+// a plain list: the headline in bold, the plain-language line, and the full
+// text behind "Read the full plank". The anchors are the long read's
+// (anchors.ts), so a link to a section or a plank lands here too and the
+// target is ringed. With no sections it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+import { partsWithAnchors } from './anchors'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const file = links(section)[0] ?? null
+const parts = partsWithAnchors(section)
+---
+{parts.length > 0 && (
+  <Band section={section} class="platform platform-columns">
+    {heading && <h2>{heading}</h2>}
+    {file && (
+      <p class="columns-file">
+        <a href={file.href} rel={file.rel}>{file.label}</a>
+      </p>
+    )}
+    <div class="columns" data-count={Math.min(parts.length, 3)}>
+      {parts.map((part) => (
+        <article class="columns-part" id={part.id}>
+          {(part.num || part.title) && (
+            <h3 class="columns-title">
+              {part.num && <span class="columns-num">{part.num}</span>}
+              {part.title && <span>{part.title}</span>}
+            </h3>
+          )}
+          {part.ethos && <p class="lede columns-ethos">{part.ethos}</p>}
+          {part.planks.length > 0 && (
+            <ul class="columns-planks" role="list">
+              {part.planks.map((plank) => (
+                <li class="columns-plank" id={plank.id}>
+                  <h4 class="columns-headline">{plank.headline}</h4>
+                  {plank.plain && <p class="columns-plain">{plank.plain}</p>}
+                  {text(plank.full) && (
+                    <details>
+                      <summary>Read the full plank</summary>
+                      <Prose value={plank.full} />
+                    </details>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ))}
+    </div>
+  </Band>
+)}
+
+<style>
+  .columns-file {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .columns-file a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.25rem 2.5rem;
+    margin-top: 1.75rem;
+  }
+  /* A column and a plank carry a clear border, pulled out into the gap, so the
+     ring of a linked one never moves the text. */
+  .columns-part {
+    margin: calc(-0.875rem - 1px) calc(-1rem - 1px);
+    padding: 0.875rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    scroll-margin-top: 1rem;
+  }
+  .columns-part > * {
+    margin: 0;
+  }
+  .columns[data-count='1'] .columns-part {
+    max-width: calc(var(--measure) + 2rem);
+  }
+  .columns-title {
+    display: grid;
+    gap: 0.5rem;
+    font-size: var(--h3);
+    font-weight: 800;
+  }
+  .columns-num {
+    color: var(--link);
+    font-size: clamp(2rem, 1.6rem + 1.4vw, 2.5rem);
+    line-height: 1;
+  }
+  .columns-part .columns-ethos {
+    margin-top: 0.5rem;
+    font-size: var(--text);
+  }
+  .columns-part .columns-planks {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    padding: 0.625rem 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    list-style: none;
+  }
+  .columns-plank {
+    margin: 0 calc(-0.75rem - 1px);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    scroll-margin-top: 1rem;
+  }
+  .columns-part:target,
+  .columns-plank:target {
+    border-color: var(--link);
+    box-shadow: 0 0 0 2px var(--link);
+  }
+  .columns-headline {
+    margin: 0 0 0.125rem;
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  .columns-plain {
+    margin: 0;
+  }
+  .columns-plank details {
+    margin-top: 0.375rem;
+  }
+  .columns-plank summary {
+    font-size: var(--text-sm);
+  }
+  .columns-plank :global(.prose) {
+    margin-top: 0.5rem;
+  }
+  /* Two across, an odd last section takes the whole row rather than leave a hole beside it. */
+  @media (min-width: 40rem) {
+    .columns:not([data-count='1']) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .columns-part:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 60rem) {
+    .columns[data-count='3'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .columns[data-count='3'] .columns-part:last-child:nth-child(odd) {
+      grid-column: auto;
+    }
+  }
+</style>

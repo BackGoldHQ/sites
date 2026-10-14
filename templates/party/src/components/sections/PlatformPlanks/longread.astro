@@ -7,54 +7,20 @@
 // has its number, title and ethos; each plank is a card with its headline,
 // its plain-language line, the full text behind "Read the full plank", and a
 // "Share" link to its own anchor, a plain link that works with scripts off.
-// With no sections it draws nothing.
+// The anchors are anchors.ts's, shared with the columns layout. With no
+// sections it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
-import { nested, rows } from '../../../lib/section'
 import { text } from '../../../lib/format'
+import { partsWithAnchors } from './anchors'
 
 type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
-
-// Anchors read as words ("#plank-a-levy-needs-a-ballot") so a shared link says
-// what it points at; a repeat gets a number.
-const taken = new Set<string>()
-const anchor = (prefix: string, words: string | null, fallback: string) => {
-  const slug =
-    (words ?? '')
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || fallback
-  let id = `${prefix}-${slug}`
-  for (let n = 2; taken.has(id); n++) id = `${prefix}-${slug}-${n}`
-  taken.add(id)
-  return id
-}
-
-const parts = rows(section)
-  .map((row, i) => {
-    const num = text(row.num)
-    const title = text(row.title)
-    return {
-      id: anchor('platform', title, String(i + 1)),
-      num,
-      title,
-      ethos: text(row.ethos),
-      planks: nested(row, 'planks')
-        .map((p, j) => {
-          const headline = text(p.headline)
-          return { id: anchor('plank', headline, `${i + 1}-${j + 1}`), headline, plain: text(p.plain), full: p.full }
-        })
-        .filter((p) => p.headline),
-    }
-  })
-  .filter((part) => part.title || part.planks.length > 0)
+const parts = partsWithAnchors(section)
 ---
 {parts.length > 0 && (
   <Band section={section} class="platform platform-longread">

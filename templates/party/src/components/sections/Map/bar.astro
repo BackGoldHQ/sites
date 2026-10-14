@@ -1,0 +1,160 @@
+---
+// Map, 'bar' layout (Coverage bar; board A12-catalogue, Coverage map). The
+// kicker over the heading, then the coverage line counted against the whole
+// set as a map's is (CoverageLine.astro: "8 of 254 counties · Organized"),
+// then that share as one wide bar: filled to the lit places' share of the
+// set (src/lib/regions.ts coverageShare: `regionTotal` when the section
+// carries one, else the rows), the rest the track. The bar is one image to
+// a screen reader, read as the line and the places still dark ("8 of 254
+// counties · Organized · 246 counties · Still open"); under it the two ends in words,
+// the lit places and the lit label at the left, the dark ones and the dark
+// label at the right, as BackGold's Map block reads its bar (hidden from
+// screen readers, which the bar's label already tells). No geometry is read
+// or drawn.
+//
+// Then the directory: a card per row, a lit place solid and any other dashed
+// as open, the place's name a link when it has one, its status label under
+// it (the lit, starting or dark label: a starting place counts as dark on
+// the bar but keeps its own word in its card). When `regionTotal` counts
+// more places than the rows name, one more dashed card stands for the
+// unnamed ones, their count and the dark label ("251 counties · Still
+// open"), with the section's charter link (the link whose label is
+// `charterCtaText`) as its button. The section's other links follow as
+// buttons, quiet when the charter button leads.
+//
+// Without rows there is nothing to be a share of: the kicker, the heading
+// and the links only.
+//
+// Rows: `region`, `status` 'lit', 'starting' or anything else (dark), an
+// optional `url`.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import CoverageLine from './CoverageLine.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+import { coverageOf, coverageShare, mapLabels, nounFor, placesOf } from '../../../lib/regions'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const labels = mapLabels(section)
+const places = placesOf(rows(section))
+const actions = links(section)
+
+const line = coverageOf(section, places, labels)
+const { lit, total } = coverageShare(section, places)
+const dark = Math.max(0, total - lit)
+const share = total > 0 ? Math.min(100, Math.round((lit / total) * 10000) / 100) : 0
+const unnamed = Math.max(0, total - places.length)
+const charterText = text(section.copy.charterCtaText)
+const charter = unnamed > 0 ? (charterText && actions.find((link) => link.label === charterText)) || null : null
+const below = charter ? actions.filter((link) => link !== charter) : actions
+---
+<Band section={section} class="regions regions-bar">
+  {kicker && <p class="kicker">{kicker}</p>}
+  {heading && <h2>{heading}</h2>}
+  {places.length > 0 && (
+    <>
+      <CoverageLine coverage={line} />
+      <div class="coverage-bar" role="img" aria-label={`${line.count} · ${line.label} · ${dark} ${nounFor(section, dark)} · ${labels.dark}`}>
+        <span class="coverage-bar-fill" style={`width:${share}%`}></span>
+      </div>
+      <p class="coverage-ends" aria-hidden="true">
+        <span><span class="coverage-end-count">{lit} {nounFor(section, lit)}</span> · {labels.lit}</span>
+        <span class="coverage-end-dark"><span class="coverage-end-count">{dark} {nounFor(section, dark)}</span> · {labels.dark}</span>
+      </p>
+      <ul class="directory" role="list">
+        {places.map((p) => (
+          <li class:list={['place', p.status !== 'lit' && 'place-open']}>
+            <span class="place-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</span>
+            <span class="place-status">{labels[p.status]}</span>
+          </li>
+        ))}
+        {unnamed > 0 && (
+          <li class="place place-open place-invite">
+            <span class="place-name">{unnamed} {nounFor(section, unnamed)}</span>
+            <span class="place-status">{labels.dark}</span>
+            {charter && <a class="button button-small" href={charter.href} rel={charter.rel}>{charter.label}</a>}
+          </li>
+        )}
+      </ul>
+    </>
+  )}
+  {below.length > 0 && (
+    <p class="actions">
+      {below.map((link, i) => <a class:list={['button', (charter || i > 0) && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>
+
+<style>
+  .coverage-bar {
+    height: 0.875rem;
+    margin-top: 1.25rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 15%, transparent);
+    overflow: hidden;
+  }
+  .coverage-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--button);
+  }
+  .coverage-ends {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1.25rem;
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .coverage-end-count {
+    font-weight: 700;
+  }
+  /* The dark end keeps to the right when a narrow screen wraps it under the lit end. */
+  .coverage-end-dark {
+    margin-left: auto;
+    text-align: right;
+  }
+  .directory {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.625rem;
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+  }
+  @media (min-width: 40rem) {
+    .directory {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    }
+  }
+  .place {
+    padding: 0.75rem 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--page) 60%, transparent);
+  }
+  .place-open {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+    background: transparent;
+  }
+  .place-name {
+    display: block;
+    font-weight: 700;
+  }
+  .place-status {
+    display: block;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  /* The places no row names, as one card with the charter link. */
+  .place-invite .button {
+    margin-top: 0.625rem;
+  }
+</style>

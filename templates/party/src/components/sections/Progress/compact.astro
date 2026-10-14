@@ -1,0 +1,150 @@
+---
+// Progress, 'compact' layout: one line on a wash panel. The heading, smaller,
+// above it when the section has one; then the figures as BackGold last
+// counted them when the page was published ("$18,400 raised", then "of a
+// $50,000 goal" muted), a thin bar across the middle at the share of the goal
+// raised with the percent after it, and the one button, the section's donate
+// link under its own label, at the end. Under the line, when the section has
+// a kicker or a match multiplier, one muted line: the kicker (else "2×
+// match") and the end of the match as MatchClock.astro writes it without
+// tiles ("Ends Sunday, October 18, 2026 at 11:59 PM", which is also what a
+// visitor without script reads; "The match has ended" once it has passed in
+// the visitor's browser, and the words before it go). On a phone
+// the line wraps: the figures, the bar with its percent, the button full
+// width. Without a goal there is no bar. Nothing is drawn without a raised
+// figure.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { formatCents, formatWhen, text } from '../../../lib/format'
+import MatchClock from './MatchClock.astro'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const [row] = rows(section)
+const raised = typeof row?.raised_cents === 'number' ? row.raised_cents : null
+const goal = typeof row?.goal_cents === 'number' && row.goal_cents > 0 ? row.goal_cents : null
+const percent = raised !== null && goal !== null ? Math.min(100, Math.round((raised / goal) * 100)) : null
+const multiplier = section.options?.matchMultiplier
+const times = typeof multiplier === 'number' && Number.isInteger(multiplier) && multiplier >= 2 && multiplier <= 10 ? multiplier : null
+const chip = text(section.copy.kicker) ?? (times !== null ? `${times}× match` : null)
+const heading = text(section.copy.heading)
+const [give] = links(section)
+const until = text(section.options?.matchUntil)?.trim() ?? null
+const ends = until !== null && !Number.isNaN(Date.parse(until)) ? formatWhen(until) : null
+---
+{raised !== null && (
+  <Band section={section} class="progress progress-compact">
+    <div class="compact">
+      {heading && <h2 class="compact-heading">{heading}</h2>}
+      <div class="compact-row">
+        <p class="compact-figures">
+          <strong class="compact-raised">{formatCents(raised)} raised</strong>
+          {goal !== null && <span class="compact-goal"> of a {formatCents(goal)} goal</span>}
+        </p>
+        {percent !== null && (
+          <div class="compact-bar">
+            <div class="meter compact-meter" role="img" aria-label={`${percent}% of the goal`}>
+              <span class="meter-fill" style={`width:${percent}%`}></span>
+            </div>
+            <span class="compact-percent" aria-hidden="true">{percent}%</span>
+          </div>
+        )}
+        {give && <a class="button button-small compact-give" href={give.href} rel={give.rel}>{give.label}</a>}
+      </div>
+      {(chip || (ends && until)) && (
+        <div class="compact-match">
+          {chip && (
+            <span class="compact-chip" data-match-chip>
+              {chip}{ends && <span class="compact-dot" aria-hidden="true">·</span>}
+            </span>
+          )}
+          {ends && until && <MatchClock until={until} ends={ends} tiles={false} />}
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .compact {
+    padding: clamp(1rem, 0.75rem + 1vw, 1.5rem) clamp(1.125rem, 0.75rem + 1.5vw, 1.75rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .compact-heading {
+    margin: 0 0 0.75rem;
+    font-size: var(--text-lg);
+    line-height: 1.25;
+  }
+  .compact-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+  }
+  .compact-figures {
+    margin: 0;
+    white-space: nowrap;
+  }
+  .compact-raised {
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+  }
+  .compact-goal {
+    color: var(--muted);
+  }
+  .compact-bar {
+    display: flex;
+    flex: 1 1 10rem;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .compact-meter {
+    flex: 1;
+    height: 0.375rem;
+  }
+  .compact-percent {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .compact-give {
+    margin-left: auto;
+  }
+  .compact-match {
+    margin-top: 0.625rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  /* The clock's plain line runs on after the kicker as one sentence. */
+  .compact-match :global(.match-clock),
+  .compact-match :global(.match-clock p:not([hidden])) {
+    display: inline;
+  }
+  .compact-dot {
+    margin: 0 0.5em;
+  }
+  .compact-chip[hidden] {
+    display: none;
+  }
+  @media (max-width: 39.99rem) {
+    .compact-figures {
+      flex-basis: 100%;
+      white-space: normal;
+    }
+    .compact-bar {
+      flex-basis: 100%;
+    }
+    .compact-give {
+      flex-basis: 100%;
+      min-height: 2.75rem;
+      margin-left: 0;
+    }
+  }
+</style>
