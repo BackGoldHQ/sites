@@ -1,0 +1,204 @@
+---
+// Issues, 'checklist' layout (board S22, C, "Vertical checklist + CTA"): the
+// kicker and the heading, then one panel filled in the contrast band's
+// colours (on a section already on the contrast band, a tint of its ink).
+// At its left the issues as numbered steps: a number tile in the accent, the
+// step's title, its line, and what it includes as a checked list. At its
+// right, behind a rule, the lead as the call's words (its first paragraph
+// large in the display face, "Ready to start step 1?") and the section's
+// first link as the one button, any further links as text links under it.
+// Without a link the right column is left out and the lead sits under the
+// heading. On a phone the call follows the steps, behind a rule above it.
+// With no step the lead and the links follow the heading as on the 'cards'
+// layout; nothing is drawn with no heading, lead or step.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { issuesOf } from './issues'
+import { links } from '../../../lib/section'
+import { prose, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const steps = issuesOf(section)
+const [cta, ...more] = links(section)
+const side = steps.length > 0 && cta ? cta : null
+const drawn = heading || kicker || prose(section.copy.lead) || steps.length > 0
+---
+{drawn && (
+  <Band section={section} class="issues">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    {!side && <Prose value={section.copy.lead} class="lede" />}
+    {steps.length > 0 && (
+      <div class:list={['checklist', 'bg-band-contrast', side && 'checklist-with-call']}>
+        <ol class="checklist-steps" role="list">
+          {steps.map((step, i) => (
+            <li class="checklist-step">
+              <span class="checklist-tile" aria-hidden="true">{i + 1}</span>
+              <div class="checklist-words">
+                {step.title && <h3>{step.title}</h3>}
+                <Prose value={step.body} class="checklist-body" />
+                {step.includes.length > 0 && (
+                  <ul class="checklist-includes" role="list">
+                    {step.includes.map((line) => (
+                      <li>
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+        {side && (
+          <div class="checklist-call">
+            <Prose value={section.copy.lead} class="checklist-lead" />
+            <p class="checklist-button">
+              <a class="button" href={side.href} rel={side.rel}>{side.label}</a>
+            </p>
+            {more.length > 0 && (
+              <p class="checklist-more">
+                {more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    )}
+    {steps.length === 0 && cta && (
+      <p class="actions">
+        {[cta, ...more].map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </Band>
+)}
+
+<style>
+  .checklist {
+    display: grid;
+    gap: 1.75rem;
+    margin-top: 1.5rem;
+    padding: clamp(1.375rem, 1rem + 2vw, 2.25rem);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .checklist {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .checklist-steps {
+    display: grid;
+    gap: 1.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .checklist-step {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .checklist-tile {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1.5px solid var(--accent);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .checklist-words {
+    min-width: 0;
+    padding-top: 0.25rem;
+  }
+  .checklist-words h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1875rem;
+    font-weight: 700;
+  }
+  .checklist-words :global(.checklist-body) {
+    color: var(--muted);
+    font-size: 0.96875rem;
+  }
+  .checklist-words :global(.checklist-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .checklist-includes {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+  .checklist-includes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.45;
+  }
+  .checklist-includes svg {
+    flex: 0 0 auto;
+    margin-top: 0.15em;
+    color: var(--accent);
+  }
+
+  /* The call: the lead's words and the one button, behind a rule. */
+  .checklist-call {
+    min-width: 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+  .checklist-call :global(.checklist-lead) {
+    color: var(--muted);
+  }
+  .checklist-call :global(.checklist-lead) > :global(p:first-child) {
+    margin-bottom: 0.625rem;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: var(--h3);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .checklist-call :global(.checklist-lead) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .checklist-button {
+    margin: 1.25rem 0 0;
+  }
+  .checklist-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 1rem 0 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  @media (min-width: 48rem) {
+    .checklist-with-call {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: clamp(1.75rem, 3vw, 2.5rem);
+    }
+    .checklist-call {
+      padding: 0.25rem 0 0 clamp(1.5rem, 3vw, 2.5rem);
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+  }
+</style>

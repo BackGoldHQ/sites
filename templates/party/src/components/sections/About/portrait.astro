@@ -1,0 +1,308 @@
+---
+// About, 'portrait' layout (board S19, A and C, "Portrait + credentials"):
+// the person's photo at the left, tall (4:5) and rounded, and beside it the
+// kicker, their name (the heading) large in the display face, their role
+// under it, the story, then the credential rows as a checked list (the year
+// before the line when the row has one, the label linked when it has an
+// address, the detail muted under it) and the milestone rows in order down a
+// short rail in the accent (the year small in capitals over the label, the
+// detail muted), and the section's one button. The pull quote, when the
+// operator wrote one, sits under everything in a panel filled in the
+// contrast band's colours (on a section already on the contrast band, a tint
+// of its ink): the quotation in the display face, its source under it.
+//
+// The photo's treatment is BackGold's `photoStyle`: a photo crops to fill;
+// 'badge' shows the whole picture on the band's surface and 'plain' on
+// nothing (a logo). Without a photo the words take the column alone; on a
+// phone the photo comes first. Nothing is drawn with no heading, story,
+// photo, row or quote.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { buttonOf, credentialsOf, photoStyleOf, quoteOf } from './credentials'
+import { media } from '../../../lib/section'
+import { prose, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const role = text(section.copy.role)
+const photo = media(section, 'photoUrl')
+const style = photoStyleOf(section)
+const { credentials, milestones } = credentialsOf(section)
+const pull = quoteOf(section)
+const button = buttonOf(section)
+const drawn = heading || prose(section.copy.body) || photo || credentials.length > 0 || milestones.length > 0 || pull
+---
+{drawn && (
+  <Band section={section} class="about about-portrait">
+    <div class:list={['portrait', photo && 'portrait-with-photo']}>
+      {photo && (
+        <div class:list={['portrait-photo', `portrait-photo-${style}`]}>
+          <img src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />
+        </div>
+      )}
+      <div class="portrait-words">
+        {kicker && <p class="kicker">{kicker}</p>}
+        {heading && <h2 class="portrait-name">{heading}</h2>}
+        {role && <p class="portrait-role">{role}</p>}
+        <Prose value={section.copy.body} class="portrait-body" />
+        {credentials.length > 0 && (
+          <ul class="portrait-credentials" role="list">
+            {credentials.map((c) => (
+              <li>
+                <svg class="portrait-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <div>
+                  <p class="portrait-credential">
+                    {c.year && <><span class="portrait-year">{c.datetime ? <time datetime={c.datetime}>{c.year}</time> : c.year}</span>{' '}</>}
+                    {c.link ? <a href={c.link.href} rel={c.link.rel}>{c.label}</a> : c.label}
+                  </p>
+                  {c.detail && <p class="portrait-detail">{c.detail}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {milestones.length > 0 && (
+          <ol class="portrait-rail" role="list">
+            {milestones.map((m) => (
+              <li class="portrait-step">
+                <span class="portrait-dot" aria-hidden="true"></span>
+                {m.year && <p class="portrait-step-year">{m.datetime ? <time datetime={m.datetime}>{m.year}</time> : m.year}</p>}
+                <p class="portrait-step-label">{m.link ? <a href={m.link.href} rel={m.link.rel}>{m.label}</a> : m.label}</p>
+                {m.detail && <p class="portrait-detail">{m.detail}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
+        {button && (
+          <p class="actions">
+            <a class="button" href={button.href} rel={button.rel}>{button.label}</a>
+          </p>
+        )}
+      </div>
+    </div>
+    {pull && (
+      <figure class="portrait-quote bg-band-contrast">
+        <span class="portrait-quote-mark" aria-hidden="true">“</span>
+        <blockquote><p>{pull.quote}</p></blockquote>
+        {pull.source && <figcaption>{pull.source}</figcaption>}
+      </figure>
+    )}
+  </Band>
+)}
+
+<style>
+  .portrait {
+    display: grid;
+    gap: 2rem;
+  }
+  .portrait-photo {
+    width: 100%;
+    max-width: 22rem;
+    aspect-ratio: 4 / 5;
+    border-radius: calc(var(--radius) * 2);
+    overflow: hidden;
+  }
+  .portrait-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* A logo: the whole picture, on the band's surface ('badge') or on nothing ('plain'). */
+  .portrait-photo-badge,
+  .portrait-photo-plain {
+    display: grid;
+    place-items: center;
+  }
+  .portrait-photo-badge {
+    padding: clamp(1rem, 8%, 2rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .portrait-photo-badge img,
+  .portrait-photo-plain img {
+    object-fit: contain;
+  }
+  .portrait-words {
+    min-width: 0;
+  }
+  .portrait-words > :last-child {
+    margin-bottom: 0;
+  }
+  .portrait-name {
+    margin-bottom: 0.25rem;
+  }
+  .portrait-role {
+    margin: 0 0 1.25rem;
+    color: var(--muted);
+    font-size: var(--text-lg);
+    font-weight: 600;
+  }
+  .portrait-words :global(.portrait-body) {
+    margin-top: 1rem;
+  }
+  .portrait-words :global(.portrait-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .portrait-detail {
+    margin: 0.125rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+  /* The credentials: a check in the accent beside each line. */
+  .portrait-credentials {
+    display: grid;
+    gap: 0.75rem;
+    margin: 1.75rem 0 0;
+    padding: 1.25rem 0 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .portrait-credentials li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .portrait-check {
+    flex: 0 0 auto;
+    margin-top: 0.25em;
+    color: var(--accent);
+  }
+  .portrait-credential {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .portrait-credential a {
+    color: var(--ink);
+  }
+  .portrait-year {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .portrait-year::after {
+    content: ' ·';
+    color: var(--muted);
+  }
+
+  /* The milestones: a short rail in the accent, a dot at each step. */
+  .portrait-rail {
+    --rail: 2px;
+    --dot: 0.875rem;
+    /* The dot's centre sits on the year's line (its line box is 1.125rem tall). */
+    --dot-y: 0.5625rem;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .portrait-step {
+    position: relative;
+    padding: 0 0 1.125rem calc(var(--dot) + 1rem);
+  }
+  .portrait-step:last-child {
+    padding-bottom: 0;
+  }
+  .portrait-step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    top: var(--dot-y);
+    bottom: calc(-1 * var(--dot-y));
+    left: calc(var(--dot) / 2 - var(--rail) / 2);
+    width: var(--rail);
+    background: var(--accent);
+  }
+  .portrait-dot {
+    position: absolute;
+    z-index: 1;
+    top: calc(var(--dot-y) - var(--dot) / 2);
+    left: 0;
+    width: var(--dot);
+    height: var(--dot);
+    border: 2px solid var(--bg-band-background);
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .portrait-step > p {
+    margin: 0;
+  }
+  .portrait-step .portrait-step-year {
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+  .portrait-step .portrait-step-label {
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .portrait-step-label a {
+    color: var(--ink);
+  }
+
+  /* The pull quote: a panel in the contrast band's colours under everything. */
+  .portrait-quote {
+    margin: clamp(2rem, 1.5rem + 2vw, 3rem) 0 0;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .portrait-quote {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .portrait-quote-mark {
+    display: block;
+    height: 0.5em;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 3rem + 2vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .portrait-quote blockquote {
+    margin: 0;
+  }
+  .portrait-quote blockquote p {
+    max-width: 44ch;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.375rem, 1.1rem + 1.1vw, 2rem);
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .portrait-quote figcaption {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .portrait-quote figcaption::before {
+    content: '— ';
+  }
+
+  @media (min-width: 48rem) {
+    .portrait-with-photo {
+      grid-template-columns: minmax(15rem, 21rem) minmax(0, 1fr);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+    .portrait-photo {
+      max-width: none;
+    }
+    .portrait-with-photo .portrait-words {
+      padding-top: clamp(0rem, 2vw, 1.5rem);
+    }
+  }
+</style>

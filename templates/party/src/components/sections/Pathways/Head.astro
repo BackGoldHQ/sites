@@ -1,0 +1,37 @@
+---
+// The head the Doors and Quiz layouts open with (mock 11, A, "Which one is
+// you?"): the kicker over the heading, then the body as the line under it,
+// all centred over what follows. Draws nothing when there is none of them.
+import Prose from '../../Prose.astro'
+import SectionHead from '../SectionHead.astro'
+import { prose } from '../../../lib/format'
+
+interface Props {
+  kicker: string | null
+  heading: string | null
+  body: unknown
+}
+
+const { kicker, heading, body } = Astro.props
+---
+{(kicker || heading || prose(body)) && (
+  <div class="pathways-head">
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    <Prose value={body} class="lede" />
+  </div>
+)}
+
+<style>
+  .pathways-head {
+    text-align: center;
+  }
+  .pathways-head > :global(.section-head) {
+    justify-content: center;
+  }
+  .pathways-head > :global(.lede) {
+    margin: -0.5rem auto 1.75rem;
+  }
+  .pathways-head > :global(.lede > :last-child) {
+    margin-bottom: 0;
+  }
+</style>

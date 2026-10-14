@@ -1,0 +1,183 @@
+---
+// MediaKit · Press kit, the default (board 15, A): everything a booker or a
+// reporter takes away. At the left the headshot (`imageUrl`), 4:5 with
+// rounded corners, and under it the downloads (the rows of kind `asset`,
+// drawn by Downloads.astro), each an outline button with its title and its
+// detail ("JPG · 2 MB") small. At the right the kicker, the name
+// (`heading`) large in the display face, the line under it (`role`) muted,
+// then a card on the band's surface for each of the short bio, the long bio
+// and the fact sheet that the copy has (BioCard.astro), each with a Copy
+// button that puts the card's words on the clipboard; the button reads
+// "Copied" for a moment and a status line says which card was copied. The
+// Copy buttons are drawn hidden and shown by the section's script where the
+// browser can copy, so with scripts off nothing is offered that cannot
+// work. The press kit link (`kitLabel` → `kitHref`) is the section's one
+// button, under the cards. Without a headshot the words take the full width
+// and the downloads sit under the cards. Talks, appearances and mentions
+// are the other layouts'. With no name and no download it draws nothing.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import BioCard from './BioCard.astro'
+import Downloads from './Downloads.astro'
+import { mediaKitOf } from './kit'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const found = mediaKitOf(section)
+const { assets, photo } = found
+const shortBio = text(section.copy.shortBio)
+const longBio = text(section.copy.longBio)
+const level = found.heading ? 'h3' : 'h2'
+---
+{(found.heading || assets.length > 0) && (
+  <Band section={section} class="mediakit mediakit-kit">
+    <div class:list={['kit', photo && 'kit-split']} data-kit>
+      {photo && (
+        <div class="kit-aside">
+          <img class="kit-photo" src={photo.url} alt={photo.alt || found.heading || ''} loading="lazy" decoding="async" />
+          <Downloads assets={assets} />
+        </div>
+      )}
+      <div class="kit-words">
+        {(found.kicker || found.heading || found.role) && (
+          <div class="kit-head">
+            {found.kicker && <p class="kicker">{found.kicker}</p>}
+            {found.heading && <h2 class="kit-name">{found.heading}</h2>}
+            {found.role && <p class="kit-role">{found.role}</p>}
+          </div>
+        )}
+        {(shortBio || longBio || found.facts) && (
+          <ul class="kit-cards" role="list">
+            {shortBio && <BioCard label="Short bio" value={shortBio} level={level} />}
+            {longBio && <BioCard label="Long bio" value={longBio} level={level} />}
+            {found.facts && <BioCard label="Fact sheet" value={found.facts} level={level} count={false} />}
+          </ul>
+        )}
+        {!photo && assets.length > 0 && (
+          <div class="kit-downloads">
+            <Downloads assets={assets} />
+          </div>
+        )}
+        {found.kit && (
+          <p class="kit-action">
+            <a class="button" href={found.kit.href} rel={found.kit.rel}>{found.kit.label}</a>
+          </p>
+        )}
+      </div>
+      {(shortBio || longBio || found.facts) && (
+        <>
+          <p class="visually-hidden" role="status" data-kit-status></p>
+          <script is:inline>
+            ;(function (root) {
+              if (!root || !navigator.clipboard) return
+              var status = root.querySelector('[data-kit-status]')
+              var buttons = root.querySelectorAll('[data-kit-copy]')
+              var say = function (words) {
+                status.textContent = ''
+                setTimeout(function () {
+                  status.textContent = words
+                }, 50)
+              }
+              var arm = function (button) {
+                var label = button.querySelector('[data-kit-copy-label]')
+                var card = button.closest('[data-kit-card]')
+                var words = card.querySelector('[data-kit-text]')
+                var timer = 0
+                button.addEventListener('click', function () {
+                  navigator.clipboard.writeText(words.innerText.trim()).then(
+                    function () {
+                      label.textContent = 'Copied'
+                      say(button.getAttribute('data-kit-copied'))
+                      clearTimeout(timer)
+                      timer = setTimeout(function () {
+                        label.textContent = 'Copy'
+                      }, 2500)
+                    },
+                    function () {
+                      say('Could not copy. Select the words and copy them instead.')
+                    },
+                  )
+                })
+                button.hidden = false
+              }
+              for (var i = 0; i < buttons.length; i++) arm(buttons[i])
+            })(document.currentScript.closest('[data-kit]'))
+          </script>
+        </>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .kit {
+    display: grid;
+    gap: 1.75rem;
+  }
+  .kit-aside {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    min-width: 0;
+  }
+  .kit-photo {
+    display: block;
+    width: 100%;
+    max-width: 22rem;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .kit-words {
+    min-width: 0;
+  }
+  .kit-head > * {
+    margin: 0;
+  }
+  .kit-head .kit-name {
+    font-size: clamp(2.125rem, 1.5rem + 2.2vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.04;
+  }
+  .kit-head .kit-role {
+    margin-top: 0.625rem;
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .kit-cards {
+    display: grid;
+    gap: 0.75rem;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .kit-head + .kit-cards {
+    margin-top: 1.75rem;
+  }
+  .kit-cards:first-child {
+    margin-top: 0;
+  }
+  .kit-downloads,
+  .kit-action {
+    margin: 1.5rem 0 0;
+  }
+  .kit-words > :first-child {
+    margin-top: 0;
+  }
+  @media (min-width: 48rem) {
+    .kit-split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+      gap: clamp(2rem, 4vw, 3rem);
+      align-items: start;
+    }
+    .kit-photo {
+      max-width: none;
+    }
+  }
+</style>

@@ -1,0 +1,144 @@
+---
+// Booking, 'list' layout: the section head and the body, then a row per
+// meeting type the organization's booking module offers, in its order, each
+// on the band's surface: the type's name and its description at the left, its
+// length and where it happens ("30 min · Video call") with its price under
+// them ("$250", "Free"; nothing when the type names no price) in the middle,
+// and the pick button ("Pick a time", the section's pick label) at the right,
+// to the type's booking page in BackGold, where the time is picked and the
+// booking made. The first row's button is solid and the rest are outlined, so
+// the section has one dominant action. On a phone each row stacks: the words,
+// the length, place and price, then the button full width.
+//
+// Nothing is drawn when the organization offers no meeting types, heading or
+// not: the words would promise a booking that does not exist.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { meetingTypesOf } from './types'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const types = meetingTypesOf(section)
+---
+{types.length > 0 && (
+  <Band section={section} class="booking booking-list">
+    <SectionHead kicker={text(section.copy.kicker)} heading={text(section.copy.heading)} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    <ul class="bk-rows" role="list">
+      {types.map((type, i) => (
+        <li class="bk-row">
+          <div class="bk-row-words">
+            <h3 class="bk-row-name">{type.name}</h3>
+            {type.description && <p class="bk-row-description">{type.description}</p>}
+          </div>
+          {(type.meta || type.price) && (
+            <p class="bk-row-facts">
+              {type.meta && <span class="bk-row-meta">{type.meta}</span>}
+              {type.price && <span class="bk-row-price">{type.price}</span>}
+            </p>
+          )}
+          <p class="bk-row-action">
+            <a class:list={['button', i > 0 && 'button-quiet']} href={type.book.href} rel={type.book.rel}>
+              {type.book.label}<span class="visually-hidden">: {type.name}</span><span class="bk-arrow" aria-hidden="true">→</span>
+            </a>
+          </p>
+        </li>
+      ))}
+    </ul>
+  </Band>
+)}
+
+<style>
+  .bk-rows {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  :global(.lede) + .bk-rows {
+    margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
+  }
+  /* A phone: the words, then the length, place and price, then the button across the bottom. */
+  .bk-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.875rem;
+    align-items: center;
+    min-width: 0;
+    padding: 1.125rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .bk-row-words {
+    min-width: 0;
+  }
+  .bk-row-name {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .bk-row-description {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+  .bk-row-facts {
+    display: flex;
+    margin: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.875rem;
+    font-size: var(--text-sm);
+  }
+  .bk-row-meta {
+    font-weight: 700;
+  }
+  .bk-row-price {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .bk-row-action {
+    margin: 0;
+  }
+  .bk-row-action .button {
+    width: 100%;
+  }
+  .bk-arrow {
+    margin-left: -0.125rem;
+  }
+  /* Wider: one line per type, the facts in a middle column, the button at the right. */
+  @media (min-width: 48rem) {
+    .bk-row {
+      grid-template-columns: minmax(0, 1fr) minmax(9rem, 13rem) auto;
+      gap: 0 1.5rem;
+      padding: 1.125rem 1.5rem;
+    }
+    .bk-row-facts {
+      grid-column: 2;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .bk-row-action {
+      grid-column: 3;
+    }
+    .bk-row-action .button {
+      width: auto;
+      min-width: 9.5rem;
+    }
+  }
+</style>

@@ -1,0 +1,93 @@
+---
+// Resources · Band (board 09, C, the inline offer box, without its email
+// field or its thank-you, which are BackGold's): a slim line for the middle
+// of an article, drawn as Cta/strip draws the template's slim band: a
+// hairline above and below, a dot in the button colour, the first
+// resource's title in bold and the first line of its summary at the left,
+// the one small button at the right. The button is the
+// section's link (`buttonLabel` → `buttonHref`, where BackGold's sign-up
+// is), else the resource's own address under the same words. With no
+// resource the heading takes the title's place. On a phone the button
+// wraps under the words. With no resource and no heading it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { buttonFor, resourcesOf } from './resources'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const found = resourcesOf(section)
+const first = found.resources[0]
+const title = first?.title ?? found.heading
+const line = first?.points[0] ?? null
+const button = buttonFor(found, first)
+---
+{title && (
+  <Band section={section} class="resources resources-band">
+    <div class="res-offer">
+      <span class="res-offer-dot" aria-hidden="true"></span>
+      <div class="res-offer-words">
+        <h2 class="res-offer-title">{title}</h2>
+        {line && <p class="res-offer-line">{line}</p>}
+      </div>
+      {button && <a class="button button-small res-offer-button" href={button.href} rel={button.rel}>{button.label}</a>}
+    </div>
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.resources-band) {
+    --bg-section-padding: calc(var(--space) / 2) var(--gutter);
+  }
+  .res-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.875rem 1.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .res-offer-dot {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--button);
+  }
+  .res-offer-words {
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+  .res-offer-words > * {
+    margin: 0;
+  }
+  .res-offer-words .res-offer-title {
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  .res-offer-line {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .res-offer-button {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    white-space: nowrap;
+  }
+  @media (min-width: 40rem) {
+    .res-offer {
+      flex-wrap: nowrap;
+      padding: 1.125rem 0;
+    }
+    .res-offer-words .res-offer-title {
+      font-size: 1.0625rem;
+    }
+  }
+</style>

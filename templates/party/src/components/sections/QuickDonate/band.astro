@@ -1,0 +1,164 @@
+---
+// QuickDonate, 'band' layout (board 16, C): a slim line for the end of an
+// article or an episode, drawn as Cta · Strip draws its line: no card, a
+// hairline rule above and below on the section's band, the heading in bold
+// after a dot in the button colour, the body after it (the operator's
+// "Enjoyed this? …"), and at the right up to three amounts (the first three
+// the section lists) and the one small button. Each is a plain link to the
+// organization's donate page in BackGold: an amount with its `?amount=`, the
+// button with the link as the section sets it. There is no picker and no
+// monthly switch: an amount is one tap to the donate page, which offers
+// monthly itself. It does not stick and cannot be dismissed. On a phone the
+// amounts and the button sit under the words. Nothing is drawn when the
+// section has no donate link.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { amountHref, dollars, quickDonate } from './donate'
+import { prose, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const qd = quickDonate(section)
+const heading = text(section.copy.heading)
+const body = prose(section.copy.body)
+const shown = qd ? qd.amounts.slice(0, 3) : []
+---
+{qd && (
+  <Band section={section} class="quick-donate qd-band-band">
+    <div class="qd-band">
+      {(heading || body) && (
+        <div class="qd-band-words">
+          {heading && (
+            <h2 class="qd-band-heading">
+              <span class="qd-band-dot" aria-hidden="true"></span>{heading}
+            </h2>
+          )}
+          <Prose value={section.copy.body} class="qd-band-body" />
+        </div>
+      )}
+      <div class="qd-band-choices">
+        <ul class="qd-band-amounts" role="list" aria-label="Give an amount">
+          {shown.map((amount) => (
+            <li>
+              <a class="qd-band-amount" href={amountHref(qd.donate.href, amount)} rel={qd.donate.rel}>{dollars(amount)}</a>
+            </li>
+          ))}
+        </ul>
+        <a class="button button-small qd-band-give" href={qd.donate.href} rel={qd.donate.rel}>{qd.donate.label}</a>
+      </div>
+    </div>
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.qd-band-band) {
+    --bg-section-padding: calc(var(--space) / 2) var(--gutter);
+  }
+  .qd-band {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.875rem 2rem;
+    padding: 1.125rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .qd-band-words {
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+  .qd-band-words .qd-band-heading {
+    margin: 0;
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  .qd-band-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin: 0 0.625rem 0.125rem 0;
+    border-radius: 50%;
+    background: var(--button);
+    vertical-align: middle;
+  }
+  .qd-band-words > :global(.qd-band-body) {
+    margin-top: 0.25rem;
+    max-width: none;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .qd-band-words > :global(.qd-band-body) :global(p) {
+    margin: 0;
+  }
+  .qd-band-choices {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .qd-band-amounts {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .qd-band-amounts li {
+    flex: 1 1 0;
+  }
+  .qd-band-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--pill);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .qd-band-amount:hover {
+    border-color: var(--ink);
+  }
+  .qd-band-give {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    white-space: nowrap;
+  }
+  @media (min-width: 48rem) {
+    .qd-band {
+      flex-wrap: nowrap;
+    }
+    .qd-band-words .qd-band-heading {
+      font-size: 1.0625rem;
+    }
+    .qd-band-choices,
+    .qd-band-amounts {
+      flex: 0 0 auto;
+    }
+    .qd-band-amounts li {
+      flex: 0 0 auto;
+    }
+    .qd-band-amount {
+      min-width: 4.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .qd-band-amount {
+      transition: border-color 0.15s ease;
+    }
+  }
+</style>

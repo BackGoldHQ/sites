@@ -1,7 +1,8 @@
 // A QuickDonate's choices as its layouts draw them: the donate link (the
 // section's one link, whose label is the button's), the amounts, the one that
 // starts selected, the monthly switch when the section offers it, and the
-// address each choice hands to BackGold's donate page. The donate page reads
+// address each choice hands to BackGold's donate page (and, for the jar
+// layout, its unit and the quantities of it). The donate page reads
 // `?amount=` in whole dollars from 1 to 99,999 and `?frequency=monthly`, so an
 // amount outside that is left out here rather than sent and ignored there.
 // Null when the section has no donate link: there is nothing to give through.
@@ -69,4 +70,25 @@ export function amountHref(href: string, amount: number | null): string {
 /** The button's words: "Donate $25" with an amount selected, else the link's own label. */
 export function giveLabel(qd: QuickDonate): string {
   return qd.selected === null ? qd.donate.label : `${qd.donate.label} ${dollars(qd.selected)}`
+}
+
+/** The jar layout's quantities of its unit. */
+const JAR_COUNTS = [1, 3, 5]
+
+export interface Jar {
+  /** Whole dollars: one of what the jar asks for. */
+  unit: number
+  /** Each quantity with its total; a quantity whose total the donate page would not take is left out. */
+  choices: { count: number; amount: number }[]
+}
+
+/**
+ * The jar layout's choices: its unit is the section's default amount when
+ * the donate page would take it, else the first of its amounts (the rest are
+ * not drawn), offered as 1, 3 and 5 of it.
+ */
+export function jarOf(section: Section, qd: QuickDonate): Jar {
+  const unit = wholeDollars(section.options?.defaultAmount) ?? qd.amounts[0]
+  const choices = JAR_COUNTS.map((count) => ({ count, amount: unit * count })).filter((c) => wholeDollars(c.amount) !== null)
+  return { unit, choices }
 }

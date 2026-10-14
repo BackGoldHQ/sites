@@ -1,0 +1,333 @@
+---
+// CaseStudies · Featured, the default (board S06, A): the kicker and
+// heading, the line of copy, then the first case large: its picture at the
+// left with rounded corners (the row's own, else the section's), and at the
+// right its tag as a chip, its title in the display face, the challenge and
+// the approach each as a line with its bold label (a line with no words is
+// left out), the figures it has as a row of large numerals in the accent
+// with their labels under them, and the read button: the section's read
+// words to the case's own address, else to the section's read link. A case
+// with no figures shows its result as a third line instead, so it never
+// reads as a story without an end.
+//
+// With no picture anywhere, the tag is set large in the display face on a
+// panel of the band's surface in the picture's place (and not repeated as a
+// chip); with neither a picture nor a tag, the words take the full width on
+// the surface. The title is an <h3>, or an <h2> when the section has no
+// heading of its own.
+//
+// The other cases follow under a thin rule as compact cards, three across on
+// a wide screen, two on a tablet and one on a phone: the tag small in
+// capitals, the title (the whole card is its link when the row has one) and
+// the hero figure with its label. The note sits small at the end. With no
+// case and no heading it draws nothing.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { casesOf, readFor } from './cases'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const note = text(section.copy.note)
+const cases = casesOf(section)
+const [lead, ...rest] = cases
+const picture = lead?.photo ? { url: lead.photo, alt: '' } : media(section, 'imageUrl')
+const panel = !picture && lead?.tag ? lead.tag : null
+const read = lead ? readFor(section, lead) : null
+const lines = lead
+  ? [
+      { label: 'Challenge:', words: lead.challenge },
+      { label: 'Approach:', words: lead.approach },
+      { label: 'Result:', words: lead.metrics.length === 0 ? lead.result : null },
+    ].filter((line) => line.words)
+  : []
+const Title = heading ? 'h3' : 'h2'
+---
+{(heading || lead) && (
+  <Band section={section} class="cases cases-featured">
+    <div class="cases-intro">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {lead && (
+      <article class:list={['case-lead', picture || panel ? 'case-lead-pictured' : 'case-lead-words-only']}>
+        {picture && (
+          <div class="case-lead-media">
+            <img class="case-lead-photo" src={picture.url} alt={picture.alt} loading="lazy" decoding="async" />
+          </div>
+        )}
+        {panel && (
+          <div class="case-lead-media case-lead-panel">
+            <p class="case-lead-panel-tag">{panel}</p>
+          </div>
+        )}
+        <div class="case-lead-words">
+          {lead.tag && !panel && <p class="case-lead-tag"><span class="chip">{lead.tag}</span></p>}
+          <Title class="case-lead-title">{lead.title}</Title>
+          {lines.map((line) => (
+            <p class="case-lead-line"><strong>{line.label}</strong> {line.words}</p>
+          ))}
+          {lead.metrics.length > 0 && (
+            <ul class="case-figures" role="list">
+              {lead.metrics.map((m) => (
+                <li>
+                  <p class="case-figure">{m.value}</p>
+                  {m.label && <p class="case-figure-label">{m.label}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {read && (
+            <p class="actions case-lead-actions">
+              <a class="button" href={read.href} rel={read.rel}>{read.label}</a>
+            </p>
+          )}
+        </div>
+      </article>
+    )}
+    {rest.length > 0 && (
+      <ul class="case-cards" role="list">
+        {rest.map((c) => (
+          <li class:list={['case-card', c.link && 'case-card-linked']}>
+            {c.tag && <p class="case-card-tag">{c.tag}</p>}
+            <Title class="case-card-title">{c.link ? <a href={c.link.href} rel={c.link.rel}>{c.title}</a> : c.title}</Title>
+            {c.hero && (
+              <p class="case-card-figure">
+                <span class="case-card-value">{c.hero.value}</span>
+                {c.hero.label && <span class="case-card-label">{c.hero.label}</span>}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+    {lead && note && <p class="fine cases-note">{note}</p>}
+  </Band>
+)}
+
+<style>
+  .cases-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .cases-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+  .case-lead {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .case-lead-media {
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+  .case-lead-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+  /* No picture: the tag large on the band's surface, ruled in the accent at its foot. */
+  .case-lead-panel {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 2 / 1;
+    padding: clamp(1.25rem, 1rem + 2vw, 2.5rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+  .case-lead-panel-tag {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 1.5rem + 2.2vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  .case-lead-words > * {
+    margin: 0;
+  }
+  .case-lead-tag .chip {
+    white-space: normal;
+  }
+  .case-lead-words .case-lead-title {
+    margin-top: 0.875rem;
+    font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.08;
+  }
+  .case-lead-words > .case-lead-title:first-child {
+    margin-top: 0;
+  }
+  .case-lead-words .case-lead-line {
+    margin-top: 0.75rem;
+    color: var(--muted);
+    max-width: var(--measure);
+  }
+  .case-lead-title + .case-lead-line {
+    margin-top: 1rem;
+  }
+  .case-lead-line strong {
+    color: var(--ink);
+  }
+  .case-lead-words .case-figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.25rem;
+    margin-top: 1.375rem;
+    padding: 1.125rem 0 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  /* Three across down to a phone; a figure too wide for its third takes a line of its own rather than breaking. */
+  .case-figures li {
+    flex: 1 1 5.25rem;
+  }
+  .case-figures p {
+    margin: 0;
+  }
+  .case-figure {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 1.5rem + 1.2vw, 2.5rem);
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    overflow-wrap: break-word;
+  }
+  .case-figure-label {
+    margin-top: 0.375rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+  }
+  .case-lead-words .case-lead-actions {
+    margin-top: 1.5rem;
+  }
+  .case-lead-words-only .case-lead-words {
+    padding: 1.5rem 1.25rem 1.625rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .case-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin: clamp(2rem, 1.5rem + 1.5vw, 2.75rem) 0 0;
+    padding: clamp(2rem, 1.5rem + 1.5vw, 2.75rem) 0 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .case-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 1.25rem 1.25rem 1.375rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .case-card > * {
+    margin: 0;
+  }
+  .case-card-tag {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .case-card .case-card-title {
+    font-size: calc(var(--h3) * 0.9);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .case-card-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .case-card-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .case-card-linked:hover .case-card-title a {
+    text-decoration: underline;
+  }
+  .case-card-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .case-card-title a:focus-visible {
+    outline: none;
+  }
+  .case-card .case-card-figure {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.625rem;
+    margin-top: auto;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--line);
+  }
+  .case-card-value {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+  .case-card-label {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+  }
+  .cases-note {
+    margin: 1.25rem 0 0;
+  }
+  @media (min-width: 40rem) {
+    .case-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+  @media (min-width: 48rem) {
+    .case-lead-pictured {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: clamp(2rem, 4vw, 3rem);
+      align-items: center;
+    }
+    .case-lead-panel {
+      aspect-ratio: 4 / 3;
+    }
+    .case-lead-words-only .case-lead-words {
+      padding: 2.25rem 2.5rem 2.5rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .case-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+  }
+</style>

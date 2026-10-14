@@ -1,0 +1,340 @@
+---
+// QuoteStrip, 'carousel' layout (board 10, B): the heading small in capitals
+// and centred, then one quote at a time, large, on a panel filled with the
+// contrast band (outlined instead when the section already sits on that
+// band). Each quote opens under a large quotation mark in the accent, sets
+// the words in the display face, and closes with who said it and their role
+// ("attribution · role") beside the row's mark, small. Under the quote: the
+// previous arrow, a dot per quote ("Quote 2 of 4"; the shown one is a long
+// dot in the accent and the only one in the tab order) and the next arrow.
+// It moves only when asked, by click or by the arrow keys (Home and End for
+// the first and last), and wraps round at either end; the panel keeps the
+// height of its longest quote so the controls never move under a pointer,
+// and a screen reader hears each quote as it changes. A new quote slides in
+// a little, or simply replaces the last one when reduced motion is asked
+// for. The controls are drawn hidden and shown by the section's script, so
+// without it every quote stacks in the panel, ruled apart. One quote is
+// drawn alone, with no controls. Nothing is drawn with no heading and no
+// quote.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { quotesOf } from './quotes'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const quotes = quotesOf(section)
+const many = quotes.length > 1
+const id = `${section.id}-quotes`.replace(/[^A-Za-z0-9_-]/g, '-')
+---
+{(heading || quotes.length > 0) && (
+  <Band section={section} class="quotes quotes-carousel">
+    {heading && <h2 class="qc-heading">{heading}</h2>}
+    {quotes.length > 0 && (
+      <div class="qc" data-qc>
+        <div class="qc-panel bg-band-contrast">
+          <ul class="qc-slides" id={id} role="list" aria-live="polite">
+            {quotes.map((q, i) => (
+              <li class="qc-slide" id={`${id}-${i + 1}`} data-qc-slide data-qc-current={i === 0 ? '' : undefined}>
+                <figure>
+                  <span class="qc-mark" aria-hidden="true">“</span>
+                  <blockquote><p class="qc-quote">{q.quote}</p></blockquote>
+                  {(q.attribution || q.role || q.logo) && (
+                    <figcaption class="qc-by">
+                      {q.logo && <img class="qc-by-mark" src={q.logo} alt="" loading="lazy" decoding="async" />}
+                      {(q.attribution || q.role) && (
+                        <span>
+                          {q.attribution && <span class="qc-by-name">{q.attribution}</span>}
+                          {q.attribution && q.role && <span class="qc-by-dot" aria-hidden="true"> · </span>}
+                          {q.attribution && q.role && <span class="visually-hidden">, </span>}
+                          {q.role && <span class="qc-by-role">{q.role}</span>}
+                        </span>
+                      )}
+                    </figcaption>
+                  )}
+                </figure>
+              </li>
+            ))}
+          </ul>
+          {many && (
+            <div class="qc-controls" data-qc-controls hidden>
+              <button type="button" class="qc-arrow qc-prev" aria-controls={id} data-qc-step="-1">
+                <span class="visually-hidden">Previous quote</span>
+              </button>
+              <div class="qc-dots" role="group" aria-label={heading ? `${heading}: quotes` : 'Quotes'}>
+                {quotes.map((_, i) => (
+                  <button
+                    type="button"
+                    class="qc-dot"
+                    aria-label={`Quote ${i + 1} of ${quotes.length}`}
+                    aria-controls={`${id}-${i + 1}`}
+                    aria-current={i === 0 ? 'true' : undefined}
+                    tabindex={i === 0 ? 0 : -1}
+                    data-qc-dot
+                  ></button>
+                ))}
+              </div>
+              <button type="button" class="qc-arrow qc-next" aria-controls={id} data-qc-step="1">
+                <span class="visually-hidden">Next quote</span>
+              </button>
+            </div>
+          )}
+        </div>
+        {many && (
+          <script is:inline>
+            (function (root) {
+              if (!root) return
+              var slides = root.querySelectorAll('[data-qc-slide]')
+              var dots = root.querySelectorAll('[data-qc-dot]')
+              var controls = root.querySelector('[data-qc-controls]')
+              if (!controls || slides.length < 2 || dots.length !== slides.length) return
+              var current = 0
+              var show = function (next, step, focusDot) {
+                current = (next + slides.length) % slides.length
+                root.style.setProperty('--qc-from', step < 0 ? '-1' : '1')
+                root.setAttribute('data-qc-moved', '')
+                for (var i = 0; i < slides.length; i++) {
+                  var on = i === current
+                  if (on) {
+                    slides[i].setAttribute('data-qc-current', '')
+                    dots[i].setAttribute('aria-current', 'true')
+                  } else {
+                    slides[i].removeAttribute('data-qc-current')
+                    dots[i].removeAttribute('aria-current')
+                  }
+                  dots[i].tabIndex = on ? 0 : -1
+                }
+                if (focusDot) dots[current].focus()
+              }
+              controls.addEventListener('click', function (event) {
+                var button = event.target.closest('button')
+                if (!button) return
+                var step = Number(button.getAttribute('data-qc-step'))
+                if (step) return show(current + step, step, false)
+                for (var i = 0; i < dots.length; i++) if (dots[i] === button && i !== current) show(i, i < current ? -1 : 1, false)
+              })
+              controls.addEventListener('keydown', function (event) {
+                var onDot = event.target.hasAttribute('data-qc-dot')
+                var to = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: slides.length - 1 }[event.key]
+                if (to === undefined) return
+                event.preventDefault()
+                if (to !== current) show(to, to < current ? -1 : 1, onDot)
+              })
+              controls.hidden = false
+              root.setAttribute('data-qc-live', '')
+            })(document.currentScript.closest('[data-qc]'))
+          </script>
+        )}
+      </div>
+    )}
+  </Band>
+)}
+
+<style>
+  .qc-heading {
+    max-width: none;
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .qc-panel {
+    padding: clamp(2rem, 1.25rem + 3vw, 3.5rem) clamp(1.25rem, 0.5rem + 4vw, 4rem);
+    border: 1px solid var(--bg-band-background);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+    text-align: center;
+  }
+  :global(.bg-band-contrast) .qc-panel {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .qc-slides {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .qc-slide {
+    min-width: 0;
+  }
+  /* Without script: every quote, ruled apart. */
+  .qc-slide + .qc-slide {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+  }
+  /* With it: the quotes share one cell, so the panel keeps the longest one's height; only the current one shows. */
+  [data-qc-live] .qc-slide {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+  [data-qc-live] .qc-slide + .qc-slide {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  [data-qc-live] .qc-slide:not([data-qc-current]) {
+    visibility: hidden;
+  }
+  .qc-slide figure {
+    max-width: 48rem;
+    margin: 0 auto;
+  }
+  .qc-mark {
+    display: block;
+    height: 0.5em;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 4.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .qc-slide blockquote {
+    margin: 1rem 0 0;
+  }
+  .qc-quote {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 1rem + 1.9vw, 2.25rem);
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.28;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .qc-by {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1.25rem;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+  }
+  /* A client's mark is drawn for a light ground: it sits on the panel's surface lifted to a pale tint of its own hue. */
+  .qc-by-mark {
+    box-sizing: content-box;
+    display: block;
+    width: auto;
+    height: 1.75rem;
+    max-width: 7rem;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    background: var(--surface);
+    object-fit: contain;
+  }
+  @supports (color: oklch(from red l c h)) {
+    .qc-by-mark {
+      background: oklch(from var(--surface) max(l, 0.95) min(c, 0.012) h);
+    }
+  }
+  .qc-by-name {
+    font-weight: 700;
+  }
+  .qc-by-dot,
+  .qc-by-role {
+    color: var(--muted);
+  }
+  .qc-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+  }
+  .qc-controls[hidden] {
+    display: none;
+  }
+  .qc-dots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-width: 0;
+  }
+  .qc-controls button {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+  .qc-dot {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 2.75rem;
+  }
+  .qc-dot::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--pill);
+    background: var(--muted);
+  }
+  .qc-dot:hover::before {
+    background: var(--ink);
+  }
+  .qc-dot[aria-current='true'] {
+    width: 2.75rem;
+  }
+  .qc-dot[aria-current='true']::before {
+    width: 1.75rem;
+    background: var(--accent);
+  }
+  .qc-controls .qc-arrow {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 50%;
+  }
+  .qc-controls .qc-arrow:hover {
+    border-color: var(--ink);
+  }
+  .qc-arrow::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+  }
+  .qc-prev::before {
+    margin-left: 0.2rem;
+    transform: rotate(135deg);
+  }
+  .qc-next::before {
+    margin-right: 0.2rem;
+    transform: rotate(-45deg);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-qc-moved] .qc-slide[data-qc-current] {
+      animation: qc-in 0.3s ease-out;
+    }
+    .qc-dot::before {
+      transition:
+        width 0.2s ease,
+        background-color 0.2s ease;
+    }
+  }
+  @keyframes qc-in {
+    from {
+      opacity: 0;
+      transform: translateX(calc(var(--qc-from, 1) * 1.5rem));
+    }
+  }
+</style>

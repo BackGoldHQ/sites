@@ -208,6 +208,18 @@ function kitchenSinkDocument() {
         body: 'Neighbors who read the budget line by line.\n\nWe meet on the first Tuesday of each month.',
         photoUrl: asset('about.webp'),
         photoSide: 'left',
+        // The portrait and books layouts' (the services sections): a pull
+        // quote, the one button, and credentials, books and milestones.
+        quote: 'Read the budget before you vote on it. Every line.',
+        quoteSource: 'The committee’s first rule',
+        buttonLabel: 'Meet the committee',
+        buttonHref: '/about',
+        items: [
+          { kind: 'credential', label: 'Certified public accountant', detail: 'Three of our five members', year: '' },
+          { kind: 'book', label: 'Reading a County Budget', detail: 'Pine Valley Press', year: '2025', href: 'https://example.org/books/county-budget', imageUrl: asset('budget-cover.webp') },
+          { kind: 'milestone', label: 'First line-by-line audit published', detail: 'Pine County', year: '2022' },
+          { kind: 'milestone', label: 'Levy freeze on the ballot', detail: 'Proposition A', year: '2026' },
+        ],
       }),
       block('Issues', {
         kicker: 'Platform',
@@ -216,9 +228,10 @@ function kitchenSinkDocument() {
         style: 'cards',
         columns: '3',
         items: [
-          { title: 'Freeze the levy', body: 'No increase for four years.', icon: 'shield' },
-          { title: 'Open the books', body: 'Every check online within a week.', icon: 'book' },
-          { title: 'Classrooms first', body: 'Administration grows no faster than enrollment.', icon: 'school' },
+          // A picture, a chip and what each step includes: the rows and checklist layouts' (the services sections).
+          { title: 'Freeze the levy', body: 'No increase for four years.', icon: 'shield', imageUrl: asset('levy.webp'), note: 'Year one', includes: ['A ballot measure', 'A four-year cap'] },
+          { title: 'Open the books', body: 'Every check online within a week.', icon: 'book', note: 'Year one', includes: ['A searchable ledger', 'Weekly updates'] },
+          { title: 'Classrooms first', body: 'Administration grows no faster than enrollment.', icon: 'school', note: 'Year two', includes: [] },
         ],
         ctas: [
           { label: 'Read the plan', href: '/plan', style: 'primary' },
@@ -245,9 +258,12 @@ function kitchenSinkDocument() {
       }),
       block('QuoteStrip', {
         heading: 'What neighbors say',
+        // Each quote's role line and logo: the logos, carousel and wall layouts' (the services sections).
         items: [
-          { quote: 'I finally know where the money goes.', attribution: 'A parent in Ward 3' },
-          { quote: 'The meetings are short and useful.', attribution: 'A retired teacher' },
+          { quote: 'I finally know where the money goes.', attribution: 'A parent in Ward 3', role: 'Pine Valley PTA', logoUrl: asset('pta-logo.svg') },
+          { quote: 'The meetings are short and useful.', attribution: 'A retired teacher', role: '', logoUrl: '' },
+          { quote: 'They posted the checks before anyone asked.', attribution: 'The Pine Valley Ledger', role: 'Editorial board', logoUrl: asset('ledger-logo.svg') },
+          { quote: 'Our shop pays less to renew than it did in 2019.', attribution: 'A bakery owner', role: 'Main Street Merchants', logoUrl: asset('merchants-logo.svg') },
         ],
       }),
       block('Map', {
@@ -400,6 +416,109 @@ function kitchenSinkDocument() {
           { label: '2026', title: 'Library bond', body: 'On the ballot as Proposition A.', status: 'On the ballot', tone: 'none' },
         ],
       }),
+      // The services sections (CONTRACT §2, added 2026-10-14), each on its
+      // default layout, in the voice of a consulting firm, a training program
+      // and a show.
+      block('Services', {
+        kicker: 'Ridgeline Strategies',
+        heading: 'What we do for campaigns',
+        body: 'Three ways to work with us, priced the way we bill them.',
+        featuredLabel: 'Where most campaigns start',
+        startingLabel: 'Starting at',
+        note: 'Every engagement starts with a free thirty-minute call.',
+        layout: 'packages',
+        items: [
+          { name: 'District audit', summary: 'We read your district before you spend a dollar in it.', price: '$2,500', term: 'One time, two weeks', includes: ['Voter file review', 'Turnout model', 'A written plan'], href: '/contact', buttonLabel: 'Book the audit', featured: false, icon: 'scale' },
+          { name: 'Full campaign', summary: 'Strategy, mail and digital from filing day to election night.', price: '$4,500/mo', term: '3-month minimum', includes: ['Voter file review', 'Turnout model', 'A written plan', 'Mail program', 'Weekly call'], href: '/contact', buttonLabel: 'Talk to us', featured: true, icon: 'briefcase' },
+          { name: 'Digital only', summary: 'Ads that find your voters, reported every week.', price: '15% of spend', term: 'Month to month', includes: ['Ad buys', 'Weekly report'], href: '/contact', buttonLabel: 'Talk to us', featured: false, icon: 'globe' },
+        ],
+      }),
+      block('CaseStudies', {
+        kicker: 'Results',
+        heading: 'Races we helped win',
+        body: 'The challenge, what we did, and what came of it.',
+        readLabel: 'Read the case study',
+        readHref: '/work',
+        beforeLabel: 'Before',
+        afterLabel: 'After',
+        note: 'Results shown are the clients’ own figures.',
+        imageUrl: asset('open-seat.webp'),
+        layout: 'featured',
+        items: [
+          { title: 'An open seat, won by 900 votes', tag: 'State House · 2024', challenge: 'A first-time candidate nobody had heard of.', approach: 'Doors in the eleven precincts that decide the district, and mail that followed the doors.', result: 'Won the seat by 900 votes.', metric: '$412k', metricLabel: 'raised', metric2: '38,000', metric2Label: 'doors knocked', metric3: '61%', metric3Label: 'name recognition in October', before: '$38k', after: '$412k', href: '/work/open-seat', imageUrl: asset('open-seat.webp') },
+          { title: 'A levy defeated', tag: 'Ballot measure · 2025', challenge: 'A well-funded yes campaign.', approach: 'One message, three mailers, two hundred volunteers.', result: 'Proposition A failed by eight points.', metric: '8 pts', metricLabel: 'margin', before: 'Down 12 in June', after: 'Won by 8 in November', href: '/work/levy' },
+          { title: 'A county party rebuilt', tag: 'Party building · 2023', challenge: 'Four precinct chairs in a county of sixty precincts.', approach: 'A chair recruitment drive and monthly trainings.', result: 'Forty-one precincts with a chair.', metric: '41', metricLabel: 'precinct chairs', before: '4 chairs', after: '41 chairs' },
+        ],
+      }),
+      block('Resources', {
+        kicker: 'Liberty Leadership Lab',
+        heading: 'Free guides for first-time candidates',
+        body: 'Download what you need. A few ask for your email first.',
+        openLabel: 'Free',
+        gatedLabel: 'Email to unlock',
+        buttonLabel: 'Get the playbook',
+        buttonHref: '/playbook',
+        layout: 'library',
+        items: [
+          { title: 'The first-run playbook', kind: 'Guide', detail: 'PDF · 18 pp', summary: 'Filing deadlines and fees\nYour first budget\nYour first hundred volunteers', href: '/playbook', imageUrl: asset('playbook.webp'), gated: true },
+          { title: 'Walk list template', kind: 'Template', detail: 'Spreadsheet', summary: 'A sheet to plan a Saturday of doors.', href: asset('walk-list.xlsx'), gated: false },
+          { title: 'Filing day checklist', kind: 'Checklist', detail: 'PDF · 2 pp', summary: 'Everything to bring to the clerk.', href: asset('filing-checklist.pdf'), gated: false },
+          { title: 'Your first fundraising call', kind: 'Video', detail: '12 min', summary: 'A real call, start to finish.', href: '/videos/first-call', gated: true },
+        ],
+      }),
+      block('Pathways', {
+        kicker: 'Liberty Leadership Lab',
+        heading: 'Which path fits you?',
+        body: 'Pick the one that sounds like your week, and start with its first program.',
+        programsLabel: 'See programs',
+        quizHeading: 'Find your pathway',
+        resultLabel: 'Your recommended pathway',
+        startLabel: 'Start this pathway',
+        layout: 'doors',
+        items: [
+          { title: 'Candidate', summary: 'You are exploring a run, have declared, or are already on the ballot.', outcome: 'Leave with: a message, a plan and the habits to reach election day', icon: 'ballot', href: '/paths/candidate', programs: ['Deciding to run · 45 min', 'Filing and fees · 30 min', 'Candidate Training Day · Full day · Austin'], fits: ['I am thinking about running', 'I want to knock doors as the candidate', 'I need to raise my first dollar'] },
+          { title: 'Campaign Staff', summary: 'You run the operation: field, finance, comms.', outcome: 'A field plan and the skills to manage volunteers and money', icon: 'clipboard', href: '/paths/staff', programs: ['Managing volunteers · 45 min', 'Walk lists that work · 30 min'], fits: ['I manage volunteers', 'I want to run a campaign for someone else', 'I keep the calendar'] },
+          { title: 'Organizer', summary: 'You move people around a cause or a local fight.', outcome: 'A growth plan that turns attention into commitment', icon: 'megaphone', href: '/paths/organizer', programs: ['From petition to coalition · 40 min', 'One-on-ones · 25 min'], fits: ['I organize people around an issue', 'I want to lead a local coalition', 'I want more people to show up'] },
+          { title: 'Civic Leader', summary: 'You serve on a board, a commission or a party body.', outcome: 'Run meetings, hold a position and get decisions made', icon: 'building', href: '/paths/civic', programs: ['Robert’s Rules in an hour · 60 min', 'Reading a budget · 50 min'], fits: ['I sit on a board or commission', 'I want to serve on a board', 'I chair our county party'] },
+          { title: 'Career Readiness', summary: 'You want a resume, an interview and a voice that works at work.', outcome: 'A finished resume and a 90-day plan', icon: 'briefcase', href: '/paths/career', programs: ['The one-page resume · 30 min', 'Interview practice · Live · Online'], fits: ['I want a job in politics or policy', 'I want to speak up at work', 'I am looking for my next role'] },
+        ],
+      }),
+      block('Portfolio', {
+        kicker: 'Ridgeline Strategies',
+        heading: 'Our work',
+        body: 'Mail, video and brands for campaigns that won.',
+        clientLabel: 'Client',
+        layout: 'grid',
+        items: [
+          { title: 'The open seat mailers', kind: 'Mail', client: 'A State House campaign', year: '2024', summary: 'Five pieces that followed the doors.', role: 'Strategy and design', result: 'Won by 900 votes', imageUrl: asset('mailer.webp'), href: '/work/mailers', images: [asset('mailer-2.webp'), asset('mailer-3.webp')] },
+          { title: 'Vote no on A', kind: 'Video', client: 'A ballot committee', year: '2025', summary: 'A thirty-second spot shot in one afternoon.', role: 'Script and edit', result: '1.2 million views', imageUrl: asset('spot.webp'), images: [] },
+          { title: 'A county party, rebranded', kind: 'Brand', client: 'A county party', year: '2023', summary: 'A mark, a palette and a yard sign.', role: 'Identity', result: 'Forty-one precinct chairs', imageUrl: asset('brand.webp'), images: [asset('brand-sign.webp')] },
+        ],
+      }),
+      block('MediaKit', {
+        kicker: 'Free Market Hour',
+        heading: 'Jordan Ellery',
+        role: 'Host of Free Market Hour',
+        shortBio: 'Jordan hosts Free Market Hour, a weekly show about the economics of everyday life.',
+        longBio: 'Jordan hosts Free Market Hour, a weekly show about the economics of everyday life.\n\nBefore the show, Jordan taught economics at a community college for ten years.',
+        facts: 'Weekly since 2021 · 240 episodes · Based in Pine Valley',
+        talksHeading: 'Signature talks',
+        bookLabel: 'Check availability',
+        bookHref: '/book',
+        contactHeading: 'Media inquiries',
+        contactLine: 'press@freemarkethour.example',
+        kitLabel: 'Download the press kit',
+        kitHref: asset('press-kit.zip'),
+        imageUrl: asset('headshot.webp'),
+        layout: 'kit',
+        items: [
+          { title: 'Headshot', kind: 'asset', detail: 'JPG · 2 MB', href: asset('headshot.jpg'), imageUrl: asset('headshot.webp') },
+          { title: 'Show logo', kind: 'asset', detail: 'PNG and SVG', href: asset('show-logo.zip') },
+          { title: 'Why prices are signals', kind: 'talk', detail: '45 min keynote' },
+          { title: 'Pine Valley Business Forum', kind: 'appearance', outlet: 'Pine Valley Chamber', date: '2026-04-12' },
+          { title: 'The host who reads the budget', kind: 'mention', outlet: 'The Pine Valley Ledger', date: '2026-03-14', href: 'https://example.org/ledger/ellery' },
+        ],
+      }),
       // Baked: lastKnownRaisedCents from the campaign, goalCents as authored.
       block('Progress', { campaignId: 'cmp_1', lastKnownRaisedCents: 1840000, goalCents: 5000000 }),
       // Baked from the campaign's election date: zone-less local wall clock.
@@ -443,9 +562,32 @@ function kitchenSinkDocument() {
         entries: [
           { slug: 'maple-hollow-neighbors', title: 'Maple Hollow Neighbors Council', summary: 'A neighborhood council backs the levy freeze.', hero_url: asset('maple.webp'), publish_at: '2026-09-25T10:00:00.000Z', href: '/endorsements/maple-hollow-neighbors', terms: [{ label: 'Neighborhoods' }], authors: [{ name: 'Robin Ash', role_label: 'Written by' }] },
           { slug: 'quarry-road-association', title: 'Quarry Road Association', summary: 'Homeowners sign on.', hero_url: null, publish_at: '2026-09-18T10:00:00.000Z', href: '/endorsements/quarry-road-association', terms: [], authors: [] },
+          // Two first terms between them, so the library and shelves layouts have groups to draw.
+          { slug: 'main-street-merchants', title: 'Main Street Merchants', summary: 'Forty shops back the open checkbook.', hero_url: asset('merchants.webp'), publish_at: '2026-09-12T10:00:00.000Z', href: '/endorsements/main-street-merchants', terms: [{ label: 'Businesses' }, { label: 'Downtown' }], authors: [] },
+          { slug: 'cedar-park-neighbors', title: 'Cedar Park Neighbors', summary: 'The north side signs on.', hero_url: null, publish_at: '2026-09-05T10:00:00.000Z', href: '/endorsements/cedar-park-neighbors', terms: [{ label: 'Neighborhoods' }], authors: [] },
         ],
       }),
-      block('ContentPost', { contentSlug: 'levy-explained', heading: 'Featured post', showTitle: true, showDate: true, postTitle: 'The levy, explained', postKind: 'article', postDate: '2026-09-29T12:00:00.000Z', postHtml: '<p>Every dollar…</p>' }),
+      // Baked: the piece's words, and (for the player and theater layouts) its
+      // media and hero; the links and their heading are authored.
+      block('ContentPost', {
+        contentSlug: 'levy-explained',
+        heading: 'Featured post',
+        showTitle: true,
+        showDate: true,
+        notesLabel: 'Notes',
+        linksHeading: 'In this series',
+        links: [
+          { label: 'Part two: the school levy', href: '/blog/school-levy' },
+          { label: 'The budget we propose (PDF)', href: asset('budget.pdf') },
+        ],
+        postTitle: 'The levy, explained',
+        postKind: 'vlog',
+        postDate: '2026-09-29T12:00:00.000Z',
+        postHtml: '<p>Every dollar…</p>',
+        postMediaUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+        postMediaKind: 'video',
+        postImageUrl: 'https://api.backgold.com/api/content-pages/pine-valley/hero/ci_levy?v=1',
+      }),
       block('PlatformPlanks', {
         heading: 'Our platform',
         sections: [
@@ -489,6 +631,19 @@ function kitchenSinkDocument() {
           { model: 'tiered', name: 'Neighbor', monthly_cents: 2500, annual_cents: 2500, lifetime_cents: null, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
           { model: 'tiered', name: 'Spirit of ’71', monthly_cents: 1971, annual_cents: 1971, lifetime_cents: null, onetime_cents: null, symbolic: true, benefits: MEMBER_BENEFITS },
           { model: 'tiered', name: 'Founder', monthly_cents: null, annual_cents: null, lifetime_cents: 50000, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
+        ],
+      }),
+      // Baked from the org's booking module: one row per active meeting type.
+      block('Booking', {
+        kicker: 'Ridgeline Strategies',
+        heading: 'Book a call',
+        body: 'Pick the conversation you need. Times are on the next page.',
+        pickLabel: 'Pick a time',
+        layout: 'cards',
+        types: [
+          { name: 'Intro call', slug: 'intro-call', description: 'Fifteen minutes on your race and whether we fit.', duration_minutes: 15, location_kind: 'video_link', price_cents: 0, url: 'https://app.backgold.com/book/pine-valley/intro-call' },
+          { name: 'Strategy session', slug: 'strategy-session', description: 'An hour with a strategist and your district map.', duration_minutes: 60, location_kind: 'in_person', price_cents: 25000, url: 'https://app.backgold.com/book/pine-valley/strategy-session' },
+          { name: 'Check-in', slug: 'check-in', description: null, duration_minutes: 30, location_kind: 'phone', price_cents: null, url: 'https://app.backgold.com/book/pine-valley/check-in' },
         ],
       }),
       // Compliance: each frames what BackGold serves, or carries only its heading.
@@ -2231,6 +2386,16 @@ const ROW_TEXT = {
   Faq: (i) => [i.question],
   Comparison: (i) => [i.issue, i.us, i.them, i.them2],
   Stories: (i) => [i.title],
+  // About's credential rows are its portrait and books layouts' words; the default draws none.
+  About: () => [],
+  Services: (i) => [i.name],
+  CaseStudies: (i) => [i.title],
+  Resources: (i) => [i.title],
+  Pathways: (i) => [i.title],
+  Portfolio: (i) => [i.title],
+  // The kit layout lists the downloads; talks, appearances and mentions are the speaker and press layouts'.
+  MediaKit: (i) => (i.kind === 'asset' ? [i.title] : []),
+  Booking: (i) => [i.name],
   Countdown: () => [],
   Leaderboard: () => [],
   SocialFeed: () => [],

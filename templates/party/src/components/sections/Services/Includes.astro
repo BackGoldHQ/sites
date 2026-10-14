@@ -1,0 +1,42 @@
+---
+// What a service includes as a checked list: a check mark in the accent (or
+// `--sv-check`, set by a layout on a filled ground) beside each line, in the
+// row's order. Draws nothing without one.
+import Check from './Check.astro'
+
+interface Props {
+  items: string[]
+  class?: string
+}
+
+const { items, class: className } = Astro.props
+---
+{items.length > 0 && (
+  <ul class:list={['sv-includes', className]} role="list">
+    {items.map((line) => (
+      <li>
+        <Check />
+        <span>{line}</span>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .sv-includes {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .sv-includes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    line-height: 1.45;
+  }
+  .sv-includes li :global(.sv-check) {
+    margin-top: 0.2em;
+  }
+</style>

@@ -1,0 +1,222 @@
+---
+// CaseStudies · Before / after (board S06, C): the section head (the
+// kicker, the heading and the section's read link at the right), the line
+// of copy, then each case that has a before or an after as a pair of
+// panels side by side (the before over the after on a phone): its tag small
+// in capitals and its title over them (a link to the case when the row has
+// an address), the first panel on the band's surface headed by the before
+// label, the second filled in the contrast band's colours (on a section
+// that is already on the contrast band, a tint of its ink) headed by the
+// after label. In each panel the measure (`metricLabel`) sits at the left
+// and that side's figure at the right, in bold, as typed.
+//
+// Rows next to each other that share a title are one case with several
+// measures: the panels list each measure in turn, as the board draws four
+// figures for one client. A measure with only one side set shows a dash on
+// the other, read as "Not given". A side no measure has is left out and the
+// other panel keeps its own half of the row (the after panel stays at the
+// right), so the gap shows what is missing. Several cases stack. The note
+// sits small at the end. With no case to compare and no heading it draws
+// nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { casesOf, readLinkOf, sidesOf, type Case } from './cases'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+interface Comparison {
+  first: Case
+  measures: { measure: string | null; before: string | null; after: string | null }[]
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const note = text(section.copy.note)
+const sides = sidesOf(section)
+const more = readLinkOf(section)
+const comparisons = casesOf(section)
+  .filter((c) => c.before || c.after)
+  .reduce<Comparison[]>((all, c) => {
+    const last = all.at(-1)
+    const measure = { measure: c.measure, before: c.before, after: c.after }
+    if (last && last.first.title === c.title) last.measures.push(measure)
+    else all.push({ first: c, measures: [measure] })
+    return all
+  }, [])
+const Title = heading ? 'h3' : 'h2'
+const Label = heading ? 'h4' : 'h3'
+---
+{(heading || comparisons.length > 0) && (
+  <Band section={section} class="cases cases-beforeafter">
+    <div class="cases-intro">
+      <SectionHead kicker={kicker} heading={heading} more={more ? [more] : []} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {comparisons.length > 0 && (
+      <div class="swaps">
+        {comparisons.map(({ first, measures }) => {
+          const panels = [
+            { side: 'before', label: sides.before, has: measures.some((m) => m.before) },
+            { side: 'after', label: sides.after, has: measures.some((m) => m.after) },
+          ].filter((p) => p.has) as { side: 'before' | 'after'; label: string }[]
+          return (
+            <article class="swap">
+              <div class="swap-head">
+                {first.tag && <p class="swap-tag">{first.tag}</p>}
+                <Title class="swap-title">{first.link ? <a href={first.link.href} rel={first.link.rel}>{first.title}</a> : first.title}</Title>
+              </div>
+              <div class="swap-pair">
+                {panels.map((p) => (
+                  <div class:list={['swap-panel', `swap-${p.side}`, p.side === 'after' && 'bg-band-contrast']}>
+                    <Label class="swap-label">{p.label}</Label>
+                    <dl class="swap-rows">
+                      {measures.map((m) => (
+                        <div class="swap-row">
+                          <dt class:list={[!m.measure && 'visually-hidden']}>{m.measure ?? first.title}</dt>
+                          <dd>
+                            {m[p.side] ?? (
+                              <>
+                                <span aria-hidden="true">—</span>
+                                <span class="visually-hidden">Not given</span>
+                              </>
+                            )}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    )}
+    {comparisons.length > 0 && note && <p class="fine cases-note">{note}</p>}
+  </Band>
+)}
+
+<style>
+  .cases-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .cases-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+  .swaps {
+    display: grid;
+    gap: clamp(2rem, 1.5rem + 1.5vw, 2.75rem);
+  }
+  .swap-head {
+    margin-bottom: 1rem;
+  }
+  .swap-head > * {
+    margin: 0;
+  }
+  .swap-tag {
+    margin-bottom: 0.375rem;
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .swap-head .swap-title {
+    font-size: calc(var(--h3) * 0.95);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .swap-title a {
+    color: var(--ink);
+    text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+  .swap-title a:hover {
+    text-decoration-color: currentColor;
+  }
+  .swap-pair {
+    display: grid;
+    gap: 1rem;
+  }
+  .swap-panel {
+    min-width: 0;
+    padding: clamp(1.25rem, 1rem + 1vw, 1.75rem) clamp(1.25rem, 1rem + 1vw, 1.75rem) clamp(0.75rem, 0.5rem + 0.6vw, 1rem);
+    border-radius: var(--radius-card);
+  }
+  .swap-before {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .swap-after {
+    border: 1px solid var(--bg-band-background);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-section.bg-band-contrast) .swap-after {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .swap-panel .swap-label {
+    margin: 0 0 0.25rem;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .swap-rows {
+    margin: 0;
+  }
+  .swap-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1.25rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .swap-row:last-child {
+    border-bottom: 0;
+  }
+  .swap-row dt {
+    min-width: 0;
+    font-size: 1.0625rem;
+    line-height: 1.35;
+  }
+  .swap-row dd {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 0 0 auto;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    line-height: 1.25;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .swap-row dt.visually-hidden + dd {
+    text-align: left;
+  }
+  .cases-note {
+    margin: 1.25rem 0 0;
+  }
+  @media (min-width: 48rem) {
+    .swap-pair {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+    .swap-after {
+      grid-column: 2;
+    }
+  }
+</style>

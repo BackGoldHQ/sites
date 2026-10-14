@@ -1,0 +1,239 @@
+---
+// Resources · Featured (board 09, A, "Lead magnet hero", without its email
+// field): the kicker, heading and line of copy, then the first resource as a
+// panel in the contrast band's colours (on a section already on the contrast
+// band, a tint of its ink). Its picture stands at the left as a cover (when
+// it has none, a panel on the surface with its title large and its detail
+// under); at the right its kind as a chip, its title large in the display
+// face, its summary as a checked list (one line of the summary, one point),
+// the one button, and the detail small under it. The button is the
+// section's link (`buttonLabel` → `buttonHref`, where BackGold's sign-up
+// is), else the resource's own address under the same words. On a phone the
+// cover sits over the words, narrower.
+//
+// The other resources follow as a compact list: the title (linked as the
+// library's cards are: a gated one to `buttonHref`, an open one to its own
+// address), the kind and the detail (the detail alone when it repeats the
+// kind), and the `openLabel` or `gatedLabel` chip at the right. No email field is drawn here. With no resource and no
+// heading it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { buttonFor, metaOf, resourcesOf } from './resources'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const found = resourcesOf(section)
+const [first, ...rest] = found.resources
+const button = buttonFor(found, first)
+const listed = rest.map((r) => ({ ...r, meta: metaOf(r) }))
+---
+{(first || found.heading) && (
+  <Band section={section} class="resources resources-featured">
+    <div class="res-intro">
+      <SectionHead kicker={found.kicker} heading={found.heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {first && (
+      <article class="res-hero bg-band-contrast">
+        <div class="res-cover-frame">
+          {first.picture ? (
+            <img class="res-cover" src={first.picture} alt="" loading="lazy" decoding="async" />
+          ) : (
+            <div class="res-cover res-cover-words" aria-hidden="true">
+              <p class="res-cover-title">{first.title}</p>
+              {first.detail && <p class="res-cover-detail">{first.detail}</p>}
+            </div>
+          )}
+        </div>
+        <div class="res-hero-words">
+          {first.kind && <p class="res-hero-kind"><span class="chip">{first.kind}</span></p>}
+          <h3 class="res-hero-title">{first.title}</h3>
+          {first.points.length > 0 && (
+            <ul class="res-points" role="list">
+              {first.points.map((point) => (
+                <li>
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {button && <p class="res-hero-action"><a class="button" href={button.href} rel={button.rel}>{button.label}</a></p>}
+          {first.detail && <p class="res-hero-detail">{first.detail}</p>}
+        </div>
+      </article>
+    )}
+    {listed.length > 0 && (
+      <ul class="res-list" role="list">
+        {listed.map((r) => (
+          <li class="res-row">
+            <div class="res-row-words">
+              <p class="res-row-title">{r.link ? <a href={r.link.href} rel={r.link.rel}>{r.title}</a> : r.title}</p>
+              {r.meta && <p class="res-row-meta">{r.meta}</p>}
+            </div>
+            <span class:list={['chip', r.gated && 'chip-accent']}>{r.gated ? found.gatedLabel : found.openLabel}</span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}
+
+<style>
+  .res-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .res-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+  .res-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .res-hero {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .res-cover-frame {
+    width: min(100%, 11rem);
+  }
+  .res-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+  .res-cover-words {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: inset 0 -4px 0 var(--accent);
+    color: var(--ink);
+  }
+  .res-cover-words > * {
+    margin: 0;
+  }
+  .res-cover-title {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .res-cover-detail {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+  .res-hero-words {
+    min-width: 0;
+  }
+  .res-hero-words > * {
+    margin: 0;
+  }
+  .res-hero-kind {
+    margin-bottom: 0.75rem;
+  }
+  .res-hero-words .res-hero-title {
+    font-size: calc(var(--h2) * 0.8);
+    font-weight: 800;
+    line-height: 1.1;
+    max-width: 22ch;
+  }
+  .res-hero-words > .res-points {
+    margin-top: 1.25rem;
+  }
+  .res-points {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0;
+    list-style: none;
+  }
+  .res-points li {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.625rem;
+    align-items: start;
+    line-height: 1.45;
+  }
+  .res-points svg {
+    margin-top: 0.2em;
+    color: var(--accent);
+  }
+  .res-hero-words > .res-hero-action {
+    margin-top: 1.5rem;
+  }
+  .res-hero-words > .res-hero-detail {
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .res-list {
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 2px solid var(--ink);
+  }
+  .res-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .res-row-words > * {
+    margin: 0;
+  }
+  .res-row-title {
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .res-row-title a {
+    color: var(--ink);
+  }
+  .res-row-meta {
+    margin-top: 0.125rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  @media (min-width: 40rem) {
+    .res-hero {
+      grid-template-columns: 12rem minmax(0, 1fr);
+      gap: 2rem;
+      align-items: center;
+      padding: 2rem;
+    }
+    .res-cover-frame {
+      width: 100%;
+    }
+    .res-cover-title {
+      font-size: 1.375rem;
+    }
+  }
+  @media (min-width: 56rem) {
+    .res-hero {
+      grid-template-columns: 15rem minmax(0, 1fr);
+      gap: 2.5rem;
+      padding: 2.25rem 2.5rem;
+    }
+    .res-cover-words {
+      padding: 1.25rem;
+    }
+  }
+</style>

@@ -1,0 +1,24 @@
+---
+// A service's button as every layout draws it: the row's words to the row's
+// address, solid or outlined as the layout says. When the section offers more
+// than one service the service's name follows the words for a screen reader
+// ("Talk to us: Full campaign"), since two buttons may read the same.
+import type { Service } from './services'
+
+interface Props {
+  service: Service
+  solid: boolean
+  /** Whether other services sit beside this one. */
+  many: boolean
+  class?: string
+}
+
+const { service, solid, many, class: className } = Astro.props
+const link = service.link
+---
+{link && (
+  <a class:list={['button', !solid && 'button-quiet', className]} href={link.href} rel={link.rel}>
+    {link.label}
+    {many && <span class="visually-hidden">: {service.name}</span>}
+  </a>
+)}

@@ -1,0 +1,329 @@
+---
+// ContentPost · Theater (board 02, B, "Theater + tabs"): the piece's media
+// across the whole column, as its entry page plays it (lesson.ts): a video
+// in its player at 16:9, a podcast's audio in the browser's controls beside
+// its cover, the hero alone when the piece has no media. Under it the
+// section's heading as a kicker, the title (linking to the piece's page on
+// this site) and its date, then two tabs: `notesLabel` ("Notes") over the
+// piece's body, and `linksHeading` ("Resources" when blank) over the
+// section's links as a list. Nothing here knows who is watching: no
+// discussion, no transcript, no quiz.
+//
+// The tabs follow the ARIA tabs pattern (arrow keys, Home and End move
+// between them) and are drawn hidden and shown by the section's script, so
+// with scripts off both parts show one after the other under their own
+// headings; with the script the headings are left to screen readers, the tab
+// names them. With only notes or only links there is nothing to switch
+// between and no tabs are drawn. With no piece baked the section draws
+// nothing, as the Card layout does.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { lessonOf } from './lesson'
+import { idFor } from '../SampleBallot/ballot'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const lesson = await lessonOf(section, Astro.locals.backgold)
+const parts = lesson
+  ? [
+      ...(lesson.notes ? [{ key: 'notes', label: lesson.notesLabel }] : []),
+      ...(lesson.links.length > 0 ? [{ key: 'links', label: lesson.linksHeading ?? 'Resources' }] : []),
+    ]
+  : []
+const tabs = parts.length > 1
+const id = (key: string, what: string) => idFor(section, `theater-${key}-${what}`)
+---
+{lesson && (
+  <Band section={section} class="featured lesson-theater">
+    <div class="th">
+      {lesson.media?.kind === 'embed' && (
+        <div class="th-frame">
+          <iframe src={lesson.media.src} title={lesson.title} allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>
+        </div>
+      )}
+      {lesson.media?.kind === 'video' && (
+        <div class="th-frame">
+          <video src={lesson.media.src} poster={lesson.media.poster ?? undefined} controls preload="none" playsinline>
+            <a href={lesson.media.src}>Watch the video</a>
+          </video>
+        </div>
+      )}
+      {lesson.media?.kind === 'audio' && (
+        <div class="th-audio">
+          {lesson.media.cover && <img class="th-cover" src={lesson.media.cover} alt="" width="200" height="200" decoding="async" />}
+          <audio src={lesson.media.src} controls preload="none">
+            <a href={lesson.media.src}>Download the audio</a>
+          </audio>
+        </div>
+      )}
+      {lesson.media?.kind === 'image' && <img class="th-image" src={lesson.media.src} alt="" decoding="async" />}
+      <div class="th-head">
+        {lesson.kicker && <p class="kicker">{lesson.kicker}</p>}
+        <h2 class="th-title featured-title">{lesson.href ? <a href={lesson.href}>{lesson.title}</a> : lesson.title}</h2>
+        {lesson.day && lesson.date && <p class="fine"><time datetime={lesson.date}>{lesson.day}</time></p>}
+      </div>
+      {parts.length > 0 && (
+        <div class="th-parts" data-theater>
+          {tabs && (
+            <div class="th-tabs" role="tablist" aria-label={lesson.title} data-theater-tabs hidden>
+              {parts.map((part, i) => (
+                <button type="button" role="tab" id={id(part.key, 'tab')} aria-controls={id(part.key, 'panel')} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>
+                  {part.label}
+                  {part.key === 'links' && <span class="th-count" aria-hidden="true">{lesson.links.length}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {lesson.notes && (
+            <section class="th-panel" id={id('notes', 'panel')} data-theater-panel>
+              <h3 class="th-label">{lesson.notesLabel}</h3>
+              <div class="prose" set:html={lesson.notes} />
+            </section>
+          )}
+          {lesson.links.length > 0 && (
+            <section class="th-panel" id={id('links', 'panel')} data-theater-panel>
+              <h3 class="th-label">{lesson.linksHeading ?? 'Resources'}</h3>
+              <ul class="th-links" role="list">
+                {lesson.links.map((link) => (
+                  <li><a href={link.href} rel={link.rel}>{link.label}</a></li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {tabs && (
+            <script is:inline>
+              ;(function (root) {
+                if (!root) return
+                var list = root.querySelector('[data-theater-tabs]')
+                var tabs = list.querySelectorAll('[role="tab"]')
+                var panels = root.querySelectorAll('[data-theater-panel]')
+                var pick = function (index, focus) {
+                  for (var t = 0; t < tabs.length; t++) {
+                    var on = t === index
+                    tabs[t].setAttribute('aria-selected', on ? 'true' : 'false')
+                    tabs[t].tabIndex = on ? 0 : -1
+                    panels[t].hidden = !on
+                  }
+                  if (focus) tabs[index].focus()
+                }
+                for (var t = 0; t < tabs.length; t++) {
+                  panels[t].setAttribute('role', 'tabpanel')
+                  panels[t].setAttribute('aria-labelledby', tabs[t].id)
+                  panels[t].tabIndex = 0
+                  tabs[t].addEventListener('click', function (event) {
+                    pick(Array.prototype.indexOf.call(tabs, event.currentTarget), false)
+                  })
+                  tabs[t].addEventListener('keydown', function (event) {
+                    var at = Array.prototype.indexOf.call(tabs, event.currentTarget)
+                    var to = event.key === 'ArrowRight' ? at + 1 : event.key === 'ArrowLeft' ? at - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
+                    if (to === null) return
+                    event.preventDefault()
+                    pick((to + tabs.length) % tabs.length, true)
+                  })
+                }
+                list.hidden = false
+                root.setAttribute('data-theater-live', '')
+                pick(0, false)
+              })(document.currentScript.closest('[data-theater]'))
+            </script>
+          )}
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .th {
+    display: grid;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+  .th > * {
+    margin: 0;
+  }
+  .th-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+  .th-frame iframe,
+  .th-frame video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .th-audio {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.75rem;
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .th-cover {
+    width: 8rem;
+    height: 8rem;
+    border-radius: calc(var(--radius) / 1.5);
+    object-fit: cover;
+  }
+  .th-audio audio {
+    flex: 1 1 18rem;
+    min-width: 0;
+    width: 100%;
+  }
+  .th-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    border-radius: var(--radius);
+    object-fit: cover;
+  }
+  .th-head > * {
+    margin: 0;
+  }
+  .th-head .kicker {
+    margin-bottom: 0.5rem;
+  }
+  .th-head .th-title {
+    font-size: calc(var(--h2) * 0.8);
+    line-height: 1.12;
+  }
+  .th-head .fine {
+    margin-top: 0.375rem;
+  }
+  .th-parts {
+    display: grid;
+    gap: 1.75rem;
+    min-width: 0;
+  }
+  [data-theater-live].th-parts {
+    gap: 1.25rem;
+  }
+  .th-tabs[hidden],
+  .th-panel[hidden] {
+    display: none;
+  }
+  .th-tabs {
+    display: flex;
+    gap: 0.25rem 1.5rem;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+  }
+  .th-tabs button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    margin-bottom: -1px;
+    padding: 0.5rem 0.125rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .th-tabs button:hover {
+    color: var(--ink);
+  }
+  .th-tabs button[aria-selected='true'] {
+    border-bottom-color: var(--accent);
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .th-tabs button:focus-visible {
+    outline-offset: -3px;
+  }
+  .th-count {
+    padding: 0 0.4375rem;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .th-panel {
+    min-width: 0;
+  }
+  .th-panel:focus-visible {
+    outline-offset: 6px;
+  }
+  .th-label {
+    margin: 0 0 0.75rem;
+    font-size: calc(var(--h3) * 0.85);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  /* With the tabs, the tab names the part; its heading is left to screen readers. */
+  [data-theater-live] .th-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .th-panel .prose > :global(:first-child) {
+    margin-top: 0;
+  }
+  .th-panel .prose > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  /* The body's headings, moved under the part's own (lesson.ts). */
+  .th-panel .prose :global(h4),
+  .th-panel .prose :global(h5) {
+    margin: 1.5rem 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .th-panel .prose :global(h5) {
+    font-family: var(--font);
+    font-size: var(--text);
+  }
+  .th-links {
+    display: grid;
+    gap: 0.5rem;
+    max-width: var(--measure);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .th-links a {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    line-height: 1.4;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .th-links a:hover {
+    border-color: var(--line-strong);
+    text-decoration: underline;
+  }
+  @media (min-width: 48rem) {
+    .th {
+      gap: 1.5rem;
+    }
+  }
+</style>

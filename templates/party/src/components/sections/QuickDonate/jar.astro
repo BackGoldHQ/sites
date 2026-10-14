@@ -1,0 +1,225 @@
+---
+// QuickDonate, 'jar' layout (board 16, A, without its note field: the donate
+// page takes a note): a tip jar, one card centred on the band's surface. The
+// section's picture as a small round portrait beside the heading and the
+// body; then the unit ("× $5") and how many of it, 1, 3 or 5; the monthly
+// switch when the section offers it; the one button; the note small under
+// it. The unit is the section's default amount, else the first of its
+// amounts: a jar asks for one thing, so any other amounts are not drawn, nor
+// is the kicker. Without script each quantity is a plain link to the donate
+// page with its total as `?amount=`, and the button carries one of the unit.
+// With script (Picker.astro, which reads each quantity's total as its
+// amount) a quantity is a toggle the button follows ("Support $15"), and
+// the switch sets `&frequency=monthly`. A quantity whose total passes the
+// donate page's $99,999 is left out. Nothing is drawn when the section has
+// no donate link.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import Picker from './Picker.astro'
+import type Default from './index.astro'
+import { amountHref, dollars, giveLabel, jarOf, quickDonate } from './donate'
+import { media } from '../../../lib/section'
+import { prose, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const qd = quickDonate(section)
+const jar = qd ? jarOf(section, qd) : null
+const heading = text(section.copy.heading)
+const body = prose(section.copy.body)
+const picture = media(section, 'imageUrl')
+---
+{qd && jar && (
+  <Band section={section} class="quick-donate qd-jar-band">
+    <div class="qd-jar" data-quick-donate data-href={qd.donate.href} data-label={qd.donate.label}>
+      {(picture || heading || body) && (
+        <div class="qd-jar-head">
+          {picture && <img class="qd-jar-portrait" src={picture.url} alt={picture.alt} width="64" height="64" loading="lazy" decoding="async" />}
+          {(heading || body) && (
+            <div class="qd-jar-words">
+              {heading && <h2 class="qd-jar-heading">{heading}</h2>}
+              <Prose value={section.copy.body} class="qd-jar-body" />
+            </div>
+          )}
+        </div>
+      )}
+      <div class="qd-jar-pick">
+        <p class="qd-jar-unit" aria-hidden="true">× {dollars(jar.unit)}</p>
+        <ul class="qd-jar-counts" role="list" aria-label={`How many, at ${dollars(jar.unit)} each`}>
+          {jar.choices.map((choice, i) => (
+            <li>
+              <a class="qd-jar-count" href={amountHref(qd.donate.href, choice.amount)} rel={qd.donate.rel} data-amount={choice.amount} data-selected={i === 0 ? '' : undefined}>
+                {choice.count}<span class="visually-hidden"> for {dollars(choice.amount)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {qd.monthly && (
+        <button type="button" class="qd-switch" role="switch" aria-checked="false" data-monthly hidden>
+          <span class="qd-switch-track" aria-hidden="true"><span class="qd-switch-thumb"></span></span>
+          <span>{qd.monthly}</span>
+        </button>
+      )}
+      <a class="button qd-jar-give" href={amountHref(qd.donate.href, jar.unit)} rel={qd.donate.rel} data-give>{giveLabel({ ...qd, selected: jar.unit })}</a>
+      {qd.note && <p class="fine qd-jar-note">{qd.note}</p>}
+    </div>
+    <Picker />
+  </Band>
+)}
+
+<style>
+  .qd-jar {
+    max-width: 30rem;
+    margin-inline: auto;
+    padding: clamp(1.25rem, 0.9rem + 1.2vw, 1.75rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+  }
+  .qd-jar-head {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+  .qd-jar-portrait {
+    flex: 0 0 auto;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .qd-jar-words {
+    min-width: 0;
+  }
+  .qd-jar-heading {
+    margin: 0;
+    font-size: var(--h3);
+    line-height: 1.2;
+  }
+  .qd-jar-words > :global(.qd-jar-body) {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .qd-jar-words > :global(.qd-jar-body) > :last-child {
+    margin-bottom: 0;
+  }
+  .qd-jar-words > :global(.qd-jar-body) :global(p) {
+    margin: 0 0 0.5rem;
+  }
+  .qd-jar-pick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+  }
+  .qd-jar-unit {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .qd-jar-counts {
+    display: flex;
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .qd-jar-count {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border: 2px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    text-decoration: none;
+  }
+  .qd-jar-count:hover {
+    border-color: var(--ink);
+  }
+  .qd-jar-count[data-selected] {
+    background: var(--button-2);
+    border-color: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .qd-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    margin: 0.875rem 0 0;
+    padding: 0 0.25rem 0 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .qd-switch[hidden] {
+    display: none;
+  }
+  .qd-switch-track {
+    position: relative;
+    flex: 0 0 auto;
+    width: 2.75rem;
+    height: 1.5rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--pill);
+  }
+  .qd-switch-thumb {
+    position: absolute;
+    top: 0.1875rem;
+    left: 0.1875rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .qd-switch[aria-checked='true'] .qd-switch-track {
+    background: var(--button-2);
+    border-color: var(--button-2);
+  }
+  .qd-switch[aria-checked='true'] .qd-switch-thumb {
+    background: var(--button-2-ink);
+    transform: translateX(1.25rem);
+  }
+  .qd-jar-give {
+    display: flex;
+    width: 100%;
+    margin-top: 1rem;
+    font-size: var(--text);
+  }
+  .qd-jar-note {
+    margin: 0.75rem 0 0;
+    text-align: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .qd-jar-count,
+    .qd-switch-track,
+    .qd-switch-thumb {
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
+    }
+  }
+</style>

@@ -1,0 +1,286 @@
+---
+// Pathways · Quiz (mock 11, C, "3-question quiz"): the kicker, heading and
+// body centred, then a card that asks in up to three rounds which statement
+// sounds like the visitor. Round r offers the r-th of each pathway's `fits`
+// statements as a button apiece (a pathway with no r-th statement sits that
+// round out, and a round of fewer than two statements is left out),
+// starting one pathway further along each round, under `quizHeading`. The
+// card says "Question 2 of 3" over them and fills a bar under them a round
+// at a time (a quiz of one round has neither). A pick counts for its
+// pathway and moves to the next round, the focus on its "Question" line.
+// After the last, the card gives way to a panel in the contrast band's
+// colours (on a section that is already on the contrast band, a tint of its
+// ink), the focus on its title:
+// `resultLabel` small in capitals, the pathway with the most picks large
+// (between pathways picked as often, the one picked first), "Leave with:"
+// and its outcome, the `startLabel` button to its programs, and Start over,
+// which clears the picks and asks the first round again.
+//
+// The quiz is the section's script and nothing else: the picks stay in the
+// page, nothing is sent and nothing is stored. The card is drawn hidden and
+// shown by the script, which hides the doors in its place, so with scripts
+// off (or with no round that offers two statements) the section is the
+// Doors layout. With no pathways and no heading it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import Doors from './Doors.astro'
+import Head from './Head.astro'
+import { idFor, pathwaysOf, roundsOf } from './pathways'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const quizHeading = text(section.copy.quizHeading)
+const resultLabel = text(section.copy.resultLabel)
+const startLabel = text(section.copy.startLabel)
+const pathways = pathwaysOf(section)
+const rounds = roundsOf(pathways)
+const offered = new Set(rounds.flat().map((choice) => choice.key))
+const results = pathways.filter((p) => offered.has(p.key))
+const headingId = idFor(section, 'quiz-heading')
+// One round has no "Question 1 of 1" and no bar.
+const steps = rounds.length > 1
+---
+{(pathways.length > 0 || heading) && (
+  <Band section={section} class="pathways pathways-quiz">
+    <Head kicker={text(section.copy.kicker)} heading={heading} body={section.copy.body} />
+    <div class="quiz-frame" data-quiz-frame>
+      <div data-quiz-doors>
+        <Doors pathways={pathways} programsLabel={text(section.copy.programsLabel)} />
+      </div>
+      {rounds.length > 0 && (
+        <div class="quiz" data-quiz hidden>
+          <div class="quiz-card" data-quiz-card>
+            {quizHeading && <h3 class="quiz-heading" id={headingId}>{quizHeading}</h3>}
+            {rounds.map((round, r) => {
+              const stepId = steps ? idFor(section, `quiz-step-${r + 1}`) : null
+              const labelledBy = [quizHeading && headingId, stepId].filter(Boolean).join(' ')
+              return (
+                <div class="quiz-round" data-quiz-round hidden={r > 0}>
+                  {stepId && <p class="quiz-step" id={stepId} tabindex="-1">Question {r + 1} of {rounds.length}</p>}
+                  <div class="quiz-choices" role="group" aria-labelledby={labelledBy || undefined} aria-label={labelledBy ? undefined : (heading ?? undefined)}>
+                    {round.map((choice) => (
+                      <button type="button" class="quiz-choice" data-quiz-pick={choice.key}>{choice.statement}</button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+            {steps && (
+              <div class="meter quiz-meter" aria-hidden="true">
+                <span class="meter-fill" data-quiz-fill style={`width: ${100 / rounds.length}%`}></span>
+              </div>
+            )}
+          </div>
+          {results.map((p) => (
+            <div class="quiz-result bg-band-contrast" data-quiz-result={p.key} hidden>
+              {resultLabel && <p class="quiz-result-label">{resultLabel}</p>}
+              <h3 class="quiz-result-title" tabindex="-1">{p.title}</h3>
+              {p.outcome && <p class="quiz-result-outcome"><b>Leave with:</b> {p.outcome}</p>}
+              <p class="quiz-result-actions">
+                {p.link && startLabel && (
+                  <a class="button" href={p.link.href} rel={p.link.rel}>{startLabel}<span aria-hidden="true"> →</span></a>
+                )}
+                <button type="button" class="quiz-again" data-quiz-again>Start over</button>
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      {rounds.length > 0 && (
+        <script is:inline>
+          ;(function (root) {
+            if (!root) return
+            var quiz = root.querySelector('[data-quiz]')
+            var card = quiz.querySelector('[data-quiz-card]')
+            var rounds = quiz.querySelectorAll('[data-quiz-round]')
+            var results = quiz.querySelectorAll('[data-quiz-result]')
+            var fill = quiz.querySelector('[data-quiz-fill]')
+            var picks = []
+            var ask = function (r, focus) {
+              for (var i = 0; i < rounds.length; i++) rounds[i].hidden = i !== r
+              if (fill) fill.style.width = ((r + 1) / rounds.length) * 100 + '%'
+              if (focus) rounds[r].querySelector('.quiz-step, .quiz-choice').focus()
+            }
+            var finish = function () {
+              var counts = {}
+              var best = 0
+              var winner = null
+              for (var i = 0; i < picks.length; i++) {
+                counts[picks[i]] = (counts[picks[i]] || 0) + 1
+                if (counts[picks[i]] > best) best = counts[picks[i]]
+              }
+              for (var j = 0; j < picks.length && winner === null; j++) if (counts[picks[j]] === best) winner = picks[j]
+              card.hidden = true
+              for (var k = 0; k < results.length; k++) {
+                var won = results[k].getAttribute('data-quiz-result') === winner
+                results[k].hidden = !won
+                if (won) results[k].querySelector('.quiz-result-title').focus()
+              }
+            }
+            quiz.addEventListener('click', function (event) {
+              var pick = event.target.closest('[data-quiz-pick]')
+              if (pick) {
+                picks.push(pick.getAttribute('data-quiz-pick'))
+                if (picks.length < rounds.length) ask(picks.length, true)
+                else finish()
+                return
+              }
+              if (event.target.closest('[data-quiz-again]')) {
+                picks = []
+                for (var k = 0; k < results.length; k++) results[k].hidden = true
+                card.hidden = false
+                ask(0, true)
+              }
+            })
+            root.querySelector('[data-quiz-doors]').hidden = true
+            quiz.hidden = false
+          })(document.currentScript.closest('[data-quiz-frame]'))
+        </script>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  [data-quiz-doors][hidden],
+  .quiz[hidden],
+  .quiz-card[hidden],
+  .quiz-round[hidden],
+  .quiz-result[hidden] {
+    display: none;
+  }
+  .quiz {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+  .quiz-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: clamp(1.25rem, 0.9rem + 1.5vw, 2rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .quiz-card > *,
+  .quiz-round > * {
+    margin: 0;
+  }
+  .quiz-heading {
+    font-size: var(--h3);
+    font-weight: 700;
+  }
+  .quiz-round {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .quiz-step {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .quiz-step:focus,
+  .quiz-result-title:focus {
+    outline: none;
+  }
+  .quiz-choices {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .quiz-choice {
+    min-height: 3rem;
+    padding: 0.75rem 1.125rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+  }
+  .quiz-choice:hover {
+    border-color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 5%, var(--surface));
+  }
+  .quiz-card .quiz-meter {
+    margin-top: 0.5rem;
+  }
+  .quiz-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: clamp(1.75rem, 1.2rem + 2vw, 2.75rem) clamp(1.25rem, 0.9rem + 1.5vw, 2.25rem);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+    text-align: center;
+  }
+  .quiz-result > * {
+    margin: 0;
+  }
+  :global(.bg-band-contrast) .quiz-result {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .quiz-result-label {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .quiz-result-title {
+    font-size: var(--h2);
+    font-weight: 800;
+  }
+  .quiz-result-outcome {
+    max-width: 30rem;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+  }
+  .quiz-result .quiz-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 0.75rem;
+  }
+  .quiz-again {
+    min-height: 2.75rem;
+    padding: 0 0.25rem;
+    border: 0;
+    background: transparent;
+    color: var(--link);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+    cursor: pointer;
+  }
+  .quiz-again:hover {
+    text-decoration-thickness: 2px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .quiz-choice {
+      transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease;
+    }
+    .quiz-meter .meter-fill {
+      transition: width 0.3s ease;
+    }
+  }
+</style>
