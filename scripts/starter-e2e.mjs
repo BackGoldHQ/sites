@@ -564,7 +564,15 @@ async function kitchenSink() {
     orgSlug: 'pine-valley',
     embedUrls: shared.contentApiEmbedUrls(origins),
   })
-  return { blocks: shared.CONTENT_API_BLOCKS, areaBlocks: shared.CONTENT_API_AREA_BLOCKS, doc, sections }
+  return {
+    blocks: shared.CONTENT_API_BLOCKS,
+    areaBlocks: shared.CONTENT_API_AREA_BLOCKS,
+    // Drawn by the party template. The public starter has no component for
+    // them and falls through to DefaultSection.
+    templateSections: new Set(shared.TEMPLATE_SECTION_TYPES),
+    doc,
+    sections,
+  }
 }
 
 
@@ -2296,12 +2304,18 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
     }
 
     const rowText = ROW_TEXT[type]
-    if (section.data && !rowText) {
+    // The party template's components must show every column. The public
+    // starter draws these through DefaultSection, which shows the heading
+    // and the row fields it knows, not each column the party component draws.
+    const plainFallback = !PARTY && kitchen.templateSections.has(type)
+    if (section.data && !rowText && !plainFallback) {
       failures.push(`${type}: a data block with no row rule in starter-e2e.mjs ROW_TEXT`)
       continue
     }
-    for (const item of section.data?.items ?? []) {
-      for (const want of rowText(item)) if (want && !text.includes(want)) failures.push(`${type}: row text ${JSON.stringify(want)} missing`)
+    if (!plainFallback && rowText) {
+      for (const item of section.data?.items ?? []) {
+        for (const want of rowText(item)) if (want && !text.includes(want)) failures.push(`${type}: row text ${JSON.stringify(want)} missing`)
+      }
     }
   }
   check(failures.length === 0, `every non-chrome block type renders as its projection says (${types.length} types)${failures.length ? `:\n      ${failures.join('\n      ')}` : ''}`)
@@ -3114,20 +3128,22 @@ async function checkPartyLook(origin, fixture, chrome) {
 
 /**
  * Every non-chrome block type has a component of its own in the template (the
- * starter: every non-chrome, non-compliance one). The party template draws the
- * compliance modules for their frame (heading and card around
- * BackGold's own frame), all but SocialFrame, which has no frame a site can
- * place. A block the api projects only inside an area (areaBlocks) counts with
- * its area role.
+ * starter: every non-chrome, non-compliance one, except TEMPLATE_SECTION_TYPES,
+ * which the party template draws and the starter leaves to DefaultSection).
+ * The party template draws the compliance modules for their frame (heading
+ * and card around BackGold's own frame), all but SocialFrame, which has no
+ * frame a site can place. A block the api projects only inside an area
+ * (areaBlocks) counts with its area role.
  */
-function checkSectionsMap(chromeBlocks, areaBlocks) {
+function checkSectionsMap(chromeBlocks, areaBlocks, templateSections) {
   const blocks = { ...chromeBlocks, ...areaBlocks }
   const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
   const unframed = ['SocialFrame']
+  const delegated = PARTY ? new Set() : templateSections
   const missing = Object.entries(blocks)
-    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !keys.has(type))
+    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
     .map(([type]) => type)
   const extra = [...keys].filter(
     (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!PARTY && blocks[key].role === 'compliance'),
@@ -3161,7 +3177,7 @@ async function main() {
   if (PARTY) checkFirstPartyFonts(siteDir, examples.SiteResponse.site.theme)
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
-  checkSectionsMap(kitchen.blocks, kitchen.areaBlocks)
+  checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
   const fixture = await startFixture(examples, kitchen.sections)
   log(`Fixture Content API: ${fixture.origin}`)
   writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
