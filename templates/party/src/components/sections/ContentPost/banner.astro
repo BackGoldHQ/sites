@@ -1,0 +1,152 @@
+---
+// ContentPost · Banner (board A12, "Banner"): one piece as a wide banner
+// across the band's column. The piece's hero fills it behind a scrim in the
+// photo band's ground, deepest at the left where the words sit, and the
+// words read in the photo band's inks: the section's heading as a kicker,
+// the title (linking to the piece's page on this site, as the Card layout
+// links it), the body's first paragraph as the line under it, the date, and
+// one button to the piece. The row carries no summary, so the line is the
+// body's first paragraph as plain text (lesson.ts dekOf), whole in the page
+// and held to three lines here. The button's words follow what the piece's
+// page plays: "Watch the video" for a video, "Listen to the episode" for
+// audio, and by the piece's kind when it has no media ("Read the post" for
+// an article). Without a hero the same banner sits on the photo band's solid
+// ground; without a page to link to, the title is plain and there is no
+// button. With no piece baked the section draws nothing, as the Card layout
+// does.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import { safeSrc } from '@backgold/astro/server'
+import Band from '../Band.astro'
+import { dekOf, lessonOf } from './lesson'
+import { rows } from '../../../lib/section'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const lesson = await lessonOf(section, Astro.locals.backgold)
+const [row] = rows(section)
+// The hero: the image a piece without media shows, a video's poster, a podcast's cover.
+const picture = safeSrc(row?.image_url)
+const dek = dekOf(section.copy.postHtml)
+const plays = lesson?.media?.kind
+const action =
+  plays === 'embed' || plays === 'video'
+    ? 'Watch the video'
+    : plays === 'audio'
+      ? 'Listen to the episode'
+      : row?.kind === 'vlog'
+        ? 'Watch the video'
+        : row?.kind === 'podcast'
+          ? 'Listen to the episode'
+          : 'Read the post'
+---
+{lesson && (
+  <Band section={section} class="featured featured-banner">
+    <div class:list={['cb', picture && 'cb-photo']}>
+      {picture && (
+        <>
+          <img class="cb-image" src={picture} alt="" loading="lazy" decoding="async" />
+          <div class="cb-scrim" aria-hidden="true"></div>
+        </>
+      )}
+      <div class="cb-words on-photo">
+        {lesson.kicker && <p class="kicker">{lesson.kicker}</p>}
+        <h2 class="cb-title featured-title">{lesson.href ? <a href={lesson.href}>{lesson.title}</a> : lesson.title}</h2>
+        {dek && <p class="cb-dek">{dek}</p>}
+        {lesson.day && lesson.date && <p class="fine cb-date"><time datetime={lesson.date}>{lesson.day}</time></p>}
+        {lesson.href && (
+          <p class="actions cb-actions"><a class="button" href={lesson.href}>{action}</a></p>
+        )}
+      </div>
+    </div>
+  </Band>
+)}
+
+<style>
+  /* The banner: its own frame inside the band's column, on the photo band's ground. */
+  .cb {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    min-height: 16rem;
+    border-radius: var(--radius-card);
+    background: var(--band-photo);
+  }
+  /* Without a picture a hairline keeps the banner's edge on a dark page, whose ground is near the photo band's. */
+  .cb:not(.cb-photo) {
+    box-shadow: inset 0 0 0 1px var(--band-photo-line);
+  }
+  .cb-image {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  /* Until the banner is wide the words take most of its width, so the scrim is deep across it. */
+  .cb-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--band-photo) 82%, transparent) 0%,
+      color-mix(in srgb, var(--band-photo) 90%, transparent) 100%
+    );
+  }
+  .cb-words {
+    width: 100%;
+    max-width: 36rem;
+    padding: clamp(1.75rem, 1.25rem + 2vw, 3rem) clamp(1.25rem, 0.75rem + 2.5vw, 3rem);
+  }
+  .cb-words > * {
+    margin: 0;
+  }
+  .cb-words .kicker {
+    margin-bottom: 0.75rem;
+  }
+  .cb-title {
+    font-size: calc(var(--h2) * 0.85);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+  }
+  .cb-words .cb-dek {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    margin-top: 0.875rem;
+    color: color-mix(in srgb, var(--ink) 92%, transparent);
+    font-size: var(--text-lg);
+    line-height: 1.5;
+  }
+  .cb-words .cb-date {
+    margin-top: 0.625rem;
+  }
+  .cb-words .cb-actions {
+    margin-top: 1.5rem;
+  }
+  @media (min-width: 48rem) {
+    .cb {
+      min-height: 20rem;
+    }
+  }
+  /* On a wide banner the words keep to its left part: the scrim stays deep under them and lets the picture through at the right. */
+  @media (min-width: 64rem) {
+    .cb-scrim {
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--band-photo) 88%, transparent) 0%,
+        color-mix(in srgb, var(--band-photo) 82%, transparent) 62%,
+        color-mix(in srgb, var(--band-photo) 25%, transparent) 100%
+      );
+    }
+  }
+</style>

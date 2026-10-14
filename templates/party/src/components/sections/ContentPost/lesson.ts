@@ -72,6 +72,28 @@ function notesOf(value: unknown): string {
   return html.replace(/<(\/?)h([23])>/g, (_, slash: string, level: string) => `<${slash}h${Number(level) + 2}>`)
 }
 
+/**
+ * The body's first paragraph as plain text, whole (the layout clamps it), or
+ * null when the body has none: the notes' first `<p>` that holds words, with
+ * its markup gone and the sanitizer's three entities read back (a paragraph
+ * holding only a picture is passed over). A plain-text body's first
+ * paragraph is the text before its first blank line.
+ */
+export function dekOf(value: unknown): string | null {
+  for (const [, inner = ''] of notesOf(value).matchAll(/<p>([\s\S]*?)<\/p>/g)) {
+    const dek = inner
+      .replace(/<br>/g, ' ')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (dek) return dek
+  }
+  return null
+}
+
 /** The section's piece, or null when the bake found none (the section then draws nothing, as the Card layout does). */
 export async function lessonOf(section: Section, bg: App.Locals['backgold']): Promise<Lesson | null> {
   const [row] = rows(section)

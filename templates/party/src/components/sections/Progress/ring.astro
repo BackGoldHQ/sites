@@ -1,0 +1,179 @@
+---
+// Progress, 'ring' layout: one raised card on the band's surface. At the
+// left, the share of the goal raised as a ring, a conic gradient in the
+// button colour over the meter's track with the card's own ground as its
+// hole, and the percent in the display face in the middle. Beside it (under
+// it, below 40rem): the kicker as an accent chip (else, when the section sets
+// a multiplier, "2× match"), the heading and the figures as BackGold last
+// counted them when the page was published ("$18,400 raised of a $50,000
+// goal"); then the time left until the match ends as match draws it
+// (MatchClock.astro: four tiles counting down with script, "Ends …" without,
+// "The match has ended" once it has passed, drawn only for an end that is a
+// date) and the one button, the section's donate link under its own label,
+// which from 56rem take a column of their own at the right, as in match.
+// Without a goal there is no share to draw and no ring: the rest stands
+// alone. Nothing is drawn without a raised figure.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { links, rows } from '../../../lib/section'
+import { formatCents, formatWhen, text } from '../../../lib/format'
+import MatchClock from './MatchClock.astro'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const [row] = rows(section)
+const raised = typeof row?.raised_cents === 'number' ? row.raised_cents : null
+const goal = typeof row?.goal_cents === 'number' && row.goal_cents > 0 ? row.goal_cents : null
+const percent = raised !== null && goal !== null ? Math.min(100, Math.round((raised / goal) * 100)) : null
+const multiplier = section.options?.matchMultiplier
+const times = typeof multiplier === 'number' && Number.isInteger(multiplier) && multiplier >= 2 && multiplier <= 10 ? multiplier : null
+const chip = text(section.copy.kicker) ?? (times !== null ? `${times}× match` : null)
+const heading = text(section.copy.heading)
+const [give] = links(section)
+const until = text(section.options?.matchUntil)?.trim() ?? null
+const ends = until !== null && !Number.isNaN(Date.parse(until)) ? formatWhen(until) : null
+---
+{raised !== null && (
+  <Band section={section} class="progress progress-ring">
+    <div class:list={['ring-card', percent !== null && 'ring-card-drawn', (ends || give) && 'ring-card-side']}>
+      {percent !== null && (
+        <div class="ring" role="img" aria-label={`${percent}% of the goal`} style={`--ring-share: ${percent}%`}>
+          <span class="ring-percent" aria-hidden="true">{percent}%</span>
+        </div>
+      )}
+      <div class="ring-main">
+        {chip && <p class="chip chip-accent ring-chip" data-match-chip>{chip}</p>}
+        {heading && <h2 class="ring-heading">{heading}</h2>}
+        <p class="ring-figures">
+          <strong class="ring-raised">{formatCents(raised)}</strong> raised
+          {goal !== null && <span> of a {formatCents(goal)} goal</span>}
+        </p>
+      </div>
+      {(ends || give) && (
+        <div class="ring-side">
+          {ends && until && <MatchClock until={until} ends={ends} />}
+          {give && <a class="button ring-give" href={give.href} rel={give.rel}>{give.label}</a>}
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .ring-card {
+    display: grid;
+    gap: 1.5rem;
+    padding: clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .ring {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 7rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(var(--button) 0 var(--ring-share), color-mix(in srgb, var(--ink) 15%, transparent) 0);
+  }
+  .ring::before {
+    content: '';
+    position: absolute;
+    inset: 0.875rem;
+    border-radius: 50%;
+    background: var(--surface);
+  }
+  .ring-percent {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    font-weight: 800;
+    font-variant-numeric: lining-nums tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .ring-main {
+    min-width: 0;
+  }
+  .ring-chip[hidden] {
+    display: none;
+  }
+  .ring-chip {
+    margin: 0 0 0.875rem;
+    text-transform: uppercase;
+  }
+  .ring-heading {
+    margin: 0;
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+  }
+  .ring-figures {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+  .ring-heading + .ring-figures {
+    margin-top: 0.75rem;
+  }
+  .ring-raised {
+    font-family: var(--font-display);
+    font-size: 1.25em;
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+    letter-spacing: -0.01em;
+  }
+  /* With no chip or heading above them the figures are the card's headline. */
+  .ring-figures:first-child .ring-raised {
+    font-size: var(--h2);
+    letter-spacing: -0.02em;
+  }
+  .ring-side {
+    display: grid;
+    gap: 0.875rem;
+    min-width: 0;
+  }
+  .ring-give {
+    display: flex;
+    width: 100%;
+    font-size: var(--text);
+  }
+  /* Beside the ring from 40rem: the words, the clock and the button under them. */
+  @media (min-width: 40rem) {
+    .ring-card-drawn {
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: clamp(1.75rem, 1rem + 2.5vw, 3rem);
+      align-items: center;
+    }
+    .ring-card-drawn.ring-card-side .ring {
+      grid-row: span 2;
+    }
+    .ring-card-drawn .ring-side {
+      max-width: 28rem;
+    }
+    .ring {
+      width: 9rem;
+    }
+    .ring-percent {
+      font-size: 2.125rem;
+    }
+  }
+  /* From 56rem the clock and the button take a third column, as match puts them. */
+  @media (min-width: 56rem) {
+    .ring-card-side {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      column-gap: 2.5rem;
+      align-items: center;
+    }
+    .ring-card-drawn.ring-card-side {
+      grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 1fr);
+    }
+    .ring-card-drawn.ring-card-side .ring {
+      grid-row: auto;
+    }
+    .ring-card-drawn .ring-side {
+      max-width: none;
+    }
+  }
+</style>

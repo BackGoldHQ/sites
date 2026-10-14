@@ -1,0 +1,306 @@
+---
+// TeamGrid · List (A12, "Team & open roles · List": the people as rows): one
+// row per person, the headshot as a small round avatar (the holder's
+// initials when there is none, so the rows line up), then the name, a muted
+// role line, a chip and a short line under it, with a hairline between rows.
+// On a phone the avatar stays at the left, the words stack, the chips wrap
+// under the role line and a row's button goes under its words. With no rows
+// it draws nothing.
+//
+// When the rows are the party's seats (people.ts), each body is a group
+// under its name with its seat count, in BackGold's order (the officers'
+// body first, Staff last); a term every seat in the body shares is written
+// beside the count ("term ends April 2027"), otherwise on the seat's role
+// line after "since 2023". The holder's name links to their page, their bio
+// is the line under it, and when the section has more than one body each
+// row carries its body as a chip. A vacant seat is an open row in its place:
+// a "?" avatar, "This seat is open", the role line "Chair · open seat", the
+// section's open-roles line (else "Any member in good standing can stand for
+// it at convention.") and a small quiet "Ask about running" to its open
+// role's page (else the section's "interested?" link). Open roles that
+// arrive without a seat follow under "Open roles".
+//
+// When the rows are the older groups, the leadership rows come first (role,
+// short bio), then the staff (role, the department as a chip), then "Open
+// roles" with the section's intro, each open role a row: the role, its
+// department as a chip, the line about it and a small quiet "Apply" to its
+// own page (else the section's "interested?" link). When every open role has
+// its own page, the section's "interested?" link follows the list.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import type { Link } from '../../../lib/section'
+import { text } from '../../../lib/format'
+import { bodiesOf, initials, sharedTerm, teamOf } from './people'
+
+type Props = ComponentProps<typeof Default>
+
+interface Line {
+  open: boolean
+  photo: string | null
+  initials: string
+  /** The bold words: the holder's name, or for an open row the role or "This seat is open". */
+  name: string
+  link: Link | null
+  role: string | null
+  chip: string | null
+  line: string | null
+  /** An open row's button, with the seat or role it is about for a screen reader. */
+  ask: Link | null
+  about: string
+}
+
+interface Group {
+  name: string | null
+  meta: string | null
+  intro: string | null
+  lines: Line[]
+  /** The section's "interested?" link after the rows, when no row carries it. */
+  after: Link | null
+}
+
+const OPEN_LINE = 'Any member in good standing can stand for it at convention.'
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const intro = text(section.copy.teamOpenRolesIntro)
+const team = teamOf(section)
+const { interest } = team
+const bodies = bodiesOf(section)
+const bySeat = bodies.length > 0
+// By seat, the open roles that came without a seat; by group, every row.
+const { leaders, staff } = bySeat ? { leaders: [], staff: [] } : team
+const open = bySeat ? team.openRoles : team.open
+const manyBodies = bodies.length > 1
+const count = (n: number) => (n === 1 ? '1 seat' : `${n} seats`)
+const joined = (parts: (string | null | false)[]) => parts.filter(Boolean).join(' · ') || null
+const relabel = (label: string) => (link: Link | null) => (link ? { ...link, label } : interest)
+const ask = relabel('Ask about running')
+const apply = relabel('Apply')
+
+const groups: Group[] = bodies.map((body) => {
+  const term = sharedTerm(body)
+  return {
+    name: body.name,
+    meta: joined([count(body.seats.length), term && `term ends ${term}`]),
+    intro: null,
+    after: null,
+    lines: body.seats.map((s): Line => {
+      const termLine = !term && s.termEnds && `term ends ${s.termEnds}`
+      const base = { photo: s.photo, chip: manyBodies ? body.name : null, about: s.seat ?? body.name }
+      return s.name
+        ? { ...base, open: false, initials: initials(s.name), name: s.name, link: s.link, role: joined([s.seat, s.since && `since ${s.since}`, termLine]), line: s.bio, ask: null }
+        : { ...base, open: true, initials: '?', name: 'This seat is open', link: null, role: joined([s.seat, 'open seat', termLine]), line: intro ?? OPEN_LINE, ask: ask(s.link) }
+    }),
+  }
+})
+
+const people: Line[] = [...leaders.map((p) => ({ p, chip: null })), ...staff.map((p) => ({ p, chip: p.dept }))].map(({ p, chip }) => ({
+  open: false,
+  photo: p.photo,
+  initials: initials(p.name),
+  name: p.name ?? '',
+  link: p.link,
+  role: p.role,
+  chip,
+  line: p.bio,
+  ask: null,
+  about: p.name ?? '',
+}))
+if (people.length > 0) groups.push({ name: null, meta: null, intro: null, after: null, lines: people })
+
+if (open.length > 0) {
+  groups.push({
+    name: 'Open roles',
+    meta: null,
+    intro,
+    after: open.every((p) => p.link) ? interest : null,
+    lines: open.map((p) => ({
+      open: true,
+      photo: null,
+      initials: '?',
+      name: p.role ?? 'Open role',
+      link: null,
+      role: 'Open role',
+      chip: p.dept,
+      line: p.blurb,
+      ask: apply(p.link),
+      about: p.role ?? 'Open role',
+    })),
+  })
+}
+---
+{groups.length > 0 && (
+  <Band section={section} class="team team-list">
+    {heading && <h2>{heading}</h2>}
+    {groups.map((group) => (
+      <div class="list-group">
+        {group.name && (
+          <h3 class="list-group-name">
+            {group.name} {group.meta && <span class="list-group-meta">{group.meta}</span>}
+          </h3>
+        )}
+        {group.intro && <p class="list-intro">{group.intro}</p>}
+        <ul class="rows" role="list">
+          {group.lines.map((l) => (
+            <li class:list={['row', { 'row-open': l.open }]}>
+              {l.photo ? (
+                <img class="row-photo" src={l.photo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class:list={['row-photo', l.open ? 'row-empty' : 'row-initials']} aria-hidden="true">{l.initials}</span>
+              )}
+              <div class="row-words">
+                <p class="row-name">{l.link ? <a href={l.link.href} rel={l.link.rel}>{l.name}</a> : l.name}</p>
+                {(l.role || l.chip) && (
+                  <p class="row-meta">
+                    {l.role && <span class="row-role">{l.role}</span>}
+                    {l.chip && <span class="chip">{l.chip}</span>}
+                  </p>
+                )}
+                {l.line && <p class="fine row-line">{l.line}</p>}
+              </div>
+              {l.ask && (
+                <p class="row-ask">
+                  <a class="button button-quiet button-small" href={l.ask.href} rel={l.ask.rel}>
+                    {l.ask.label}<span class="visually-hidden">: {l.about}</span>
+                  </a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+        {group.after && (
+          <p class="list-after">
+            <a class="button button-quiet button-small" href={group.after.href} rel={group.after.rel}>{group.after.label}</a>
+          </p>
+        )}
+      </div>
+    ))}
+  </Band>
+)}
+
+<style>
+  .list-group {
+    max-width: 56rem;
+  }
+  .list-group + .list-group {
+    margin-top: 2.25rem;
+  }
+  h2 + .list-group {
+    margin-top: 1.5rem;
+  }
+  .list-group-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0 0 0.5rem;
+    font-size: calc(var(--h3) * 1.05);
+    font-weight: 800;
+  }
+  .list-group-meta {
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .list-intro {
+    margin: 0 0 0.5rem;
+    color: var(--muted);
+    max-width: var(--measure);
+  }
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: 0.75rem 1rem;
+    align-items: start;
+    padding: 0.875rem 0;
+  }
+  .row + .row {
+    border-top: 1px solid var(--line);
+  }
+  .row-photo {
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    object-fit: cover;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  .row-initials,
+  .row-empty {
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .row-initials {
+    color: var(--ink);
+  }
+  .row-empty {
+    border: 2px dashed var(--line-strong);
+    background: none;
+    color: var(--muted);
+  }
+  .row-words {
+    min-width: 0;
+  }
+  .row-words > * {
+    margin: 0;
+  }
+  .row-name {
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .row-name a {
+    color: var(--ink);
+  }
+  .row-words .row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+    margin-top: 0.125rem;
+  }
+  .row-role {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .row-meta .chip {
+    white-space: normal;
+  }
+  .row-words .row-line {
+    margin-top: 0.375rem;
+    max-width: var(--measure);
+  }
+  .row-ask {
+    grid-column: 2;
+    margin: 0;
+  }
+  .list-after {
+    margin: 1rem 0 0;
+  }
+  /* A small button still a full tap target. */
+  .row-ask .button,
+  .list-after .button {
+    min-height: 2.75rem;
+  }
+  @media (min-width: 40rem) {
+    .row {
+      grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+      align-items: center;
+    }
+    .row-ask {
+      grid-column: 3;
+    }
+  }
+</style>

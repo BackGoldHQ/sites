@@ -1,0 +1,319 @@
+---
+// QuoteStrip, 'ticker' layout (board A12, Press quotes, Ticker): the heading,
+// then the quotes on a wash panel, each a tile on the band's surface with
+// the words in the display face (curly quotes added unless the operator
+// typed their own) and, under them, who said it and their role
+// ("attribution · role") beside the row's mark, small. The server draws the
+// tiles as the row draws them, as many across as fit and wrapping, one to a
+// line on a phone, and that is what a visitor without script, or asking for
+// reduced motion, sees.
+// With script, and when the tiles are wider than the panel, an inline island
+// lays them in one line that runs right to left behind the panel's clipped
+// edges at about 40px a second, a hidden copy of the line following it so
+// the loop has no seam. The line holds still while a pointer is over the
+// panel or focus is inside it, while the tab is hidden and while the panel
+// is off screen; a Pause button (shown only while the line can move, WCAG
+// 2.2.2) stops it until it is pressed again. A single quote, or quotes that
+// fit the panel's width, are drawn as the row and never move, and the line
+// goes back to the row if reduced motion is asked for while it runs.
+// Nothing is drawn with no heading and no quote.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { quotesOf } from './quotes'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const quotes = quotesOf(section)
+const many = quotes.length > 1
+---
+{(heading || quotes.length > 0) && (
+  <Band section={section} class="quotes quotes-ticker">
+    <div class="qt" data-qt>
+      {(heading || many) && (
+        <div class="qt-head">
+          {heading && <h2>{heading}</h2>}
+          {many && (
+            <button type="button" class="qt-toggle" data-qt-toggle hidden>
+              <svg class="qt-icon qt-icon-pause" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 3h3v10H4zM9 3h3v10H9z" /></svg>
+              <svg class="qt-icon qt-icon-play" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M5 3l8 5-8 5z" /></svg>
+              <span class="visually-hidden" data-qt-label>Pause the moving quotes</span>
+            </button>
+          )}
+        </div>
+      )}
+      {quotes.length > 0 && (
+        <div class="qt-panel" data-qt-panel>
+          <div class="qt-belt" data-qt-belt>
+            <ul class="qt-track" role="list" data-qt-track>
+              {quotes.map((q) => (
+                <li class="qt-tile">
+                  <figure>
+                    <blockquote>
+                      <p class:list={['qt-words', q.quoted && 'qt-quoted']}>{q.quote}</p>
+                    </blockquote>
+                    {(q.attribution || q.role || q.logo) && (
+                      <figcaption class="qt-by">
+                        {q.logo && <img class="qt-by-mark" src={q.logo} alt="" loading="lazy" decoding="async" />}
+                        {(q.attribution || q.role) && (
+                          <span>
+                            {q.attribution && <span class="qt-by-name">{q.attribution}</span>}
+                            {q.attribution && q.role && <span class="qt-by-dot" aria-hidden="true"> · </span>}
+                            {q.attribution && q.role && <span class="visually-hidden">, </span>}
+                            {q.role && <span class="qt-by-role">{q.role}</span>}
+                          </span>
+                        )}
+                      </figcaption>
+                    )}
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      {many && (
+        <script is:inline>
+          ;(function (root) {
+            if (!root) return
+            var panel = root.querySelector('[data-qt-panel]')
+            var belt = root.querySelector('[data-qt-belt]')
+            var track = root.querySelector('[data-qt-track]')
+            var toggle = root.querySelector('[data-qt-toggle]')
+            var label = toggle && toggle.querySelector('[data-qt-label]')
+            if (!panel || !belt || !track || !toggle || !label) return
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
+            var copy = null
+            var paused = false
+            var inView = true
+            var room = 0
+
+            // The line moves only when it is wider than the panel: measured
+            // laid out in one line, again once the faces load and whenever the
+            // window changes size. One track's width at 40px a second is one lap.
+            function lay() {
+              if (copy) {
+                copy.remove()
+                copy = null
+              }
+              panel.setAttribute('data-ticker-live', '')
+              var width = track.getBoundingClientRect().width
+              room = panel.clientWidth
+              if (reduce.matches || width <= room + 1) {
+                panel.removeAttribute('data-ticker-live')
+                panel.style.removeProperty('--qt-lap')
+              } else {
+                copy = track.cloneNode(true)
+                copy.setAttribute('aria-hidden', 'true')
+                copy.removeAttribute('data-qt-track')
+                belt.appendChild(copy)
+                panel.style.setProperty('--qt-lap', Math.round(width / 40) + 's')
+              }
+              run()
+            }
+            function run() {
+              var live = copy !== null
+              panel.classList.toggle('qt-held', paused || !inView || document.hidden)
+              toggle.hidden = !live
+              toggle.setAttribute('data-paused', paused ? 'true' : 'false')
+              label.textContent = (paused ? 'Play' : 'Pause') + ' the moving quotes'
+            }
+
+            toggle.addEventListener('click', function () {
+              paused = !paused
+              run()
+            })
+            if (reduce.addEventListener) reduce.addEventListener('change', lay)
+            document.addEventListener('visibilitychange', run)
+            window.addEventListener('resize', function () {
+              if (panel.clientWidth !== room) lay()
+            })
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(lay)
+            if ('IntersectionObserver' in window) {
+              new IntersectionObserver(function (entries) {
+                inView = entries[0].isIntersecting
+                run()
+              }).observe(panel)
+            }
+            lay()
+          })(document.currentScript.closest('[data-qt]'))
+        </script>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .qt-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .qt-head h2 {
+    margin: 0;
+  }
+  /* Without a heading the head holds only the button, and takes no room while it is hidden. */
+  .qt-head:not(:has(h2)):not(:has(.qt-toggle:not([hidden]))) {
+    display: none;
+  }
+
+  /* Pause / play: video.astro's corner button at the head's end, at a full 44px target. */
+  .qt-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .qt-toggle:hover {
+    border-color: var(--ink);
+  }
+  .qt-toggle[hidden] {
+    display: none;
+  }
+  .qt-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    fill: currentColor;
+  }
+  .qt-toggle[data-paused='true'] .qt-icon-pause,
+  .qt-toggle:not([data-paused='true']) .qt-icon-play {
+    display: none;
+  }
+
+  /* The board's wash: a quiet panel a step off the band. */
+  .qt-panel {
+    padding: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .qt-track {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 40rem) {
+    .qt-track {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    }
+  }
+  .qt-tile {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .qt-tile figure {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1rem;
+    height: 100%;
+    margin: 0;
+    padding: 1.125rem 1.25rem 1.25rem;
+  }
+  .qt-tile blockquote {
+    margin: 0;
+  }
+  .qt-words {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.4;
+    text-indent: -0.36em;
+  }
+  .qt-words:not(.qt-quoted)::before {
+    content: open-quote;
+  }
+  .qt-words:not(.qt-quoted)::after {
+    content: close-quote;
+  }
+  .qt-by {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+  }
+  /* A client's mark is drawn for a light ground: it sits on the tile's surface lifted to a pale tint of its own hue. */
+  .qt-by-mark {
+    box-sizing: content-box;
+    display: block;
+    width: auto;
+    height: 1.5rem;
+    max-width: 6rem;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    background: var(--surface);
+    object-fit: contain;
+  }
+  @supports (color: oklch(from red l c h)) {
+    .qt-by-mark {
+      background: oklch(from var(--surface) max(l, 0.95) min(c, 0.012) h);
+    }
+  }
+  .qt-by-name {
+    font-weight: 700;
+  }
+  .qt-by-dot,
+  .qt-by-role {
+    color: var(--muted);
+  }
+
+  /* Moving: one line of tiles, then its hidden copy, run under the panel's clipped edges. */
+  .qt-panel[data-ticker-live] {
+    overflow: hidden;
+    padding-inline: 0;
+  }
+  [data-ticker-live] .qt-belt {
+    display: flex;
+    width: max-content;
+  }
+  [data-ticker-live] .qt-track {
+    display: flex;
+    width: max-content;
+    padding-right: 1rem;
+  }
+  [data-ticker-live] .qt-tile {
+    flex: 0 0 auto;
+    width: min(22rem, 78vw);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-ticker-live] .qt-belt {
+      animation: qt-run var(--qt-lap, 40s) linear infinite;
+    }
+    .qt-panel:hover .qt-belt,
+    .qt-panel:focus-within .qt-belt,
+    .qt-held .qt-belt {
+      animation-play-state: paused;
+    }
+  }
+  /* The belt is two equal tracks, each with its trailing gap: half its width is one lap. */
+  @keyframes qt-run {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+</style>

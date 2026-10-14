@@ -17,7 +17,10 @@
 // map names its place and status instead ("Travis county" · "Organized"),
 // as BackGold's block does: the count of the whole set is not that place's
 // story. The label is the section's litLabel as written, never turned into
-// a verb.
+// a verb. The numbers behind a map's count are its share (coverageShare):
+// the lit rows, and the set's `regionTotal` when a positive number, else
+// the rows. The 'bar' layout draws that share as one wide bar with no map,
+// under the line a map would carry (coverageOf).
 //
 // Under a map the directory lists the lit and starting places only; the
 // places the map draws dark are one invitation in the coverage line's
@@ -155,7 +158,7 @@ function pluralNoun(noun: string): string {
 }
 
 /** "county"/"counties" for `n`; "place"/"places" when the section names no noun. */
-function nounFor(section: Section, n: number): string {
+export function nounFor(section: Section, n: number): string {
   const noun = text(section.options?.regionNoun)?.trim() ?? 'place'
   return n === 1 ? noun : pluralNoun(noun)
 }
@@ -167,15 +170,27 @@ export interface Coverage {
   label: string
 }
 
+/** The lit rows, and the set they are a share of: `regionTotal` when a positive number, else the rows. */
+export function coverageShare(section: Section, places: Place[]): { lit: number; total: number } {
+  const lit = places.filter((p) => p.status === 'lit').length
+  const regionTotal = section.options?.regionTotal
+  const total = typeof regionTotal === 'number' && regionTotal > 0 ? Math.trunc(regionTotal) : places.length
+  return { lit, total }
+}
+
+/** The coverage line a whole map carries, counted against the set ("8 of 254 counties" · "Organized"). */
+export function coverageOf(section: Section, places: Place[], labels: MapLabels): Coverage {
+  const noun = text(section.options?.regionNoun)?.trim() ?? null
+  const { lit, total } = coverageShare(section, places)
+  return { count: `${lit} of ${total}${noun ? ` ${nounFor(section, total)}` : ''}`, label: labels.lit }
+}
+
 /** The coverage line (see above); `drawn` is null over the tiles. */
 export function coverage(section: Section, drawn: DrawnMap | null, places: Place[], labels: MapLabels): Coverage {
   const noun = text(section.options?.regionNoun)?.trim() ?? null
   if (drawn?.focus) return { count: `${drawn.focus.label}${noun ? ` ${noun}` : ''}`, label: labels[drawn.focus.status] }
-  const lit = places.filter((p) => p.status === 'lit').length
-  if (!drawn) return { count: `${lit} of ${places.length}`, label: labels.lit }
-  const regionTotal = section.options?.regionTotal
-  const total = typeof regionTotal === 'number' && regionTotal > 0 ? Math.trunc(regionTotal) : places.length
-  return { count: `${lit} of ${total}${noun ? ` ${nounFor(section, total)}` : ''}`, label: labels.lit }
+  if (!drawn) return { count: `${coverageShare(section, places).lit} of ${places.length}`, label: labels.lit }
+  return coverageOf(section, places, labels)
 }
 
 export interface Invitation {

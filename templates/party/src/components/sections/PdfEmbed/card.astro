@@ -1,0 +1,99 @@
+---
+// PdfEmbed, 'card' layout (board A12, "Download card"): one card on the
+// band's surface, about 44rem wide and centred in the band, which keeps its
+// own ground. At the left a page glyph, an outline with a folded corner in
+// the accent; beside it the title as the section's heading, the caption as
+// its line under it, and the one button, "Open the PDF", to the file. On a
+// phone the glyph sits above the words. There is no viewer: the button is
+// the whole document in the visitor's own reader.
+//
+// The contract gives a document its address and nothing else, so the card
+// never shows the file's size or its number of pages. Nothing is drawn
+// without a PDF.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const title = text(section.copy.title)
+const caption = text(section.copy.caption)
+const pdf = media(section, 'pdfUrl')
+---
+{pdf && (
+  <Band section={section} class="document document-card">
+    <div class="pdf-card">
+      <svg class="pdf-card-glyph" viewBox="0 0 36 48" aria-hidden="true" focusable="false">
+        <path class="pdf-card-page" d="M6 2h17l11 11v29a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4Z" />
+        <path class="pdf-card-fold" d="M23 2v8a3 3 0 0 0 3 3h8" />
+        <path class="pdf-card-lines" d="M9 23h18M9 30h18M9 37h11" />
+      </svg>
+      <div class="pdf-card-words">
+        {title && <h2 class="pdf-card-title">{title}</h2>}
+        {caption && <p class="pdf-card-caption">{caption}</p>}
+        <p class="actions pdf-card-actions"><a class="button" href={pdf.url} rel="noopener">Open the PDF{title && <span class="visually-hidden">: {title}</span>}</a></p>
+      </div>
+    </div>
+  </Band>
+)}
+
+<style>
+  .pdf-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+    max-width: 44rem;
+    margin-inline: auto;
+    padding: clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .pdf-card-glyph {
+    display: block;
+    width: 2.25rem;
+    height: 3rem;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .pdf-card-page {
+    fill: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .pdf-card-lines {
+    stroke-width: 1.75;
+    opacity: 0.55;
+  }
+  .pdf-card-words {
+    min-width: 0;
+  }
+  .pdf-card-title {
+    margin: 0;
+    font-size: var(--h3);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .pdf-card-caption {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .pdf-card-actions {
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+  }
+  /* A phone: the glyph over the words. */
+  @media (max-width: 39.99rem) {
+    .pdf-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
