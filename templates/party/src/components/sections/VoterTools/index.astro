@@ -197,11 +197,10 @@ const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0)
   .vt-note {
     color: var(--muted);
   }
-  /* The nearest open date (DaysLeft): an accent rule at its left, its state and day in the accent. */
+  /* The nearest open date (DaysLeft): a tint of the accent behind it, its state and day in the accent. */
   .vt-deadline.vt-next {
     margin-inline: calc(-1 * clamp(1.375rem, 1rem + 1.5vw, 2.25rem));
-    padding-inline: calc(clamp(1.375rem, 1rem + 1.5vw, 2.25rem) - 4px) clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
-    border-left: 4px solid var(--accent);
+    padding-inline: clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
     background: color-mix(in srgb, var(--accent) 7%, transparent);
   }
   .vt-next .vt-state,
