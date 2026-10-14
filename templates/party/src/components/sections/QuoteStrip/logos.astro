@@ -1,10 +1,226 @@
 ---
-// QuoteStrip, 'logos' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// QuoteStrip, 'logos' layout (board 10, A, "Trusted by"): the heading small
+// in capitals and centred, then a wall of the clients' marks, then the first
+// three quotes as cards. Each row with a mark gives one tile on the band's
+// surface (a mark two rows share, one tile), the mark named by the row's
+// attribution or role, in grey and a little faded until the tile is hovered
+// or holds focus; five tiles to a row, three on a phone, a short last row
+// centred. Each card sets the quote in the display face, curly quotes added
+// (hanging into the margin) unless the operator typed their own, then who
+// said it in bold over their role, muted, with the row's mark small beside
+// them when it has one. With no marks the quotes stand alone; with no quotes
+// the wall does. Nothing is drawn with no heading, no quote and no mark.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import Band from '../Band.astro'
+import type Default from './index.astro'
+import { marksOf, quotesOf } from './quotes'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const marks = marksOf(section)
+const quotes = quotesOf(section).slice(0, 3)
 ---
-<Default {...Astro.props} />
+{(heading || marks.length > 0 || quotes.length > 0) && (
+  <Band section={section} class="quotes quotes-logos">
+    {heading && <h2 class="ql-heading">{heading}</h2>}
+    {marks.length > 0 && (
+      <ul class="ql-marks" role="list">
+        {marks.map((mark) => (
+          <li class="ql-mark">
+            <img src={mark.logo} alt={mark.name} loading="lazy" decoding="async" />
+          </li>
+        ))}
+      </ul>
+    )}
+    {quotes.length > 0 && (
+      <ul class="ql-cards" role="list">
+        {quotes.map((q) => (
+          <li class="ql-card">
+            <figure>
+              <blockquote>
+                <p class:list={['ql-quote', q.quoted && 'ql-quoted']}>{q.quote}</p>
+              </blockquote>
+              {(q.attribution || q.role || q.logo) && (
+                <figcaption class="ql-by">
+                  {q.logo && <img class="ql-by-mark" src={q.logo} alt="" loading="lazy" decoding="async" />}
+                  {(q.attribution || q.role) && (
+                    <span class="ql-by-words">
+                      {q.attribution && <span class="ql-by-name">{q.attribution}</span>}
+                      {q.role && <span class="ql-by-role">{q.role}</span>}
+                    </span>
+                  )}
+                </figcaption>
+              )}
+            </figure>
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}
+
+<style>
+  .ql-heading {
+    max-width: none;
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  /*
+    A client's mark is drawn for a light ground: on a dark band (or in dark
+    mode) its tile, and the plate under a card's small mark, are the band's
+    surface lifted to a pale tint of its own hue; on a light band they are the
+    surface itself (where a browser cannot lift a colour, the surface).
+  */
+  .ql-marks,
+  .ql-cards {
+    --ql-plate: var(--surface);
+  }
+  @supports (color: oklch(from red l c h)) {
+    .ql-marks,
+    .ql-cards {
+      --ql-plate: oklch(from var(--surface) max(l, 0.95) min(c, 0.012) h);
+    }
+  }
+  .ql-marks {
+    --ql-gap: 0.75rem;
+    --ql-across: 3;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--ql-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ql-mark {
+    flex: 0 0 calc((100% - (var(--ql-across) - 1) * var(--ql-gap)) / var(--ql-across));
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 5rem;
+    padding: 1rem 0.875rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--ql-plate);
+  }
+  .ql-mark img {
+    display: block;
+    max-width: 100%;
+    max-height: 2.5rem;
+    width: auto;
+    object-fit: contain;
+    filter: grayscale(1);
+    opacity: 0.72;
+  }
+  .ql-mark:hover img,
+  .ql-mark:focus-within img {
+    filter: none;
+    opacity: 1;
+  }
+  .ql-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ql-marks + .ql-cards {
+    margin-top: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+  }
+  .ql-card {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .ql-card figure {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1.25rem;
+    height: 100%;
+    margin: 0;
+    padding: 1.375rem 1.5rem 1.5rem;
+  }
+  .ql-card blockquote {
+    margin: 0;
+  }
+  .ql-quote {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.3125rem);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    text-indent: -0.4em;
+  }
+  .ql-quote:not(.ql-quoted)::before {
+    content: open-quote;
+  }
+  .ql-quote:not(.ql-quoted)::after {
+    content: close-quote;
+  }
+  .ql-by {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--text-sm);
+    line-height: 1.35;
+  }
+  .ql-by-mark {
+    box-sizing: content-box;
+    flex: 0 0 auto;
+    display: block;
+    width: auto;
+    height: 1.75rem;
+    max-width: 6.5rem;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    background: var(--ql-plate);
+    object-fit: contain;
+  }
+  .ql-by-words {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  .ql-by-name {
+    font-weight: 700;
+  }
+  .ql-by-role {
+    color: var(--muted);
+  }
+  @media (min-width: 40rem) {
+    .ql-marks {
+      --ql-across: 5;
+      --ql-gap: 1rem;
+    }
+    .ql-mark {
+      min-height: 5.75rem;
+    }
+  }
+  @media (min-width: 48rem) {
+    .ql-cards {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+      gap: 1.25rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ql-mark img {
+      transition:
+        filter 0.2s ease,
+        opacity 0.2s ease;
+    }
+  }
+</style>
