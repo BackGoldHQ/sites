@@ -468,7 +468,7 @@ function kitchenSinkDocument() {
       }),
       block('Pathways', {
         kicker: 'Liberty Leadership Lab',
-        heading: 'Which one is you?',
+        heading: 'Which path fits you?',
         body: 'Pick the one that sounds like your week, and start with its first program.',
         programsLabel: 'See programs',
         quizHeading: 'Find your pathway',
