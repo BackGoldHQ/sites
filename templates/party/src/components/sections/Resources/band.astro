@@ -1,10 +1,86 @@
 ---
-// Resources, 'band' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Resources · Band (board 09, C, the inline offer box, without its email
+// field or its thank-you, which are BackGold's): a slim box for the middle
+// of an article, on the band's surface with a rule in the accent down its
+// left edge. The first resource's title in bold and the first line of its
+// summary at the left, the one small button at the right. The button is the
+// section's link (`buttonLabel` → `buttonHref`, where BackGold's sign-up
+// is), else the resource's own address under the same words. With no
+// resource the heading takes the title's place. On a phone the button
+// wraps under the words. With no resource and no heading it draws nothing.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import { buttonFor, resourcesOf } from './resources'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const found = resourcesOf(section)
+const first = found.resources[0]
+const title = first?.title ?? found.heading
+const line = first?.points[0] ?? null
+const button = buttonFor(found, first)
 ---
-<Default {...Astro.props} />
+{title && (
+  <Band section={section} class="resources resources-band">
+    <div class="res-offer">
+      <div class="res-offer-words">
+        <h2 class="res-offer-title">{title}</h2>
+        {line && <p class="res-offer-line">{line}</p>}
+      </div>
+      {button && <a class="button button-small res-offer-button" href={button.href} rel={button.rel}>{button.label}</a>}
+    </div>
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.resources-band) {
+    --bg-section-padding: calc(var(--space) / 2) var(--gutter);
+  }
+  .res-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.875rem 1.5rem;
+    padding: 1rem 1.25rem 1rem 1.125rem;
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .res-offer-words {
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+  .res-offer-words > * {
+    margin: 0;
+  }
+  .res-offer-words .res-offer-title {
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  .res-offer-line {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .res-offer-button {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    white-space: nowrap;
+  }
+  @media (min-width: 40rem) {
+    .res-offer {
+      flex-wrap: nowrap;
+      padding: 1.125rem 1.5rem 1.125rem 1.375rem;
+    }
+    .res-offer-words .res-offer-title {
+      font-size: 1.0625rem;
+    }
+  }
+</style>
