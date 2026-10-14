@@ -287,6 +287,18 @@ Never cover, restyle or imitate what is inside the frame, and never collect
 donations, signatures, sign-ups or consent in a form of your own. Profile
 frames (SocialFrame) have no frame a site can place and are not drawn.
 
+A module BackGold sends with nothing to frame (an organization with no
+donation form yet, a petition section with no petition picked) still draws
+its section's words, and where the frame would be, one line saying the module
+is not available ("Online donations are not available right now.", the words
+a hosted BackGold page uses), never nothing.
+
+In a preview (`src/pages/preview.astro`), the form, poll and sign-up frames
+that show the draft arrive with the preview link's token on their address:
+they show the draft as it stands, say they are a preview, and send nothing.
+The donate, petition, event and store frames are addressed by their record,
+not by the page, and are the same in a preview as on the published page.
+
 **Each event's page** is `/events/<slug>` on the site (board A7's address):
 every events list links there, and `src/components/EventPage.astro` draws a
 breadcrumb back to Events over BackGold's event frame (its details, RSVP and

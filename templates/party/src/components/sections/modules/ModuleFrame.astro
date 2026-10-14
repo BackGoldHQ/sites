@@ -15,6 +15,12 @@
 // default slot is drawn inside the card above the module (a form's title).
 // Advocacy has no frame, only a container its script fills: it is placed as
 // BackGold sends it.
+//
+// A section BackGold sends with no embed has nothing to frame (no donation
+// form for the organization, no petition picked, an event no longer public):
+// it draws one line saying the module is not available, where the module
+// would be, never nothing, in the words a hosted BackGold page uses for a
+// donate module with no form.
 import type { SectionEmbed } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import { SECTION_BANDS, appearanceOf, moduleLook, type SectionBand } from '../../../lib/brand'
@@ -60,11 +66,30 @@ function framed(iframe: string | null): string | null {
 
 const embed = sent ? { ...sent, iframe: framed(sent.iframe) } : null
 const hasHead = Astro.slots.has('default')
+
+/** What a visitor reads where a module with nothing to frame would be. */
+const UNAVAILABLE: Record<string, string> = {
+  Donate: 'Online donations are not available right now.',
+  FormBlock: 'This form is not available right now.',
+  PollBlock: 'This poll is not available right now.',
+  SignupCapture: 'Signing up is not available right now.',
+  Petition: 'This petition is not available right now.',
+  Store: 'The store is not available right now.',
+  Event: 'This event is not available right now.',
+  Calendar: 'The calendar is not available right now.',
+  Advocacy: 'Contacting your legislators is not available right now.',
+}
+const unavailable = UNAVAILABLE[type] ?? 'This is not available right now.'
 ---
-{embed && (
+{embed ? (
   <div class:list={['module', card && 'module-card', className]} data-module={type} style={`--bg-embed-height:${height}`}>
     {hasHead && <div class="module-head"><slot /></div>}
     <Embed embed={embed} title={title} />
+  </div>
+) : (
+  <div class:list={['module', 'module-unavailable', card && 'module-card', className]} data-module={type} data-module-unavailable>
+    {hasHead && <div class="module-head"><slot /></div>}
+    <p class="module-unavailable-line">{unavailable}</p>
   </div>
 )}
 
@@ -84,6 +109,18 @@ const hasHead = Astro.slots.has('default')
     margin: 0 0 0.875rem;
     font-size: var(--h3);
     font-weight: 600;
+  }
+  .module-unavailable-line {
+    margin: 0;
+    padding: 1rem 1.125rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-card);
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .module-card .module-unavailable-line {
+    padding: 0;
+    border: 0;
   }
   .module :global(.bg-embed) {
     display: block;

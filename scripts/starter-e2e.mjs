@@ -1351,6 +1351,16 @@ function fixtureData(ex, kitchenSections) {
     mapSection('Map-framed', 'map', { heading: 'One place, framed' }, geoUrl(geo.four.hash), { focusRegion: 'cedar', regionNoun: 'county' }, fourRows),
     mapSection('Map-unread', 'map', { heading: 'A map BackGold cannot find' }, geoUrl('0'.repeat(64)), {}, fourRows),
   ]
+  // A published page whose BackGold modules have nothing to frame (an
+  // organization with no donation form, no petition picked): the api sends
+  // each with its words and no embed.
+  const unwired = (id, type, variant, copy) => ({ id, type, band: 'plain', bleed: 'full', variant, copy, media: {}, links: [], options: {} })
+  const unwiredSections = [
+    unwired('Donate-unwired', 'Donate', 'story', { heading: 'Give to the party', storyHeadline: 'Every county, every ballot.', storyBody: 'Members fund this party.' }),
+    unwired('FormBlock-unwired', 'FormBlock', null, { heading: 'Send us a note' }),
+    unwired('Petition-unwired', 'Petition', null, { heading: 'Sign the ballot petition' }),
+    unwired('SignupCapture-unwired', 'SignupCapture', 'band', { heading: 'Get the weekly letter' }),
+  ]
   const boardPage = (id, slug, title, sections) => ({
     page: { ...ex.PageResponse.page, id, slug, title, url: `/${slug}`, is_home: false, meta: { title: null, description: null, image_url: null } },
     sections,
@@ -1390,6 +1400,7 @@ function fixtureData(ex, kitchenSections) {
       // (newsBaseData).
       ...(PARTY ? [{ id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-02T14:00:00.000Z', updated_at: '2026-10-02T14:00:00.000Z' }] : []),
       ...(PARTY ? [{ id: 'lp_coverage', slug: 'coverage', title: 'Coverage', url: '/coverage', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }] : []),
+      ...(PARTY ? [{ id: 'lp_unwired', slug: 'unwired', title: 'Unwired', url: '/unwired', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }] : []),
     ],
     page: (slug, headline) =>
       slug === 'home'
@@ -1404,6 +1415,8 @@ function fixtureData(ex, kitchenSections) {
             ])
         : slug === 'coverage' && PARTY
           ? boardPage('lp_coverage', 'coverage', 'Coverage', coverageSections)
+        : slug === 'unwired' && PARTY
+          ? boardPage('lp_unwired', 'unwired', 'Unwired', unwiredSections)
         : slug === 'issues'
           ? {
               page: { ...ex.PageResponse.page, id: 'lp_issues', slug: 'issues', title: 'Issues', url: '/issues', is_home: false, meta: { title: null, description: 'What we will do.', image_url: null } },
@@ -1484,6 +1497,46 @@ function placeholderImage(path) {
 }
 
 /** The fixture Content API; `blogBase` 'news' serves the organization at /news (newsBaseData). */
+/**
+ * The draft a valid preview link reads, as the api sends it: the home page
+ * with its headline as the draft has it, plus a form and a petition the draft
+ * added. Like the api's preview read (lib/content-api/context.ts
+ * previewContext), the frames that show what the draft holds carry the token
+ * (`?bg_preview=`): the form addressed by the page, and the sign-up framed by
+ * its reusable section; the donate frame is addressed by its form and carries
+ * none. The petition names no petition yet, so it has no embed.
+ */
+function previewDraft(page) {
+  const tokened = (iframe) => `${iframe}${iframe.includes('?') ? '&' : '?'}bg_preview=${PREVIEW_TOKEN}`
+  const areas = Object.fromEntries(
+    Object.entries(page.areas).map(([key, items]) => [
+      key,
+      items.map((item) => ({
+        ...item,
+        sections: item.sections.map((sec) =>
+          sec.embed?.iframe?.includes('/embed/signup/section/') ? { ...sec, embed: { ...sec.embed, iframe: tokened(sec.embed.iframe) } } : sec,
+        ),
+      })),
+    ]),
+  )
+  return {
+    ...page,
+    sections: [
+      ...page.sections,
+      {
+        id: 'FormBlock-draft', type: 'FormBlock', band: 'plain', bleed: 'full', variant: null,
+        copy: { heading: 'Tell us where you stand' }, media: {}, links: [], options: {},
+        embed: { iframe: tokened(`https://api.backgold.com/f/${page.page.id}/FormBlock-draft`), script: 'https://secure.backgold.com/embed.js' },
+      },
+      {
+        id: 'Petition-draft', type: 'Petition', band: 'plain', bleed: 'full', variant: null,
+        copy: { heading: 'Put every party on the ballot' }, media: {}, links: [], options: {},
+      },
+    ],
+    areas,
+  }
+}
+
 function startFixture(examples, kitchenSections, blogBase = 'blog') {
   const plain = fixtureData(examples, kitchenSections)
   const data = blogBase === 'news' ? newsBaseData(plain, examples) : plain
@@ -1557,7 +1610,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     if (parts[0] === 'preview') {
       if (key !== SECRET_KEY) return send(403, { error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' })
       if (parts[1] !== PREVIEW_TOKEN) return send(400, { error: 'Bad preview token', code: 'BAD_PREVIEW_TOKEN' })
-      const draft = data.page('home', 'A draft headline, not yet published')
+      const draft = previewDraft(data.page('home', 'A draft headline, not yet published'))
       return send(200, draft, { 'Cache-Control': 'private, no-store' })
     }
     if (req.headers['if-none-match'] === etag) return send(304)
@@ -1978,7 +2031,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(res.status === 200 && html.includes('Draft · not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
   check(/<meta name="robots" content="noindex"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'the preview is noindex and no-store')
   check(html.includes('<meta name="backgold-preview" content="sections">'), 'the preview carries <meta name="backgold-preview" content="sections">')
-  const draft = fixture.data.page('home', '')
+  const draft = previewDraft(fixture.data.page('home', ''))
   const draftIds = [...draft.sections, ...Object.values(draft.areas).flat().flatMap((item) => item.sections)].map((s) => s.id)
   const markers = [...html.matchAll(/<span\b[^>]*data-bg-section[^>]*>/g)].map((m) => /id="([^"]*)"/.exec(m[0])?.[1])
   check(
@@ -1986,6 +2039,24 @@ async function checkConfigured(origin, fixture, disclaimer) {
     `the preview has one data-bg-section marker per section of the draft, areas included (${markers.length} for ${draftIds.length})`,
   )
   check(/data-bg-donate/.test(html), 'a draft page that takes donations shows the Donate header button')
+  // The module frames that show the draft carry the preview link's token, as
+  // the api addresses them; the donate frame, addressed by its form, carries none.
+  const frameSrcs = tags(html, 'iframe').map((tag) => decode(/\bsrc="([^"]*)"/.exec(tag)?.[1] ?? ''))
+  const formFrame = frameSrcs.find((src) => src.startsWith('https://api.backgold.com/f/'))
+  const signupFrame = frameSrcs.find((src) => src.includes('/embed/signup/section/'))
+  const donateFrame = frameSrcs.find((src) => src.includes('/embed/d/'))
+  check(
+    !!formFrame && new URL(formFrame).searchParams.get('bg_preview') === PREVIEW_TOKEN && !!signupFrame && new URL(signupFrame).searchParams.get('bg_preview') === PREVIEW_TOKEN,
+    `the preview frames the draft's form and the area's sign-up with the token (${formFrame}, ${signupFrame})`,
+  )
+  check(!!donateFrame && !new URL(donateFrame).searchParams.has('bg_preview'), `the donate frame, addressed by its form, carries no token (${donateFrame})`)
+  if (PARTY) {
+    const petition = sectionWith(html, 'Petition', 'Put every party on the ballot')
+    check(
+      petition !== '' && petition.includes('This petition is not available right now.') && tags(petition, 'iframe').length === 0,
+      'a draft section with nothing to frame draws its heading and says the module is not available',
+    )
+  }
   assertNoSecrets(html, 'preview')
 
   res = await get(origin, '/issues')
@@ -2273,6 +2344,10 @@ async function headlessChrome(chrome) {
     await send('Network.setBlockedURLs', { urls: ['https://*'] }, sessionId)
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId)
     return {
+      /** The viewport's width in CSS pixels (phones below 768 emulate a mobile device). */
+      async width(width) {
+        await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 }, sessionId)
+      },
       async open(url, scheme) {
         await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }, { name: 'prefers-reduced-motion', value: 'reduce' }] }, sessionId)
         const loaded = next('Page.loadEventFired', sessionId, 60)
@@ -2956,6 +3031,27 @@ async function checkPartyBoards(origin, fixture) {
  * there is none: on the kitchen sink (no geoUrl) and at an address the api
  * does not have.
  */
+/** A published page whose modules have nothing to frame draws each one's words and says it is not available. */
+async function checkPartyUnwired(origin) {
+  log('\nParty modules with nothing to frame')
+  const res = await get(origin, '/unwired')
+  const html = await res.text()
+  check(res.status === 200, `GET /unwired is 200 (got ${res.status})`)
+  const cases = [
+    ['Donate', 'Every county, every ballot.', 'Online donations are not available right now.'],
+    ['FormBlock', 'Send us a note', 'This form is not available right now.'],
+    ['Petition', 'Sign the ballot petition', 'This petition is not available right now.'],
+    ['SignupCapture', 'Get the weekly letter', 'Signing up is not available right now.'],
+  ]
+  for (const [type, words, line] of cases) {
+    const markup = sectionsOf(html).find((sec) => sec.type === type)?.html ?? ''
+    check(
+      markup.includes(words) && markup.includes(line) && /data-module-unavailable/.test(markup) && tags(markup, 'iframe').length === 0,
+      `${type} with no embed draws its words and "${line}"`,
+    )
+  }
+}
+
 async function checkPartyMap(origin, fixture) {
   log('\nParty map: the Map section drawn from its geometry')
   const { four, texas } = fixture.data.geo
@@ -3242,6 +3338,24 @@ async function checkPartyLook(origin, fixture, chrome) {
         new RegExp(`<link rel="preconnect" href="${fixture.origin.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}" crossorigin`).test(html),
       "it sets the theme's stacks, links nothing from Google Fonts and preconnects to the api, where the files are",
     )
+    // The header at a phone's width: the wordmark's column may shrink for the
+    // controls, so each of its lines stays one line (cut with an ellipsis when
+    // it must) instead of breaking letter by letter, and nothing scrolls sideways.
+    // The fixture's brand has a logo, so the words are drawn with it taken away.
+    await restyle(origin, fixture, { brand: { ...own.brand, logo_url: null }, theme: own.theme })
+    await browser.width(375)
+    await browser.open(`${origin}/`, 'light')
+    const narrow = await browser.evaluate(
+      `(() => {
+        const one = (el) => !el || Math.round(el.getBoundingClientRect().height) <= Math.round(parseFloat(getComputedStyle(el).fontSize) * 1.6)
+        const name = document.querySelector('.site-header .brand-name')
+        return { name: one(name), rest: one(document.querySelector('.site-header .brand-rest')), text: name?.textContent ?? '', scroll: document.documentElement.scrollWidth }
+      })()`,
+    )
+    check(narrow.text.length > 0 && narrow.name && narrow.rest, `at 375 the wordmark keeps each line on one line (${narrow.text})`)
+    check(narrow.scroll <= 375, `at 375 the page does not scroll sideways (${narrow.scroll}px wide)`)
+    await browser.width(1280)
+    await restyle(origin, fixture, own)
     for (const scheme of ['light', 'dark']) {
       await browser.open(`${origin}/`, scheme)
       const home = await browser.evaluate(`(${pageLook})(null)`)
@@ -3360,6 +3474,7 @@ async function main() {
     await checkKitchenSink(configured.origin, kitchen, disclaimer)
     if (PARTY) await checkPartyBoards(configured.origin, fixture)
     if (PARTY) await checkPartyMap(configured.origin, fixture)
+    if (PARTY) await checkPartyUnwired(configured.origin)
     if (PARTY) await checkPartyChrome(configured.origin)
     if (PARTY) await checkPartyLook(configured.origin, fixture, chrome)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)

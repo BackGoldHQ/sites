@@ -316,12 +316,21 @@ main:focus {
   display: grid;
   min-width: 0;
 }
+/*
+  Each line of the wordmark stays one line. The brand's column may shrink
+  (min-width: 0) when the header's controls, which never shrink, need the
+  room, so a long name is cut with an ellipsis rather than broken letter by
+  letter down the column.
+*/
 .brand-name {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 1.375rem;
   line-height: 1;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand-rest {
   margin-top: 0.25rem;
@@ -331,6 +340,9 @@ main:focus {
   letter-spacing: 0.2em;
   line-height: 1.2;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Header and menus ── */
@@ -467,16 +479,29 @@ main:focus {
   text-transform: uppercase;
 }
 
-/* The sheet (under 56rem) */
+/*
+  The sheet (under 56rem). Its summary is a quiet control, the menu's glyph
+  and the word with no outline, tinted under the pointer and while the sheet
+  is open as the bar's links are, with the focus ring the mode toggle beside
+  it wears.
+*/
 .header-sheet > summary {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
-  border: 1.5px solid var(--line-strong);
   border-radius: var(--pill);
   font-weight: 700;
   font-size: var(--text-sm);
+}
+.header-sheet > summary:hover,
+.header-sheet[open] > summary {
+  background: var(--band-tint);
+  color: var(--band-tint-ink);
+}
+.header-sheet > summary:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }
 .header-sheet > summary::before {
   content: '';
@@ -602,6 +627,10 @@ main:focus {
   .site-header .brand-rest {
     font-size: 0.59375rem;
     letter-spacing: 0.16em;
+  }
+  /* The sheet's summary and the mode toggle give the wordmark the width they can. */
+  .site-header .header-sheet > summary {
+    padding-inline: 0.75rem;
   }
 }
 /* A13 at its narrowest: a smaller mark and wordmark, no Menu icon. */

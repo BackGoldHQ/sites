@@ -2,7 +2,8 @@
 // A BackGold module under its section head: the kicker and heading the
 // section carries, then the module's frame (ModuleFrame). Petition, One event,
 // Store, Calendar and Contact your legislators draw through this, each with
-// its own card and starting height.
+// its own card and starting height. A module with nothing to frame keeps its
+// head and says it is not available (ModuleFrame).
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import SectionHead from '../SectionHead.astro'
@@ -24,12 +25,10 @@ const { section, layout, card = false, height, head = true, narrow = false } = A
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
 ---
-{section.embed && (
-  <Band section={section} class:list={['headed-module', narrow && 'headed-module-narrow']}>
-    {head && <SectionHead kicker={kicker} heading={heading} more={[]} />}
-    <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout={layout} card={card} title={heading ?? section.type} height={height} />
-  </Band>
-)}
+<Band section={section} class:list={['headed-module', narrow && 'headed-module-narrow']}>
+  {(head || !section.embed) && <SectionHead kicker={kicker} heading={heading} more={[]} />}
+  <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout={layout} card={card} title={heading ?? section.type} height={height} />
+</Band>
 
 <style>
   :global(.headed-module-narrow .section-head),
