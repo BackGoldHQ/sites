@@ -1,10 +1,261 @@
 ---
-// CaseStudies, 'grid' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// CaseStudies · Grid (board S06, B): the section head (the kicker, the
+// heading and the section's read link at the right), the line of copy, then
+// one card per case on the band's surface, three across on a wide screen,
+// two on a tablet and one on a phone. Each card opens with its tag small in
+// capitals, then its hero figure very large in the display face, the
+// figure's label in bold and the result muted under it, and "Read →" at the
+// foot when the case has an address (the whole card is that link; its name
+// carries the case's title for a screen reader, whose card is headed by the
+// title too). A case with no hero figure shows its title in the figure's
+// place instead.
+//
+// When the cases carry more than one tag, a chip per tag ("All" first, then
+// each tag in the order it first appears) narrows the grid to that tag's
+// cases. The chips are drawn hidden and shown by the section's script, so
+// with scripts off every card shows and nothing is offered that cannot work.
+// The note sits small at the end. With no case and no heading it draws
+// nothing.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { casesOf, readLinkOf, tagsOf } from './cases'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const note = text(section.copy.note)
+const cases = casesOf(section)
+const tags = tagsOf(cases)
+const more = readLinkOf(section)
+const gridId = `${section.id}-cases`.replace(/[^A-Za-z0-9_-]/g, '-')
+const Title = heading ? 'h3' : 'h2'
 ---
-<Default {...Astro.props} />
+{(heading || cases.length > 0) && (
+  <Band section={section} class="cases cases-grid">
+    <div class="cases-intro">
+      <SectionHead kicker={kicker} heading={heading} more={more ? [more] : []} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    {cases.length > 0 && (
+      <div class="results" data-cases>
+        {tags.length > 1 && (
+          <div class="results-tags" role="group" aria-label="Filter by tag" data-cases-tags hidden>
+            <button type="button" aria-pressed="true" aria-controls={gridId} data-cases-tag="">All</button>
+            {tags.map((tag) => (
+              <button type="button" aria-pressed="false" aria-controls={gridId} data-cases-tag={tag}>{tag}</button>
+            ))}
+          </div>
+        )}
+        <ul class="results-grid" id={gridId} role="list">
+          {cases.map((c) => (
+            <li class:list={['result', c.link && 'result-linked']} data-tag={c.tag ?? ''}>
+              {c.tag && <p class="result-tag">{c.tag}</p>}
+              {c.hero ? (
+                <>
+                  <Title class="visually-hidden">{c.title}</Title>
+                  <p class="result-figure">{c.hero.value}</p>
+                </>
+              ) : (
+                <Title class="result-title">{c.title}</Title>
+              )}
+              {c.hero?.label && <p class="result-label">{c.hero.label}</p>}
+              {c.result && <p class="result-words">{c.result}</p>}
+              {c.link && (
+                <p class="result-read">
+                  <a href={c.link.href} rel={c.link.rel}>Read<span class="visually-hidden">: {c.title}</span> <span aria-hidden="true">→</span></a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+        {tags.length > 1 && <p class="visually-hidden" role="status" data-cases-showing></p>}
+        {tags.length > 1 && (
+          <script is:inline>
+            (function (root) {
+              if (!root) return
+              var group = root.querySelector('[data-cases-tags]')
+              var chips = group.querySelectorAll('[data-cases-tag]')
+              var cards = root.querySelectorAll('[data-tag]')
+              var showing = root.querySelector('[data-cases-showing]')
+              var choose = function (chip) {
+                var tag = chip.getAttribute('data-cases-tag')
+                var shown = 0
+                for (var c = 0; c < chips.length; c++) chips[c].setAttribute('aria-pressed', chips[c] === chip ? 'true' : 'false')
+                for (var i = 0; i < cards.length; i++) {
+                  var match = !tag || cards[i].getAttribute('data-tag') === tag
+                  cards[i].hidden = !match
+                  if (match) shown++
+                }
+                showing.textContent = tag ? 'Showing ' + shown + ' of ' + cards.length + ' case studies: ' + tag + '.' : 'Showing all ' + cards.length + ' case studies.'
+              }
+              for (var c = 0; c < chips.length; c++) {
+                chips[c].addEventListener('click', function (event) {
+                  choose(event.currentTarget)
+                })
+              }
+              group.hidden = false
+            })(document.currentScript.closest('[data-cases]'))
+          </script>
+        )}
+      </div>
+    )}
+    {cases.length > 0 && note && <p class="fine cases-note">{note}</p>}
+  </Band>
+)}
+
+<style>
+  .cases-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .cases-intro:last-child > :global(.lede) {
+    margin-bottom: 0;
+  }
+  .results-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+  }
+  .results-tags[hidden] {
+    display: none;
+  }
+  .results-tags button {
+    min-height: 2.75rem;
+    padding: 0.375rem 1rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .results-tags button:hover {
+    border-color: var(--ink);
+  }
+  .results-tags button[aria-pressed='true'] {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+  .results-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .result {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .result[hidden] {
+    display: none;
+  }
+  .result > * {
+    margin: 0;
+  }
+  .result-tag {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .result .result-figure {
+    margin-top: 0.75rem;
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 2.4rem + 2.4vw, 4.25rem);
+    font-weight: 800;
+    font-variant-numeric: lining-nums;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
+  }
+  .result .result-title {
+    margin-top: 0.75rem;
+    font-size: var(--h3);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .result > :first-child {
+    margin-top: 0;
+  }
+  .result .result-label {
+    margin-top: 0.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .result .result-words {
+    margin-top: 0.375rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  .result-title + .result-words {
+    margin-top: 0.625rem;
+  }
+  .result .result-read {
+    margin-top: auto;
+    padding-top: 1.125rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .result-read a {
+    color: var(--link);
+    text-decoration: none;
+  }
+  .result-read a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .result-linked:hover .result-read a {
+    text-decoration: underline;
+  }
+  .result-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .result-read a:focus-visible {
+    outline: none;
+  }
+  .result-linked:hover {
+    border-color: var(--line-strong);
+  }
+  .cases-note {
+    margin: 1.25rem 0 0;
+  }
+  @media (min-width: 40rem) {
+    .results-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .results-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .result {
+      transition: border-color 0.15s ease;
+    }
+  }
+</style>
