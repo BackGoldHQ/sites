@@ -1,10 +1,191 @@
 ---
-// Collection, 'shelves' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Collection · Shelves (board 01, B, "shelves"): the heading with the "See
+// all" link to the type's index at the right, then the entries grouped by
+// their first term, a shelf per term in the order the terms first appear.
+// Each shelf is its term as a heading over a single row of compact cards
+// that scrolls sideways and snaps to a card: the picture at 16:9 (a soft
+// panel with the title's first letter when the entry has none), the title
+// (the whole card is the link to the entry's page) and the summary, cut at
+// its first line break and held to two lines. On a tablet two and a half
+// cards show, inviting the scroll. Entries with no term sit on the last shelf, named by the type
+// ("Courses") or "More" when the bake gave no name. There is no "continue
+// where you left off": nothing here knows who is reading.
+//
+// On a wide screen four cards show across and the rest scroll; on a phone a
+// card and the edge of the next. With no entries the heading stands over
+// "Nothing here yet.", as the Cards layout says it; with neither, nothing is
+// drawn.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import { idFor } from '../SampleBallot/ballot'
+import { entriesOf, pluralOf, seeAllOf, termsOf, type CollectionEntry } from './entries'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const entries = entriesOf(section)
+const loose = entries.filter((e) => e.term === null)
+const shelves: { name: string; entries: CollectionEntry[] }[] = [
+  ...termsOf(entries).map((term) => ({ name: term, entries: entries.filter((e) => e.term === term) })),
+  ...(loose.length > 0 ? [{ name: pluralOf(section) ?? 'More', entries: loose }] : []),
+]
+const Shelf = heading ? 'h3' : 'h2'
+const Title = heading ? 'h4' : 'h3'
+const firstLine = (summary: string | null) => summary?.split(/\r?\n/)[0]?.trim() || null
 ---
-<Default {...Astro.props} />
+{(heading || entries.length > 0) && (
+  <Band section={section} class="entries entries-shelves">
+    <SectionHead kicker={null} heading={heading} more={seeAllOf(section, entries)} />
+    {entries.length > 0 ? (
+      <div class="shelves">
+        {shelves.map((shelf, i) => {
+          const id = idFor(section, `shelf-${i}`)
+          return (
+            <div class="shelf">
+              <Shelf class="shelf-name" id={id}>{shelf.name}</Shelf>
+              <ul class="shelf-row" role="list" aria-labelledby={id}>
+                {shelf.entries.map((entry) => (
+                  <li class:list={['shelf-card', entry.href && 'shelf-card-linked']}>
+                    {entry.image ? (
+                      <img class="shelf-photo" src={entry.image} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      <span class="shelf-photo shelf-photo-none" aria-hidden="true">{Array.from(entry.title)[0]}</span>
+                    )}
+                    <Title class="shelf-title">{entry.href ? <a href={entry.href}>{entry.title}</a> : entry.title}</Title>
+                    {firstLine(entry.summary) && <p class="shelf-summary">{firstLine(entry.summary)}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })}
+      </div>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+  </Band>
+)}
+
+<style>
+  .shelves {
+    display: grid;
+    gap: clamp(1.75rem, 1.4rem + 1vw, 2.5rem);
+  }
+  .shelf {
+    min-width: 0;
+  }
+  .shelf .shelf-name {
+    margin: 0 0 0.875rem;
+    font-size: var(--h3);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  /* One row that scrolls sideways and snaps to a card; on a phone the next card's edge shows. */
+  .shelf-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 78%;
+    gap: 0.875rem;
+    margin: 0;
+    padding: 0.25rem 0.25rem 0.875rem;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  .shelf-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+    padding: 0.75rem 0.75rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    scroll-snap-align: start;
+  }
+  .shelf-card > * {
+    margin: 0;
+  }
+  .shelf-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 0.375rem;
+    border-radius: var(--radius);
+    object-fit: cover;
+  }
+  .shelf-photo-none {
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    box-shadow: inset 0 -3px 0 var(--accent);
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .shelf-card .shelf-title {
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+  .shelf-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  /* The title's link covers the card. */
+  .shelf-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+  }
+  .shelf-title a:focus-visible {
+    outline: none;
+  }
+  .shelf-card-linked:hover .shelf-title a {
+    text-decoration: underline;
+  }
+  .shelf-card-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .shelf-summary {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  @media (min-width: 40rem) {
+    .shelf-row {
+      grid-auto-columns: calc((100% - 2rem) / 2.5);
+      gap: 1rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    .shelf-row {
+      grid-auto-columns: calc((100% - 3 * 1rem) / 4);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .shelf-row {
+      scroll-behavior: smooth;
+    }
+  }
+</style>

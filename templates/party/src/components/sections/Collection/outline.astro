@@ -1,10 +1,134 @@
 ---
-// Collection, 'outline' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Collection · Outline (board 01, C, "Learning-path list"): the heading
+// with the "See all" link to the type's index at the right, then the
+// entries in the order the bake listed them as a numbered list held to the
+// reading column, meant to sit beside a lesson as its syllabus. Each row is
+// its number in the display face, the title (the whole row is the link to
+// the entry's page) and the summary in the muted ink under it. Nothing here
+// knows who is reading: no ticks, no locks, no "now playing". With no
+// entries the heading stands over "Nothing here yet.", as the Cards layout
+// says it; with neither, nothing is drawn.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import { entriesOf, seeAllOf } from './entries'
+import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const entries = entriesOf(section)
+const Title = heading ? 'h3' : 'h2'
 ---
-<Default {...Astro.props} />
+{(heading || entries.length > 0) && (
+  <Band section={section} class="entries entries-outline">
+    <div class="outline">
+      <SectionHead kicker={null} heading={heading} more={seeAllOf(section, entries)} />
+      {entries.length > 0 ? (
+        <ol class="outline-list" role="list">
+          {entries.map((entry, i) => (
+            <li class:list={['outline-row', entry.href && 'outline-row-linked']}>
+              <span class="outline-num" aria-hidden="true">{i + 1}</span>
+              <div class="outline-words">
+                <Title class="outline-title">{entry.href ? <a href={entry.href}>{entry.title}</a> : entry.title}</Title>
+                {entry.summary && <p class="outline-summary">{entry.summary}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p class="empty">Nothing here yet.</p>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .outline {
+    max-width: var(--measure);
+  }
+  .outline-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .outline-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    gap: 0 0.875rem;
+    align-items: baseline;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .outline-num {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .outline-words {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .outline-words > * {
+    margin: 0;
+  }
+  .outline-row .outline-title {
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  .outline-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  /* The title's link covers the row. */
+  .outline-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+  }
+  .outline-title a:focus-visible {
+    outline: none;
+  }
+  .outline-row-linked:hover {
+    border-color: var(--line-strong);
+  }
+  .outline-row-linked:hover .outline-title a {
+    text-decoration: underline;
+  }
+  .outline-row-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .outline-summary {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  @media (min-width: 40rem) {
+    .outline-row {
+      grid-template-columns: 2.75rem minmax(0, 1fr);
+      gap: 0 1rem;
+      padding: 1rem 1.25rem;
+    }
+    .outline-num {
+      font-size: 1.75rem;
+    }
+  }
+</style>
