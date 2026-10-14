@@ -1,0 +1,171 @@
+---
+// The story cards (board 10, B), drawn by the Cards layout and under the
+// Spotlight's featured story: one card per story on the band's surface, as
+// the news cards are, three across on a wide screen, two on a tablet and one
+// on a phone. Each card opens with its picture at 4:3 and the label laid
+// over its corner as a small tag; a story with no picture but a label opens
+// with the label large in the display face on a soft panel instead (wider
+// than a picture on a phone, where no row lines up with it), and one with
+// neither opens with its words. Then the status word as its tone sets
+// it, the title (the whole card is its link when the row has one) and the
+// body in the muted ink.
+import Status from './Status.astro'
+import type { Story } from './stories'
+
+interface Props {
+  stories: Story[]
+}
+
+const { stories } = Astro.props
+---
+<ul class="story-cards" role="list">
+  {stories.map((story) => (
+    <li class:list={['story-card', story.link && 'story-card-linked']}>
+      {story.photo ? (
+        <div class="story-frame">
+          <img class="story-photo" src={story.photo} alt="" loading="lazy" decoding="async" />
+          {story.label && <p class="story-tag">{story.label}</p>}
+        </div>
+      ) : story.label && (
+        <div class="story-frame story-frame-label">
+          <p class="story-big-label">{story.label}</p>
+        </div>
+      )}
+      <div class="story-body">
+        <Status status={story.status} tone={story.tone} />
+        <h3 class="story-title">{story.link ? <a href={story.link.href} rel={story.link.rel}>{story.title}</a> : story.title}</h3>
+        {story.body && <p class="story-text">{story.body}</p>}
+      </div>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .story-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .story-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .story-frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+  .story-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .story-tag {
+    position: absolute;
+    left: 0.875rem;
+    bottom: 0.875rem;
+    max-width: calc(100% - 1.75rem);
+    margin: 0;
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--pill);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+  /* One card across (a phone), the label's panel is wider than a picture: there is no row of pictures to line up with. */
+  .story-frame-label {
+    aspect-ratio: 2 / 1;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+  .story-big-label {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 2.2rem + 2vw, 3.75rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .story-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 1.125rem 1.25rem 1.375rem;
+  }
+  .story-body > * {
+    margin: 0;
+  }
+  .story-body .story-title {
+    font-size: calc(var(--h3) * 0.9);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .story-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .story-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .story-card-linked:hover .story-title a {
+    text-decoration: underline;
+  }
+  .story-card-linked:focus-within {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .story-title a:focus-visible {
+    outline: none;
+  }
+  .story-text {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  @media (min-width: 40rem) {
+    .story-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+    .story-frame-label {
+      aspect-ratio: 4 / 3;
+    }
+  }
+  @media (min-width: 60rem) {
+    .story-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .story-photo {
+      transition: transform 0.3s ease;
+    }
+    .story-card-linked:hover .story-photo {
+      transform: scale(1.02);
+    }
+  }
+</style>

@@ -1,0 +1,143 @@
+---
+// QuickDonate, 'hero' layout (board 01, B): the photo at the left with the
+// kicker chip and the heading over its lower edge on a fixed scrim, in the
+// photo band's inks as Hero · Full photo sets them, and the body under the
+// photo; the donate card at the right, as the grid layout draws it. Without a
+// photo the kicker, heading and body sit on a panel of the band's surface.
+// On a phone the card follows. The heading is an <h2>: this is never the
+// page's opening Hero. It shows no raised figures or donor counts; a Progress
+// section beside it carries those. Nothing is drawn when the section has no
+// donate link.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import DonateCard from './DonateCard.astro'
+import type Default from './index.astro'
+import { quickDonate } from './donate'
+import { media } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const qd = quickDonate(section)
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const picture = media(section, 'imageUrl')
+---
+{qd && (
+  <Band section={section} class="quick-donate qd-hero">
+    <div class="qd-hero-grid">
+      {picture ? (
+        <div class="qd-story">
+          <div class="qd-photo">
+            <img class="qd-photo-image" src={picture.url} alt={picture.alt} loading="lazy" decoding="async" />
+            {(kicker || heading) && (
+              <>
+                <div class="qd-scrim" aria-hidden="true"></div>
+                <div class="qd-photo-words on-photo">
+                  {kicker && <p class="chip qd-kicker">{kicker}</p>}
+                  {heading && <h2 class="qd-hero-heading">{heading}</h2>}
+                </div>
+              </>
+            )}
+          </div>
+          <Prose value={section.copy.body} class="lede qd-hero-body" />
+        </div>
+      ) : (
+        <div class="qd-story qd-panel">
+          {kicker && <p class="chip qd-kicker">{kicker}</p>}
+          {heading && <h2 class="qd-hero-heading">{heading}</h2>}
+          <Prose value={section.copy.body} class="lede qd-hero-body" />
+        </div>
+      )}
+      <DonateCard qd={qd} />
+    </div>
+  </Band>
+)}
+
+<style>
+  .qd-hero-grid {
+    display: grid;
+    gap: 1.75rem;
+  }
+  .qd-story {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .qd-photo {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 20rem;
+    padding: clamp(1.25rem, 0.8rem + 1.6vw, 2rem);
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+  .qd-photo-image {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  /* Hero · Full photo's scrim: clear at the top, deep under the words, so they read on any photo. */
+  .qd-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--band-photo) 0%, transparent) 25%,
+      color-mix(in srgb, var(--band-photo) 55%, transparent) 55%,
+      color-mix(in srgb, var(--band-photo) 90%, transparent) 100%
+    );
+  }
+  .qd-kicker {
+    align-self: flex-start;
+    margin: 0 0 0.875rem;
+  }
+  .qd-hero-heading {
+    margin: 0;
+    max-width: 14em;
+    font-size: clamp(2.25rem, 1.4rem + 2.8vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+  .qd-story > :global(.qd-hero-body) {
+    margin: 1.25rem 0 0;
+  }
+  .qd-story > :global(.qd-hero-body) > :last-child {
+    margin-bottom: 0;
+  }
+  .qd-panel {
+    justify-content: center;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+  }
+  @media (min-width: 48rem) {
+    .qd-photo {
+      min-height: 26rem;
+    }
+  }
+  @media (min-width: 56rem) {
+    .qd-hero-grid {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      gap: clamp(2rem, 3.5vw, 3rem);
+      align-items: stretch;
+    }
+    .qd-photo {
+      flex: 1 0 auto;
+    }
+    .qd-hero-grid > :global(.qd-card) {
+      align-self: center;
+    }
+  }
+</style>

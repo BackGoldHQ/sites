@@ -59,6 +59,8 @@ import EventsListCards from './EventsList/cards.astro'
 import EventsListAgenda from './EventsList/agenda.astro'
 import EventsListCalendar from './EventsList/calendar.astro'
 import EventsListCompact from './EventsList/compact.astro'
+import EventsListShifts from './EventsList/shifts.astro'
+import EventsListWeek from './EventsList/week.astro'
 import HeroCover from './Hero/cover.astro'
 import HeroSplit from './Hero/split.astro'
 import HeroStatement from './Hero/statement.astro'
@@ -68,8 +70,11 @@ import MapSectionMap from './Map/map.astro'
 import PdfEmbedMedium from './PdfEmbed/medium.astro'
 import PdfEmbedTall from './PdfEmbed/tall.astro'
 import PlatformPlanksLongread from './PlatformPlanks/longread.astro'
+import ProgressMatch from './Progress/match.astro'
 import QuoteStripSingle from './QuoteStrip/single.astro'
 import StatCardsRibbon from './StatCards/ribbon.astro'
+import StatCardsFeature from './StatCards/feature.astro'
+import StatCardsWall from './StatCards/wall.astro'
 import TeamGridBoard from './TeamGrid/board.astro'
 import VideoEmbedLandscape from './VideoEmbed/landscape.astro'
 import VideoEmbedPortrait from './VideoEmbed/portrait.astro'
@@ -95,6 +100,30 @@ import Calendar from './Calendar/index.astro'
 import CalendarAgenda from './Calendar/agenda.astro'
 import Advocacy from './Advocacy/index.astro'
 import AdvocacyCompact from './Advocacy/compact.astro'
+import QuickDonate from './QuickDonate/index.astro'
+import QuickDonateHero from './QuickDonate/hero.astro'
+import QuickDonateBar from './QuickDonate/bar.astro'
+import VoterTools from './VoterTools/index.astro'
+import VoterToolsPolling from './VoterTools/polling.astro'
+import VoterToolsDates from './VoterTools/dates.astro'
+import SampleBallot from './SampleBallot/index.astro'
+import SampleBallotCards from './SampleBallot/cards.astro'
+import SampleBallotMeasures from './SampleBallot/measures.astro'
+import Scorecard from './Scorecard/index.astro'
+import ScorecardGrades from './Scorecard/grades.astro'
+import ScorecardPromise from './Scorecard/promise.astro'
+import Membership from './Membership/index.astro'
+import MembershipTiers from './Membership/tiers.astro'
+import MembershipCompare from './Membership/compare.astro'
+import Faq from './Faq/index.astro'
+import FaqTopics from './Faq/topics.astro'
+import FaqCards from './Faq/cards.astro'
+import Comparison from './Comparison/index.astro'
+import ComparisonCards from './Comparison/cards.astro'
+import ComparisonSpectrum from './Comparison/spectrum.astro'
+import Stories from './Stories/index.astro'
+import StoriesCards from './Stories/cards.astro'
+import StoriesTimeline from './Stories/timeline.astro'
 
 export const sections = {
   Hero,
@@ -109,6 +138,8 @@ export const sections = {
   'Issues:numbered': IssuesNumbered,
   StatCards,
   'StatCards:ribbon': StatCardsRibbon,
+  'StatCards:feature': StatCardsFeature,
+  'StatCards:wall': StatCardsWall,
   Cta,
   'Cta:banner': CtaBanner,
   'Cta:strip': CtaStrip,
@@ -126,6 +157,7 @@ export const sections = {
   'PdfEmbed:medium': PdfEmbedMedium,
   'PdfEmbed:tall': PdfEmbedTall,
   Progress,
+  'Progress:match': ProgressMatch,
   Countdown,
   Leaderboard,
   SocialFeed,
@@ -135,6 +167,8 @@ export const sections = {
   'EventsList:agenda': EventsListAgenda,
   'EventsList:calendar': EventsListCalendar,
   'EventsList:compact': EventsListCompact,
+  'EventsList:shifts': EventsListShifts,
+  'EventsList:week': EventsListWeek,
   Blog,
   'Blog:list': BlogList,
   'Blog:feature': BlogFeature,
@@ -170,4 +204,28 @@ export const sections = {
   'Calendar:agenda': CalendarAgenda,
   Advocacy,
   'Advocacy:compact': AdvocacyCompact,
+  QuickDonate,
+  'QuickDonate:hero': QuickDonateHero,
+  'QuickDonate:bar': QuickDonateBar,
+  VoterTools,
+  'VoterTools:polling': VoterToolsPolling,
+  'VoterTools:dates': VoterToolsDates,
+  SampleBallot,
+  'SampleBallot:cards': SampleBallotCards,
+  'SampleBallot:measures': SampleBallotMeasures,
+  Scorecard,
+  'Scorecard:grades': ScorecardGrades,
+  'Scorecard:promise': ScorecardPromise,
+  Membership,
+  'Membership:tiers': MembershipTiers,
+  'Membership:compare': MembershipCompare,
+  Faq,
+  'Faq:topics': FaqTopics,
+  'Faq:cards': FaqCards,
+  Comparison,
+  'Comparison:cards': ComparisonCards,
+  'Comparison:spectrum': ComparisonSpectrum,
+  Stories,
+  'Stories:cards': StoriesCards,
+  'Stories:timeline': StoriesTimeline,
 }

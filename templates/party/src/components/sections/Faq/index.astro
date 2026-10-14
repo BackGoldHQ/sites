@@ -1,0 +1,49 @@
+---
+// Faq · Accordion, the default (board 07, A): the kicker and heading, the
+// line of copy, then every question in one reading column, each a <details>
+// the visitor opens (the first open when `firstOpen` is on), and under them
+// the contact heading with its button in a slim row when the section has
+// the contact link. Every Faq layout writes the questions and answers as
+// FAQPage JSON-LD for search. With no questions and no heading it draws
+// nothing.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import Contact from './Contact.astro'
+import Questions from './Questions.astro'
+import { contactOf, faqSchema, questionsOf } from './faq'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const questions = questionsOf(section)
+const schema = faqSchema(questions)
+---
+{(questions.length > 0 || heading) && (
+  <Band section={section} class="faq faq-accordion">
+    <div class="faq-column">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+      {questions.length > 0 && <Questions questions={questions} firstOpen={section.options?.firstOpen === true} />}
+      <Contact contact={contactOf(section)} look="row" />
+    </div>
+    {schema && <script is:inline type="application/ld+json" set:html={schema} />}
+  </Band>
+)}
+
+<style>
+  .faq-column {
+    max-width: calc(var(--measure) + 4rem);
+    margin-inline: auto;
+  }
+  .faq-column > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+</style>

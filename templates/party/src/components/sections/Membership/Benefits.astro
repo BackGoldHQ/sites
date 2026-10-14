@@ -1,0 +1,42 @@
+---
+// The program's benefits as a checked list: a check mark in the accent (or
+// `--ms-check`, set by a layout on a filled ground) beside each benefit, in
+// the program's order. Draws nothing without one.
+import Check from './Check.astro'
+
+interface Props {
+  items: string[]
+  class?: string
+}
+
+const { items, class: className } = Astro.props
+---
+{items.length > 0 && (
+  <ul class:list={['ms-benefits', className]} role="list">
+    {items.map((benefit) => (
+      <li>
+        <Check />
+        <span>{benefit}</span>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .ms-benefits {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ms-benefits li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    line-height: 1.45;
+  }
+  .ms-benefits li :global(.ms-check) {
+    margin-top: 0.2em;
+  }
+</style>

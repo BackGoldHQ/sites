@@ -1,0 +1,149 @@
+---
+// VoterTools, 'dates' layout (mock 02, C, without its state picker: the
+// dates are the ones the organization enters for its own state). The
+// kicker over `datesHeading` (else the heading), then a tile per key date,
+// four across (two on a phone): its label in small capitals, its day large
+// in the display face ("Oct 20"), then its state, which DaysLeft writes in
+// the visitor's browser ("12 days left", "Today", "Closed"), and its note.
+// The nearest open date's tile carries an accent rule across its top and
+// its day and state in the accent; a closed date's tile goes quiet. Under
+// the tiles, the registration link as the main call and the polling-place
+// link as an outline (the polling link is the main call when there is no
+// registration link). Nothing is drawn when the section has neither a
+// heading, a link nor a date.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import DaysLeft from './DaysLeft.astro'
+import type Default from './index.astro'
+import { voterTools } from './voter-tools'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const vt = voterTools(section)
+const heading = vt.datesHeading ?? vt.heading
+const buttons = [vt.register, vt.polling].filter((link) => link !== null)
+const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0)
+const across = Math.min(vt.dates.length, 4)
+---
+{shown && (
+  <Band section={section} class="voter-tools vt-dates">
+    <SectionHead kicker={vt.kicker} heading={heading} more={[]} />
+    {vt.dates.length > 0 && (
+      <ul class:list={['vt-tiles', `vt-tiles-${across}`]} role="list">
+        {vt.dates.map((date) => (
+          <li class="vt-tile" data-vt-date={date.day ?? undefined}>
+            <p class="vt-tile-label">{date.label}</p>
+            {date.day && date.short && (
+              <p class="vt-tile-day">
+                <time datetime={date.day}>
+                  <span aria-hidden="true">{date.short}</span>
+                  <span class="visually-hidden">{date.full}</span>
+                </time>
+              </p>
+            )}
+            {date.day && <p class="vt-state" data-vt-state></p>}
+            {date.note && <p class="vt-note">{date.note}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {buttons.length > 0 && (
+      <p class="actions vt-actions">
+        {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+    {vt.dates.some((date) => date.day) && <DaysLeft />}
+  </Band>
+)}
+
+<style>
+  .vt-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .vt-tiles-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vt-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+    padding: 1.125rem 1.125rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .vt-tile > * {
+    margin: 0;
+  }
+  .vt-tile-label {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+  .vt-tile-day {
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 1.5rem + 1.2vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .vt-tile .vt-state {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .vt-state:empty {
+    display: none;
+  }
+  .vt-note {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  /* The nearest open date (DaysLeft): the accent across the top, its day and state in the accent. */
+  .vt-tile.vt-next {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background:
+      linear-gradient(var(--accent), var(--accent)) top / 100% 4px no-repeat,
+      var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .vt-next .vt-tile-day,
+  .vt-next .vt-state {
+    color: var(--accent);
+  }
+  .vt-tile.vt-closed {
+    background: transparent;
+  }
+  .vt-closed .vt-tile-day,
+  .vt-closed .vt-state {
+    color: var(--muted);
+  }
+  .vt-actions {
+    margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+  }
+  @media (min-width: 48rem) {
+    .vt-tiles {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .vt-tiles-1 {
+      grid-template-columns: minmax(0, 16rem);
+    }
+    .vt-tiles-2 {
+      grid-template-columns: repeat(2, minmax(0, 16rem));
+    }
+    .vt-tiles-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

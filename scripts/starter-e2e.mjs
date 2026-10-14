@@ -176,6 +176,9 @@ function filesUnder(dir) {
 
 // ── The kitchen sink: one block of every type, through the api's own projection ──
 
+/** The kitchen sink's membership program's benefits, on every one of its rows. */
+const MEMBER_BENEFITS = ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts']
+
 /**
  * A Puck document with one block of every non-chrome type in
  * CONTENT_API_BLOCKS, its props as the hosted builder writes them
@@ -278,6 +281,125 @@ function kitchenSinkDocument() {
         orientation: 'landscape',
       }),
       block('PdfEmbed', { pdfUrl: asset('budget.pdf'), title: 'The budget we propose', caption: 'Twelve pages, every line explained.', height: 'medium' }),
+      // The political sections (CONTRACT §2, added 2026-10-13), each on its default layout.
+      block('QuickDonate', {
+        kicker: 'Chip in',
+        heading: 'Keep the levy frozen',
+        body: 'Every dollar goes to mail, yard signs and the fall canvass.',
+        amounts: '10,25,50,100,250',
+        defaultAmount: 25,
+        monthly: true,
+        monthlyLabel: 'Make it monthly',
+        buttonLabel: 'Donate',
+        donateHref: '/donate',
+        note: 'Contributions are not tax deductible.',
+        imageUrl: asset('canvass.webp'),
+        layout: 'grid',
+      }),
+      block('VoterTools', {
+        kicker: 'November 3',
+        heading: 'Make your vote count',
+        body: 'Three things to check before election day.',
+        registerLabel: 'Check your registration',
+        registerHref: 'https://vote.example.gov/registration',
+        pollingLabel: 'Find your polling place',
+        pollingHref: 'https://vote.example.gov/polling-places',
+        idNote: 'Bring a photo ID',
+        earlyVoting: 'Early voting runs October 19 to October 30 at the county annex.',
+        electionDay: 'Polls are open 7 a.m. to 7 p.m. on November 3.',
+        datesHeading: 'Key dates',
+        dates: [
+          { label: 'Last day to register', date: '2026-10-05', note: 'Postmarked by this day' },
+          { label: 'Early voting begins', date: '2026-10-19', note: '' },
+          { label: 'Mail ballot request deadline', date: '2026-10-23', note: 'Received, not postmarked' },
+          { label: 'Election day', date: '2026-11-03', note: 'Polls 7 a.m. to 7 p.m.' },
+        ],
+      }),
+      block('SampleBallot', {
+        kicker: 'Take it to the polls',
+        heading: 'Our slate for November',
+        body: 'Every race on the Pine County ballot where we endorse, and where we stand on the measures.',
+        printLabel: 'Print this slate',
+        endorsedLabel: 'Endorsed',
+        measuresHeading: 'Ballot measures',
+        note: 'There is no straight-ticket box: vote each race.',
+        rows: [
+          { kind: 'race', office: 'County Judge', name: 'Dana Whitfield', party: 'Liberty', region: 'Pine County', summary: 'Twelve years on the appraisal board.', href: '/candidates/dana-whitfield', imageUrl: asset('whitfield.webp'), endorsed: true },
+          { kind: 'race', office: 'School Board, Place 3', name: 'Marcus Okafor', party: 'Nonpartisan', region: 'Pine Valley ISD', summary: 'Parent of three; wants the budget online.', endorsed: true },
+          { kind: 'race', office: 'Justice of the Peace, Precinct 2', name: 'Elena Brandt', party: 'Liberty', region: 'Precinct 2', endorsed: true },
+          { kind: 'measure', office: 'Proposition A: Library bonds', position: 'no', summary: 'A forty-year bond for one building.', region: 'Pine County' },
+          { kind: 'measure', office: 'Proposition B: Open checkbook', position: 'yes', summary: 'Every county payment posted within a week.', href: '/issues', region: 'Pine County' },
+          { kind: 'measure', office: 'Proposition C: Fire district merger', position: 'neutral', summary: 'Our members are split, so we take no position.', region: 'Pine County' },
+        ],
+      }),
+      block('Scorecard', {
+        kicker: 'The record',
+        heading: 'How the commission voted',
+        body: 'Five votes that decided what you pay.',
+        sourceNote: 'Sources link to the official roll-call votes.',
+        promiseLabel: 'What they promised',
+        promise: 'No new taxes without a vote of the people.',
+        promiseSource: 'Commissioner Hale, campaign forum, 2024',
+        didLabel: 'What they did',
+        did: 'Voted for the levy increase',
+        didDetail: 'Order 24-117 raised the levy without a ballot measure.',
+        rows: [
+          { bill: 'Order 24-117', issue: 'Property tax', vote: 'yea', position: 'disagrees', date: '2024-09-10', href: 'https://records.example.gov/orders/24-117' },
+          { bill: 'Order 25-031', issue: 'Open records', vote: 'nay', position: 'disagrees', date: '2025-02-18', href: 'https://records.example.gov/orders/25-031' },
+          { bill: 'Order 25-088', issue: 'Spending cap', vote: 'yea', position: 'agrees', date: '2025-06-03', href: 'https://records.example.gov/orders/25-088' },
+          { bill: 'Order 26-012', issue: 'Road bonds', vote: 'absent', date: '2026-01-21', href: 'https://records.example.gov/orders/26-012' },
+        ],
+      }),
+      block('Faq', {
+        kicker: 'Questions',
+        heading: 'What people ask us',
+        body: 'Short answers to the questions we hear at the door.',
+        firstOpen: true,
+        contactHeading: 'Still have a question?',
+        contactLabel: 'Ask our team',
+        contactHref: '/contact',
+        items: [
+          { question: 'Who can join?', answer: 'Anyone who lives in Pine County and agrees with the platform.', topic: 'Joining' },
+          { question: 'Do I have to pay dues?', answer: 'No. Members who give help pay for mail and signs, but a vote at the convention is free.', topic: 'Joining' },
+          { question: 'Where does the money go?', answer: 'Printing, postage and the fall canvass. We post every expense each quarter.', topic: 'Money' },
+          { question: 'Can I volunteer one Saturday?', answer: 'Yes. Most volunteers knock doors one morning a month.', topic: 'Volunteering' },
+        ],
+      }),
+      block('Comparison', {
+        kicker: 'The choice',
+        heading: 'Where we stand',
+        body: 'Three issues on this year’s ballot, side by side.',
+        usLabel: 'Pine Valley for Liberty',
+        themLabel: 'The incumbents',
+        them2Label: 'The challengers',
+        leftLabel: 'More freedom',
+        rightLabel: 'More government',
+        rows: [
+          { issue: 'Property tax', us: 'Freeze the levy for four years', them: 'Raise it with appraisals', them2: 'Cap increases at 5%', usAt: 15, themAt: 75, them2At: 55 },
+          { issue: 'County spending', us: 'Post every check online', them: 'Annual summary only', them2: 'Quarterly reports', usAt: 20, themAt: 65, them2At: 60 },
+          { issue: 'Schools', us: 'Classrooms before administration', them: 'A new central office', them2: 'Study it first', usAt: 30, themAt: 70, them2At: 35 },
+        ],
+      }),
+      block('Stories', {
+        kicker: 'Stories',
+        heading: 'Neighbors we have stood with',
+        body: 'What changed when people showed up.',
+        label: 'Featured story',
+        title: 'The bakery that stayed open',
+        summary: 'A permit fee would have closed Rosa Delgado’s bakery. Forty neighbors came to the hearing.',
+        status: 'Fee repealed',
+        outcome: 'Two hundred shops pay nothing to renew',
+        imageUrl: asset('bakery.webp'),
+        readLabel: 'Read the full story',
+        readHref: '/stories/bakery',
+        watchLabel: 'Watch the story',
+        watchHref: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+        items: [
+          { label: '2024', title: 'Permit fee repealed', body: 'Forty neighbors at the hearing; the fee is gone.', status: 'Won', tone: 'won', href: '/stories/bakery' },
+          { label: '2025', title: 'Open checkbook', body: 'The county now posts payments, a month late.', status: 'In progress', tone: 'progress' },
+          { label: '2026', title: 'Library bond', body: 'On the ballot as Proposition A.', status: 'On the ballot', tone: 'none' },
+        ],
+      }),
       // Baked: lastKnownRaisedCents from the campaign, goalCents as authored.
       block('Progress', { campaignId: 'cmp_1', lastKnownRaisedCents: 1840000, goalCents: 5000000 }),
       // Baked from the campaign's election date: zone-less local wall clock.
@@ -353,6 +475,22 @@ function kitchenSinkDocument() {
         staff: [{ name: 'Sam Ortiz', role: 'Organizer', dept: 'Field' }],
         open: [{ role: 'Data volunteer', dept: 'Research', blurb: 'Help us post the checks.', linkUrl: '/volunteer' }],
       }),
+      // Baked from the org's membership program: one row per offer its join
+      // page sells, here a tiered program's three tiers.
+      block('Membership', {
+        kicker: 'Membership',
+        heading: 'Become a member',
+        body: 'Members vote at the convention and choose our candidates.',
+        joinLabel: 'Join',
+        joinHref: '/join',
+        benefitsHeading: 'What members get',
+        note: 'Cancel a monthly membership any time.',
+        paths: [
+          { model: 'tiered', name: 'Neighbor', monthly_cents: 2500, annual_cents: 2500, lifetime_cents: null, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
+          { model: 'tiered', name: 'Spirit of ’71', monthly_cents: 1971, annual_cents: 1971, lifetime_cents: null, onetime_cents: null, symbolic: true, benefits: MEMBER_BENEFITS },
+          { model: 'tiered', name: 'Founder', monthly_cents: null, annual_cents: null, lifetime_cents: 50000, onetime_cents: null, symbolic: false, benefits: MEMBER_BENEFITS },
+        ],
+      }),
       // Compliance: each frames what BackGold serves, or carries only its heading.
       block('Donate', { heading: 'Chip in', presetAmounts: '10,25,50', donationFormId: 'df_general' }),
       block('FormBlock', { heading: 'Get updates', subtext: 'One email a week.', buttonText: 'Sign up', pageId: 'lp_ks', fields: [{ label: 'Email', type: 'email', required: true }] }),
@@ -426,7 +564,15 @@ async function kitchenSink() {
     orgSlug: 'pine-valley',
     embedUrls: shared.contentApiEmbedUrls(origins),
   })
-  return { blocks: shared.CONTENT_API_BLOCKS, areaBlocks: shared.CONTENT_API_AREA_BLOCKS, doc, sections }
+  return {
+    blocks: shared.CONTENT_API_BLOCKS,
+    areaBlocks: shared.CONTENT_API_AREA_BLOCKS,
+    // Drawn by the party template. The public starter has no component for
+    // them and falls through to DefaultSection.
+    templateSections: new Set(shared.TEMPLATE_SECTION_TYPES),
+    doc,
+    sections,
+  }
 }
 
 
@@ -2077,6 +2223,14 @@ const ROW_TEXT = {
   CandidateRoster: (i) => [i.name],
   TeamGrid: (i) => [i.name ?? i.role],
   Progress: (i) => [`$${Math.round(i.raised_cents / 100).toLocaleString('en-US')}`],
+  VoterTools: (i) => [i.label],
+  SampleBallot: (i) => [i.name ?? i.office],
+  Scorecard: (i) => [i.bill ?? i.name],
+  // The offer's name and the program's first benefit; prices are the template's own words over the *_cents columns.
+  Membership: (i) => [i.name, ...(i.benefits ?? []).slice(0, 1)],
+  Faq: (i) => [i.question],
+  Comparison: (i) => [i.issue, i.us, i.them, i.them2],
+  Stories: (i) => [i.title],
   Countdown: () => [],
   Leaderboard: () => [],
   SocialFeed: () => [],
@@ -2150,12 +2304,18 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
     }
 
     const rowText = ROW_TEXT[type]
-    if (section.data && !rowText) {
+    // The party template's components must show every column. The public
+    // starter draws these through DefaultSection, which shows the heading
+    // and the row fields it knows, not each column the party component draws.
+    const plainFallback = !PARTY && kitchen.templateSections.has(type)
+    if (section.data && !rowText && !plainFallback) {
       failures.push(`${type}: a data block with no row rule in starter-e2e.mjs ROW_TEXT`)
       continue
     }
-    for (const item of section.data?.items ?? []) {
-      for (const want of rowText(item)) if (want && !text.includes(want)) failures.push(`${type}: row text ${JSON.stringify(want)} missing`)
+    if (!plainFallback && rowText) {
+      for (const item of section.data?.items ?? []) {
+        for (const want of rowText(item)) if (want && !text.includes(want)) failures.push(`${type}: row text ${JSON.stringify(want)} missing`)
+      }
     }
   }
   check(failures.length === 0, `every non-chrome block type renders as its projection says (${types.length} types)${failures.length ? `:\n      ${failures.join('\n      ')}` : ''}`)
@@ -2968,20 +3128,22 @@ async function checkPartyLook(origin, fixture, chrome) {
 
 /**
  * Every non-chrome block type has a component of its own in the template (the
- * starter: every non-chrome, non-compliance one). The party template draws the
- * compliance modules for their frame (heading and card around
- * BackGold's own frame), all but SocialFrame, which has no frame a site can
- * place. A block the api projects only inside an area (areaBlocks) counts with
- * its area role.
+ * starter: every non-chrome, non-compliance one, except TEMPLATE_SECTION_TYPES,
+ * which the party template draws and the starter leaves to DefaultSection).
+ * The party template draws the compliance modules for their frame (heading
+ * and card around BackGold's own frame), all but SocialFrame, which has no
+ * frame a site can place. A block the api projects only inside an area
+ * (areaBlocks) counts with its area role.
  */
-function checkSectionsMap(chromeBlocks, areaBlocks) {
+function checkSectionsMap(chromeBlocks, areaBlocks, templateSections) {
   const blocks = { ...chromeBlocks, ...areaBlocks }
   const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
   const unframed = ['SocialFrame']
+  const delegated = PARTY ? new Set() : templateSections
   const missing = Object.entries(blocks)
-    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !keys.has(type))
+    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
     .map(([type]) => type)
   const extra = [...keys].filter(
     (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!PARTY && blocks[key].role === 'compliance'),
@@ -3015,7 +3177,7 @@ async function main() {
   if (PARTY) checkFirstPartyFonts(siteDir, examples.SiteResponse.site.theme)
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
-  checkSectionsMap(kitchen.blocks, kitchen.areaBlocks)
+  checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
   const fixture = await startFixture(examples, kitchen.sections)
   log(`Fixture Content API: ${fixture.origin}`)
   writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)

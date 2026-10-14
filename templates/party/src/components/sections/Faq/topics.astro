@@ -1,0 +1,178 @@
+---
+// Faq · Topics (board 07, B): the kicker, heading and line of copy, then the
+// topics at the left and the accordion at the right. The topics are buttons,
+// "All" first and then each row's `topic` in the order it first appears (the
+// questions with none last, under "Other"); picking one shows only its
+// questions, and its heading is then left to screen readers. The buttons are
+// drawn hidden and shown by the section's script, so with scripts off every
+// question shows in one column, grouped under its topic's heading. Under
+// 48rem the topics are a wrapped row of chips above the questions. The
+// contact row closes it, and
+// the FAQPage JSON-LD goes with it as on every Faq layout. When no question
+// has a topic it is the Accordion; with no questions and no heading it draws
+// nothing.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import Accordion from './index.astro'
+import Contact from './Contact.astro'
+import Questions from './Questions.astro'
+import { contactOf, faqSchema, questionsOf, topicsOf } from './faq'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Accordion>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const questions = questionsOf(section)
+const topics = topicsOf(questions)
+const schema = faqSchema(questions)
+const firstOpen = section.options?.firstOpen === true
+const groupsId = `${section.id}-faq-topics`.replace(/[^A-Za-z0-9_-]/g, '-')
+---
+{topics.length === 0 ? (
+  <Accordion {...Astro.props} />
+) : (
+  <Band section={section} class="faq faq-topics">
+    <div class="faq-intro">
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <Prose value={section.copy.body} class="lede" />
+    </div>
+    <div class="faq-split" data-faq-topics>
+      <div class="faq-nav" role="group" aria-label={heading ? `${heading}: topics` : 'Topics'} data-faq-nav hidden>
+        <button type="button" aria-pressed="true" aria-controls={groupsId} data-faq-topic="">All</button>
+        {topics.map((t) => (
+          <button type="button" aria-pressed="false" aria-controls={groupsId} data-faq-topic={t.key}>{t.label}</button>
+        ))}
+      </div>
+      <div class="faq-groups" id={groupsId}>
+        {topics.map((t, i) => (
+          <div class="faq-group" data-faq-group={t.key}>
+            <h3 class="faq-group-name">{t.label}</h3>
+            <Questions questions={t.questions} firstOpen={firstOpen && i === 0} />
+          </div>
+        ))}
+        <Contact contact={contactOf(section)} look="row" />
+      </div>
+      <script is:inline>
+        (function (root) {
+          if (!root) return
+          var nav = root.querySelector('[data-faq-nav]')
+          var buttons = nav.querySelectorAll('[data-faq-topic]')
+          var groups = root.querySelectorAll('[data-faq-group]')
+          var pick = function (topic) {
+            for (var b = 0; b < buttons.length; b++) buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-faq-topic') === topic ? 'true' : 'false')
+            for (var g = 0; g < groups.length; g++) groups[g].hidden = topic !== '' && groups[g].getAttribute('data-faq-group') !== topic
+            if (topic) root.setAttribute('data-faq-picked', '')
+            else root.removeAttribute('data-faq-picked')
+          }
+          for (var b = 0; b < buttons.length; b++) {
+            buttons[b].addEventListener('click', function (event) {
+              pick(event.currentTarget.getAttribute('data-faq-topic'))
+            })
+          }
+          nav.hidden = false
+          root.setAttribute('data-faq-live', '')
+        })(document.currentScript.closest('[data-faq-topics]'))
+      </script>
+    </div>
+    {schema && <script is:inline type="application/ld+json" set:html={schema} />}
+  </Band>
+)}
+
+<style>
+  .faq-intro > :global(.lede) {
+    margin: -0.5rem 0 1.75rem;
+  }
+  .faq-nav[hidden],
+  .faq-group[hidden] {
+    display: none;
+  }
+  .faq-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .faq-nav button {
+    min-height: 2.75rem;
+    padding: 0.375rem 1rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .faq-nav button:hover {
+    border-color: var(--ink);
+  }
+  .faq-nav button[aria-pressed='true'] {
+    border-color: var(--button-2);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .faq-groups {
+    display: grid;
+    gap: 2rem;
+    max-width: calc(var(--measure) + 4rem);
+    min-width: 0;
+  }
+  .faq-group-name {
+    margin: 0 0 0.875rem;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  /* One topic picked: its button already names it, so its heading is left to screen readers. */
+  [data-faq-picked] .faq-group-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .faq-groups > :global(.faq-contact) {
+    margin-top: 0;
+  }
+  @media (min-width: 48rem) {
+    [data-faq-live].faq-split {
+      display: grid;
+      grid-template-columns: 14rem minmax(0, 1fr);
+      gap: 2.5rem;
+      align-items: start;
+    }
+    [data-faq-live] .faq-groups {
+      max-width: none;
+    }
+    .faq-nav {
+      position: sticky;
+      top: 1.5rem;
+      display: grid;
+      gap: 0.375rem;
+      margin: 0;
+    }
+    .faq-nav button {
+      padding: 0.625rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      font-size: var(--text);
+    }
+    .faq-nav button:hover {
+      border-color: var(--line-strong);
+    }
+    .faq-nav button[aria-pressed='true'] {
+      border-color: var(--button-2);
+      background: var(--button-2);
+      color: var(--button-2-ink);
+    }
+  }
+</style>

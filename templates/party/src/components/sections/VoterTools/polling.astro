@@ -1,0 +1,141 @@
+---
+// VoterTools, 'polling' layout (mock 02, B, without its address search and
+// map: BackGold has no polling-place lookup of its own, so the finder is the
+// official one the organization links to). The polling-place card leads,
+// raised on the band's card colour: the kicker, the heading and the body,
+// the polling-place link as the main call, then under a rule the early
+// voting line and the ID note as a chip. Beside it (under it on a phone) the
+// election-day card: the election-day line large in the display face, with
+// an accent rule over it, and the registration link as an outline (the main
+// call when there is no polling link). The key dates belong to the 'dates'
+// and 'register' layouts; this one leaves them out. Each card draws only
+// what it has, and a card with nothing is left out. Nothing is drawn when
+// the section has neither a heading, a link nor a date.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { voterTools } from './voter-tools'
+import { prose } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const vt = voterTools(section)
+const place = !!(vt.kicker || vt.heading || prose(section.copy.body) || vt.polling || vt.earlyVoting || vt.idNote)
+const day = !!(vt.electionDay || vt.register)
+const shown = !!(vt.heading || vt.register || vt.polling || vt.dates.length > 0)
+---
+{shown && (place || day) && (
+  <Band section={section} class="voter-tools vt-polling">
+    <div class:list={['vt-cards', place && day && 'vt-cards-two']}>
+      {place && (
+        <div class="vt-card vt-place">
+          {vt.kicker && <p class="kicker">{vt.kicker}</p>}
+          {vt.heading && <h2>{vt.heading}</h2>}
+          <Prose value={section.copy.body} class="vt-body" />
+          {vt.polling && (
+            <p class="actions vt-actions">
+              <a class="button" href={vt.polling.href} rel={vt.polling.rel}>{vt.polling.label}</a>
+            </p>
+          )}
+          {(vt.earlyVoting || vt.idNote) && (
+            <div class="vt-details">
+              {vt.earlyVoting && <p class="vt-early">{vt.earlyVoting}</p>}
+              {vt.idNote && <p class="vt-id"><span class="chip">{vt.idNote}</span></p>}
+            </div>
+          )}
+        </div>
+      )}
+      {day && (
+        <div class="vt-card vt-day">
+          {vt.electionDay && <p class="vt-lead">{vt.electionDay}</p>}
+          {vt.register && (
+            <p class="vt-day-action">
+              <a class:list={['button', vt.polling && 'button-quiet']} href={vt.register.href} rel={vt.register.rel}>{vt.register.label}</a>
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .vt-cards {
+    display: grid;
+    gap: clamp(1rem, 2vw, 1.5rem);
+  }
+  .vt-card {
+    min-width: 0;
+    padding: clamp(1.375rem, 1rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+  }
+  .vt-card > :last-child {
+    margin-bottom: 0;
+  }
+  .vt-place {
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .vt-place h2 {
+    max-width: 18ch;
+  }
+  .vt-place :global(.vt-body) {
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .vt-place :global(.vt-body) > :last-child {
+    margin-bottom: 0;
+  }
+  .vt-actions {
+    margin-top: 1.75rem;
+  }
+  .vt-details {
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  .vt-place > .vt-details:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .vt-details > :last-child {
+    margin-bottom: 0;
+  }
+  .vt-early {
+    margin: 0 0 0.875rem;
+    font-weight: 600;
+  }
+  .vt-id {
+    margin: 0;
+  }
+  /* The election-day card: an accent rule, then the line large in the display face. */
+  .vt-day {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background: linear-gradient(var(--accent), var(--accent)) top / 100% 4px no-repeat;
+  }
+  .vt-day > * {
+    margin: 0;
+  }
+  .vt-lead {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.35rem + 1.4vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+  }
+  @media (min-width: 48rem) {
+    .vt-cards-two {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+    .vt-day {
+      justify-content: center;
+    }
+  }
+</style>

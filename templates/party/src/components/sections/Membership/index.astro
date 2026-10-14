@@ -1,0 +1,281 @@
+---
+// Membership, 'card' layout, the default (board 05, B, "Join banner"): one
+// filled panel (the band's second button colour; a tint of the ink on the
+// contrast band) holding the kicker, the heading large in the display face,
+// the body and the program's benefits under the benefits heading at the
+// left, and at the right a card on the band's surface with what joining
+// costs: the least the program asks ("from $25/yr" when its offers differ,
+// "from $10/mo" and "You choose the amount" for a donation program, "Free"
+// for a free one), how many ways there are to join and their names (a lone
+// named offer's name by itself), the one button to the organization's join
+// page and the note small under it.
+//
+// When the program sells both monthly and annual dues, a Monthly / Annual
+// switch (a radio group: arrows move it) swaps which price shows. It is drawn
+// hidden and shown by the section's script, so with scripts off both prices
+// show, one over the other. The join page picks the cadence itself, so the
+// button's address is the same either way. Nothing is collected here: the
+// join is the organization's own page in BackGold. On a phone the card
+// follows the words. Nothing is drawn when the program has no offers.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import Benefits from './Benefits.astro'
+import Price from './Price.astro'
+import { cadenceLabel, cheapestAt, leadCadenceOf, membershipOf, type Cadence } from './offers'
+import { listOf, prose, text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const m = membershipOf(section)
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const benefitsHeading = text(section.copy.benefitsHeading)
+const words = kicker || heading || prose(section.copy.body) || (m && m.benefits.length > 0)
+const switchable = m !== null && m.cadences.includes('monthly') && m.cadences.includes('annual')
+const shown: (Cadence | null)[] = !m || m.model === 'free' ? [null] : switchable ? ['monthly', 'annual'] : [leadCadenceOf(m.cadences)]
+const lines = m ? shown.map((cadence) => ({ cadence, least: cadence ? cheapestAt(m, cadence) : null })) : []
+const names = m?.offers.filter((o) => o.named).map((o) => o.name) ?? []
+const ways =
+  !m ? null
+  : m.model === 'donation' ? 'You choose the amount'
+  : m.offers.length > 1 ? `${m.offers.length} ways to join${names.length > 0 ? `: ${listOf(names)}` : ''}`
+  : (names[0] ?? null)
+const groupId = `${section.id}-membership-cadence`.replace(/[^A-Za-z0-9_-]/g, '-')
+---
+{m && (
+  <Band section={section} class="membership membership-card">
+    <div class:list={['ms-banner', words && 'ms-banner-words']}>
+      {words && (
+        <div class="ms-words">
+          {kicker && <p class="kicker">{kicker}</p>}
+          {heading && <h2>{heading}</h2>}
+          <Prose value={section.copy.body} class="lede" />
+          {m.benefits.length > 0 && (
+            <div class="ms-perks">
+              {benefitsHeading && <h3 class="ms-label">{benefitsHeading}</h3>}
+              <Benefits items={m.benefits} />
+            </div>
+          )}
+        </div>
+      )}
+      <div class="ms-card" data-membership-card>
+        {switchable && (
+          <div class="ms-switch" role="radiogroup" aria-label="How often you pay" data-ms-switch hidden>
+            {(['monthly', 'annual'] as const).map((cadence, i) => (
+              <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} aria-controls={groupId} tabindex={i === 0 ? 0 : -1} data-cadence={cadence}>
+                {cadenceLabel(cadence)}
+              </button>
+            ))}
+          </div>
+        )}
+        <div class="ms-lines" id={groupId} aria-live="polite">
+          {lines.map(({ cadence, least }) => (
+            <p class="ms-line" data-ms-line={cadence ?? ''}>
+              <Price cents={least?.amount ?? null} cadence={cadence} from={least?.from ?? false} />
+            </p>
+          ))}
+        </div>
+        {ways && <p class="ms-ways">{ways}</p>}
+        {m.join && <a class="button ms-join" href={m.join.href} rel={m.join.rel}>{m.join.label}</a>}
+        {m.note && <p class="fine ms-note">{m.note}</p>}
+        {switchable && (
+          <script is:inline>
+            (function (root) {
+              if (!root) return
+              var group = root.querySelector('[data-ms-switch]')
+              var radios = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'))
+              var lines = root.querySelectorAll('[data-ms-line]')
+              var choose = function (radio, focus) {
+                var cadence = radio.getAttribute('data-cadence')
+                radios.forEach(function (r) {
+                  r.setAttribute('aria-checked', r === radio ? 'true' : 'false')
+                  r.tabIndex = r === radio ? 0 : -1
+                })
+                for (var i = 0; i < lines.length; i++) lines[i].hidden = lines[i].getAttribute('data-ms-line') !== cadence
+                if (focus) radio.focus()
+              }
+              radios.forEach(function (radio, i) {
+                radio.addEventListener('click', function () {
+                  choose(radio, false)
+                })
+                radio.addEventListener('keydown', function (event) {
+                  var next = null
+                  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = radios[(i + 1) % radios.length]
+                  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = radios[(i + radios.length - 1) % radios.length]
+                  else if (event.key === 'Home') next = radios[0]
+                  else if (event.key === 'End') next = radios[radios.length - 1]
+                  if (!next) return
+                  event.preventDefault()
+                  choose(next, true)
+                })
+              })
+              group.hidden = false
+              choose(radios[0], false)
+            })(document.currentScript.closest('[data-membership-card]'))
+          </script>
+        )}
+      </div>
+    </div>
+  </Band>
+)}
+
+<style>
+  .ms-banner {
+    display: grid;
+    gap: 1.75rem;
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+  .ms-banner-words {
+    max-width: none;
+    padding: clamp(1.5rem, 0.9rem + 2.4vw, 3rem);
+    border: 1px solid var(--button-2);
+    border-radius: var(--radius-card);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    --ms-check: var(--button-2-ink);
+  }
+  :global(.bg-band-contrast) .ms-banner-words {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    color: var(--ink);
+    --ms-check: var(--accent);
+  }
+  .ms-words {
+    min-width: 0;
+  }
+  .ms-words h2 {
+    margin: 0;
+  }
+  .ms-banner-words .kicker,
+  .ms-banner-words .ms-label {
+    color: color-mix(in srgb, var(--button-2-ink) 78%, transparent);
+  }
+  :global(.bg-band-contrast) .ms-banner-words .kicker {
+    color: var(--accent);
+  }
+  :global(.bg-band-contrast) .ms-banner-words .ms-label {
+    color: var(--muted);
+  }
+  .ms-words h2 {
+    max-width: 15em;
+    font-size: clamp(2rem, 1.3rem + 2.4vw, 3.125rem);
+  }
+  .ms-words > :global(.lede) {
+    margin-top: 1rem;
+    color: inherit;
+    opacity: 0.88;
+  }
+  .ms-words > :global(.lede) > :last-child {
+    margin-bottom: 0;
+  }
+  .ms-banner-words .ms-words :global(a) {
+    color: inherit;
+  }
+  .ms-banner-words .ms-words :focus-visible {
+    outline-color: currentColor;
+  }
+  .ms-perks:not(:first-child) {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  }
+  .ms-label {
+    margin: 0 0 0.875rem;
+    font-family: var(--font);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .ms-card {
+    align-self: center;
+    min-width: 0;
+    padding: clamp(1.25rem, 0.9rem + 1.2vw, 1.75rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    --ms-price-size: clamp(2.5rem, 2rem + 1.6vw, 3.25rem);
+  }
+  .ms-switch {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+    margin: 0 0 1.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--pill);
+  }
+  .ms-switch[hidden] {
+    display: none;
+  }
+  .ms-switch button {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ms-switch button:hover {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .ms-switch button[aria-checked='true'] {
+    background: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .ms-lines {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .ms-line {
+    margin: 0;
+    line-height: 1.1;
+  }
+  .ms-line[hidden] {
+    display: none;
+  }
+  .ms-ways {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+  .ms-join {
+    display: flex;
+    width: 100%;
+    margin-top: 1.25rem;
+    font-size: var(--text);
+  }
+  .ms-note {
+    margin: 0.75rem 0 0;
+    text-align: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ms-switch button {
+      transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+    }
+  }
+  @media (min-width: 48rem) {
+    .ms-banner-words {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+      gap: clamp(2rem, 4vw, 3.5rem);
+      align-items: center;
+    }
+  }
+</style>

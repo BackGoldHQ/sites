@@ -1,0 +1,191 @@
+---
+// Comparison, 'table' layout, the default (board 08, "Three-way table"): the
+// section head (the kicker and the heading), the body, then the issues as a
+// table on the band's surface: the issue, then a column for each labelled
+// side, ours first. Our column is the one that stands out: its header filled
+// in the band's button colour, its cells on a tint of the surface, each of
+// our positions in bold after a check mark. The others are plain. A side no
+// row fills is left out, a row that names no position is not drawn, and a
+// side with nothing on an issue it shares shows a dash. The heading is the
+// table's caption, for a screen reader.
+//
+// On a phone each issue is a block of its own: the issue as its heading,
+// then each side's label over its position, ours on the tint. Nothing is
+// drawn with neither a heading nor an issue.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { text } from '../../../lib/format'
+import Unlisted from './Unlisted.astro'
+import { linesOf, sidesOf } from './sides'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const all = linesOf(section)
+const sides = sidesOf(section).filter((side) => all.some((line) => line.says[side.key]))
+const lines = all.filter((line) => sides.some((side) => line.says[side.key]))
+---
+{(heading || lines.length > 0) && (
+  <Band section={section} class="comparison comparison-table">
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    {lines.length > 0 && (
+      <div class="versus-frame">
+        <table class="versus">
+          {heading && <caption class="visually-hidden">{heading}</caption>}
+          <thead>
+            <tr>
+              <th scope="col">Issue</th>
+              {sides.map((side) => (
+                <th scope="col" class:list={[side.key === 'us' && 'versus-us']}>{side.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => (
+              <tr class="versus-row">
+                <th scope="row" class="versus-issue">{line.issue}</th>
+                {sides.map((side) =>
+                  side.key === 'us' ? (
+                    <td class="versus-us" data-label={side.label}>
+                      {line.says.us ? (
+                        <span class="versus-ours">
+                          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                          <span>{line.says.us}</span>
+                        </span>
+                      ) : (
+                        <span class="versus-none"><Unlisted /></span>
+                      )}
+                    </td>
+                  ) : (
+                    <td data-label={side.label}>{line.says[side.key] ?? <span class="versus-none"><Unlisted /></span>}</td>
+                  ),
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </Band>
+)}
+
+<style>
+  .versus-frame {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .versus {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .versus thead th {
+    padding: 0.875rem 1.125rem;
+    border-bottom: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.35;
+    text-align: left;
+    text-transform: uppercase;
+    vertical-align: bottom;
+  }
+  .versus thead th:first-child {
+    width: 28%;
+  }
+  .versus thead th.versus-us {
+    border-bottom-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+  .versus td,
+  .versus .versus-issue {
+    padding: 0.9375rem 1.125rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  .versus-row:last-child > * {
+    border-bottom: 0;
+  }
+  .versus .versus-issue {
+    font-weight: 700;
+  }
+  .versus td.versus-us {
+    background: color-mix(in srgb, var(--button) 9%, var(--surface));
+  }
+  .versus-ours {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.4375rem;
+    font-weight: 700;
+  }
+  .versus-none {
+    color: var(--muted);
+  }
+  .versus-ours svg {
+    flex: 0 0 auto;
+    margin-top: 0.1875rem;
+    color: var(--accent);
+  }
+  /* A phone: each issue a block, the issue over its sides, each side's label over its position. */
+  @media (max-width: 39.99rem) {
+    .versus thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .versus,
+    .versus tbody {
+      display: block;
+    }
+    .versus-row {
+      display: grid;
+      gap: 0.625rem;
+      padding: 1.125rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .versus-row:last-child {
+      border-bottom: 0;
+    }
+    .versus td,
+    .versus .versus-issue {
+      display: grid;
+      gap: 0.25rem;
+      padding: 0;
+      border: 0;
+    }
+    .versus .versus-issue {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      line-height: 1.25;
+    }
+    .versus td::before {
+      content: attr(data-label);
+      color: var(--muted);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .versus td.versus-us {
+      padding: 0.625rem 0.75rem;
+      border-radius: var(--radius);
+    }
+  }
+</style>

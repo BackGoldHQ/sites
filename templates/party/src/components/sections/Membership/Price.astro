@@ -1,0 +1,61 @@
+---
+// A Membership price as every layout says it: the amount in the display face
+// and the cadence after it ("$25/yr", "$500 once, for life"), with "from"
+// before a floor (a donation program's minimum, or the least of several
+// offers). A slash suffix is read aloud as words ("$25 a year"). With no
+// amount and no cadence it is a free program's "Free". The amount's size is
+// the caller's: set `--ms-price-size` on any ancestor.
+import { price, type Cadence } from './offers'
+
+interface Props {
+  cents: number | null
+  cadence: Cadence | null
+  from?: boolean
+  class?: string
+}
+
+const { cents, cadence, from = false, class: className } = Astro.props
+const p = cents !== null && cadence !== null ? price(cents, cadence) : null
+---
+<span class:list={['ms-price', className]}>
+  {p ? (
+    <>
+      {from && <span class="ms-price-from">from </span>}
+      <span class="ms-price-amount">{p.amount}</span>
+      {p.spaced ? (
+        <span class="ms-price-suffix ms-price-words"> {p.suffix}</span>
+      ) : (
+        <>
+          <span class="ms-price-suffix" aria-hidden="true">{p.suffix}</span>
+          <span class="visually-hidden"> {p.spoken}</span>
+        </>
+      )}
+    </>
+  ) : (
+    <span class="ms-price-amount">Free</span>
+  )}
+</span>
+
+<style>
+  .ms-price {
+    display: inline;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .ms-price-amount {
+    font-family: var(--font-display);
+    font-size: var(--ms-price-size, 1em);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .ms-price-from,
+  .ms-price-suffix {
+    font-size: max(0.875rem, calc(var(--ms-price-size, 1em) * 0.36));
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .ms-price-from,
+  .ms-price-words {
+    opacity: 0.82;
+  }
+</style>

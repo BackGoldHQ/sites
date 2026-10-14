@@ -1,0 +1,208 @@
+---
+// QuickDonate, 'bar' layout (board 01, C): a slim bar pinned to the bottom of
+// the screen (`position: sticky` on its band, clear of a phone's home
+// indicator) until the reader scrolls to its own place on the page, where it
+// settles; placed last, it stays in view the whole way down. The heading in
+// bold and the body (two lines at most) at the left; at the right up to three
+// amounts (the one that starts selected and its neighbours), the one button
+// and Dismiss, which hides the bar for the rest of the visit. On a phone the
+// words sit over a row of the amounts and the button. It wears the band it is
+// given; the contrast band sets it apart from the page. The amounts and the
+// button behave as the grid layout's do (Picker.astro); the bar has no
+// monthly switch. Nothing is drawn when the section has no donate link.
+import type { ComponentProps } from 'astro/types'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import Picker from './Picker.astro'
+import type Default from './index.astro'
+import { amountHref, dollars, giveLabel, quickDonate } from './donate'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const qd = quickDonate(section)
+const heading = text(section.copy.heading)
+// Three amounts around the one that starts selected (the first three when none does).
+const at = qd?.selected != null ? qd.amounts.indexOf(qd.selected) : 0
+const start = qd ? Math.max(0, Math.min(at - 1, qd.amounts.length - 3)) : 0
+const shown = qd ? qd.amounts.slice(start, start + 3) : []
+---
+{qd && (
+  <Band section={section} class="quick-donate qd-bar-band">
+    <div class="qd-bar" data-quick-donate data-href={qd.donate.href} data-label={qd.donate.label} data-dismiss-key={section.id}>
+      <div class="qd-bar-words">
+        {heading && <h2 class="qd-bar-heading">{heading}</h2>}
+        <Prose value={section.copy.body} class="qd-bar-body" />
+      </div>
+      <div class="qd-bar-choices">
+        <ul class="qd-bar-amounts" role="list" aria-label="Choose an amount">
+          {shown.map((amount) => (
+            <li>
+              <a class="qd-bar-amount" href={amountHref(qd.donate.href, amount)} rel={qd.donate.rel} data-amount={amount} data-selected={amount === qd.selected ? '' : undefined}>
+                {dollars(amount)}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <a class="button qd-bar-give" href={amountHref(qd.donate.href, qd.selected)} rel={qd.donate.rel} data-give>{giveLabel(qd)}</a>
+      </div>
+      <button type="button" class="qd-dismiss" aria-label="Dismiss" data-dismiss hidden>
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <Picker />
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.qd-bar-band) {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    --bg-section-padding: 0.75rem var(--gutter) calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+  }
+  :global(.bg-section.qd-bar-band.bg-bleed-contained) {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .qd-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'words dismiss'
+      'choices choices';
+    align-items: center;
+    gap: 0.625rem 0.75rem;
+  }
+  .qd-bar-words {
+    grid-area: words;
+    min-width: 0;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+  }
+  .qd-bar-heading {
+    margin: 0;
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+  /* At most two lines, so a long body never lifts the bar over the page. */
+  .qd-bar-words > :global(.qd-bar-body) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    max-width: none;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .qd-bar-words > :global(.qd-bar-body) :global(p) {
+    margin: 0;
+  }
+  .qd-bar-choices {
+    grid-area: choices;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .qd-bar-amounts {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .qd-bar-amounts li {
+    flex: 1 1 0;
+  }
+  .qd-bar-amount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--pill);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .qd-bar-amount:hover {
+    border-color: var(--ink);
+  }
+  .qd-bar-amount[data-selected] {
+    background: var(--button-2);
+    border-color: var(--button-2);
+    color: var(--button-2-ink);
+  }
+  .qd-bar-give {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    white-space: nowrap;
+  }
+  .qd-dismiss {
+    grid-area: dismiss;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: -0.25rem -0.5rem 0 0;
+    align-self: start;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .qd-dismiss:hover {
+    color: var(--ink);
+  }
+  .qd-dismiss[hidden] {
+    display: none;
+  }
+  @media (min-width: 48rem) {
+    .qd-bar {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: 'words choices dismiss';
+      gap: 1.5rem;
+    }
+    .qd-bar-words {
+      font-size: var(--text);
+    }
+    .qd-bar-heading {
+      font-size: 1.0625rem;
+    }
+    .qd-bar-amounts li {
+      flex: 0 0 auto;
+    }
+    .qd-bar-amount {
+      min-width: 4.5rem;
+    }
+    .qd-dismiss {
+      margin: 0 -0.5rem 0 -0.75rem;
+      align-self: center;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .qd-bar-amount {
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+    }
+  }
+</style>

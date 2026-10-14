@@ -1,0 +1,217 @@
+---
+// Membership, 'tiers' layout (board 05, A, "Three tiers"): the section head
+// and the body, then a card per offer the organization's join page sells, in
+// its order, three across (one under another on a phone): the offer's name
+// small in capitals (a donation program's one offer is "Supporter", a free
+// one's "Member"), a "Symbolic price" chip on a tier whose amount carries a
+// meaning in its digits, the price large in the display face with its cadence
+// ("$25/yr"; "$500 once, for life" for a lifetime tier; "Free"), any other
+// cadence it is sold at under it ("or $25/mo"), the program's benefits as a
+// checked list, and the join button. A program with one offer draws one card,
+// centred.
+//
+// One card is filled in the band's second button colour and carries the solid
+// button: the program's one recurring offer that is not symbolic, when the
+// others are symbolic or lifetime ones, else the middle of exactly three.
+// Nothing says it in words: the program does not name a favourite, so the
+// fill is emphasis, not a claim. The other cards' buttons are outlined; with
+// no filled card every button is, and a single card's is solid. Every button
+// goes to the same join page, where the tier is picked. The note sits small
+// under the cards. Nothing is drawn when the program has no offers.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import Benefits from './Benefits.astro'
+import Price from './Price.astro'
+import { featuredOf, leadCadenceOf, membershipOf, otherCadences } from './offers'
+import { text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const m = membershipOf(section)
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const featured = m ? featuredOf(m) : null
+const only = m?.offers.length === 1
+---
+{m && (
+  <Band section={section} class="membership membership-tiers">
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    <ul class="ms-tiers" role="list" data-count={Math.min(m.offers.length, 3)}>
+      {m.offers.map((offer) => {
+        const lead = leadCadenceOf(offer.cadences)
+        const others = otherCadences(offer)
+        const solid = offer === featured || only
+        return (
+          <li class:list={['ms-tier', offer === featured && 'ms-tier-featured']}>
+            <div class="ms-tier-body">
+              <div class="ms-tier-head">
+                <h3 class="ms-tier-name">{offer.name}</h3>
+                {offer.symbolic && <span class="chip ms-symbolic">Symbolic price</span>}
+              </div>
+              <p class="ms-tier-price">
+                <Price cents={lead ? offer.cents[lead]! : null} cadence={lead} from={offer.model === 'donation'} />
+              </p>
+              {others.length > 0 && (
+                <p class="ms-tier-or">
+                  or{' '}
+                  {others.map((cadence, i) => (
+                    <>
+                      {i > 0 && ' or '}
+                      <Price cents={offer.cents[cadence]!} cadence={cadence} />
+                    </>
+                  ))}
+                </p>
+              )}
+              {offer.model === 'donation' && <p class="ms-tier-or">You choose the amount</p>}
+              <Benefits items={m.benefits} class="ms-tier-benefits" />
+            </div>
+            {m.join && (
+              <a class:list={['button', 'ms-tier-join', !solid && 'button-quiet']} href={m.join.href} rel={m.join.rel}>
+                {m.join.label}
+                {m.offers.length > 1 && <span class="visually-hidden">: {offer.name}</span>}
+              </a>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+    {m.note && <p class="fine ms-tiers-note">{m.note}</p>}
+  </Band>
+)}
+
+<style>
+  .ms-tiers {
+    display: grid;
+    gap: clamp(1rem, 2vw, 1.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  :global(.lede) + .ms-tiers {
+    margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
+  }
+  .ms-tier {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: clamp(1.375rem, 1rem + 1vw, 1.875rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+    --ms-price-size: clamp(2.5rem, 2rem + 1.5vw, 3.25rem);
+  }
+  :global(.bg-band-contrast) .ms-tier {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .ms-tier-featured,
+  :global(.bg-band-contrast) .ms-tier-featured {
+    border-color: var(--button-2);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    box-shadow: var(--shadow);
+    --ms-check: var(--button-2-ink);
+  }
+  .ms-tier-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    min-height: 1.75rem;
+  }
+  .ms-tier-name {
+    margin: 0;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .ms-tier-featured .ms-tier-name {
+    color: color-mix(in srgb, var(--button-2-ink) 78%, transparent);
+  }
+  .ms-tier-featured .ms-symbolic {
+    background: color-mix(in srgb, var(--button-2-ink) 16%, transparent);
+    color: var(--button-2-ink);
+  }
+  .ms-tier-price {
+    margin: 0.875rem 0 0;
+    line-height: 1.05;
+  }
+  .ms-tier-or {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+    --ms-price-size: 1.0625rem;
+  }
+  .ms-tier-or :global(.ms-price-amount) {
+    font-family: var(--font);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .ms-tier-featured .ms-tier-or {
+    color: color-mix(in srgb, var(--button-2-ink) 82%, transparent);
+  }
+  .ms-tier :global(.ms-tier-benefits) {
+    margin: 1.375rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.9375rem;
+  }
+  .ms-tier-featured :global(.ms-tier-benefits) {
+    border-top-color: color-mix(in srgb, var(--button-2-ink) 22%, transparent);
+  }
+  .ms-tier-body {
+    flex: 1 0 auto;
+  }
+  .ms-tier-join {
+    display: flex;
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+  .ms-tier-featured .button-quiet {
+    color: var(--button-2-ink);
+  }
+  .ms-tier-featured :focus-visible {
+    outline-color: var(--button-2-ink);
+  }
+  .ms-tiers-note {
+    margin: 1.25rem 0 0;
+    text-align: center;
+  }
+  [data-count='1'] {
+    max-width: 26rem;
+    margin-inline: auto;
+  }
+  @media (min-width: 40rem) {
+    .ms-tiers {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    [data-count='1'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    [data-count='2'] {
+      max-width: 48rem;
+      margin-inline: auto;
+    }
+  }
+  @media (min-width: 56rem) {
+    .ms-tiers[data-count='3'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+    }
+    .ms-tiers[data-count='3'] .ms-tier {
+      height: calc(100% - 1.5rem);
+    }
+    .ms-tiers[data-count='3'] .ms-tier-featured {
+      height: 100%;
+    }
+  }
+</style>

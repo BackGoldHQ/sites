@@ -1,0 +1,261 @@
+---
+// Comparison, 'spectrum' layout (board 08, "Issue slider"): the section head
+// and the body, a key to the marks, then a card per issue on the band's
+// surface: the issue as its heading and a rail, drawn as the Progress meter
+// is, with a mark for each side at its place from 0 (the left end, under
+// which `leftLabel` sits) to 100 (the right end, `rightLabel`). Ours is a
+// pill in the band's button colour above the rail, carrying our short label,
+// over a dot on the rail at our exact place; each opponent is a small circle
+// in the ink on the rail with the initial of their label, named in full in
+// the key above the cards. A side with no
+// place on an issue has no mark on its rail, and an issue no side has placed
+// is not drawn.
+//
+// Marks closer than COLLIDE points apart would overlap on a phone, so a
+// later side (in the order us, them, them2) within that distance of an
+// earlier one is stacked: `data-stack` drops it below the rail, a step to
+// the first level no nearby earlier mark holds, and draws it over the mark
+// it meets, ringed in the surface colour so the two read apart; the rail
+// grows by the steps it uses. The rail
+// says every place in words for a screen reader. Nothing is drawn with
+// neither a heading nor an issue.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { text } from '../../../lib/format'
+import { linesOf, sidesOf, type Side } from './sides'
+
+type Props = ComponentProps<typeof Default>
+
+const COLLIDE = 10
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const leftLabel = text(section.copy.leftLabel)
+const rightLabel = text(section.copy.rightLabel)
+const all = linesOf(section)
+const sides = sidesOf(section).filter((side) => all.some((line) => line.at[side.key] !== null))
+const scale = leftLabel || rightLabel ? `from ${leftLabel ?? 'the left'} (0) to ${rightLabel ?? 'the right'} (100)` : 'from 0 to 100'
+const issues = all.flatMap((line) => {
+  const marks: { side: Side; at: number; stack: number }[] = []
+  for (const side of sides) {
+    const at = line.at[side.key]
+    if (at === null) continue
+    const taken = marks.filter((m) => Math.abs(m.at - at) < COLLIDE).map((m) => m.stack)
+    let stack = 0
+    while (taken.includes(stack)) stack++
+    marks.push({ side, at, stack })
+  }
+  if (marks.length === 0) return []
+  const words = marks.map((m) => `${m.side.label} ${Math.round(m.at)}`).join(', ')
+  return [{ issue: line.issue, marks, depth: Math.max(...marks.map((m) => m.stack)), label: `Where each stands, ${scale}: ${words}.` }]
+})
+const ours = sides.find((side) => side.key === 'us')
+---
+{(heading || issues.length > 0) && (
+  <Band section={section} class="comparison comparison-spectrum">
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    {issues.length > 0 && (
+      <>
+        <ul class="key" role="list" aria-label="Key">
+          {sides.map((side) => (
+            <li class="key-item">
+              {side.key === 'us' && side.short === side.label ? (
+                <span class="mark-pill">{side.label}</span>
+              ) : (
+                <>
+                  {side.key === 'us' ? <span class="mark-pill" aria-hidden="true">{side.short}</span> : <span class="mark-dot" aria-hidden="true">{side.initial}</span>}
+                  <span>{side.label}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+        <ul class="spectra" role="list">
+          {issues.map((item) => (
+            <li class="spectrum">
+              <h3 class="spectrum-issue">{item.issue}</h3>
+              <div class:list={['rail', ours && 'rail-has-us']} role="img" aria-label={item.label}>
+                <div class="rail-field" style={`--depth: ${item.depth}`}>
+                  <span class="rail-track"></span>
+                  {item.marks.map((m) =>
+                    m.side.key === 'us' ? (
+                      <>
+                        <span class="mark-pill rail-pill" style={`--at: ${m.at}`}>{m.side.short}</span>
+                        <span class="rail-pin" style={`--at: ${m.at}`}></span>
+                      </>
+                    ) : (
+                      <span class="mark-dot rail-dot" style={`--at: ${m.at}`} data-stack={m.stack}>
+                        {m.side.initial}<span class="visually-hidden"> {m.side.label}</span>
+                      </span>
+                    ),
+                  )}
+                </div>
+              </div>
+              {(leftLabel || rightLabel) && (
+                <p class="rail-ends" aria-hidden="true">
+                  <span>{leftLabel}</span>
+                  <span>{rightLabel}</span>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </Band>
+)}
+
+<style>
+  /* The marks, in the key and on the rails. */
+  .mark-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0 0.75rem;
+    border-radius: var(--pill);
+    background: var(--button);
+    color: var(--button-ink);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .mark-dot {
+    display: inline-grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--surface);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem 1.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .key-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .spectra {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .spectrum {
+    padding: 1.25rem 1.25rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .spectrum .spectrum-issue {
+    margin: 0 0 0.75rem;
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
+  /*
+    The rail: a field inset by half a circle on each side, so a mark at 0 or
+    100 sits on the track's end. The pill rides above the track and leans
+    with its place (translateX by the same share it sits along the field), so
+    it never runs past either end; the pin under it marks the exact place.
+  */
+  .rail {
+    padding: 0 0.875rem;
+  }
+  .rail-field {
+    position: relative;
+    height: calc(2.5rem + var(--depth) * 1.375rem);
+  }
+  .rail-has-us .rail-field {
+    height: calc(4.25rem + var(--depth) * 1.375rem);
+  }
+  .rail-track {
+    position: absolute;
+    left: -0.875rem;
+    right: -0.875rem;
+    top: 1rem;
+    height: 0.75rem;
+    border-radius: var(--pill);
+    background: var(--line-strong);
+  }
+  .rail-has-us .rail-track {
+    top: 2.75rem;
+  }
+  .rail-pill {
+    position: absolute;
+    top: 0;
+    left: calc(var(--at) * 1%);
+    transform: translateX(calc(var(--at) * -1%));
+    z-index: 3;
+  }
+  .rail-pin {
+    position: absolute;
+    top: 2.6875rem;
+    left: calc(var(--at) * 1%);
+    width: 0.875rem;
+    height: 0.875rem;
+    transform: translateX(-50%);
+    z-index: 4;
+    border-radius: 50%;
+    background: var(--button);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .rail-pin::before {
+    content: '';
+    position: absolute;
+    left: calc(50% - 1px);
+    bottom: 100%;
+    width: 2px;
+    height: 0.9375rem;
+    background: var(--button);
+  }
+  .rail-dot {
+    position: absolute;
+    top: 0.5rem;
+    left: calc(var(--at) * 1%);
+    transform: translateX(-50%);
+    z-index: 2;
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .rail-has-us .rail-dot {
+    top: 2.25rem;
+  }
+  /* A stacked mark drops a step below the one it meets and is drawn over it; the step clears the initial of the mark above. */
+  .rail-dot[data-stack='1'] {
+    transform: translate(-50%, 1.375rem);
+    z-index: 3;
+  }
+  .rail-dot[data-stack='2'] {
+    transform: translate(-50%, 2.75rem);
+    z-index: 3;
+  }
+  .rail-ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .rail-ends span:last-child {
+    text-align: right;
+  }
+</style>

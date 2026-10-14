@@ -1,0 +1,33 @@
+---
+// The key dates' one script, placed once inside each VoterTools layout that
+// draws dates. Pages are cached until content changes, so the server writes
+// each date as a calendar day and this counts in the visitor's browser: for
+// every `data-vt-date` in its section it writes the state into that row's
+// `data-vt-state` slot ("12 days left", "1 day left", "Today", "Closed"),
+// marks the row `vt-open` or `vt-closed`, and marks the nearest open one
+// `vt-next`. Days are calendar days in the visitor's own time zone, and a
+// date is open through its whole day. Without script the slots stay empty
+// and the dates read plainly.
+---
+<script is:inline>
+  (function (section) {
+    if (!section) return
+    var now = new Date()
+    var today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    var next = null
+    var nearest = Infinity
+    section.querySelectorAll('[data-vt-date]').forEach(function (row) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(row.getAttribute('data-vt-date') || '')
+      if (!m) return
+      var days = Math.round((Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) - today) / 86400000)
+      var slot = row.querySelector('[data-vt-state]')
+      if (slot) slot.textContent = days < 0 ? 'Closed' : days === 0 ? 'Today' : days + (days === 1 ? ' day left' : ' days left')
+      row.classList.add(days < 0 ? 'vt-closed' : 'vt-open')
+      if (days >= 0 && days < nearest) {
+        nearest = days
+        next = row
+      }
+    })
+    if (next) next.classList.add('vt-next')
+  })(document.currentScript.closest('.bg-section'))
+</script>

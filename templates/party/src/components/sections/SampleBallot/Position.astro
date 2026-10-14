@@ -1,0 +1,39 @@
+---
+// A ballot measure's position as every SampleBallot layout shows it: a chip
+// reading YES, NO or No position. Yes wears the band's accent; no and no
+// position are outlines, no in the text colour and no position muted, so a
+// position never reads as a party's red or blue. On paper each is an outline
+// in black ink.
+import { positionLabel, type Position } from './ballot'
+
+interface Props {
+  position: Position
+}
+
+const { position } = Astro.props
+---
+<span class:list={['chip', 'position', `position-${position}`, position === 'yes' && 'chip-accent']}>{positionLabel(position)}</span>
+
+<style>
+  .position {
+    border: 1.5px solid transparent;
+    letter-spacing: 0.06em;
+  }
+  .position-no,
+  .position-neutral {
+    background: transparent;
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+  .position-neutral {
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  @media print {
+    .position {
+      border-color: black;
+      background: none;
+      color: black;
+    }
+  }
+</style>

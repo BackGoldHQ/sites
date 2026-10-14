@@ -1,0 +1,73 @@
+---
+// QuickDonate, 'grid' layout, the default (board 01, A): the kicker as a
+// chip, the heading and the body at the left, and the donate card at the
+// right: the amounts three across with Other, the monthly switch when the
+// section offers it, the one button and the note under it. Each amount hands
+// its choice to the organization's own donate page in BackGold (`?amount=`,
+// and `&frequency=monthly` with the switch on); nothing is collected here.
+// On a phone the card follows the words. Without words the card stands alone,
+// centred. Nothing is drawn when the section has no donate link.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import DonateCard from './DonateCard.astro'
+import { quickDonate } from './donate'
+import { prose, text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const qd = quickDonate(section)
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const words = kicker || heading || prose(section.copy.body)
+---
+{qd && (
+  <Band section={section} class="quick-donate">
+    <div class:list={['qd-grid', words && 'qd-grid-words']}>
+      {words && (
+        <div class="qd-words">
+          {kicker && <p class="chip qd-kicker">{kicker}</p>}
+          {heading && <h2>{heading}</h2>}
+          <Prose value={section.copy.body} class="lede" />
+        </div>
+      )}
+      <DonateCard qd={qd} />
+    </div>
+  </Band>
+)}
+
+<style>
+  .qd-grid {
+    display: grid;
+    gap: 1.75rem;
+    max-width: 30rem;
+    margin-inline: auto;
+  }
+  .qd-grid-words {
+    max-width: none;
+  }
+  .qd-kicker {
+    margin: 0 0 1rem;
+  }
+  .qd-words h2 {
+    margin: 0;
+    max-width: 16em;
+  }
+  .qd-words > :global(.lede) {
+    margin: 1rem 0 0;
+  }
+  .qd-words > :global(.lede) > :last-child {
+    margin-bottom: 0;
+  }
+  @media (min-width: 48rem) {
+    .qd-grid-words {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+      gap: clamp(2rem, 4vw, 3.5rem);
+      align-items: center;
+    }
+  }
+</style>
