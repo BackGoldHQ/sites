@@ -1,10 +1,188 @@
 ---
-// About, 'books' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// About, 'books' layout (board S19, B, "Books shelf"): the person's card at
+// the left, a panel filled in the contrast band's colours (on a section
+// already on the contrast band, a tint of its ink) with the kicker, their
+// name (the heading) in the display face, their role, the story and the
+// section's one button; at the right the book rows as a shelf, three across
+// (two on a phone): each book's cover (2:3; without one, a panel on the
+// band's surface with the title set on it), its title, the year and the
+// detail muted under it ("2026 · Pine Valley Press"), and "Get the book"
+// when the row has an address. On a phone the card sits over the shelf. A
+// card with no words is left out and the shelf takes the row, and the card
+// takes it alone with no book; a shelf alone runs four across on a wide
+// screen. Nothing is drawn with neither.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import type Default from './index.astro'
+import { buttonOf, credentialsOf } from './credentials'
+import { prose, text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const role = text(section.copy.role)
+const button = buttonOf(section)
+const { books } = credentialsOf(section)
+const card = !!(kicker || heading || role || prose(section.copy.body) || button)
 ---
-<Default {...Astro.props} />
+{(card || books.length > 0) && (
+  <Band section={section} class="about about-books">
+    <div class:list={['books', card && books.length > 0 && 'books-split']}>
+      {card && (
+        <div class="books-card bg-band-contrast">
+          {kicker && <p class="kicker">{kicker}</p>}
+          {heading && <h2 class="books-name">{heading}</h2>}
+          {role && <p class="books-role">{role}</p>}
+          <Prose value={section.copy.body} class="books-body" />
+          {button && (
+            <p class="actions">
+              <a class="button" href={button.href} rel={button.rel}>{button.label}</a>
+            </p>
+          )}
+        </div>
+      )}
+      {books.length > 0 && (
+        <ul class="books-shelf" role="list">
+          {books.map((book) => (
+            <li class="book">
+              {book.cover ? (
+                <img class="book-cover" src={book.cover} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <div class="book-cover book-blank" aria-hidden="true"><span>{book.title}</span></div>
+              )}
+              <h3 class="book-title">{book.title}</h3>
+              {(book.year || book.detail) && (
+                <p class="book-meta">
+                  {book.year && (book.datetime ? <time datetime={book.datetime}>{book.year}</time> : book.year)}
+                  {book.year && book.detail && ' · '}
+                  {book.detail}
+                </p>
+              )}
+              {book.link && (
+                <p class="book-get">
+                  <a href={book.link.href} rel={book.link.rel}>Get the book<span class="visually-hidden">: {book.title}</span><span aria-hidden="true"> →</span></a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  .books {
+    display: grid;
+    gap: 1.75rem;
+  }
+  .books-card {
+    min-width: 0;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+    border-radius: var(--radius-card);
+    background: var(--bg-band-background);
+    color: var(--bg-band-color);
+  }
+  :global(.bg-band-contrast) .books-card {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .books-card > :last-child {
+    margin-bottom: 0;
+  }
+  .books-name {
+    margin-bottom: 0.375rem;
+  }
+  .books-role {
+    margin: 0 0 1rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .books-card :global(.books-body) {
+    color: var(--muted);
+  }
+  .books-card :global(.books-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .books-card .actions {
+    margin-top: 1.5rem;
+  }
+
+  .books-shelf {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.75rem 1rem;
+    align-content: start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .book {
+    min-width: 0;
+  }
+  .book > * {
+    margin: 0;
+  }
+  .book-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  /* No cover: the title set on the band's surface, where the cover would be. */
+  .book-blank {
+    display: flex;
+    align-items: flex-end;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: none;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.375rem);
+    font-weight: 700;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .book .book-title {
+    margin-top: 0.875rem;
+    font-family: var(--font);
+    font-size: var(--text);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+  .book .book-meta {
+    margin-top: 0.125rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .book .book-get {
+    margin-top: 0.5rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  @media (min-width: 40rem) {
+    .books-shelf {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2rem 1.25rem;
+    }
+  }
+  @media (min-width: 56rem) {
+    .books-split {
+      grid-template-columns: minmax(16rem, 1fr) minmax(0, 2fr);
+      gap: clamp(1.75rem, 3vw, 2.5rem);
+      align-items: start;
+    }
+    /* A shelf with no card beside it: four across, so a cover stays book-sized. */
+    .books:not(.books-split) .books-shelf {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>
