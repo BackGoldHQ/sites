@@ -1,10 +1,343 @@
 ---
-// Portfolio, 'featured' layout. A stub for the design pass: draws the default
-// layout with the same props. Replace this file's contents to give the layout
-// its design; sections/index.ts already points at it.
+// Portfolio · Featured (mock 13, B): the kicker and heading, the body, then
+// the first piece large: its picture edge to edge at 21:9 (4:3 on a phone)
+// with the kind and year as a chip and the title over its lower edge on a
+// scrim, in the photo band's inks as Hero · Full photo sets its words, and
+// the summary and the client under it. The title links to the piece's page
+// when it has one; with no picture the words sit on a panel of the band's
+// surface instead. The title is an <h2>, or an <h3> under the section's own
+// heading.
+//
+// Under it, with more than one piece, a strip of thumbnails of every piece
+// (its picture with the kind laid over it, or its title on the surface),
+// five across and scrolling sideways past five (two and a half on a phone).
+// Clicking a thumbnail shows that piece large in the first one's place and
+// marks its thumbnail, and a screen reader hears "Showing …". That is the
+// section's script: without it the first piece shows and each thumbnail is
+// a plain link to its piece's page, or to its picture when it has none.
+// Nothing is drawn with no work and no heading.
 import type { ComponentProps } from 'astro/types'
-import Default from './index.astro'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import Prose from '../../Prose.astro'
+import { text } from '../../../lib/format'
+import { clientOf, kindAndYear, targetOf, workOf } from './work'
 
 type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const clientLabel = text(section.copy.clientLabel)?.trim() ?? null
+const work = workOf(section)
+const Title = heading ? 'h3' : 'h2'
 ---
-<Default {...Astro.props} />
+{(heading || work.length > 0) && (
+  <Band section={section} class="portfolio portfolio-featured">
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    {work.length > 0 && (
+      <div class="feature" data-portfolio-feature>
+        {work.map((piece, i) => {
+          const picture = piece.pictures[0] ?? null
+          const line = kindAndYear(piece)
+          const client = clientOf(piece, clientLabel)
+          return (
+            <article class="feature-stage" data-feature-stage data-title={piece.title} hidden={i > 0}>
+              <div class:list={['feature-media', picture ? 'feature-media-pictured' : 'feature-media-words']}>
+                {picture && (
+                  <>
+                    <img class="feature-photo" src={picture} alt="" loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
+                    <div class="feature-scrim" aria-hidden="true"></div>
+                  </>
+                )}
+                <div class:list={['feature-words', picture && 'on-photo']}>
+                  {line && <p class="feature-line"><span class="chip">{line}</span></p>}
+                  <Title class="feature-title">
+                    {piece.link ? <a href={piece.link.href} rel={piece.link.rel}>{piece.title}</a> : piece.title}
+                  </Title>
+                </div>
+              </div>
+              {(piece.summary || client) && (
+                <div class="feature-under">
+                  {piece.summary && <p class="feature-summary">{piece.summary}</p>}
+                  {client && <p class="feature-client">{client}</p>}
+                </div>
+              )}
+            </article>
+          )
+        })}
+        {work.length > 1 && (
+          <>
+            <ul class="feature-thumbs" role="list" aria-label="All work">
+              {work.map((piece, i) => {
+                const target = targetOf(piece)
+                const picture = piece.pictures[0] ?? null
+                const inner = (
+                  <>
+                    {picture ? (
+                      <img class="thumb-photo" src={picture} alt={piece.title} loading="lazy" decoding="async" />
+                    ) : (
+                      <span class="thumb-words">{piece.title}</span>
+                    )}
+                    {picture && piece.kind && <span class="thumb-kind" aria-hidden="true">{piece.kind}</span>}
+                  </>
+                )
+                return (
+                  <li class="feature-thumb-item">
+                    {target ? (
+                      <a class="feature-thumb" href={target.href} rel={target.rel} data-feature-thumb data-current={i === 0 ? '' : undefined}>{inner}</a>
+                    ) : (
+                      <span class="feature-thumb" data-feature-thumb data-current={i === 0 ? '' : undefined}>{inner}</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+            <p class="visually-hidden" role="status" data-feature-showing></p>
+            <script is:inline>
+              ;(function (root) {
+                if (!root) return
+                var stages = root.querySelectorAll('[data-feature-stage]')
+                var thumbs = root.querySelectorAll('[data-feature-thumb]')
+                var showing = root.querySelector('[data-feature-showing]')
+                var choose = function (index) {
+                  for (var s = 0; s < stages.length; s++) stages[s].hidden = s !== index
+                  for (var t = 0; t < thumbs.length; t++) {
+                    thumbs[t].setAttribute('aria-pressed', t === index ? 'true' : 'false')
+                    if (t === index) thumbs[t].setAttribute('data-current', '')
+                    else thumbs[t].removeAttribute('data-current')
+                  }
+                  thumbs[index].scrollIntoView({ block: 'nearest', inline: 'nearest' })
+                  showing.textContent = 'Showing ' + stages[index].getAttribute('data-title') + '.'
+                }
+                // Each thumbnail becomes a button that shows its piece; one with nowhere to go is made one.
+                for (var i = 0; i < thumbs.length; i++) {
+                  ;(function (index) {
+                    var el = thumbs[index]
+                    if (el.tagName === 'SPAN') {
+                      var button = document.createElement('button')
+                      button.type = 'button'
+                      button.className = el.className
+                      button.setAttribute('data-feature-thumb', '')
+                      while (el.firstChild) button.appendChild(el.firstChild)
+                      el.replaceWith(button)
+                      el = button
+                      thumbs = root.querySelectorAll('[data-feature-thumb]')
+                    } else {
+                      el.setAttribute('role', 'button')
+                      el.addEventListener('keydown', function (event) {
+                        if (event.key === ' ') {
+                          event.preventDefault()
+                          choose(index)
+                        }
+                      })
+                    }
+                    el.addEventListener('click', function (event) {
+                      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+                      event.preventDefault()
+                      choose(index)
+                    })
+                  })(i)
+                }
+                for (var t = 0; t < thumbs.length; t++) thumbs[t].setAttribute('aria-pressed', t === 0 ? 'true' : 'false')
+              })(document.currentScript.closest('[data-portfolio-feature]'))
+            </script>
+          </>
+        )}
+      </div>
+    )}
+  </Band>
+)}
+
+<style>
+  .feature-stage[hidden] {
+    display: none;
+  }
+  .feature-media {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+  .feature-media-pictured {
+    display: flex;
+    align-items: flex-end;
+    aspect-ratio: 4 / 3;
+  }
+  .feature-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  /* Hero · Full photo's scrim: light at the top, deep where the words are. */
+  .feature-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--band-photo) 0%, transparent) 0%,
+      color-mix(in srgb, var(--band-photo) 25%, transparent) 40%,
+      color-mix(in srgb, var(--band-photo) 78%, transparent) 75%,
+      color-mix(in srgb, var(--band-photo) 90%, transparent) 100%
+    );
+  }
+  .feature-words {
+    padding: 1.25rem;
+  }
+  .feature-words > * {
+    margin: 0;
+  }
+  .feature-media-words {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+  .feature-media-words .feature-words {
+    padding: 2rem 1.25rem 2.25rem;
+  }
+  .feature-words .feature-title {
+    margin-top: 0.625rem;
+    max-width: 22em;
+    font-size: clamp(1.625rem, 1.1rem + 2vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.04;
+  }
+  .feature-words > .feature-title:first-child {
+    margin-top: 0;
+  }
+  .feature-title a {
+    color: inherit;
+    text-decoration-thickness: 2px;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+  .feature-title a:hover {
+    text-decoration-color: currentColor;
+  }
+  .feature-line .chip {
+    white-space: normal;
+  }
+  .feature-under {
+    margin-top: 1rem;
+  }
+  .feature-under > * {
+    margin: 0;
+  }
+  .feature-summary {
+    max-width: var(--measure);
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .feature-under .feature-client {
+    margin-top: 0.375rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  /* The thumbnails: five across, scrolling sideways past five. The padding keeps the marked one's ring inside the scroll box. */
+  .feature-thumbs {
+    display: flex;
+    gap: 0.75rem;
+    margin: 1.25rem -0.3125rem 0;
+    padding: 0.3125rem;
+    list-style: none;
+    overflow-x: auto;
+  }
+  .feature-thumb-item {
+    flex: 0 0 calc((100% - 1.5 * 0.75rem) / 2.5);
+    min-width: 0;
+  }
+  .feature-thumb {
+    position: relative;
+    display: grid;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    scroll-margin-inline: 0.3125rem;
+  }
+  .feature-thumb[data-current] {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .feature-thumb:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .thumb-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .thumb-words {
+    align-self: end;
+    padding: 0.625rem 0.75rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .thumb-kind {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    max-width: calc(100% - 1rem);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--pill);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .feature-thumb:hover .thumb-words {
+    text-decoration: underline;
+  }
+
+  @media (min-width: 48rem) {
+    .feature-media-pictured {
+      aspect-ratio: 21 / 9;
+    }
+    .feature-words {
+      padding: 1.75rem 2rem;
+    }
+    .feature-media-words .feature-words {
+      padding: 2.5rem 2.5rem 2.75rem;
+    }
+    .feature-thumbs {
+      gap: 1rem;
+    }
+    .feature-thumb-item {
+      flex-basis: calc((100% - 4 * 1rem) / 5);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .thumb-photo {
+      transition: transform 0.3s ease;
+    }
+    .feature-thumb:hover .thumb-photo {
+      transform: scale(1.04);
+    }
+  }
+</style>
