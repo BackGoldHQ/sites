@@ -20,7 +20,7 @@ import { S as SiteNavItemType } from './constants-BcK31coy.js';
  */
 
 /** Every template BackGold ships, by its manifest `key`. */
-declare const SITE_TEMPLATE_KEYS: readonly ["party"];
+declare const SITE_TEMPLATE_KEYS: readonly ["party", "candidate", "petition-drive"];
 type SiteTemplateKey = (typeof SITE_TEMPLATE_KEYS)[number];
 /**
  * The data sources whose rows an author types in BackGold, named exactly as
@@ -85,8 +85,16 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
         list: z.ZodString;
     }, z.core.$strip>>;
     chrome: z.ZodObject<{
-        header: z.ZodString;
-        footer: z.ZodString;
+        header: z.ZodArray<z.ZodEnum<{
+            bar: "bar";
+            centered: "centered";
+        }>>;
+        footer: z.ZodArray<z.ZodEnum<{
+            columns: "columns";
+            closing: "closing";
+            compact: "compact";
+            giving: "giving";
+        }>>;
         takeoverBanner: z.ZodBoolean;
         legalLine: z.ZodBoolean;
     }, z.core.$strip>;

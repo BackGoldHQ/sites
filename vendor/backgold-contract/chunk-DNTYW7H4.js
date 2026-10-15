@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-UU2RX6DP.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-NQP7MJJF.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -41,6 +41,8 @@ function parseMapStatusRows(rows) {
 }
 
 // src/content-api.ts
+var CONTENT_API_PREFIX = "/api/content/v1";
+var EVENTS_WINDOW_MAX_DAYS = 42;
 var SECTION_BANDS = ["plain", "tint", "panel", "wash", "contrast"];
 var SECTION_BLEEDS = ["full", "contained"];
 var SECTION_LAYOUTS = {
@@ -137,6 +139,10 @@ var TEMPLATE_SECTION_TYPES = [
   "MediaKit",
   "Booking"
 ];
+var SITE_CHROME_LAYOUTS = {
+  header: ["bar", "centered"],
+  footer: ["columns", "closing", "compact", "giving"]
+};
 function siteKeyKind(key) {
   if (key.startsWith(SITE_KEY_PREFIXES.publishable)) return "publishable";
   if (key.startsWith(SITE_KEY_PREFIXES.secret)) return "secret";
@@ -187,6 +193,8 @@ function contentApiEmbedUrls(origins) {
     signup: (pageId, blockId) => `${api}/embed/signup/${seg(pageId)}/${seg(blockId)}`,
     signupSection: (sectionId, blockId) => `${api}/embed/signup/section/${seg(sectionId)}/${seg(blockId)}`,
     petition: (orgSlug, slug) => `${donor}/embed/p/${seg(orgSlug)}/${seg(slug)}`,
+    petitionBlock: (pageId, blockId) => `${api}/embed/petition/${seg(pageId)}/${seg(blockId)}`,
+    movementMapBlock: (pageId, blockId) => `${api}/embed/movement-map/${seg(pageId)}/${seg(blockId)}`,
     event: (orgSlug, slug) => `${donor}/embed/e/${seg(orgSlug)}/${seg(slug)}`,
     events: (orgSlug) => `${api}/embed/events/${seg(orgSlug)}`,
     calendar: (orgSlug) => `${api}/embed/calendar/${seg(orgSlug)}`,
@@ -244,6 +252,24 @@ function signupEmbed(p, ctx) {
   }
   const target = formTarget(p);
   return iframeEmbed(target && ctx.embedUrls.signup(target.pageId, target.blockId), ctx);
+}
+var PETITION_BLOCK_HEADERS = /* @__PURE__ */ new Set(["map", "coverage"]);
+function petitionEmbed(p, ctx) {
+  const slug = str(p.petitionSlug);
+  if (!slug) return null;
+  const pageId = str(p.pageId);
+  const blockId = str(p.id);
+  if (typeof p.header === "string" && PETITION_BLOCK_HEADERS.has(p.header) && pageId && blockId) {
+    return iframeEmbed(ctx.embedUrls.petitionBlock(pageId, blockId), ctx);
+  }
+  return iframeEmbed(ctx.embedUrls.petition(ctx.orgSlug, slug), ctx);
+}
+function movementMapEmbed(p, ctx) {
+  const pageId = str(p.pageId);
+  const blockId = str(p.id);
+  const hasSource = !!str(p.datasetUrl) || !!str(p.datasetPreset) && !!str(p.datasetArea);
+  if (!pageId || !blockId || !hasSource) return null;
+  return iframeEmbed(ctx.embedUrls.movementMapBlock(pageId, blockId), ctx);
 }
 var HEADING_ONLY = ["heading"];
 var CONTENT_API_BLOCKS = {
@@ -385,13 +411,19 @@ var CONTENT_API_BLOCKS = {
     options: ["geoId", "focusRegion", "regionTotal", "regionNoun", "anchorId"],
     data: { source: "regions", rows: { read: (p) => mapRegions(p.rows), write: mapRows } }
   },
+  // The figures and the legend travel as rows for a site to draw; the live
+  // map itself — the one a visitor zooms and explores — is BackGold's, framed
+  // by the page's block (`embed`) whenever the block names a data source (a
+  // curated preset with an area, or a public dataset URL). The bake stamps
+  // `pageId`; a block with no source has nothing to frame and no embed.
   MovementMap: {
     role: "presentational",
     copy: ["kicker", "heading", "badgeNoun", "uncategorizedLabel", "sourceLabel"],
     media: ["datasetUrl"],
     links: [{ label: "sourceLabel", href: "sourceHref" }],
     options: ["datasetPreset", "datasetArea", "categoryProperty", "centerLat", "centerLng", "zoom", "anchorId"],
-    hosted: ["datasetPath"],
+    hosted: ["datasetPath", "pageId"],
+    embed: (p, ctx) => movementMapEmbed(p, ctx),
     // The stat tiles as stored, then the legend's categories (`group: 'category'`).
     data: {
       source: "movement_map",
@@ -832,7 +864,8 @@ var CONTENT_API_BLOCKS = {
       source: "countdown",
       rows: {
         read: (p) => str(p.deadline) ? [{ deadline: p.deadline }] : [],
-        write: ([row]) => row ? { deadline: row.deadline } : {}
+        // No row is a Countdown not configured yet: the renderer's `deadline: ''`.
+        write: ([row]) => ({ deadline: row ? row.deadline : "" })
       }
     }
   },
@@ -1184,6 +1217,12 @@ var CONTENT_API_BLOCKS = {
       return iframeEmbed(target && ctx.embedUrls.poll(target.pageId, target.blockId), ctx);
     }
   },
+  // Under the plain and image headers the frame is the petition's own (the
+  // record carries everything it draws). Under the map and coverage headers
+  // the band is the BLOCK's — its data source and legend, asks, goal note and
+  // stat tiles, or its county coverage rows — so the frame is addressed by
+  // the page's block (the bake stamps `pageId`), the way a form's is, and
+  // draws the hosted sheet with that band.
   // The petition's own words, switches and lists frame the sign sheet: the
   // asks, then the stat tiles (`group: 'tile'`), a tile's value a typed figure
   // or `auto:total` / `auto:signatures` / `auto:category:<value>`. The
@@ -1192,7 +1231,7 @@ var CONTENT_API_BLOCKS = {
     role: "compliance",
     copy: ["heading", "addressedTo", "goalNote", "volunteerPrompt"],
     variant: "header",
-    options: ["datasetPreset", "datasetArea", "badgeNoun", "uncategorizedLabel", "volunteerAsk", "recognition"],
+    options: ["datasetPreset", "datasetArea", "badgeNoun", "uncategorizedLabel", "volunteerAsk", "recognition", "anchorId"],
     data: {
       source: "petition",
       lists: [
@@ -1200,7 +1239,8 @@ var CONTENT_API_BLOCKS = {
         { prop: "statTiles", group: "tile", fields: { label: "label", value: "value", note: "note" } }
       ]
     },
-    embed: (p, ctx) => iframeEmbed(str(p.petitionSlug) && ctx.embedUrls.petition(ctx.orgSlug, p.petitionSlug), ctx)
+    hosted: ["pageId"],
+    embed: (p, ctx) => petitionEmbed(p, ctx)
   },
   Store: { role: "compliance", copy: HEADING_ONLY, variant: "layout", embed: (_p, ctx) => iframeEmbed(ctx.embedUrls.store(ctx.orgSlug), ctx) },
   // An event the bake could not resolve (unpublished, gated, over) renders
@@ -1547,4 +1587,4 @@ function projectedBlockProps(block, ctx) {
   return props;
 }
 
-export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, EVENTS_WINDOW_MAX_DAYS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

@@ -1,8 +1,8 @@
-import { SECTION_BLEEDS, SECTION_BANDS } from './chunk-4I543DJL.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-UU2RX6DP.js';
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-DNTYW7H4.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-NQP7MJJF.js';
 import { z } from 'zod';
 
-var SITE_TEMPLATE_KEYS = ["party"];
+var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive"];
 var name = z.string().trim().min(1).max(120);
 var layoutName = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/);
 var slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$|^$/, "a page slug (lower case, words joined by -; empty for home)");
@@ -164,9 +164,15 @@ var siteTemplateManifestSchema = z.object({
   }),
   /** Routable built-in content type key → its entry layout and its list layout. */
   entryLayouts: z.partialRecord(z.enum(BUILT_IN_CONTENT_TYPE_KEYS), entryLayoutSchema),
+  /**
+   * The site parts the template draws around every page: the header and
+   * footer layouts it draws (SITE_CHROME_LAYOUTS, its default first; the
+   * site's choice is `/site`'s `chrome`), the takeover banner and the legal
+   * line.
+   */
   chrome: z.object({
-    header: layoutName,
-    footer: layoutName,
+    header: z.array(z.enum(SITE_CHROME_LAYOUTS.header)).min(1),
+    footer: z.array(z.enum(SITE_CHROME_LAYOUTS.footer)).min(1),
     takeoverBanner: z.boolean(),
     legalLine: z.boolean()
   }),
