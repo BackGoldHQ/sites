@@ -1,0 +1,66 @@
+// What a template is to the kit: its manifest (template.json), the component
+// that draws each section type and layout, the entry and list layouts, and
+// its own two faces. A template's src/template.ts exports one, built from the
+// kit's registries with its own layouts added:
+//
+//   import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+//   import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
+//   import manifest from '../template.json'
+//   import HeroPortrait from './components/sections/Hero/portrait.astro'
+//   import './styles/template.css'
+//
+//   export default defineTemplate({
+//     manifest: siteTemplateManifestSchema.parse(manifest),
+//     sections: { ...kitSections, 'Hero:portrait': HeroPortrait },
+//     entries: kitEntries,
+//     fonts: { heading: 'Oswald:wght@500;700', body: 'Public+Sans:wght@400;700' },
+//   })
+//
+// The template's astro.config.mjs names that file to the kit's integration
+// (`templateKit({ template: './src/template.ts' })`), whose routes import it
+// as `virtual:backgold-template` and pass it to the Site layout and to
+// everything that draws a section or an entry.
+
+import type { SiteTemplateManifest } from '@backgold/contract/site-templates'
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
+import { entries } from './components/entries'
+import { sections } from './components/sections'
+
+export type AstroComponent = AstroComponentFactory
+
+export interface TemplateConfig {
+  /** The template's template.json. */
+  manifest: SiteTemplateManifest
+  /**
+   * The component for each section type ('<Type>') and layout
+   * ('<Type>:<layout>'), as `<Section components>` looks them up
+   * (src/components/sections/index.ts).
+   */
+  sections: Record<string, AstroComponent>
+  /** The entry and list layouts, as '<type>:<layout>' (src/components/entries/index.ts). */
+  entries: Record<string, AstroComponent>
+  /**
+   * The template's own faces, as Google Fonts family specs
+   * (`Family+Name:axes@values`): what the site draws in when its theme in
+   * BackGold names none (src/lib/fonts.ts).
+   */
+  fonts: { heading: string; body: string }
+}
+
+/** Every section type and layout the kit draws. */
+export const kitSections: Record<string, AstroComponent> = sections
+
+/** Every entry and list layout the kit draws. */
+export const kitEntries: Record<string, AstroComponent> = entries
+
+/** A template's configuration, typed. */
+export const defineTemplate = (config: TemplateConfig): TemplateConfig => config
+
+declare global {
+  namespace App {
+    interface Locals {
+      /** The template drawing this request; PageSections sets it for LeadingHero. */
+      template?: TemplateConfig
+    }
+  }
+}

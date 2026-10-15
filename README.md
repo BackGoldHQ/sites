@@ -21,15 +21,16 @@ gitlab.com/backgold/backgold (private).
 | --- | --- |
 | `packages/content-client` | [`@backgold/content`](https://www.npmjs.com/package/@backgold/content) on npm: the typed, cache-aware client for the Content API (`/api/content/v1`), and the `backgold-content` command that writes a site's content types. |
 | `packages/astro-backgold` | [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro) on npm: the plumbing for an Astro site on Cloudflare Workers (routing, the edge cache keyed by content version, the webhook, preview, redirects, the SEO routes and the components). It reads content with `@backgold/content`. |
+| `packages/template-kit` | `@backgold/template-kit`, private to this workspace: what every BackGold template draws the same way (the section, entry and chrome components, the Site layout, `lib`, the stylesheets) and an Astro integration that serves its routes with a template's config. Consumed as source; no build. A template is its manifest, its `src/template.ts`, its `src/styles/template.css` and any layouts of its own. |
 | `templates/astro-starter` | The public starter. `scripts/sync-starter.sh` mirrors it to [gitlab.com/backgold/backgold-starter](https://gitlab.com/backgold/backgold-starter), the repository Cloudflare's Deploy button clones. |
-| `templates/party` | The party template, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
+| `templates/party` | The party template, drawn by the template kit, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
 
 Beside them:
 
 | Path | What it is |
 | --- | --- |
 | `vendor/backgold-contract` | A snapshot of the Content API contract (response types, example responses, built-in content types, the template manifest schema) built in the platform repository. It is the private workspace package `@backgold/contract`; `@backgold/content` bundles what it uses of it. Never edit it; pull a new one (below). |
-| `scripts/starter-e2e.mjs` | The end-to-end check: packs both packages, installs them with npm into a copy of a template outside the repository, builds it, and runs it on `wrangler dev` against a fixture Content API. |
+| `scripts/starter-e2e.mjs` | The end-to-end check: packs both packages (and the template kit and the contract, for a template on the kit), installs them with npm into a copy of a template outside the repository, builds it, and runs it on `wrangler dev` against a fixture Content API. |
 | `scripts/check-manifests.mjs` | Parses every `templates/*/template.json` with the vendored manifest schema. |
 | `scripts/contract-pull.mjs` | Refreshes `vendor/backgold-contract` from a platform checkout. |
 | `scripts/sync-starter.sh` | Mirrors the starter to its public repository. |

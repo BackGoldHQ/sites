@@ -60,6 +60,27 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/template-kit:
+    devDependencies:
+      '@astrojs/check':
+        specifier: ^0.9.10
+        version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/astro':
+        specifier: workspace:^
+        version: link:../astro-backgold
+      '@backgold/content':
+        specifier: workspace:^
+        version: link:../content-client
+      '@backgold/contract':
+        specifier: workspace:*
+        version: link:../../vendor/backgold-contract
+      astro:
+        specifier: ^7.3.5
+        version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   templates/astro-starter:
     dependencies:
       '@astrojs/cloudflare':
@@ -96,6 +117,12 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
+      '@backgold/contract':
+        specifier: workspace:*
+        version: link:../../vendor/backgold-contract
+      '@backgold/template-kit':
+        specifier: workspace:^
+        version: link:../../packages/template-kit
       astro:
         specifier: ^7.3.5
         version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)

@@ -1,14 +1,15 @@
 // The site's header and footer as BackGold's operator set them up: GET /site's
-// `chrome` (each part's layout and the footer's own words), against what
-// template.json's `chrome` says this template draws. A layout the site names
-// that this template does not list is drawn as the template's first, exactly
-// as a section's variant falls back; a `/site` answer with no `chrome` at all
-// (an older BackGold) reads as the template's firsts and no words.
+// `chrome` (each part's layout and the footer's own words), against what the
+// template's template.json `chrome` (its config's manifest) says it draws. A
+// layout the site names that the template does not list is drawn as the
+// template's first, exactly as a section's variant falls back; a `/site`
+// answer with no `chrome` at all (an older BackGold) reads as the template's
+// firsts and no words.
+import type { SiteTemplateManifest } from '@backgold/contract/site-templates'
 import { relFor, safeHref } from '@backgold/astro/server'
-import manifest from '../../template.json'
 
-export type HeaderLayout = (typeof manifest.chrome.header)[number]
-export type FooterLayout = (typeof manifest.chrome.footer)[number]
+export type HeaderLayout = SiteTemplateManifest['chrome']['header'][number]
+export type FooterLayout = SiteTemplateManifest['chrome']['footer'][number]
 
 /** A link on the footer's bottom row, or a closing-call button: its address already checked. */
 export interface ChromeLink {
@@ -80,7 +81,7 @@ function linksOf(value: unknown): ChromeLink[] {
   return out
 }
 
-export function chromeOf(site: unknown): SiteChrome {
+export function chromeOf(site: unknown, manifest: SiteTemplateManifest): SiteChrome {
   const raw = ((site ?? {}) as Raw).chrome ?? {}
   const footer = raw.footer ?? {}
   const layout = drawn(manifest.chrome.footer, footer.layout)

@@ -1,9 +1,10 @@
 // What every entry layout and every list layout is given, by
-// src/pages/[...path].astro and src/pages/preview.astro.
+// src/routes/catch-all.astro and src/routes/preview.astro.
 
 import type { Areas, ContentTypeSummary, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
 import type { Pager, ResolvedType } from '@backgold/astro/server'
 import type { ListFilter } from '../../lib/entries'
+import type { TemplateConfig } from '../../template'
 
 export interface EntryLayoutProps {
   entry: EntryDetail
@@ -14,6 +15,8 @@ export interface EntryLayoutProps {
 }
 
 export interface ListLayoutProps {
+  /** The template drawing the list (its intro's sections draw through its sections map). */
+  template: TemplateConfig
   type: ResolvedType
   /** The list's address without slashes, as resolveRoute names it: the blog base (`news`) for the news list, the type's url_base for any other. */
   base: string

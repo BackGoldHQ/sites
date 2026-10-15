@@ -3,8 +3,13 @@
 // middleware sends each request here while BACKGOLD_SITE_KEY is missing or
 // malformed; once it is set, this address is a 404). There is no BackGold
 // data yet, so this page uses none: no layout, no menus, no brand.
+//
+// The kit's integration serves it at /backgold-setup. It imports the
+// template's config (`virtual:backgold-template`) for its stylesheet alone:
+// the template's src/styles/template.css, after the kit's site.css.
 import { brandCss } from '../lib/brand'
 import '../styles/site.css'
+import 'virtual:backgold-template'
 
 const HELP: Record<string, { what: string; where: string }> = {
   BACKGOLD_SITE_KEY: {

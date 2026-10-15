@@ -1,7 +1,9 @@
 /*
-  The party template's look, drawn to boards A1 (home, desktop), A13 (home
-  on a phone) and A12 (the section catalogue) in
-  docs/design/sites-unification-2026-10/mockups. The template owns the type,
+  The look every template on the kit draws, the party template's, drawn to
+  boards A1 (home, desktop), A13 (home on a phone) and A12 (the section
+  catalogue) in docs/design/sites-unification-2026-10/mockups; a template's
+  own src/styles/template.css, loaded after this, sets what it draws
+  differently. The template owns the type,
   the spacing and the shapes set here; the organization owns the colours.
   Colours come only from the custom properties the layout writes from the
   brand in BackGold (src/lib/brand.ts, the token sheet, light and dark):
@@ -25,7 +27,9 @@
     heading and body stacks, which the layout sets as --site-font-heading and
     --site-font-body and loads), else board A1's: Fraunces for display
     (headings, numerals, the wordmark), Public Sans for text, which the layout
-    loads in their place.
+    loads in their place (the party template's `fonts`). A template with other
+    faces names them in its own `fonts` and sets --font and --font-display
+    to them in its src/styles/template.css.
   */
   --font: var(--site-font-body, 'Public Sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
   --font-display: var(--site-font-heading, 'Fraunces', ui-serif, Georgia, 'Iowan Old Style', serif);

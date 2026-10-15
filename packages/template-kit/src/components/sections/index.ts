@@ -4,13 +4,15 @@
 // layout (the Layout chosen in BackGold), then as '<Type>'; a type that is
 // not listed renders through the package's DefaultSection, so a block
 // BackGold adds later still shows. The areas (src/layouts/Site.astro and the
-// Sidebar in src/pages/[...path].astro) draw their sections through this map
-// too, TakeoverBanner among them.
+// Sidebar in src/routes/catch-all.astro) draw their sections through this map
+// too, TakeoverBanner among them. It is `kitSections` (src/template.ts); a
+// template's own `sections` is this map with the layouts it draws itself
+// added.
 //
 // Each type has a directory: `<Type>/index.astro` is its default layout (the
-// first one template.json lists) and `<Type>/<layout>.astro` each other
-// layout template.json lists for it. Every layout template.json names is
-// registered below; a layout BackGold stores that is not listed falls back to
+// first one a template.json lists) and `<Type>/<layout>.astro` each other
+// layout it lists for it. Every layout the kit draws is registered below; a
+// layout BackGold stores that the template's map does not list falls back to
 // `<Type>/index.astro`, which gets the layout as its `variant` prop.
 //
 // BackGold's money and consent modules (Donate, FormBlock, PollBlock,

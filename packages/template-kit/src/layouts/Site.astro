@@ -1,6 +1,6 @@
 ---
-// Every page's frame, as template.json's `chrome` and `areas` declare it and
-// boards A1 (desktop) and A13 (phone) draw it:
+// Every page's frame, as the template's template.json `chrome` and `areas`
+// declare it and boards A1 (desktop) and A13 (phone) draw it:
 //
 //   Top banner       (`top_banner`) first, above the header, full width: a
 //                    Call to action · Strip is A1's slim announcement strip,
@@ -31,11 +31,11 @@
 //                    above the footer whatever the footer's layout.
 //   the footer       the layout the site chose (`/site` chrome.footer, one
 //                    of template.json's `chrome.footer`), with the words its
-//                    editor in BackGold holds. `giving` (this template's
-//                    first): a donate strip across its top (DonateStrip: the
-//                    footer menu's first Donate link, else the bottom row's,
-//                    else the header button when it is Donate; no strip
-//                    without one), the brand with its line (the footer's
+//                    editor in BackGold holds. `giving` (the party
+//                    template's first): a donate strip across its top
+//                    (DonateStrip: the footer menu's first Donate link, else
+//                    the bottom row's, else the header button when it is
+//                    Donate; no strip without one), the brand with its line (the footer's
 //                    blurb, else the site's description) and social links,
 //                    a Contact column (the address and phone) and the footer
 //                    menu as columns (a column per group), the legal line,
@@ -51,22 +51,24 @@
 //                    no menu and no contact is the brand and its line alone.
 //
 // The Sidebar (`sidebar`) is drawn beside the page by the routes, in
-// src/pages/[...path].astro and preview.astro. The takeover banner is the
+// src/routes/catch-all.astro and preview.astro. The takeover banner is the
 // TakeoverBanner section an area carries (most often Top banner); it draws
-// through the sections map like any area item.
+// through the template's sections map like any area item.
 //
 // The type is the site's when it wears a saved theme in BackGold: its heading
 // and body faces from `/site`'s `theme.fonts`, declared as a hosted BackGold
 // page declares them (src/lib/fonts.ts). A slot the theme does not fill, and
 // every slot of a site with no theme, keeps the template's own face, the one
-// the boards name: Fraunces for headings, Public Sans for text, from Google
-// Fonts (the boards load them from there too). Either way the faces never
-// block the first paint.
+// its boards name (`fonts` in the template's config: the party's are Fraunces
+// for headings, Public Sans for text), from Google Fonts (the boards load
+// them from there too). Either way the faces never block the first paint.
 //
 // `page` is the BackGold page being drawn as `{ id, takes_donations }`, or
 // null on a route with no BackGold page (a list, an entry, an author, a
 // tag, the 404); the menus apply each link's Shows on rule against it.
 // Every route here passes it: left out, every link and the button show.
+// `template` is the template's config (src/template.ts): its manifest, its
+// sections map and its faces.
 // `areas` is the response's `areas`; null draws no area.
 import type { Areas } from '@backgold/content'
 import { Analytics, Area, Disclaimer, MenuButton, Seo } from '@backgold/astro/components'
@@ -79,14 +81,15 @@ import FooterContact from '../components/chrome/FooterContact.astro'
 import MenuList from '../components/chrome/MenuList.astro'
 import ModeToggle from '../components/chrome/ModeToggle.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
-import { sections } from '../components/sections'
 import { appearanceOf, brandCss } from '../lib/brand'
 import { chromeOf, copyrightLine } from '../lib/chrome'
 import { siteFonts } from '../lib/fonts'
 import { footerColumnsOf } from '../lib/footer'
+import type { TemplateConfig } from '../template'
 import '../styles/site.css'
 
 interface Props {
+  template: TemplateConfig
   title?: string
   description?: string
   image?: string
@@ -104,7 +107,8 @@ const bg = Astro.locals.backgold
 if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
 
 const { site, legal, client } = bg
-const { page, areas = null, ...head } = Astro.props
+const { template, page, areas = null, ...head } = Astro.props
+const { sections } = template
 const [primary, footer, utility] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility')])
 const pathname = Astro.url.pathname
 const headerItems = primary?.items ?? []
@@ -114,7 +118,7 @@ const bottomRow = menuOf(utility?.items ?? [], pathname, page).flatMap((node) =>
 const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []
 const name = site.name ?? site.domain
 /** The header and footer as the site set them up in BackGold, against what this template draws. */
-const chrome = chromeOf(site)
+const chrome = chromeOf(site, template.manifest)
 /** The line under the brand in the footer: the footer's own, else the site's description. */
 const description = chrome.footer.blurb ?? (site.seo.description?.trim() || null)
 /** A1's social circles: the platform's short name in the circle (its first two letters when A1 names none), its full name for screen readers. */
@@ -147,7 +151,7 @@ const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (he
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
 /** The theme's faces, else the template's own (src/lib/fonts.ts). */
-const fonts = siteFonts(site.theme, bg.firstParty)
+const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
 ---
 <!doctype html>
 <html lang="en">

@@ -19,21 +19,16 @@
 // and the page preconnects to it.
 //
 // A slot with no theme face, or one whose family, stack or source is not of
-// the shapes above, keeps the template's own face: Fraunces for headings,
-// Public Sans for text, from Google Fonts. A file whose weight or address is
+// the shapes above, keeps the template's own face for it, from Google Fonts:
+// the `fonts` of the template's config (src/template.ts). A file whose weight or address is
 // not of those shapes is left out, as a hosted page leaves out a weight it has
 // no file for. Every value written into CSS passed one of the patterns below,
 // so none carries anything but a family name, a stack or a file address.
 
 import type { SiteResponse } from '@backgold/content'
+import type { TemplateConfig } from '../template'
 
 type SiteTheme = SiteResponse['site']['theme']
-
-/** The template's own faces, by slot, as Google Fonts families. */
-const OWN_FACES = {
-  heading: 'Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500',
-  body: 'Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400',
-} as const
 
 const GOOGLE_FONTS = 'https://fonts.googleapis.com'
 const GOOGLE_FILES = 'https://fonts.gstatic.com'
@@ -45,7 +40,7 @@ const STACK = /^(?:"[A-Za-z0-9 +-]{1,64}"|'[A-Za-z0-9 +-]{1,64}'|-?[A-Za-z][A-Za
 /** A woff2 file as BackGold serves one: content-addressed under /lp-runtime. */
 const FILE_PATH = /^\/lp-runtime\/[0-9a-f]{64}\.woff2$/
 
-type Slot = keyof typeof OWN_FACES
+type Slot = 'heading' | 'body'
 
 interface Face {
   family: string
@@ -94,7 +89,7 @@ function faceOf(value: unknown, firstParty: boolean): Face | null {
 }
 
 /** The faces a page of this site loads, and how (see the top of this file). */
-export function siteFonts(theme: SiteTheme | undefined, firstParty: boolean): SiteFonts {
+export function siteFonts(theme: SiteTheme | undefined, firstParty: boolean, ownFaces: TemplateConfig['fonts']): SiteFonts {
   const fonts = record(record(theme)?.fonts)
   const faces: Record<Slot, Face | null> = { heading: faceOf(fonts?.heading, firstParty), body: faceOf(fonts?.body, firstParty) }
   const props: string[] = []
@@ -110,7 +105,7 @@ export function siteFonts(theme: SiteTheme | undefined, firstParty: boolean): Si
       if (file.origin) origins.add(file.origin)
     }
   }
-  const own = (['heading', 'body'] as const).filter((slot) => !faces[slot]).map((slot) => OWN_FACES[slot])
+  const own = (['heading', 'body'] as const).filter((slot) => !faces[slot]).map((slot) => ownFaces[slot])
   const preconnects = [...origins].map((href) => ({ href, crossorigin: true }))
   if (own.length > 0) preconnects.unshift({ href: GOOGLE_FONTS, crossorigin: false }, { href: GOOGLE_FILES, crossorigin: true })
   return {

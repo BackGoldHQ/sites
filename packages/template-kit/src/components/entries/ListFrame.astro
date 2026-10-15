@@ -23,7 +23,7 @@ interface Props extends ListLayoutProps {
   class?: string
 }
 
-const { type, base: address, entries, pager, filter, term, search, intro = null, noun, class: className } = Astro.props
+const { template, type, base: address, entries, pager, filter, term, search, intro = null, noun, class: className } = Astro.props
 const base = basePath(address)
 const name = listName(type, address, intro)
 const current = term ? `${term.taxonomy.key}/${term.term.slug}` : null
@@ -32,7 +32,7 @@ const results = (n: number) => (n === 1 ? '1 result' : `${n} results`)
 ---
 <div class:list={['listing', className]}>
   {intro && !term ? (
-    <div class="list-intro"><PageSections page={intro} siteName={name} /></div>
+    <div class="list-intro"><PageSections template={template} page={intro} siteName={name} /></div>
   ) : (
     <header class="page-header list-header">
       {term && <p class="kicker"><a href={base}>{name}</a> · {term.taxonomy.label}</p>}

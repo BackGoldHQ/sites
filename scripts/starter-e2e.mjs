@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// The starter template (or another template under templates/) and the two
+// The starter template (or another template under templates/) and the
 // packages it is built on, end to end on workerd: builds @backgold/content
-// and @backgold/astro, packs them, installs them with npm into a copy of the
-// template outside the repository (its package.json pointed at the tarballs,
-// so nothing resolves through the pnpm workspace or from npm's copies of the
+// and @backgold/astro, packs them (and the workspace packages a template on
+// the kit also names: @backgold/template-kit and the vendored contract,
+// @backgold/contract), installs them with npm into a copy of the template
+// outside the repository (its package.json pointed at the tarballs, so
+// nothing resolves through the pnpm workspace or from npm's copies of the
 // packages), checks that npm put workerd's binary for this platform there
 // (installing once more when it did not), builds it, and runs it on
 // `wrangler dev` against a fixture Content API served from
@@ -141,11 +143,20 @@ function buildAndPack(packDir) {
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/astro-backgold'))
+  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
+  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'vendor/backgold-contract'))
   const files = readdirSync(packDir)
-  const content = files.find((f) => /^backgold-content-.*\.tgz$/.test(f))
-  const astro = files.find((f) => /^backgold-astro-.*\.tgz$/.test(f))
-  if (!content || !astro) throw new Error(`pnpm pack wrote ${files.join(', ')}`)
-  return { content: join(packDir, content), astro: join(packDir, astro) }
+  const tarball = (pattern) => {
+    const file = files.find((f) => pattern.test(f))
+    if (!file) throw new Error(`pnpm pack wrote ${files.join(', ')}`)
+    return join(packDir, file)
+  }
+  return {
+    content: tarball(/^backgold-content-.*\.tgz$/),
+    astro: tarball(/^backgold-astro-.*\.tgz$/),
+    kit: tarball(/^backgold-template-kit-.*\.tgz$/),
+    contract: tarball(/^backgold-contract-.*\.tgz$/),
+  }
 }
 
 // ── 2. The template, installed from the tarballs ─────────────────────────────
@@ -161,9 +172,14 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // @backgold/astro depends on @backgold/content; the override makes that
-  // the tarball too, never the copy on npm.
-  pkg.overrides = { '@backgold/content': content }
+  // A template on the kit names the kit and the contract (which its
+  // src/template.ts parses template.json with); neither is on npm.
+  if (pkg.dependencies['@backgold/template-kit']) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
+  if (pkg.dependencies['@backgold/contract']) pkg.dependencies['@backgold/contract'] = `file:${tarballs.contract}`
+  // @backgold/astro depends on @backgold/content, and the kit names both as
+  // peers; the overrides make every one of them the tarball, never the copy
+  // on npm.
+  pkg.overrides = { '@backgold/content': content, '@backgold/astro': astro }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
   const install = ['install', '--no-audit', '--no-fund', '--loglevel=error']
   run('npm', install, siteDir)
@@ -2732,7 +2748,7 @@ function probe(siteDir, name, body) {
     file,
     `import { createServer } from 'vite'
 import { getViteConfig } from 'astro/config'
-const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
+const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false }, ssr: { noExternal: ['@backgold/template-kit'] } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
 const server = await createServer({ ...config, configFile: false })
 try {
 ${body}
@@ -2751,7 +2767,7 @@ ${body}
 // Renders LiveCounts.astro alone with Astro's container, with a first-party
 // locals.backgold, and prints the markup.
 const FIRST_PARTY_PROBE = `  const { experimental_AstroContainer } = await server.ssrLoadModule('astro/container')
-  const { default: LiveCounts } = await server.ssrLoadModule('/src/components/sections/EventsList/LiveCounts.astro')
+  const { default: LiveCounts } = await server.ssrLoadModule('@backgold/template-kit/components/sections/EventsList/LiveCounts.astro')
   const container = await experimental_AstroContainer.create()
   const html = await container.renderToString(LiveCounts, { locals: { backgold: { firstParty: true } } })
   console.log('PROBE ' + JSON.stringify(html))`
@@ -2791,22 +2807,30 @@ async function checkFirstPartyLive(siteDir) {
   )
 }
 
+/** The party template's own faces, as its src/template.ts gives them to the kit. */
+const PARTY_FACES = {
+  heading: 'Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500',
+  body: 'Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400',
+}
+
 /**
  * First-party faces, unit-level (the Worker under test reads with a site key):
- * src/lib/fonts.ts names each theme file by its same-origin path, as a hosted
+ * the kit's src/lib/fonts.ts, given the party's own faces (PARTY_FACES, as
+ * templates/party/src/template.ts names them), names each theme file by its same-origin path, as a hosted
  * page does, with nothing to preconnect; a system face downloads nothing; a
  * face it cannot read keeps the template's own face for that slot alone.
  */
 function checkFirstPartyFonts(siteDir, theme) {
-  log('\nFirst-party faces (src/lib/fonts.ts alone)')
+  log('\nFirst-party faces (the kit\'s src/lib/fonts.ts alone, with the party\'s faces)')
   const fonts = probe(
     siteDir,
     'fonts-first-party',
-    `  const { siteFonts } = await server.ssrLoadModule('/src/lib/fonts.ts')
+    `  const { siteFonts } = await server.ssrLoadModule('@backgold/template-kit/lib/fonts')
+  const own = ${JSON.stringify(PARTY_FACES)}
   const theme = ${JSON.stringify(theme)}
   const system = { ...theme, fonts: { ...theme.fonts, heading: { family: 'Georgia', stack: "Georgia,'Times New Roman',Times,serif", source: 'system', files: [] } } }
   const unreadable = { ...theme, fonts: { ...theme.fonts, heading: { ...theme.fonts.heading, stack: '"Roboto Slab"}body{color:red' } } }
-  console.log('PROBE ' + JSON.stringify({ theme: siteFonts(theme, true), system: siteFonts(system, true), unreadable: siteFonts(unreadable, true) }))`,
+  console.log('PROBE ' + JSON.stringify({ theme: siteFonts(theme, true, own), system: siteFonts(system, true, own), unreadable: siteFonts(unreadable, true, own) }))`,
   )
   const sources = (css) => [...css.matchAll(/src:url\(([^)]+)\)/g)].map((m) => m[1])
   const paths = [theme.fonts.heading, theme.fonts.body].flatMap((face) => face.files.map((file) => new URL(file.url).pathname))
@@ -3530,7 +3554,9 @@ async function checkPartyLook(origin, fixture, chrome) {
  */
 function checkSectionsMap(chromeBlocks, areaBlocks, templateSections) {
   const blocks = { ...chromeBlocks, ...areaBlocks }
-  const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
+  // A template on the kit draws the kit's sections map (its own layouts add keys of the form 'Type:layout', never a type).
+  const own = join(TEMPLATE, 'src/components/sections/index.ts')
+  const source = readFileSync(existsSync(own) ? own : join(ROOT, 'packages/template-kit/src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
   const unframed = ['SocialFrame']

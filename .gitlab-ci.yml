@@ -9,13 +9,17 @@
 # Fan-out map (a consumer resolves the packages through their built dist/, so
 # each job builds what it consumes first):
 #   packages/content-client → content-client   (@backgold/content on npm)
-#                             + astro-backgold + starter + party
+#                             + astro-backgold + template-kit + starter + party
 #                             deploy-party-staging on main (automatic)
 #                             pack-content → publish-content (manual release)
 #   packages/astro-backgold → astro-backgold   (@backgold/astro on npm)
-#                             + starter + party
+#                             + template-kit + starter + party
 #                             deploy-party-staging on main (automatic)
 #                             pack-astro → publish-astro (manual release)
+#   packages/template-kit   → template-kit     (@backgold/template-kit, private:
+#                                                what every template draws)
+#                             + party
+#                             deploy-party-staging on main (automatic)
 #   templates/astro-starter → starter          (the e2e, with
 #                                                scripts/starter-e2e.mjs);
 #                             sync-starter on main (automatic: mirrors it to
@@ -193,6 +197,36 @@ astro-backgold:
     - pnpm --filter @backgold/astro build
     - pnpm --filter @backgold/astro test
 
+# template-kit = @backgold/template-kit (packages/template-kit), the private
+# workspace package every template's sections, entries, chrome, Site layout
+# and routes come from, consumed as source. Its lint is `astro check` over
+# its .astro files with its own astro.config.mjs, then `tsc` over its .ts and
+# the integration; both read @backgold/astro's and @backgold/content's built
+# types, so those build first. Same seatbelt as `content-client`.
+template-kit:
+  stage: check
+  timeout: 15m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/template-kit/**/*
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  script:
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/astro build
+    - pnpm --filter @backgold/template-kit lint
+
 # starter = the public starter (templates/astro-starter) end to end:
 # scripts/starter-e2e.mjs packs both packages, installs them with npm into a
 # copy of the template outside the repository (so nothing resolves through
@@ -240,9 +274,10 @@ starter:
     - pnpm --filter @backgold/astro build
     - node scripts/starter-e2e.mjs --lighthouse
 
-# party = the party template (templates/party), first `astro check` (the
-# template's own `check` script) run in place from the workspace, where its
-# @backgold dependencies resolve to the packages just built here; then the
+# party = the party template (templates/party), drawn by the template kit
+# (packages/template-kit), first `astro check` (the template's own `check`
+# script) run in place from the workspace, where its @backgold dependencies
+# resolve to the packages just built here; then the
 # same end-to-end checks as `starter`: scripts/starter-e2e.mjs with
 # `--template party` copies templates/party in place of the starter and runs
 # every check, Lighthouse and the party look checks in Chromium included.
@@ -260,6 +295,7 @@ party:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - templates/party/**/*
+        - packages/template-kit/**/*
         - scripts/starter-e2e.mjs
         - packages/astro-backgold/**/*
         - packages/content-client/**/*
@@ -374,6 +410,7 @@ deploy-party-staging:
       changes:
         - templates/party/**/*
         - packages/**/*
+        - packages/template-kit/**/*
         - vendor/**/*
         - pnpm-lock.yaml
         - .gitlab-ci.yml

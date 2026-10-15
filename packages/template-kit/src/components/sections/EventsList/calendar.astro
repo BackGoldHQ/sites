@@ -21,7 +21,7 @@
 //
 // On the events page the type tabs come first, as the Agenda draws them
 // (TypeTabs), each keeping the month in view; on /events/<type> the month is
-// that type's events. src/pages/[...path].astro never lets the edge store a
+// that type's events. src/routes/catch-all.astro never lets the edge store a
 // page with a calendar on it: the month in view and today move with the
 // clock and `?month=`, neither of which is in the edge cache's key.
 import type { ComponentProps } from 'astro/types'

@@ -1,10 +1,12 @@
 ---
 // The Hero a page opens with, its headline the page's <h1>. PageSections
 // draws it through <Section> so it gets the same preview marker as every
-// other section. The layout's own component comes from the sections map
+// other section, which passes it only the section and its layout, so it
+// reads the template's sections map from `Astro.locals.template`, which
+// PageSections sets. The layout's own component comes from that map
 // ('Hero:<layout>', else 'Hero'), as for any other Hero, with `level={1}`.
 import type { Section } from '@backgold/content'
-import { sections } from './sections'
+import DefaultHero from './sections/Hero/index.astro'
 
 interface Props {
   section: Section
@@ -12,8 +14,8 @@ interface Props {
 }
 
 const { section, variant } = Astro.props
-const byKey: Record<string, typeof sections.Hero> = sections
-const key = variant ? `Hero:${variant}` : null
-const Hero = (key !== null && Object.hasOwn(byKey, key) ? byKey[key] : undefined) ?? sections.Hero
+const byKey = Astro.locals.template?.sections ?? {}
+const own = (key: string) => (Object.hasOwn(byKey, key) ? byKey[key] : undefined)
+const Hero = (variant ? own(`Hero:${variant}`) : undefined) ?? own('Hero') ?? DefaultHero
 ---
 <Hero section={section} variant={variant} level={1} />

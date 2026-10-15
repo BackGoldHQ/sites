@@ -7,13 +7,17 @@
 // answers 503. Either way it is rendered with the same layout, menus, areas
 // and components as the published site, under a "Draft · not published"
 // bar, and each section carries the marker the BackGold editor scrolls to.
-// Never cached, never indexed. A bad or expired link answers 400.
+// Never cached, never indexed. A bad or expired link answers 400. The kit's
+// integration serves this page at /preview, for the template its `template`
+// option names (`virtual:backgold-template`).
 import { PREVIEW_HEADERS, areaEntriesOf, loadPreview, type MenuPage } from '@backgold/astro/server'
 import { Area, PreviewBar } from '@backgold/astro/components'
 import Site from '../layouts/Site.astro'
-import { sections } from '../components/sections'
 import { entryLayoutFor } from '../components/entries'
 import PageSections from '../components/PageSections.astro'
+import template from 'virtual:backgold-template'
+
+const { sections } = template
 
 const result = await loadPreview(Astro.request)
 if (!result.ok) return result.response
@@ -36,13 +40,13 @@ const title = 'page' in draft ? (draft.page.title ?? siteName) : draft.entry.tit
 const menuPage: MenuPage | null = 'page' in draft ? { id: draft.page.id, takes_donations: draft.page.takes_donations } : null
 const areas = draft.areas ?? null
 const sidebar = areaEntriesOf(areas, 'sidebar').length > 0
-const EntryLayout = 'entry' in draft ? entryLayoutFor(draft.entry.type) : null
+const EntryLayout = 'entry' in draft ? entryLayoutFor(template, draft.entry.type) : null
 ---
-<Site title={`Preview: ${title}`} canonicalPath={result.path} noindex page={menuPage} areas={areas}>
+<Site template={template} title={`Preview: ${title}`} canonicalPath={result.path} noindex page={menuPage} areas={areas}>
   <PreviewBar />
   <div class:list={['layout', sidebar && 'layout-split']}>
     <div class="layout-main">
-      {'page' in draft && <PageSections page={draft} siteName={siteName} />}
+      {'page' in draft && <PageSections template={template} page={draft} siteName={siteName} />}
       {EntryLayout && 'entry' in draft && <EntryLayout entry={draft.entry} type={type} areas={areas} />}
     </div>
     {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}

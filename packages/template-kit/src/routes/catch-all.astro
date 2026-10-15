@@ -5,8 +5,8 @@
 // Redirects were already answered by the middleware.
 //
 // An entry is drawn by its type's entry layout and a list (a type's list, or
-// a term's) by its type's list layout, as template.json's `entryLayouts`
-// names them (src/components/entries); a type it does not name, and the
+// a term's) by its type's list layout, as the template's template.json
+// `entryLayouts` names them (src/components/entries); a type it does not name, and the
 // news list (the blog types' shared list at the organization's blog base,
 // `/news` for one made since the address became its own, `/blog` for one that
 // kept it), use the post layouts. A list shows
@@ -54,10 +54,12 @@ import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
 import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
-import { sections } from '../components/sections'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
 import { entryCard } from '../lib/section'
+import template from 'virtual:backgold-template'
+
+const { sections } = template
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503 })
@@ -165,8 +167,9 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
   const news = resolved.type === 'blog'
   const q = news && resolved.kind === 'index' ? searchQuery(rawQuery) : null
   list = {
-    Layout: listLayoutFor(key),
+    Layout: listLayoutFor(template, key),
     props: {
+      template,
       type: resolved.type,
       base: resolved.base,
       entries: q === null ? resolved.entries : await searchNews(client, q),
@@ -179,11 +182,11 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
   }
 }
 const ListLayout = list?.Layout ?? null
-const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(resolved.entry.type) : null
+const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(template, resolved.entry.type) : null
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
-<Site {...head} page={menuPage} areas={areas}>
+<Site {...head} template={template} page={menuPage} areas={areas}>
   {resolved.kind === 'author' && (
     <div class="listing">
       <header class="page-header author">
@@ -203,7 +206,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
   {resolved.kind !== 'author' && resolved.kind !== 'not_found' && (
     <div class:list={['layout', sidebar && 'layout-split']}>
       <div class="layout-main">
-        {resolved.kind === 'page' && <PageSections page={resolved.page} siteName={siteName} />}
+        {resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} />}
         {resolved.kind === 'entry' && EntryLayout && <EntryLayout entry={resolved.entry} type={resolved.type} areas={areas} />}
         {ListLayout && list && <ListLayout {...list.props} />}
       </div>
