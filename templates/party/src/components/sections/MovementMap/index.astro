@@ -1,10 +1,13 @@
 ---
-// MovementMap: a kicker, a heading, the figures the organization wrote for
-// it, and where the data comes from. BackGold's hosted pages also draw a live
-// map from a public dataset; this section shows the figures only. A figure
-// BackGold fills in live is left out (see literalStat).
+// MovementMap: a kicker, a heading, and the live map BackGold frames when the
+// section names a data source — the map a visitor zooms and explores, with its
+// own legend, count badge, stat tiles and source line. A section with no data
+// source sends no frame: then the figures the organization wrote and where
+// the data comes from draw alone, as before. A figure BackGold fills in live
+// is left out of that list (see literalStat).
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import { links, rows } from '../../../lib/section'
 import { literalStat, text } from '../../../lib/format'
 
@@ -16,15 +19,21 @@ interface Props {
 const { section } = Astro.props
 const kicker = text(section.copy.kicker)
 const heading = text(section.copy.heading)
-const stats = rows(section)
-  .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note) }))
-  .filter((stat) => stat.value !== null)
+const framed = !!section.embed
+const stats = framed
+  ? []
+  : rows(section)
+      .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note) }))
+      .filter((stat) => stat.value !== null)
 const [source] = links(section)
 ---
-{(heading || stats.length > 0) && (
+{(framed || heading || stats.length > 0) && (
   <Band section={section} class="stats">
     {kicker && <p class="kicker">{kicker}</p>}
     {heading && <h2>{heading}</h2>}
+    {framed && (
+      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="full" title={heading || 'Map'} height="44rem" />
+    )}
     {stats.length > 0 && (
       <ul class="grid grid-3 stat-list" role="list">
         {stats.map((stat) => (
@@ -36,6 +45,6 @@ const [source] = links(section)
         ))}
       </ul>
     )}
-    {source && <p class="fine">Source: <a href={source.href} rel={source.rel}>{source.label}</a></p>}
+    {!framed && source && <p class="fine">Source: <a href={source.href} rel={source.rel}>{source.label}</a></p>}
   </Band>
 )}
