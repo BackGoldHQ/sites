@@ -30,7 +30,9 @@
 //
 // --template party needs Chrome at $CHROME_BIN too: the party template's look
 // (the header button's contrast, the accent, the faces, light and dark) is
-// read in a headless Chrome, driven over the DevTools protocol.
+// read in a headless Chrome, driven over the DevTools protocol. So does
+// --template petition-drive: its starter page (dark first, the anchors, no
+// money, light after the switch) is read the same way.
 //
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
@@ -57,6 +59,14 @@ const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
 // counts, event types, news search, seats, the roster's levels); only it is
 // checked for those drawings.
 const PARTY = TEMPLATE_NAME === 'party'
+// A template on the kit (@backgold/template-kit: a src/template.ts) draws
+// what the kit draws (BackGold's modules framed in the site's look, the light
+// and dark switch, the kit's lists, entries and 404) and is checked for it;
+// the public starter is not on the kit.
+const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
+// ── petition-drive (begin) ──
+const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
+// ── petition-drive (end) ──
 const SERVE = process.argv.includes('--serve')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
@@ -781,7 +791,7 @@ function kitchenSinkDocument() {
  * `news`, every post address and the menu's link to the list are under
  * `/news`, and a published page sits at `/news` (on the party template, the
  * starter's News page) with a Hero and a call to action, the list's intro.
- * On the party template its home's Blog section is the List layout, so the
+ * On a template on the kit its home's Blog section is the List layout, so the
  * section draws "All news".
  */
 function newsBaseData(data, ex) {
@@ -812,7 +822,7 @@ function newsBaseData(data, ex) {
     page: (slug, headline) => {
       if (slug === 'news') return intro
       const found = page(slug, headline)
-      if (slug !== 'home' || !PARTY) return found
+      if (slug !== 'home' || !ON_KIT) return found
       return { ...found, sections: found.sections.map((sec) => (sec.type === 'Blog' ? { ...sec, variant: 'list' } : sec)) }
     },
     entries: move(data.entries),
@@ -836,7 +846,7 @@ async function kitchenSink() {
   return {
     blocks: shared.CONTENT_API_BLOCKS,
     areaBlocks: shared.CONTENT_API_AREA_BLOCKS,
-    // Drawn by the party template. The public starter has no component for
+    // Drawn by a template on the kit. The public starter has no component for
     // them and falls through to DefaultSection.
     templateSections: new Set(shared.TEMPLATE_SECTION_TYPES),
     doc,
@@ -1703,6 +1713,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     }
     const auth = req.headers.authorization ?? ''
     const key = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+    // ── petition-drive (begin) ──
+    if (PETITION_DRIVE && url.pathname.startsWith('/embed/petition/')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      return res.end(petitionStubFrame(url.search))
+    }
+    // ── petition-drive (end) ──
     if (path === null) {
       res.writeHead(404, { 'Content-Type': 'application/json' })
       return res.end(JSON.stringify({ error: 'Not found', code: 'NOT_FOUND' }))
@@ -1997,10 +2013,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   const ld = jsonLdBlocks(html)
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
-    PARTY
+    ON_KIT
       ? /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"/.test(html)
       : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
-    PARTY ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
+    ON_KIT ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
   )
   check(!html.includes('auto:total'), 'a live (auto:) stat is not printed')
   check(
@@ -2040,8 +2056,8 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published entry carries no section markers and no preview meta')
   // An entry loads no script but JSON-LD, the areas' one window script because
   // its areas hold a dated item, the frames' one resize script because an
-  // area's sign-up is framed by its reusable section, and on the party
-  // template the light and dark switch's two (the head's kept choice, the
+  // area's sign-up is framed by its reusable section, and on a template on
+  // the kit the light and dark switch's two (the head's kept choice, the
   // header button's).
   const areaItems = Object.values(fixture.data.entryAreas).flat()
   const dated = areaItems.some((item) => item.from !== null || item.until !== null)
@@ -2054,8 +2070,8 @@ async function checkConfigured(origin, fixture, disclaimer) {
     scripts.length === entryWindowScripts + entryResizeScripts + entryModeScripts &&
       entryWindowScripts === (dated ? 1 : 0) &&
       entryResizeScripts === (framed ? 1 : 0) &&
-      entryModeScripts === (PARTY ? 2 : 0),
-    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${PARTY ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
+      entryModeScripts === (ON_KIT ? 2 : 0),
+    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${ON_KIT ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
   )
   const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
   check(
@@ -2171,7 +2187,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
     `the preview frames the draft's form and the area's sign-up with the token (${formFrame}, ${signupFrame})`,
   )
   check(!!donateFrame && !new URL(donateFrame).searchParams.has('bg_preview'), `the donate frame, addressed by its form, carries no token (${donateFrame})`)
-  if (PARTY) {
+  if (ON_KIT) {
     const petition = sectionWith(html, 'Petition', 'Put every party on the ballot')
     check(
       petition !== '' && petition.includes('This petition is not available right now.') && tags(petition, 'iframe').length === 0,
@@ -2285,7 +2301,7 @@ async function checkNewsBase(origin, fixture) {
     crumbs?.itemListElement?.[1]?.name === 'News' && crumbs.itemListElement[1].item === `${origin}/news`,
     `the list's breadcrumb is News at ${origin}/news (${JSON.stringify(crumbs?.itemListElement?.[1] ?? null)})`,
   )
-  if (PARTY) {
+  if (ON_KIT) {
     check(/<form class="list-search"[^>]*action="\/news"/.test(html), 'the "Search news" box sends ?q= to /news')
     res = await get(origin, '/news?q=levy')
     html = await res.text()
@@ -2300,13 +2316,13 @@ async function checkNewsBase(origin, fixture) {
     entryCrumbs?.itemListElement?.[1]?.name === 'News' && entryCrumbs.itemListElement[1].item === `${origin}/news`,
     "the entry's breadcrumb goes back to News at /news",
   )
-  if (PARTY) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
+  if (ON_KIT) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
 
   res = await get(origin, '/')
   html = await res.text()
   check(
-    res.status === 200 && (PARTY ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
-    `home's Blog section links ${PARTY ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
+    res.status === 200 && (ON_KIT ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
+    `home's Blog section links ${ON_KIT ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
   )
   res = await get(origin, '/kitchen-sink')
   html = await res.text()
@@ -2317,7 +2333,7 @@ async function checkNewsBase(origin, fixture) {
     await res.text()
     check(res.status === 404, `${path} is a 404 on an organization at /news (got ${res.status})`)
   }
-  if (PARTY) {
+  if (ON_KIT) {
     res = await get(origin, '/no-such-page')
     html = await res.text()
     check(res.status === 404 && /<a class="button button-quiet" href="\/news"[^>]*>Read the news<\/a>/.test(html), 'the 404 offers Read the news at /news')
@@ -2651,8 +2667,8 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (own) failures.push(`${type}: renders a <${own[1]}> of its own`)
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
-        // The party template asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = PARTY ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"`) : null
+        // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
@@ -2674,10 +2690,10 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
     }
 
     const rowText = ROW_TEXT[type]
-    // The party template's components must show every column. The public
+    // A kit template's components must show every column. The public
     // starter draws these through DefaultSection, which shows the heading
-    // and the row fields it knows, not each column the party component draws.
-    const plainFallback = !PARTY && kitchen.templateSections.has(type)
+    // and the row fields it knows, not each column the kit's component draws.
+    const plainFallback = !ON_KIT && kitchen.templateSections.has(type)
     if (section.data && !rowText && !plainFallback) {
       failures.push(`${type}: a data block with no row rule in starter-e2e.mjs ROW_TEXT`)
       continue
@@ -3546,8 +3562,8 @@ async function checkPartyLook(origin, fixture, chrome) {
 /**
  * Every non-chrome block type has a component of its own in the template (the
  * starter: every non-chrome, non-compliance one, except TEMPLATE_SECTION_TYPES,
- * which the party template draws and the starter leaves to DefaultSection).
- * The party template draws the compliance modules for their frame (heading
+ * which a template on the kit draws and the starter leaves to DefaultSection).
+ * A template on the kit draws the compliance modules for their frame (heading
  * and card around BackGold's own frame), all but SocialFrame, which has no
  * frame a site can place. A block the api projects only inside an area
  * (areaBlocks) counts with its area role.
@@ -3560,22 +3576,230 @@ function checkSectionsMap(chromeBlocks, areaBlocks, templateSections) {
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
   const unframed = ['SocialFrame']
-  const delegated = PARTY ? new Set() : templateSections
+  const delegated = ON_KIT ? new Set() : templateSections
   const missing = Object.entries(blocks)
-    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
+    .filter(([type, spec]) => spec.role !== 'chrome' && (ON_KIT || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
     .map(([type]) => type)
   const extra = [...keys].filter(
-    (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!PARTY && blocks[key].role === 'compliance'),
+    (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!ON_KIT && blocks[key].role === 'compliance'),
   )
   check(missing.length === 0, `the template has a section component for every presentational, data and compliance block${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`)
   check(extra.length === 0, `and none for a chrome block, SocialFrame, or a type BackGold does not have${extra.length ? ` (${extra.join(', ')})` : ''}`)
 }
 
+// ── petition-drive (begin) ───────────────────────────────────────────────────
+
+/**
+ * The stand-in the fixture serves for BackGold's petition frame
+ * (`/embed/petition/<page>/<block>`): the api's frame draws the live map
+ * band and the sign sheet, which the fixture has no map or petition for, so
+ * this page says what would be there, wears the look the site asked for
+ * (`look`, `look_dark` and the parent's `backgold:mode`, as the api's frame
+ * does) and reports its height.
+ */
+function petitionStubFrame(search) {
+  const params = new URLSearchParams(search)
+  const set = (value) => {
+    const parts = (value ?? '').split('.')
+    return parts.length === 11 && parts.every((p) => /^[0-9a-f]{6}$/i.test(p)) ? parts.map((p) => `#${p}`) : null
+  }
+  const vars = (c) => `--ink:${c[0]};--muted:${c[1]};--accent:${c[2]};--line:${c[10]}`
+  const light = set(params.get('look')) ?? ['#16191f', '#5b6170', '#8a5a00', '#1f3a5f', '#1f3a5f', '#ffffff', '#1f3a5f', '#ffffff', '#ffffff', '#d9d4ca', '#b9b2a5']
+  const dark = set(params.get('look_dark'))
+  const css =
+    `:root{color-scheme:light dark;${vars(light)}}` +
+    (dark ? `@media (prefers-color-scheme:dark){:root:not([data-mode="light"]){${vars(dark)}}}:root[data-mode="dark"]{${vars(dark)}}` : '') +
+    'html,body{margin:0;background:transparent;font:15px/1.5 system-ui,sans-serif;color:var(--ink)}' +
+    '.stub{box-sizing:border-box;margin:4px;padding:28px;min-height:420px;display:grid;align-content:center;gap:8px;border:1.5px dashed var(--line);border-radius:13px}' +
+    '.stub b{color:var(--accent);font:600 11px/1.2 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}.stub p{margin:0;color:var(--muted)}'
+  const script =
+    "addEventListener('message',function(e){var d=e.data;if(d&&d.type==='backgold:mode'&&(d.mode==='light'||d.mode==='dark'))document.documentElement.setAttribute('data-mode',d.mode)});" +
+    "function h(){parent.postMessage({type:'givegold:resize',height:document.querySelector('.stub').offsetHeight+8},'*')}addEventListener('load',h);h()"
+  return (
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Petition (fixture stand-in)</title><style>${css}</style></head>` +
+    `<body><div class="stub" data-petition-stub data-layout="${params.get('layout') === 'map' ? 'map' : 'other'}"><b>BackGold's petition frame</b>` +
+    '<h2 style="margin:0">The live map band and the sign sheet draw here</h2>' +
+    '<p>The legend, the count badge, the asks, Addressed to, the form, its goal meter and the three stat tiles are the api&rsquo;s frame. This is the e2e fixture&rsquo;s stand-in: it has no map.</p>' +
+    `</div><script>${script}</script></body></html>`
+  )
+}
+
+/**
+ * The petition drive's one starter page as the Content API sends it: the
+ * template.json starter sections, the Petition framed (the fixture's
+ * stand-in, above), three of the fixture's events in the events list, typed
+ * figures on the ticker; and its menus as BackGold projects the starter's.
+ */
+function petitionDriveFixture(fixture) {
+  const manifest = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
+  const home = fixture.data.page('home', fixture.state.headline)
+  // Three of the fixture's upcoming events (none of them a fundraiser): one with registration closed.
+  const events = fixture.data.events.upcoming.filter((e) => e.type !== 'fundraiser')
+  const sections = manifest.starter.pages[0].sections.map((s) => {
+    const section = { id: s.id, type: s.type, band: s.band, bleed: s.bleed, variant: s.variant, copy: s.copy, media: s.media, links: s.links, options: s.options ?? {} }
+    if (s.data) section.data = s.data
+    if (s.type === 'Petition') {
+      // The api sends the asks and tiles inside the frame, not as rows a site draws.
+      delete section.data
+      section.embed = { iframe: `${fixture.origin}/embed/petition/lp_home/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    }
+    if (s.type === 'EventsList') section.data = { source: 'events', items: events.slice(0, 3) }
+    if (s.type === 'MovementTicker') {
+      section.data = { source: 'movement', items: [{ value: '1,204', label: 'neighbors signed' }, { value: '38', label: 'mapping walks' }, { value: 'auto:signatures', label: 'signatures (live)' }] }
+    }
+    return section
+  })
+  let n = 0
+  const item = (m) => ({
+    id: `nav_pd_${++n}`,
+    label: m.label,
+    kind: m.kind,
+    target: { kind: m.kind, page_id: 'lp_home', slug: 'home', anchor: m.target.anchor },
+    url: `/#${m.target.anchor}`,
+    external: false,
+    header_button: m.header_button,
+    shows_on: { rule: 'every_page' },
+    children: [],
+  })
+  return {
+    page: { ...home, sections, areas: { top_banner: [], sidebar: [], above_footer: [] } },
+    menus: {
+      primary: { menu: { key: 'primary' }, items: manifest.starter.menus.primary.map(item) },
+      footer: { menu: { key: 'footer' }, items: manifest.starter.menus.footer.map(item) },
+    },
+  }
+}
+
+/**
+ * The petition drive's starter page on the Worker, in a headless Chrome:
+ * the order of its bands, the framed petition, no money anywhere, the header
+ * button, the three anchors, dark on first open whatever the visitor's
+ * system says, light after the switch and still readable, and no sideways
+ * scroll on a phone. The fixture's home and menus are put back after, and
+ * home read once under them, as Lighthouse expects to find it.
+ */
+async function checkPetitionDrive(origin, fixture, chrome) {
+  log('\nPetition drive: the starter page (headless Chrome, dark first, light after the switch)')
+  const own = { page: fixture.data.page, menus: fixture.data.menus }
+  const drive = petitionDriveFixture(fixture)
+  const publish = async () => {
+    const version = fixture.bump(fixture.state.headline)
+    const hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+    if (hook.status !== 204) throw new Error(`the webhook for content version ${version} answered ${hook.status}`)
+  }
+  fixture.data.page = (slug, headline) => (slug === 'home' ? drive.page : own.page(slug, headline))
+  fixture.data.menus = { ...own.menus, ...drive.menus }
+  await publish()
+  const browser = await headlessChrome(chrome)
+  try {
+    const res = await get(origin, '/')
+    const html = await res.text()
+    check(res.status === 200, `the drive's home renders (got ${res.status})`)
+    const types = [...html.matchAll(/<section\b[^>]*data-type="([A-Za-z]+)"/g)].map((m) => m[1])
+    check(
+      types.join(' ') === 'Petition Issues EventsList MovementTicker Cta',
+      `its bands run Petition, Issues, EventsList, MovementTicker, Cta (${types.join(', ')})`,
+    )
+    check(/<html lang="en" data-gg-opens="dark">/.test(html) && /<style>:root\{color-scheme:dark;/.test(html), 'the page opens in the dark set (data-gg-opens, the dark set on :root)')
+    const frame = tags(html, 'iframe').find((t) => t.includes('/embed/petition/')) ?? ''
+    check(/src="[^"]+\/embed\/petition\/lp_home\/Petition-home\?layout=map&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+/.test(frame), "the Petition section frames BackGold's petition in its map layout, wearing the site's look")
+    check(/<section id="petition"[^>]*data-type="Petition"/.test(html), 'the Petition section is anchored at #petition')
+    check(
+      /<section id="get-involved"[^>]*data-type="Issues"/.test(html) && /<section id="events"[^>]*data-type="EventsList"/.test(html),
+      'Get involved and the events are anchored at #get-involved and #events',
+    )
+    const button = /<a\b[^>]*class="[^"]*header-button[^"]*"[^>]*>[\s\S]*?<\/a>/.exec(html)?.[0] ?? ''
+    check(/href="\/#petition"/.test(button) && />\s*Sign the petition\s*</.test(button), `the header button is Sign the petition, to #petition (${button.replace(/\s+/g, ' ').slice(0, 160)})`)
+    const nav = /<nav class="header-bar-menu"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? ''
+    check(['/#petition', '/#get-involved', '/#events'].every((href) => nav.includes(`href="${href}"`)), 'the header menu links The petition, Get involved and Events to their anchors')
+    const visible = html.replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<style\b[\s\S]*?<\/style>/g, '')
+    check(
+      !/data-bg-donate|\/donate\b|>\s*Donate\s*<|chip in/i.test(visible) && !/donate-strip/.test(visible),
+      'nothing on the page asks for money (no Donate link, button or strip)',
+    )
+    const steps = /<section\b[^>]*data-type="Issues"[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+    check((steps.match(/<li class="drive-step"/g) ?? []).length === 4 && /Step 01/.test(steps) && /<path d="M9\.663/.test(steps), 'Get involved draws four numbered steps, each with its icon')
+    check(
+      /<a class="button"[^>]*href="https:\/\/maps\.deflock\.org"/.test(steps) && (steps.match(/<a class="button button-quiet"/g) ?? []).length === 2,
+      'and one filled action (the global map) beside two outlined ones',
+    )
+    check(!html.includes('auto:signatures') && html.includes('1,204'), "the ticker shows its typed figures and leaves the live one out")
+    const eventsBand = /<section\b[^>]*data-type="EventsList"[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+    check(
+      (eventsBand.match(/<li class="drive-event"/g) ?? []).length === 3 && />RSVP<span/.test(eventsBand) && />Details<span/.test(eventsBand),
+      'Show up in person lists three events, each with its button to its page (RSVP, or Details once closed)',
+    )
+
+    for (const scheme of ['light', 'dark']) {
+      await browser.width(1440)
+      await browser.open(`${origin}/`, scheme)
+      const look = await browser.evaluate(`(${driveLook})()`)
+      check(look.mode === 'dark' && look.page < 0.06, `a visitor whose system is ${scheme} opens the page dark (data-gg-mode ${look.mode}, page luminance ${look.page.toFixed(3)})`)
+      check(look.minRatio >= 4.5, `every heading, lede and step reads at AA on its band in the dark set (lowest ${look.minRatio.toFixed(2)}: ${look.worst})`)
+      check(look.anchors.every((a) => a.found), `the three anchors reach their sections (${look.anchors.map((a) => `${a.href}${a.found ? '' : ' missing'}`).join(', ')})`)
+    }
+    await browser.evaluate(`document.querySelector('[data-mode-toggle]').click()`)
+    const light = await browser.evaluate(`(${driveLook})()`)
+    check(light.mode === 'light' && light.page > 0.5, `the switch turns it light (data-gg-mode ${light.mode}, page luminance ${light.page.toFixed(3)})`)
+    check(light.minRatio >= 4.5, `and light mode still reads at AA (lowest ${light.minRatio.toFixed(2)}: ${light.worst})`)
+    await browser.width(375)
+    await browser.open(`${origin}/`, 'light')
+    const phone = await browser.evaluate('({ scroll: document.documentElement.scrollWidth, width: innerWidth })')
+    check(phone.scroll <= phone.width, `no sideways scroll at 375 (${phone.scroll} wide in ${phone.width})`)
+  } finally {
+    await browser.close()
+    fixture.data.page = own.page
+    fixture.data.menus = own.menus
+    await publish()
+    await (await get(origin, '/')).text()
+  }
+}
+
+/** In the page: its mode, the page ground's luminance, the lowest text contrast on the starter's bands, and whether each header anchor has its target. */
+async function driveLook() {
+  await document.fonts.ready
+  const channels = (value) => {
+    const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(value)
+    return m ? { rgb: [m[1], m[2], m[3]].map(Number), alpha: m[4] === undefined ? 1 : Number(m[4]) } : null
+  }
+  const luminance = (rgb) => {
+    const [r, g, b] = rgb.map((c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  /** The first opaque ground behind `el`. */
+  const ground = (el) => {
+    for (let node = el; node; node = node.parentElement) {
+      const c = channels(getComputedStyle(node).backgroundColor)
+      if (c && c.alpha === 1) return c.rgb
+    }
+    return [255, 255, 255]
+  }
+  let minRatio = 21
+  let worst = ''
+  for (const el of document.querySelectorAll('main h2, main h3, main .kicker, main .lede p, main .drive-step-body p, main .drive-ticker-name, main .drive-event-meta, footer .disclaimer p')) {
+    const ink = channels(getComputedStyle(el).color)
+    if (!ink) continue
+    const [hi, lo] = [luminance(ink.rgb), luminance(ground(el))].sort((a, b) => b - a)
+    const ratio = (hi + 0.05) / (lo + 0.05)
+    if (ratio < minRatio) {
+      minRatio = ratio
+      worst = `${el.tagName.toLowerCase()}.${el.className || ''} "${el.textContent.trim().slice(0, 40)}"`
+    }
+  }
+  const anchors = [...document.querySelectorAll('.header-bar-menu a[href^="/#"]')].map((a) => {
+    const id = a.getAttribute('href').slice(2)
+    return { href: `#${id}`, found: !!document.getElementById(id) }
+  })
+  return { mode: document.documentElement.getAttribute('data-gg-mode'), page: luminance(ground(document.body)), minRatio, worst, anchors }
+}
+
+// ── petition-drive (end) ─────────────────────────────────────────────────────
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
-  const chrome = LIGHTHOUSE || PARTY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : '--template party') : null
+  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
   log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
@@ -3599,6 +3823,23 @@ async function main() {
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
   const fixture = await startFixture(examples, kitchen.sections)
   log(`Fixture Content API: ${fixture.origin}`)
+  // ── petition-drive (begin) ──
+  // --serve: home is the drive's starter page, under its menus; a JSON brand
+  // in PETITION_DRIVE_BRAND ({ primary_color, secondary_color, accent_color,
+  // logo_url }) replaces the fixture's brand, and the fixture's saved theme is
+  // dropped so the template's own faces show: the drive in another
+  // organization's colours.
+  if (PETITION_DRIVE && SERVE) {
+    const drive = petitionDriveFixture(fixture)
+    const own = fixture.data.page
+    fixture.data.page = (slug, headline) => (slug === 'home' ? drive.page : own(slug, headline))
+    fixture.data.menus = { ...fixture.data.menus, ...drive.menus }
+    if (process.env.PETITION_DRIVE_BRAND) {
+      fixture.data.site.brand = { ...fixture.data.site.brand, ...JSON.parse(process.env.PETITION_DRIVE_BRAND) }
+      fixture.data.site.theme = null
+    }
+  }
+  // ── petition-drive (end) ──
   writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
 
   // SITE_URL is the Worker's own address, so canonicals point at the page Lighthouse reads.
@@ -3617,6 +3858,9 @@ async function main() {
     if (PARTY) await checkPartyUnwired(configured.origin)
     if (PARTY) await checkPartyChrome(configured.origin)
     if (PARTY) await checkPartyLook(configured.origin, fixture, chrome)
+    // ── petition-drive (begin) ──
+    if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
+    // ── petition-drive (end) ──
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

@@ -1,0 +1,167 @@
+/*
+  What the petition drive draws differently from the kit's stylesheet
+  (@backgold/template-kit's src/styles/site.css and entries.css), which this
+  file loads after on every page: the drive's faces, its compact rhythm, its
+  13px corners, the mono face on everything that is a label or a figure, and
+  a footer on the page's own ground. Colours stay the band tokens the layout
+  writes from the organization's brand (the kit's src/lib/brand.ts); nothing
+  here names a colour. The drive opens in the dark set (src/template.ts
+  `defaultAppearance`), so the bands below read, top to bottom on the
+  starter page: the petition on the contrast band, Get involved on the tint,
+  the events on the page, the signers card on the panel, the closing call on
+  the contrast band, each a change of ground from the one before.
+*/
+
+:root {
+  --font: var(--site-font-body, 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+  --font-display: var(--site-font-heading, 'Bricolage Grotesque', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Compact, as the hosted drive reads: h2 28 → 38, sections 40 → 64. */
+  --h2: clamp(1.75rem, 1.25rem + 1.6vw, 2.375rem);
+  --h1: clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem);
+  --space: clamp(2.5rem, 1.5rem + 2.5vw, 4rem);
+  /* The sign sheet's measure (1080px), which the bands around it share. */
+  --content: 67.5rem;
+  /* 13px corners on cards and buttons (the petition-drive steps polish, 2026-09-04). */
+  --radius: 0.8125rem;
+  --radius-card: 0.8125rem;
+  --header-height: 4.25rem;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+h2 {
+  line-height: 1.08;
+}
+
+/* Every label is set in the mono face: the kicker, the eyebrow, the chips. */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+.lede {
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  line-height: 1.65;
+}
+
+/* Buttons are 13px rounded, not pills: the sign sheet's own submit is. */
+.button {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  letter-spacing: 0.005em;
+}
+.button-small {
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+}
+.button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* A contained band (the signers card, the closing call) on the same corner family, a step rounder, edged with its own rule. */
+.bg-bleed-contained {
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius-card) + 0.25rem);
+}
+/*
+  In the dark set the page, tint and panel grounds sit close together, so a
+  full-width band that follows another band draws a hairline of its own rule
+  along its top: the seam reads in both sets.
+*/
+.bg-section.bg-bleed-full + .bg-section.bg-bleed-full {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+/* ── The header: the name as a wordmark, the three anchors quiet, the one button loud ── */
+
+.site-header {
+  background: var(--page);
+}
+.site-header-inner {
+  min-height: 3.75rem;
+}
+/* The kit's mark is the party's; a drive's brand is its name (or its logo). */
+.site-header .brand-mark,
+.site-footer .brand-mark {
+  display: none;
+}
+.brand-name {
+  font-size: 1.125rem;
+  letter-spacing: -0.015em;
+}
+.brand-rest {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+.header-bar-menu > ul > li > a,
+.header-bar-menu > ul > li > span,
+.header-bar-menu summary {
+  padding: 0.5rem 0.6875rem;
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.site-header .header-bar-menu > ul > li > a:not(.button) {
+  color: var(--muted);
+}
+.site-header .header-bar-menu > ul > li > a:hover {
+  color: var(--ink);
+}
+.mode-toggle {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius);
+}
+
+/* ── The bands ── */
+
+/* Section heads read tighter on a drive: the heading carries the claim. */
+.bg-section-inner > h2,
+.section-head h2 {
+  margin-bottom: 0.875rem;
+}
+/* The closing call: a contrast card, its eyebrow in the mono face. */
+.bg-section.cta .banner-words h2 {
+  font-size: clamp(1.75rem, 1.3rem + 1.5vw, 2.375rem);
+}
+
+/* ── The footer: the page's own ground under a rule, the brand, the anchors, the legal line, the bottom row ── */
+
+.site-footer {
+  --bg-band-background: var(--band-plain);
+  --bg-band-color: var(--band-plain-ink);
+  --ink: var(--band-plain-ink);
+  --muted: var(--band-plain-muted);
+  --accent: var(--band-plain-accent);
+  --link: var(--band-plain-link);
+  --button: var(--band-plain-button);
+  --button-ink: var(--band-plain-button-ink);
+  --button-2: var(--band-plain-button-2);
+  --button-2-ink: var(--band-plain-button-2-ink);
+  --surface: var(--band-plain-surface);
+  --line: var(--band-plain-line);
+  --line-strong: var(--band-plain-line-strong);
+  border-top: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+.site-footer-inner {
+  padding-top: clamp(2.25rem, 1.75rem + 1.5vw, 3rem);
+}
+.disclaimer {
+  margin-top: 2rem;
+}
+.footer-row {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}

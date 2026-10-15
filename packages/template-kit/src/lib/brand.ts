@@ -347,13 +347,17 @@ export function appearanceOf(style: string | null | undefined): Appearance {
  * The palettes as CSS. A pinned appearance is one `:root` rule. Auto is the
  * light set on `:root`, the dark set under `prefers-color-scheme: dark`
  * unless the visitor chose light, and the dark set when the visitor chose
- * dark. Every value is a `#rrggbb` built above, never text from BackGold.
+ * dark. Auto with a template that opens dark (`opensDark`, the template's
+ * `defaultAppearance: 'dark'`) is the dark set on `:root` whatever the
+ * visitor's system says, and the light set only when the visitor chose light.
+ * Every value is a `#rrggbb` built above, never text from BackGold.
  */
-export function brandCss(brand: BrandColors | null | undefined, appearance: Appearance = 'auto'): string {
+export function brandCss(brand: BrandColors | null | undefined, appearance: Appearance = 'auto', opensDark = false): string {
   const light = lines(lightPalette(brand)).join(';')
   const dark = lines(darkPalette(brand)).join(';')
   if (appearance === 'light') return `:root{color-scheme:light;${light}}`
   if (appearance === 'dark') return `:root{color-scheme:dark;${dark}}`
+  if (opensDark) return `:root{color-scheme:dark;${dark}}:root[data-gg-mode="light"]{color-scheme:light;${light}}`
   return (
     `:root{color-scheme:light;${light}}` +
     `@media (prefers-color-scheme:dark){:root:not([data-gg-mode="light"]){color-scheme:dark;${dark}}}` +

@@ -45,6 +45,13 @@ export interface TemplateConfig {
    * BackGold names none (src/lib/fonts.ts).
    */
   fonts: { heading: string; body: string }
+  /**
+   * The set a site whose appearance is `auto` opens in: `light` (the default)
+   * follows the visitor's system; `dark` opens dark whatever the system says
+   * (src/lib/brand.ts brandCss). Either way the header's switch still
+   * changes it, and a site pinned `light` or `dark` in BackGold keeps its pin.
+   */
+  defaultAppearance?: 'light' | 'dark'
 }
 
 /** Every section type and layout the kit draws. */

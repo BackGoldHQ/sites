@@ -150,11 +150,13 @@ const headerButton = headerButtonOf(headerItems, pathname, page)
 const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (headerButton?.kind === 'donate' ? headerButton : null)) : null
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
+/** An auto site on a template that opens dark (src/template.ts `defaultAppearance`). */
+const opensDark = appearance === 'auto' && template.defaultAppearance === 'dark'
 /** The theme's faces, else the template's own (src/lib/fonts.ts). */
 const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-gg-opens={opensDark ? 'dark' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -169,15 +171,23 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
         <noscript><link rel="stylesheet" href={fonts.stylesheet} /></noscript>
       </>
     )}
-    <style is:inline set:html={brandCss(site.brand, appearance)}></style>
+    <style is:inline set:html={brandCss(site.brand, appearance, opensDark)}></style>
     {/* The theme's faces: @font-face rules with font-display swap, so they too arrive after first paint. */}
     {fonts.css && <style is:inline set:html={fonts.css}></style>}
+    {/* The visitor's kept choice, else the set a template that opens dark
+        opens in (`data-gg-opens`), as `data-gg-mode`: the switch and the
+        module frames, which otherwise follow the system, read it. */}
     {appearance === 'auto' && (
       <script is:inline>
-        try {
-          var mode = localStorage.getItem('gg-mode')
-          if (mode === 'dark' || mode === 'light') document.documentElement.setAttribute('data-gg-mode', mode)
-        } catch (e) {}
+        ;(function () {
+          var root = document.documentElement
+          var mode = null
+          try {
+            mode = localStorage.getItem('gg-mode')
+          } catch (e) {}
+          if (mode !== 'dark' && mode !== 'light') mode = root.getAttribute('data-gg-opens')
+          if (mode === 'dark' || mode === 'light') root.setAttribute('data-gg-mode', mode)
+        })()
       </script>
     )}
   </head>
