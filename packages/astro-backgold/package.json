@@ -45,7 +45,7 @@
     "astro": "^7"
   },
   "devDependencies": {
-    "@givegold/shared": "workspace:*",
+    "@backgold/contract": "workspace:*",
     "@types/node": "^24",
     "astro": "^7.3.5",
     "fast-xml-parser": "^5.11.2",
@@ -58,7 +58,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/polyneural/backgold.git",
+    "url": "git+https://gitlab.com/backgold/sites.git",
     "directory": "packages/astro-backgold"
   },
   "keywords": [

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { typesExample } from '@givegold/shared'
+import { typesExample } from '@backgold/contract/content-api-examples'
 import { run, USAGE } from './cli.js'
 import { generateTypes } from './codegen.js'
 

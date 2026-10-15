@@ -1,4 +1,4 @@
-import { decodeEntryCursor, encodeEntryCursor } from '@givegold/shared/content-api'
+import { decodeEntryCursor, encodeEntryCursor } from '@backgold/contract/content-api'
 import { describe, expect, it } from 'vitest'
 import { validCursor } from '../src/server/cursor.js'
 

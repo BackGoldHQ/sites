@@ -1,4 +1,4 @@
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import { describe, expect, it } from 'vitest'
 import { PREVIEW_HEADERS, handlePreview, loadPreview } from '../src/server/preview.js'
 import { API_ORIGIN, PK, SITE_ID, SK, fakeApi } from './fixtures.js'

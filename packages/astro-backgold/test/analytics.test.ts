@@ -1,4 +1,4 @@
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import { describe, expect, it } from 'vitest'
 import { analyticsOf } from '../src/server/analytics.js'
 import { backgoldFor } from '../src/server/context.js'

@@ -3,7 +3,7 @@
 // and the request's X-BackGold-Site names the site. The env object is one
 // mutable value the mock hands out, so each test sets its own names on it.
 
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PREVIEW_HEADERS, loadPreview } from '../src/server/preview.js'
 import { API_ORIGIN, OTHER_SITE_ID, SITE_ID, fakeApi, type FakeApi } from './fixtures.js'

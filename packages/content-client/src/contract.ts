@@ -5,9 +5,10 @@
  * docs/design/headless-starter-2026-10/README.md §4): every exported name
  * here is public, documented in the README, and stable within a major.
  *
- * Every response type is the api's own contract type from `@givegold/shared`
- * content-api.ts, bundled into this package's declarations at build so a
- * consumer never sees the private package.
+ * Every response type is the api's own contract type from the platform's
+ * content-api.ts, vendored here as `@backgold/contract/content-api` and
+ * bundled into this package's declarations at build so a consumer never sees
+ * the private package.
  */
 import type {
   AreaItem,
@@ -31,7 +32,7 @@ import type {
   SitemapResponse,
   TermsResponse,
   TypesResponse,
-} from '@givegold/shared/content-api'
+} from '@backgold/contract/content-api'
 
 export type {
   AreaItem,
@@ -79,7 +80,7 @@ export type {
   SitemapResponse,
   TermsResponse,
   TypesResponse,
-} from '@givegold/shared/content-api'
+} from '@backgold/contract/content-api'
 
 // ── Cache ────────────────────────────────────────────────────────────────────
 

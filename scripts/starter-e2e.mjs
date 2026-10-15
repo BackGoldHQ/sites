@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // The starter template (or another template under templates/) and the two
-// packages it is built on, end to end on workerd: builds @givegold/shared,
-// @backgold/content and @backgold/astro, packs the two public packages,
-// installs them into a copy of the template outside the repository (so
-// nothing resolves through the pnpm workspace), builds it, and runs it on
-// `wrangler dev` against a fixture Content API served from
-// CONTENT_API_EXAMPLES: first an organization that kept the legacy blog
+// packages it is built on, end to end on workerd: builds @backgold/content
+// and @backgold/astro, packs them, installs them into a copy of the template
+// outside the repository (so nothing resolves through the pnpm workspace),
+// builds it, and runs it on `wrangler dev` against a fixture Content API
+// served from CONTENT_API_EXAMPLES in the vendored contract
+// (vendor/backgold-contract): first an organization that kept the legacy blog
 // address (`/blog`), then one at `/news` with a page there, the news list's
 // intro. Exits non-zero at the first failed check.
 //
@@ -133,7 +133,6 @@ function freePort() {
 // ── 1. Build and pack ────────────────────────────────────────────────────────
 
 function buildAndPack(packDir) {
-  run('pnpm', ['--filter', '@givegold/shared', 'build'], ROOT)
   run('pnpm', ['--filter', '@backgold/content', 'build'], ROOT)
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
@@ -746,9 +745,9 @@ function newsBaseData(data, ex) {
   }
 }
 
-/** The kitchen sink's sections, made by the api's own projection from the built @givegold/shared. */
+/** The kitchen sink's sections, made by the api's own projection from the vendored contract (vendor/backgold-contract). */
 async function kitchenSink() {
-  const shared = await import(pathToFileURL(join(ROOT, 'packages/shared/dist/content-api.js')).href)
+  const shared = await import(pathToFileURL(join(ROOT, 'vendor/backgold-contract/content-api.js')).href)
   const origins = { apiOrigin: 'https://api.backgold.com', donateOrigin: 'https://secure.backgold.com' }
   const doc = kitchenSinkDocument()
   const sections = shared.projectDocument(doc, {
@@ -771,7 +770,7 @@ async function kitchenSink() {
 
 
 async function loadExamples() {
-  const mod = await import(pathToFileURL(join(ROOT, 'packages/shared/dist/content-api-examples.js')).href)
+  const mod = await import(pathToFileURL(join(ROOT, 'vendor/backgold-contract/content-api-examples.js')).href)
   return structuredClone(mod.CONTENT_API_EXAMPLES)
 }
 
