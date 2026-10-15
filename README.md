@@ -4,7 +4,16 @@ The public side of BackGold's websites: the two npm packages a site on
 BackGold's headless Content API is built on, the starter anyone can deploy,
 and the party template BackGold runs for state parties. The BackGold
 platform itself (the api, the app and the Content API) lives in
-[gitlab.com/polyneural/backgold](https://gitlab.com/polyneural/backgold).
+gitlab.com/backgold/backgold (private).
+
+## Start here
+
+- **Building a client site?** Read [docs/CLIENT-SITES.md](docs/CLIENT-SITES.md):
+  which path you are on (a client's own repository from the public starter,
+  or a site on the party template), the commands for each, the Content API
+  and its keys, deploys, releases, and a ready-to-paste brief for your agent.
+- **An agent working here** reads [CLAUDE.md](CLAUDE.md), the rule sheet,
+  first.
 
 ## What is here
 
@@ -100,7 +109,8 @@ changed. Marking an MR ready does not start a pipeline:
   pipeline; its publish job follows by itself. Publish `@backgold/content`
   first when `@backgold/astro` needs its new version.
 - **The public starter** syncs by itself when a push to `main` changed
-  `templates/astro-starter`. Its public `package.json` names `^<version>` of
+  `templates/astro-starter`, a package's `package.json` or
+  `scripts/sync-starter.sh`. Its public `package.json` names `^<version>` of
   each package as this repository has it, and the sync waits (a yellow job)
   until npm has that version; after a release, play `sync-starter` on any
   `main` pipeline.

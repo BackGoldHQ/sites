@@ -1,7 +1,7 @@
 // Verifying and reading the content events BackGold POSTs to a partner's
-// webhook endpoint (docs/WEBHOOKS.md, docs/developers/headless-content-api.md
-// §8). The signing scheme is the api's own (packages/api/src/lib/webhooks.ts
-// signWebhookPayload): `X-BackGold-Signature: t=<unix seconds>,v1=<hex>`, the
+// webhook endpoint (docs/HEADLESS-CONTENT-API.md §8 here; the platform
+// repository's docs/WEBHOOKS.md). The signing scheme is the api's own (the
+// platform's packages/api/src/lib/webhooks.ts signWebhookPayload): `X-BackGold-Signature: t=<unix seconds>,v1=<hex>`, the
 // hex being HMAC-SHA256 over `${t}.${rawBody}` keyed with the endpoint secret.
 
 import type { ContentWebhookEvent } from '@backgold/contract/content-api'
