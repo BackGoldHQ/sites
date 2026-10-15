@@ -21,7 +21,7 @@ from the public starter, or a site on the party template), read
 | `templates/party` | The party template (`backgold-template-party`), deployed as the Worker `template-party`. Its `template.json` is its manifest. |
 | `vendor/backgold-contract` | The Content API contract snapshot (`@backgold/contract`, private, never published). Generated; never edited. |
 | `scripts/` | `starter-e2e.mjs` (the end-to-end check), `check-manifests.mjs` (every `template.json` against the contract's schema), `contract-pull.mjs` (refreshes `vendor/`), `sync-starter.sh` (the starter mirror, run only by CI). |
-| `docs/` | `CLIENT-SITES.md`, the build-out guide. |
+| `docs/` | `CLIENT-SITES.md`, the build-out guide; `HEADLESS-CONTENT-API.md`, the Content API developer guide the `@backgold/content` README links to. |
 
 Both templates depend on the packages as `workspace:^`. Keep it that way:
 the party deploy builds from this workspace, and the starter sync writes

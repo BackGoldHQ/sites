@@ -29,7 +29,7 @@ it. Both paths share everything under [Shared material](#shared-material).
 | Piece | Where | What it is |
 | --- | --- | --- |
 | The BackGold platform | [gitlab.com/backgold/backgold](https://gitlab.com/backgold/backgold) (private) | The api, the operator app and the Content API. Production: app `https://app.backgold.com`, api `https://api.backgold.com`. Staging: app `https://app.backgold.dev`, api `https://api.backgold.dev`. |
-| The Content API | `<api>/api/content/v1`, reference at `<api>/api/content/v1/docs` | The read-only API a site gets its pages, menus, entries, events, areas and brand from. |
+| The Content API | `<api>/api/content/v1`, reference at `<api>/api/content/v1/docs` | The read-only API a site gets its pages, menus, entries, events, areas and brand from. The developer guide is [HEADLESS-CONTENT-API.md](HEADLESS-CONTENT-API.md). |
 | `@backgold/content` | npm; source `packages/content-client` | The typed, cache-aware client for the Content API, and the `backgold-content types` command. [README](../packages/content-client/README.md). |
 | `@backgold/astro` | npm; source `packages/astro-backgold` | The plumbing for an Astro site on Cloudflare Workers: routing, the edge cache, the webhook, preview, redirects, the SEO routes and the components (`Section`, `Area`, `Menu`, `Embed`, `Disclaimer`, …). It reads content with `@backgold/content`. [README](../packages/astro-backgold/README.md). |
 | The public starter | `templates/astro-starter` here, mirrored to gitlab.com/backgold/backgold-starter | The thin, restylable site on top of the two packages. Its [README](../templates/astro-starter/README.md) is written for outside users and is the client-facing setup guide. |
