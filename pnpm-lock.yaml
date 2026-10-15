@@ -20,7 +20,7 @@ importers:
         specifier: ^8.0.1
         version: 8.0.1
       posthog-js:
-        specifier: ^1.435.8
+        specifier: ^1.438.10
         version: 1.438.10
     devDependencies:
       '@backgold/contract':
@@ -66,11 +66,11 @@ importers:
         specifier: ^14.3.3
         version: 14.3.4(@types/node@24.19.2)(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))(esbuild@0.28.2)(wrangler@4.151.0(@types/node@24.19.2))(yaml@2.9.1)
       '@backgold/astro':
-        specifier: ^0.4.0
-        version: 0.4.0(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))
+        specifier: workspace:^
+        version: link:../../packages/astro-backgold
       '@backgold/content':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: workspace:^
+        version: link:../../packages/content-client
       astro:
         specifier: ^7.3.5
         version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
@@ -91,11 +91,11 @@ importers:
         specifier: ^14.3.3
         version: 14.3.4(@types/node@24.19.2)(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))(esbuild@0.28.2)(wrangler@4.151.0(@types/node@24.19.2))(yaml@2.9.1)
       '@backgold/astro':
-        specifier: ^0.4.0
-        version: 0.4.0(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))
+        specifier: workspace:^
+        version: link:../../packages/astro-backgold
       '@backgold/content':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: workspace:^
+        version: link:../../packages/content-client
       astro:
         specifier: ^7.3.5
         version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
@@ -252,17 +252,6 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
-
-  '@backgold/astro@0.4.0':
-    resolution: {integrity: sha512-fb9K2FsVtHcU0JWZ8kfMMKsdCrW0MX1kinBUgTORIyApOgMbRTAtBAAzhxU08tP9xWFXLIkpJCH1WMYufhq6+Q==}
-    engines: {node: '>= 22.12'}
-    peerDependencies:
-      astro: ^7
-
-  '@backgold/content@0.3.0':
-    resolution: {integrity: sha512-1Hs44apR5pgll4lM3zoFGwARqgXeBhY/7eVgChURAnhMBelqBkbMdpaO8EEPWwaYB6UE/RPyNRp39MHP9C9S9A==}
-    engines: {node: '>= 20'}
-    hasBin: true
 
   '@bruits/satteri-darwin-arm64@0.10.5':
     resolution: {integrity: sha512-27KTVl4TJkVahMy/ohyA7qd4938G5UNneFUz/PsScYfpIhj0IVAS23mpcJXdPF44sa6nva198lmV/cKIb2YPyA==}
@@ -2799,20 +2788,6 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
-
-  '@backgold/astro@0.4.0(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))':
-    dependencies:
-      '@backgold/content': 0.3.0
-      astro: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
-      marked: 18.1.1
-      parse5: 8.0.1
-      posthog-js: 1.438.10
-    transitivePeerDependencies:
-      - '@types/react'
-      - preact-render-to-string
-      - react
-
-  '@backgold/content@0.3.0': {}
 
   '@bruits/satteri-darwin-arm64@0.10.5':
     optional: true

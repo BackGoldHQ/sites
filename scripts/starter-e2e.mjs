@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // The starter template (or another template under templates/) and the two
 // packages it is built on, end to end on workerd: builds @backgold/content
-// and @backgold/astro, packs them, installs them into a copy of the template
-// outside the repository (so nothing resolves through the pnpm workspace),
-// builds it, and runs it on `wrangler dev` against a fixture Content API
-// served from CONTENT_API_EXAMPLES in the vendored contract
-// (vendor/backgold-contract): first an organization that kept the legacy blog
-// address (`/blog`), then one at `/news` with a page there, the news list's
-// intro. Exits non-zero at the first failed check.
+// and @backgold/astro, packs them, installs them with npm into a copy of the
+// template outside the repository (its package.json pointed at the tarballs,
+// so nothing resolves through the pnpm workspace or from npm's copies of the
+// packages), checks that npm put workerd's binary for this platform there
+// (installing once more when it did not), builds it, and runs it on
+// `wrangler dev` against a fixture Content API served from
+// CONTENT_API_EXAMPLES in the vendored contract (vendor/backgold-contract):
+// first an organization that kept the legacy blog address (`/blog`), then one
+// at `/news` with a page there, the news list's intro. Exits non-zero at the
+// first failed check.
 //
 //   node scripts/starter-e2e.mjs          run, then delete the temp copy
 //   node scripts/starter-e2e.mjs --template party
@@ -31,8 +34,9 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash, createHmac } from 'node:crypto'
-import { accessSync, constants as fsConstants, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { accessSync, constants as fsConstants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, request as httpRequest } from 'node:http'
+import { createRequire } from 'node:module'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { runInNewContext } from 'node:vm'
@@ -161,9 +165,65 @@ function installTemplate(siteDir, tarballs) {
   // the tarball too, never the copy on npm.
   pkg.overrides = { '@backgold/content': content }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
-  run('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], siteDir)
+  const install = ['install', '--no-audit', '--no-fund', '--loglevel=error']
+  run('npm', install, siteDir)
+  let missing = missingWorkerdBinaries(siteDir)
+  if (missing.length) {
+    log(`npm install left out ${missing.join(', ')} (workerd's binary for ${process.platform} ${process.arch}, an optional dependency npm skips when its download fails); installing again`)
+    run('npm', install, siteDir)
+    missing = missingWorkerdBinaries(siteDir)
+    if (missing.length) {
+      throw new Error(`npm install did not install ${missing.join(', ')}, workerd's binary for ${process.platform} ${process.arch}, in two tries; the template cannot build or run without it.`)
+    }
+  }
   run('npm', ['run', 'build'], siteDir, { PATH: `${process.env.PATH}${delimiter}/${BUILD_CANARY}` })
   run('npm', ['run', 'check'], siteDir)
+}
+
+/**
+ * workerd's binary is a per-platform package (`@cloudflare/workerd-linux-64`,
+ * `@cloudflare/workerd-linux-arm64`, ...) that npm installs as an optional
+ * dependency of `workerd`. npm skips an optional dependency whose download
+ * fails and still exits 0; the build then stops with workerd's own "could not
+ * be found". Returns the platform package each copy of workerd under
+ * `siteDir/node_modules` names in its optionalDependencies for this platform
+ * and cannot resolve, once per name.
+ */
+function missingWorkerdBinaries(siteDir) {
+  const workerdDirs = packageDirs(join(siteDir, 'node_modules'), 'workerd')
+  if (!workerdDirs.length) throw new Error(`npm install put no workerd under ${join(siteDir, 'node_modules')}; wrangler and the Cloudflare adapter need it.`)
+  const wanted = `@cloudflare/workerd-${process.platform}-${process.arch === 'x64' ? '64' : process.arch}`
+  const missing = new Set()
+  for (const dir of workerdDirs) {
+    const optional = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).optionalDependencies ?? {}
+    if (!(wanted in optional)) throw new Error(`workerd at ${dir} has no binary package for ${process.platform} ${process.arch} (its optionalDependencies name ${Object.keys(optional).join(', ')}).`)
+    try {
+      createRequire(join(dir, 'package.json')).resolve(`${wanted}/package.json`)
+    } catch {
+      missing.add(wanted)
+    }
+  }
+  return [...missing]
+}
+
+/** Every unscoped package directory named `name` under `nodeModules`, nested node_modules included. */
+function packageDirs(nodeModules, name) {
+  let entries
+  try {
+    entries = readdirSync(nodeModules, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  return entries.flatMap((d) => {
+    if (!d.isDirectory() || d.name.startsWith('.')) return []
+    const dirs = d.name.startsWith('@')
+      ? readdirSync(join(nodeModules, d.name), { withFileTypes: true })
+          .filter((e) => e.isDirectory())
+          .map((e) => join(nodeModules, d.name, e.name))
+      : [join(nodeModules, d.name)]
+    const own = d.name === name && existsSync(join(nodeModules, d.name, 'package.json')) ? [join(nodeModules, d.name)] : []
+    return [...own, ...dirs.flatMap((dir) => packageDirs(join(dir, 'node_modules'), name))]
+  })
 }
 
 /** Every file under `dir`, recursively. */

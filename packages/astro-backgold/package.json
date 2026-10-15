@@ -39,7 +39,7 @@
     "@backgold/content": "workspace:^",
     "marked": "^18.0.14",
     "parse5": "^8.0.1",
-    "posthog-js": "^1.435.8"
+    "posthog-js": "^1.438.10"
   },
   "peerDependencies": {
     "astro": "^7"
