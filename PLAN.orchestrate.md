@@ -37,8 +37,8 @@ Wave 2 (after T1 + T2 integrate):
 - [x] **T5 petition-drive-comparison-migration** (platform ebbadcd50) (opus): deflocksa.org vs the new template at 1440/375 (Playwright, own port), gap table, and the migration mapping for the eight live/draft hosted petition-drive pages (prod D1 list in the scratchpad), written to `docs/design/petition-drive-template-2026-10/COMPARISON.md` on the platform branch.
 
 Wave 3 (sites):
-- [ ] **T7 kit-fixes-candidate-boards** (opus): the kit asks the candidate build handed back (header button current, Blog list in a sidebar, section heads, QuoteStrip, Cta card, planks kicker, dark quiet-button contrast).
-- [ ] **T8 absorb-sites-mr-4** (opus, after T7): rebase the feature branch onto sites main once !4 (party chrome layouts: chrome as lists, `/site.chrome`) merges; move !4's new party/src files into the kit; the three manifests' chrome as lists; re-vendor; four e2e runs green.
+- [x] **T7 kit-fixes-candidate-boards** (f98daed + f8ae39f) (opus): the kit asks the candidate build handed back (header button current, Blog list in a sidebar, section heads, QuoteStrip, Cta card, planks kicker, dark quiet-button contrast).
+- [x] **T8 absorb-sites-mr-4** (rebased onto 234daf6; 4b7452e + 62c4908) (opus, after T7): rebase the feature branch onto sites main once !4 (party chrome layouts: chrome as lists, `/site.chrome`) merges; move !4's new party/src files into the kit; the three manifests' chrome as lists; re-vendor; four e2e runs green.
 - [ ] **T6 candidate-comp-walk** (opus, after T8).
 
 Ship: combined gates (sites: `pnpm -r lint`, `pnpm -r test`, astro check ×3, e2e ×3; platform: shared/api/frontend lint), changelog files, graph close-out, MRs (sites via glab; platform: see Decisions — Assay names no GitLab landing today).
