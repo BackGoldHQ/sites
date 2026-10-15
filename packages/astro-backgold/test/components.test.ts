@@ -1,5 +1,5 @@
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { MenuResponse, PageResponse, Section as SectionData, SectionEmbed } from '@backgold/content'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import Analytics from '../components/Analytics.astro'

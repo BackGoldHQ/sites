@@ -20,8 +20,7 @@
 //     api through a service binding, where CORS does not apply) sends
 //     X-BackGold-Site in place of Authorization.
 
-import type { SITE_KEY_PREFIXES } from '@givegold/shared'
-import { siteKeyKind } from '@givegold/shared/content-api'
+import { type SITE_KEY_PREFIXES, siteKeyKind } from '@backgold/contract/content-api'
 import type {
   AreasResponse,
   AuthorResponse,

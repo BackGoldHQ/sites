@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // The starter template (or another template under templates/) and the two
-// packages it is built on, end to end on workerd: builds @givegold/shared,
-// @backgold/content and @backgold/astro, packs the two public packages,
-// installs them into a copy of the template outside the repository (so
-// nothing resolves through the pnpm workspace), builds it, and runs it on
+// packages it is built on, end to end on workerd: builds @backgold/content
+// and @backgold/astro, packs them, installs them with npm into a copy of the
+// template outside the repository (its package.json pointed at the tarballs,
+// so nothing resolves through the pnpm workspace or from npm's copies of the
+// packages), checks that npm put workerd's binary for this platform there
+// (installing once more when it did not), builds it, and runs it on
 // `wrangler dev` against a fixture Content API served from
-// CONTENT_API_EXAMPLES: first an organization that kept the legacy blog
-// address (`/blog`), then one at `/news` with a page there, the news list's
-// intro. Exits non-zero at the first failed check.
+// CONTENT_API_EXAMPLES in the vendored contract (vendor/backgold-contract):
+// first an organization that kept the legacy blog address (`/blog`), then one
+// at `/news` with a page there, the news list's intro. Exits non-zero at the
+// first failed check.
 //
 //   node scripts/starter-e2e.mjs          run, then delete the temp copy
 //   node scripts/starter-e2e.mjs --template party
@@ -31,8 +34,9 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash, createHmac } from 'node:crypto'
-import { accessSync, constants as fsConstants, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { accessSync, constants as fsConstants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, request as httpRequest } from 'node:http'
+import { createRequire } from 'node:module'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { runInNewContext } from 'node:vm'
@@ -98,10 +102,10 @@ function run(command, args, cwd, extraEnv = {}) {
  * from answering the Worker until the child exits. Output is collected and
  * printed whole when the child fails.
  */
-function runAsync(command, args, cwd) {
+function runAsync(command, args, cwd, extraEnv = {}) {
   log(`$ ${command} ${args.join(' ')}   (in ${cwd})`)
   return new Promise((resolveRun, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: process.env, detached: true })
+    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...extraEnv }, detached: true })
     children.add(child)
     let output = ''
     child.stdout.on('data', (chunk) => (output += chunk))
@@ -133,7 +137,6 @@ function freePort() {
 // ── 1. Build and pack ────────────────────────────────────────────────────────
 
 function buildAndPack(packDir) {
-  run('pnpm', ['--filter', '@givegold/shared', 'build'], ROOT)
   run('pnpm', ['--filter', '@backgold/content', 'build'], ROOT)
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
@@ -162,9 +165,65 @@ function installTemplate(siteDir, tarballs) {
   // the tarball too, never the copy on npm.
   pkg.overrides = { '@backgold/content': content }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
-  run('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], siteDir)
+  const install = ['install', '--no-audit', '--no-fund', '--loglevel=error']
+  run('npm', install, siteDir)
+  let missing = missingWorkerdBinaries(siteDir)
+  if (missing.length) {
+    log(`npm install left out ${missing.join(', ')} (workerd's binary for ${process.platform} ${process.arch}, an optional dependency npm skips when its download fails); installing again`)
+    run('npm', install, siteDir)
+    missing = missingWorkerdBinaries(siteDir)
+    if (missing.length) {
+      throw new Error(`npm install did not install ${missing.join(', ')}, workerd's binary for ${process.platform} ${process.arch}, in two tries; the template cannot build or run without it.`)
+    }
+  }
   run('npm', ['run', 'build'], siteDir, { PATH: `${process.env.PATH}${delimiter}/${BUILD_CANARY}` })
   run('npm', ['run', 'check'], siteDir)
+}
+
+/**
+ * workerd's binary is a per-platform package (`@cloudflare/workerd-linux-64`,
+ * `@cloudflare/workerd-linux-arm64`, ...) that npm installs as an optional
+ * dependency of `workerd`. npm skips an optional dependency whose download
+ * fails and still exits 0; the build then stops with workerd's own "could not
+ * be found". Returns the platform package each copy of workerd under
+ * `siteDir/node_modules` names in its optionalDependencies for this platform
+ * and cannot resolve, once per name.
+ */
+function missingWorkerdBinaries(siteDir) {
+  const workerdDirs = packageDirs(join(siteDir, 'node_modules'), 'workerd')
+  if (!workerdDirs.length) throw new Error(`npm install put no workerd under ${join(siteDir, 'node_modules')}; wrangler and the Cloudflare adapter need it.`)
+  const wanted = `@cloudflare/workerd-${process.platform}-${process.arch === 'x64' ? '64' : process.arch}`
+  const missing = new Set()
+  for (const dir of workerdDirs) {
+    const optional = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).optionalDependencies ?? {}
+    if (!(wanted in optional)) throw new Error(`workerd at ${dir} has no binary package for ${process.platform} ${process.arch} (its optionalDependencies name ${Object.keys(optional).join(', ')}).`)
+    try {
+      createRequire(join(dir, 'package.json')).resolve(`${wanted}/package.json`)
+    } catch {
+      missing.add(wanted)
+    }
+  }
+  return [...missing]
+}
+
+/** Every unscoped package directory named `name` under `nodeModules`, nested node_modules included. */
+function packageDirs(nodeModules, name) {
+  let entries
+  try {
+    entries = readdirSync(nodeModules, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  return entries.flatMap((d) => {
+    if (!d.isDirectory() || d.name.startsWith('.')) return []
+    const dirs = d.name.startsWith('@')
+      ? readdirSync(join(nodeModules, d.name), { withFileTypes: true })
+          .filter((e) => e.isDirectory())
+          .map((e) => join(nodeModules, d.name, e.name))
+      : [join(nodeModules, d.name)]
+    const own = d.name === name && existsSync(join(nodeModules, d.name, 'package.json')) ? [join(nodeModules, d.name)] : []
+    return [...own, ...dirs.flatMap((dir) => packageDirs(join(dir, 'node_modules'), name))]
+  })
 }
 
 /** Every file under `dir`, recursively. */
@@ -746,9 +805,9 @@ function newsBaseData(data, ex) {
   }
 }
 
-/** The kitchen sink's sections, made by the api's own projection from the built @givegold/shared. */
+/** The kitchen sink's sections, made by the api's own projection from the vendored contract (vendor/backgold-contract). */
 async function kitchenSink() {
-  const shared = await import(pathToFileURL(join(ROOT, 'packages/shared/dist/content-api.js')).href)
+  const shared = await import(pathToFileURL(join(ROOT, 'vendor/backgold-contract/content-api.js')).href)
   const origins = { apiOrigin: 'https://api.backgold.com', donateOrigin: 'https://secure.backgold.com' }
   const doc = kitchenSinkDocument()
   const sections = shared.projectDocument(doc, {
@@ -771,7 +830,7 @@ async function kitchenSink() {
 
 
 async function loadExamples() {
-  const mod = await import(pathToFileURL(join(ROOT, 'packages/shared/dist/content-api-examples.js')).href)
+  const mod = await import(pathToFileURL(join(ROOT, 'vendor/backgold-contract/content-api-examples.js')).href)
   return structuredClone(mod.CONTENT_API_EXAMPLES)
 }
 
@@ -1524,7 +1583,7 @@ function geoFixtures() {
       centroids: { Alder: [200, 200], Birch: [500, 100], Cedar: [430, 230], Dunmore: [530, 300] },
     }),
   )
-  const texas = file(JSON.stringify(JSON.parse(readFileSync(join(ROOT, 'packages/site/src/geo/tx-counties.json'), 'utf8'))))
+  const texas = file(JSON.stringify(JSON.parse(readFileSync(join(ROOT, 'scripts/fixtures/tx-counties.json'), 'utf8'))))
   return { four, texas, byHash: new Map([four, texas].map((f) => [f.hash, f.json])) }
 }
 
@@ -2437,7 +2496,6 @@ async function checkLighthouse(origin, chrome, fixture) {
         '--yes',
         `lighthouse@${LIGHTHOUSE_VERSION}`,
         `${origin}${path}`,
-        `--chrome-path=${chrome}`,
         '--chrome-flags=--headless=new --no-sandbox',
         '--only-categories=performance,accessibility,seo',
         '--output=json',
@@ -2445,6 +2503,10 @@ async function checkLighthouse(origin, chrome, fixture) {
         '--quiet',
       ],
       work,
+      // Lighthouse's launcher finds Chrome through CHROME_PATH (the CLI has no
+      // chrome-path option); without it, it searches the system and fails on an
+      // image whose Chromium is not on a standard path.
+      { CHROME_PATH: chrome },
     )
     log(`  the fixture api answered ${fixture.count() - before} request(s) while Lighthouse loaded ${path}`)
     const { categories } = JSON.parse(readFileSync(report, 'utf8'))

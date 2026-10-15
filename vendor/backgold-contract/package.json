@@ -1,0 +1,29 @@
+{
+  "name": "@backgold/contract",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The BackGold Content API contract, vendored from the platform's packages/shared by scripts/contract-pull.mjs",
+  "type": "module",
+  "exports": {
+    "./content-api": {
+      "types": "./content-api.d.ts",
+      "import": "./content-api.js"
+    },
+    "./content-api-examples": {
+      "types": "./content-api-examples.d.ts",
+      "import": "./content-api-examples.js"
+    },
+    "./content-types": {
+      "types": "./content-types.d.ts",
+      "import": "./content-types.js"
+    },
+    "./site-templates": {
+      "types": "./site-templates.d.ts",
+      "import": "./site-templates.js"
+    }
+  },
+  "dependencies": {
+    "markdown-it": "^14.3.0",
+    "zod": "^4.6.5"
+  }
+}

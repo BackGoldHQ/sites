@@ -45,7 +45,7 @@ describe.skipIf(!BUILT)('dist', () => {
     expect(shipped.some((f) => f.endsWith('/dist/server.js'))).toBe(true)
     for (const file of shipped) {
       for (const spec of specifiers(await readFile(file, 'utf8'))) {
-        expect(spec.startsWith('@givegold/'), `${file} imports ${spec}`).toBe(false)
+        expect(spec === '@backgold/contract' || spec.startsWith('@backgold/contract/'), `${file} imports ${spec}`).toBe(false)
         const allowed = ALLOWED_BARE.some((re) => re.test(spec)) || (file === `${DIST}index.js` && spec === 'node:fs/promises')
         if (!spec.startsWith('.')) expect(allowed, `${file} imports ${spec}`).toBe(true)
       }
@@ -64,6 +64,6 @@ describe.skipIf(!BUILT)('dist', () => {
   })
 
   it('finds the imports it guards against', () => {
-    expect(specifiers(`import a from '@givegold/shared'\nawait import('cloudflare:workers')`)).toEqual(['@givegold/shared', 'cloudflare:workers'])
+    expect(specifiers(`import a from '@backgold/contract/content-api'\nawait import('cloudflare:workers')`)).toEqual(['@backgold/contract/content-api', 'cloudflare:workers'])
   })
 })

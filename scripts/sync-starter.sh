@@ -23,9 +23,19 @@
 # build output) and nothing from outside the template can reach the public
 # repository. Files deleted from the template are deleted there.
 #
+# In this workspace the template depends on `@backgold/astro` and
+# `@backgold/content` as `workspace:^`, which only pnpm inside this repository
+# can resolve. The public repository gets a package.json with each
+# `workspace:` range on an `@backgold/*` dependency written as `^<version>`,
+# the version in that package's packages/<dir>/package.json in the same source
+# commit (read with `git show`, never from the working tree). Everything else
+# in the file is as committed.
+#
 # Before anything is pushed, the `@backgold/astro` and `@backgold/content`
-# ranges in the template's package.json must resolve on npm: the public
+# ranges in that rewritten package.json must resolve on npm: the public
 # repository is what Deploy to Cloudflare clones, so it must always install.
+# A version bump in packages/ therefore reaches the public starter only once
+# that version is published.
 #
 # The commit is pushed as a plain fast-forward on top of what was cloned. If
 # the public repository's main moves between the clone and the push, the push
@@ -114,15 +124,63 @@ fi
 WORK_ROOT=$(mktemp -d)
 trap 'rm -rf "$WORK_ROOT"' EXIT
 
+# --- The public package.json -------------------------------------------------
+# Writes PUBLIC_MANIFEST: the template's package.json at the source commit with
+# every `workspace:` range on an `@backgold/*` dependency replaced by
+# `^<version>` of the workspace package of that name, whose version comes from
+# packages/<dir>/package.json at the same commit. Prints each range it
+# rewrites. Returns 1 when such a range names a package that is not under
+# packages/ at that commit.
+PUBLIC_MANIFEST="$WORK_ROOT/template-package.json"
+write_public_manifest() {
+  local versions="$WORK_ROOT/workspace-versions.txt" dir
+  : > "$versions"
+  for dir in $(git ls-tree -d --name-only "$SOURCE_SHA" packages/); do
+    git cat-file -e "$SOURCE_SHA:$dir/package.json" 2>/dev/null || continue
+    git show "$SOURCE_SHA:$dir/package.json" | node -e '
+      let s = "";
+      process.stdin.on("data", (d) => (s += d)).on("end", () => {
+        const m = JSON.parse(s);
+        process.stdout.write(m.name + " " + m.version + "\n");
+      });
+    ' >> "$versions"
+  done
+  git show "$SOURCE_SHA:$TEMPLATE_DIR/package.json" > "$WORK_ROOT/template-package.committed.json"
+  node -e '
+    const fs = require("fs");
+    const [committed, versionsFile, out] = process.argv.slice(1);
+    const m = JSON.parse(fs.readFileSync(committed, "utf8"));
+    const versions = new Map(
+      fs.readFileSync(versionsFile, "utf8").split("\n").filter(Boolean).map((line) => line.split(" ")),
+    );
+    let failed = false;
+    for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+      for (const [name, range] of Object.entries(m[field] || {})) {
+        if (!name.startsWith("@backgold/") || !String(range).startsWith("workspace:")) continue;
+        const version = versions.get(name);
+        if (!version) {
+          console.log("  the starter depends on " + name + "@" + range + ", and no package under packages/ is named " + name);
+          failed = true;
+          continue;
+        }
+        m[field][name] = "^" + version;
+        console.log("  " + name + ": " + range + " -> ^" + version);
+      }
+    }
+    fs.writeFileSync(out, JSON.stringify(m, null, 2) + "\n");
+    process.exit(failed ? 1 : 0);
+  ' "$WORK_ROOT/template-package.committed.json" "$versions" "$PUBLIC_MANIFEST"
+}
+
 # --- The npm guard -----------------------------------------------------------
+# Reads PUBLIC_MANIFEST, so it checks the ranges the public repository gets.
 # Prints one line per package. Returns 0 when both ranges resolve on npm, 3
 # when a range is a published-style range no npm version satisfies yet, and 1
 # when a range is not an npm range at all (that is a template defect, not a
 # wait for a publish, so it wins over 3).
 check_npm_ranges() {
-  local manifest="$WORK_ROOT/template-package.json"
+  local manifest="$PUBLIC_MANIFEST"
   local failed=0 name range resolved
-  git show "$SOURCE_SHA:$TEMPLATE_DIR/package.json" > "$manifest"
   for name in @backgold/astro @backgold/content; do
     range=$(node -e '
       const m = require(process.argv[1]);
@@ -155,11 +213,13 @@ check_npm_ranges() {
 }
 
 # --- The tree ----------------------------------------------------------------
-# Empties DEST (keeping .git) and fills it with the template as committed.
+# Empties DEST (keeping .git) and fills it with the template as committed,
+# its package.json replaced by PUBLIC_MANIFEST.
 fill_tree() {
   local dest="$1"
   find "$dest" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
   git archive --format=tar "$SOURCE_SHA:$TEMPLATE_DIR" | tar -x -C "$dest"
+  cp "$PUBLIC_MANIFEST" "$dest/package.json"
   if [ ! -f "$dest/LICENSE" ]; then
     write_license "$dest/LICENSE"
   fi
@@ -192,6 +252,12 @@ LICENSE
 }
 
 echo "Starter sync from backgold@$SHORT_SHA ($TEMPLATE_DIR)"
+
+echo "package.json for the public repository (workspace ranges as published ranges):"
+if ! write_public_manifest; then
+  echo "FAIL: the starter names an @backgold package this repository does not hold; not syncing." >&2
+  exit 1
+fi
 
 # --- Source only: no key, no network to the repository -----------------------
 if [ "$SOURCE_ONLY" = 1 ]; then

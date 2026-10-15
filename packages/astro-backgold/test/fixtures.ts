@@ -4,7 +4,7 @@
 // middleware is handed on a Worker.
 
 import { createHmac } from 'node:crypto'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { KvLike } from '@backgold/content'
 import type { EdgeCache } from '../src/server/edge-cache.js'
 import type { MiddlewareContextLike } from '../src/middleware.js'

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { SiteResponse } from '@backgold/content'
 import { describe, expect, it } from 'vitest'
 import type { BackgoldLocals } from '../src/server/context.js'
