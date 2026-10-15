@@ -82,11 +82,11 @@ Chrome or Chromium at `CHROME_BIN`.
   the change merges here, copy the file there and run
   `pnpm --filter @givegold/shared templates:build` in a platform MR. Until
   then the platform's `templates-drift` job is yellow. Say so in the MR.
-- **A push to `main` deploys the party template to staging**
-  (`deploy-party-staging`, when it touches `templates/party/`, `packages/`,
+- **A push to `main` deploys each changed template to staging**
+  (`deploy-<template>-staging`, when it touches that template, `packages/`,
   `vendor/`, `pnpm-lock.yaml` or `.gitlab-ci.yml`). Production is the manual
-  `deploy-party-production` job. Never merge something you would not put on
-  staging.
+  `deploy-<template>-production` job. Never merge something you would not put
+  on staging.
 - **A push to `main` syncs the public starter** (`sync-starter`, when it
   touches `templates/astro-starter/`, a package's `package.json` or
   `scripts/sync-starter.sh`). Never push to the public repository by hand.

@@ -1,69 +1,78 @@
 # BackGold sites pipeline: the two public npm packages, the templates built on
-# them, and the party template's deploy.
+# them, and the three templates' deploys (party, candidate, petition-drive).
 #
 # Each check job is path-filtered, so an MR that only touches the starter never
-# re-runs the party template's e2e (the runners are shared with the platform's
+# re-runs any template's e2e (the runners are shared with the platform's
 # suites). GitLab evaluates `rules: changes:` against the MR diff natively;
 # each job lists its own paths, what it consumes, and the root list.
 #
 # Fan-out map (a consumer resolves the packages through their built dist/, so
 # each job builds what it consumes first):
 #   packages/content-client → content-client   (@backgold/content on npm)
-#                             + astro-backgold + template-kit + starter + party
-#                             deploy-party-staging on main (automatic)
+#                             + astro-backgold + template-kit + starter + every template
+#                             deploy-<name>-staging on main (automatic)
 #                             pack-content → publish-content (manual release)
 #   packages/astro-backgold → astro-backgold   (@backgold/astro on npm)
-#                             + template-kit + starter + party
-#                             deploy-party-staging on main (automatic)
+#                             + template-kit + starter + every template
+#                             deploy-<name>-staging on main (automatic)
 #                             pack-astro → publish-astro (manual release)
 #   packages/template-kit   → template-kit     (@backgold/template-kit, private:
 #                                                what every template draws)
-#                             + party
-#                             deploy-party-staging on main (automatic)
+#                             + every template
+#                             deploy-<name>-staging on main (automatic)
 #   templates/astro-starter → starter          (the e2e, with
 #                                                scripts/starter-e2e.mjs);
 #                             sync-starter on main (automatic: mirrors it to
 #                                                gitlab.com/backgold/backgold-starter)
-#   templates/party         → party            (astro check, then the same e2e
-#                                                with --template party);
-#                             deploy-party-staging on main (automatic: the
+#   templates/<name>        → <name>           (astro check, then the same e2e
+#                                                with --template <name>), for
+#                                                <name> = party, candidate,
+#                                                petition-drive; each extends
+#                                                .template-check;
+#                             deploy-<name>-staging on main (automatic: the
 #                                                template into the sites-staging
 #                                                dispatch namespace, built from
 #                                                this workspace);
-#                             deploy-party-production (manual on main: the same
-#                                                into sites-production)
+#                             deploy-<name>-production (manual on main: the same
+#                                                into sites-production); both
+#                                                extend .template-deploy-*
 #   templates/*/template.json → manifests      (each manifest against the
 #                                                vendored contract's schema)
-#   scripts/starter-e2e.mjs → starter + party
+#   scripts/starter-e2e.mjs → starter + every template
 #   scripts/check-manifests.mjs → manifests
 #   vendor/backgold-contract → manifests, and through the root list every
 #                             check job (the Content API contract slice both packages
 #                             bundle and the e2e's fixture api serves)
 #   root config             → every check job (lockfile/workspace/vendor/this file)
 #
-# The party template deploys from this workspace on a push to main; it never
-# waits on npm. Publishing the packages is a release for outside users (the
+# The templates deploy from this workspace on a push to main; they never
+# wait on npm. Publishing the packages is a release for outside users (the
 # public starter and their own sites), played by hand.
 #
 # CI/CD variables the main-branch jobs read (project-level, protected, so only
 # main pipelines see them; masked unless noted):
-#   CLOUDFLARE_API_TOKEN     deploy-party-staging, deploy-party-production
-#   CLOUDFLARE_ACCOUNT_ID    deploy-party-staging, deploy-party-production
-#   PARTY_STAGING_KV_ID      deploy-party-staging
-#   PARTY_PRODUCTION_KV_ID   deploy-party-production
+#   CLOUDFLARE_API_TOKEN     every deploy-<name>-staging and -production job
+#   CLOUDFLARE_ACCOUNT_ID    every deploy-<name>-staging and -production job
+#   PARTY_STAGING_KV_ID, PARTY_PRODUCTION_KV_ID
+#                            deploy-party-staging, deploy-party-production
+#   CANDIDATE_STAGING_KV_ID, CANDIDATE_PRODUCTION_KV_ID
+#                            deploy-candidate-staging, deploy-candidate-production
+#   PETITION_DRIVE_STAGING_KV_ID, PETITION_DRIVE_PRODUCTION_KV_ID
+#                            deploy-petition-drive-staging, deploy-petition-drive-production
 #   NPM_TOKEN                publish-content, publish-astro
 #   STARTER_SYNC_KEY         sync-starter (a FILE variable, not masked: it is
 #                            a multi-line private key)
 # All six are set on this project, which is the only repository that deploys
-# template-party, publishes the packages and syncs the starter. The two
+# template-party, publishes the packages and syncs the starter. The
 # deploy jobs exist only while CLOUDFLARE_API_TOKEN is set, and sync-starter
 # only while STARTER_SYNC_KEY is; every job whose variable is unset stops
 # with a sentence that names it before it does anything, so nothing deploys
 # or publishes half-configured.
 #
-# Adding a package or template later: copy a check job, set its `changes:` to
-# its own paths plus whatever it consumes plus the root list. The `gate` job
-# needs no changes.
+# Adding a package later: copy a check job, set its `changes:` to its own paths
+# plus whatever it consumes plus the root list. Adding a template: copy the
+# `party` check job and the two `deploy-party-*` jobs, naming the new template.
+# The `gate` job needs no changes.
 
 workflow:
   rules:
@@ -130,7 +139,7 @@ default:
   - CHROME_BIN=$(ls -d /ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | head -n 1)
   - |
     if [ -z "$CHROME_BIN" ] || [ ! -x "$CHROME_BIN" ]; then
-      echo "FAIL: no Chromium under /ms-playwright/chromium-*/ in this image; the e2e's Lighthouse run and the party look checks need one at CHROME_BIN." >&2
+      echo "FAIL: no Chromium under /ms-playwright/chromium-*/ in this image; the e2e's Lighthouse run and the template look checks need one at CHROME_BIN." >&2
       exit 1
     fi
   - export CHROME_BIN
@@ -274,15 +283,17 @@ starter:
     - pnpm --filter @backgold/astro build
     - node scripts/starter-e2e.mjs --lighthouse
 
-# party = the party template (templates/party), drawn by the template kit
-# (packages/template-kit), first `astro check` (the template's own `check`
-# script) run in place from the workspace, where its @backgold dependencies
-# resolve to the packages just built here; then the
+# .template-check = the check every template runs, first `astro check` (the
+# template's own `check` script) run in place from the workspace, where its
+# @backgold dependencies resolve to the packages just built here; then the
 # same end-to-end checks as `starter`: scripts/starter-e2e.mjs with
-# `--template party` copies templates/party in place of the starter and runs
-# every check, Lighthouse and the party look checks in Chromium included.
-# Same image, timeout, retry and runner note as `starter`.
-party:
+# `--template <name>` copies templates/<name> in place of the starter and runs
+# every check, Lighthouse and the template's look checks in Chromium included.
+# Same image, timeout, retry and runner note as `starter`. A job extends it,
+# sets TEMPLATE to its directory name and lists its own `rules:` (a `changes:`
+# list cannot be inherited): its own paths, packages/template-kit, the e2e
+# script, both packages and the root list.
+.template-check:
   stage: check
   image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
   timeout: 20m
@@ -291,6 +302,19 @@ party:
     when:
       - job_execution_timeout
       - stuck_or_timeout_failure
+  before_script: *e2e_before_script
+  script:
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/astro build
+    - pnpm --filter "backgold-template-$TEMPLATE" exec astro check
+    - node scripts/starter-e2e.mjs --template "$TEMPLATE" --lighthouse
+
+# party = the party template (templates/party), drawn by the template kit
+# (packages/template-kit).
+party:
+  extends: .template-check
+  variables:
+    TEMPLATE: party
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -304,12 +328,45 @@ party:
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
         - vendor/**/*
-  before_script: *e2e_before_script
-  script:
-    - pnpm --filter @backgold/content build
-    - pnpm --filter @backgold/astro build
-    - pnpm --filter backgold-template-party exec astro check
-    - node scripts/starter-e2e.mjs --template party --lighthouse
+
+# candidate = the candidate template (templates/candidate), on the kit.
+candidate:
+  extends: .template-check
+  variables:
+    TEMPLATE: candidate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/candidate/**/*
+        - packages/template-kit/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+
+# petition-drive = the petition-drive template (templates/petition-drive), on
+# the kit.
+petition-drive:
+  extends: .template-check
+  variables:
+    TEMPLATE: petition-drive
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/petition-drive/**/*
+        - packages/template-kit/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
 
 # manifests = every templates/<dir>/template.json against
 # siteTemplateManifestSchema from the vendored contract slice, and each
@@ -349,21 +406,24 @@ gate:
     - echo "pipeline present — check jobs run only for changed paths"
 
 # =========================================================================
-# PARTY TEMPLATE DEPLOYS. The MR already ran the checks, so the deploys build
+# =========================================================================
+# TEMPLATE DEPLOYS. The MR already ran the checks, so the deploys build
 # straight off the push rather than re-running them. wrangler reads
-# CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the environment.
+# CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the environment. Each
+# template (party, candidate, petition-drive) has a staging and a production
+# job, shaped by the two hidden jobs below.
 # =========================================================================
 
-# deploy-party-staging: templates/party as the Worker `template-party` in the
-# Workers for Platforms dispatch namespace `sites-staging`. The staging api
-# Worker (givegold-api-staging) answers every *.backgold.dev host and
-# dispatches each request for a site on the party template to that Worker
-# with the site's id in X-BackGold-Site; the Worker reads the Content API
-# first-party, through a service binding to the api's FirstParty entrypoint.
-# One deploy serves every party-template site on staging, the Westmark Liberty
-# Party demo (westmark.backgold.dev) among them. A namespace Worker has no
-# routes or Custom Domain, so the deploy touches no DNS. AUTOMATIC on a main
-# push that changed the template, a package, the vendored contract, the
+# .template-deploy-staging: templates/<name> as the Worker `template-<name>`
+# in the Workers for Platforms dispatch namespace `sites-staging`. The staging
+# api Worker (givegold-api-staging) answers every *.backgold.dev host and
+# dispatches each request for a site on the template to that Worker with the
+# site's id in X-BackGold-Site; the Worker reads the Content API first-party,
+# through a service binding to the api's FirstParty entrypoint. One deploy
+# serves every site on the template on staging (the Westmark Liberty Party demo,
+# westmark.backgold.dev, is on party). A namespace Worker has no routes or
+# Custom Domain, so the deploy touches no DNS. A concrete job is AUTOMATIC on a
+# main push that changed its template, a package, the vendored contract, the
 # lockfile or this file; MANUAL and never blocking on every other main
 # pipeline, to redeploy by hand. It deploys the template as committed in the
 # pipeline it runs in, so play it by hand on the newest main pipeline.
@@ -376,31 +436,148 @@ gate:
 # resolve to them, so the deploy carries the packages as committed here,
 # never what is on npm.
 #
-# The staging environment of templates/party/wrangler.jsonc holds the name,
+# The staging environment of templates/<name>/wrangler.jsonc holds the name,
 # the BACKGOLD_API service binding, BACKGOLD_API_ORIGIN and the cache's KV
 # binding. The Cloudflare adapter writes the deploy config
 # (dist/server/wrangler.json) during `astro build`, choosing the environment
 # from CLOUDFLARE_ENV then; `wrangler deploy` reads that file, so a `--env`
 # given only at deploy time would be ignored and the default config (Worker
-# `backgold-party`) deployed. The job therefore builds with
+# `backgold-<name>`) deployed. The job therefore builds with
 # CLOUDFLARE_ENV=staging and refuses to deploy unless the built config names
-# template-party. Before building it reads the namespace and stops with a
+# template-<name>. Before building it reads the namespace and stops with a
 # sentence when it does not exist (wrangler's code 100119): creating it is a
-# one-time account step (templates/party/README.md, Staging deploy).
+# one-time account step (templates/<name>/README.md, Staging deploy).
 #
-# Variables, besides CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID:
-#   PARTY_STAGING_KV_ID           required. The id of the BACKGOLD_CACHE KV
-#                                 namespace, created once by hand. Wrangler
-#                                 reads no environment variable in a config, so
-#                                 the job writes it over the placeholder in
-#                                 wrangler.jsonc before the build.
+# A concrete job extends this, sets TEMPLATE (the directory name) and KV_VAR,
+# and lists its own `rules:` (a `changes:` list cannot be inherited). KV_VAR
+# names the required CI variable, <NAME>_STAGING_KV_ID: the id of the
+# BACKGOLD_CACHE KV namespace, created once by hand. Wrangler reads no
+# environment variable in a config, so the job writes it over the
+# __<NAME>_STAGING_KV_ID__ placeholder in wrangler.jsonc before the build.
 # No site key and no secrets: a first-party read needs no key (the site comes
 # from X-BackGold-Site, drafts for /preview included), and the api keeps
 # /api/* on every site host, so the template's webhook route is never reached.
-deploy-party-staging:
+.template-deploy-staging:
   stage: deploy
   environment: staging
   interruptible: false
+  script:
+    - |
+      set -euo pipefail
+      namespace=sites-staging
+      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+        if [ -z "${!var:-}" ]; then
+          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
+          exit 1
+        fi
+      done
+      kv_id="${!KV_VAR:-}"
+      if ! printf '%s' "$kv_id" | grep -Eq '^[0-9a-f]{32}$'; then
+        echo "FAIL: $KV_VAR must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/$TEMPLATE/README.md, Staging deploy) and set the variable." >&2
+        exit 1
+      fi
+      sed -i "s/__${KV_VAR}__/$kv_id/" "templates/$TEMPLATE/wrangler.jsonc"
+      if ! grep -q "\"id\": \"$kv_id\"" "templates/$TEMPLATE/wrangler.jsonc"; then
+        echo "FAIL: templates/$TEMPLATE/wrangler.jsonc has no __${KV_VAR}__ placeholder in its staging kv_namespaces; not deploying." >&2
+        exit 1
+      fi
+      if ! ns_out=$(pnpm --filter "backgold-template-$TEMPLATE" exec wrangler dispatch-namespace get "$namespace" 2>&1); then
+        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
+          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/$TEMPLATE/README.md, Staging deploy), then play the job again." >&2
+        else
+          printf '%s\n' "$ns_out" >&2
+          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
+        fi
+        exit 1
+      fi
+      pnpm --filter @backgold/content build
+      pnpm --filter @backgold/astro build
+      CLOUDFLARE_ENV=staging pnpm --filter "backgold-template-$TEMPLATE" build
+      built=$(node -p "require('./templates/$TEMPLATE/dist/server/wrangler.json').name")
+      if [ "$built" != "template-$TEMPLATE" ]; then
+        echo "FAIL: the build wrote a deploy config for '$built', not template-$TEMPLATE; not deploying." >&2
+        exit 1
+      fi
+      pnpm --filter "backgold-template-$TEMPLATE" exec wrangler deploy --dispatch-namespace "$namespace"
+
+# .template-deploy-production: the same template as the Worker
+# `template-<name>` in the Workers for Platforms dispatch namespace
+# `sites-production`, which the production api Worker (backgold-api) binds as
+# SITES. That api answers every *.backgold.com host and each verified tenant
+# custom domain, and dispatches each request for a site on the template to this
+# Worker with the site's id in X-BackGold-Site; the Worker reads the Content API
+# first-party through a service binding to backgold-api's FirstParty
+# entrypoint. One deploy serves every site on the template in production. Until
+# a template's job has run once the namespace holds no script for it, and those
+# sites answer 503 "This site isn't ready yet." MANUAL ONLY on every main
+# pipeline and never blocking (`allow_failure: true`, so an unplayed deploy
+# never holds the pipeline); it deploys the template as committed in the
+# pipeline it is played from, so play it on the newest main pipeline. It exists
+# only once CLOUDFLARE_API_TOKEN is set, as the staging jobs.
+#
+# The script is .template-deploy-staging's with the environment names changed:
+# the namespace (sites-production), the CI variable (KV_VAR is
+# <NAME>_PRODUCTION_KV_ID, written over __<NAME>_PRODUCTION_KV_ID__ in the
+# `production` environment of templates/<name>/wrangler.jsonc, and it is the
+# production BACKGOLD_CACHE namespace's id, not the staging one's),
+# CLOUDFLARE_ENV=production for the build, the GitLab environment, and the
+# README pointer (Production deploy). See the staging job's note for why it
+# builds from the workspace, why the build, not the deploy, chooses the
+# environment, and why the job stops before building when the namespace is
+# missing. No site key and no secrets, as for staging.
+.template-deploy-production:
+  stage: deploy
+  environment: production
+  interruptible: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+  script:
+    - |
+      set -euo pipefail
+      namespace=sites-production
+      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+        if [ -z "${!var:-}" ]; then
+          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
+          exit 1
+        fi
+      done
+      kv_id="${!KV_VAR:-}"
+      if ! printf '%s' "$kv_id" | grep -Eq '^[0-9a-f]{32}$'; then
+        echo "FAIL: $KV_VAR must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/$TEMPLATE/README.md, Production deploy) and set the variable." >&2
+        exit 1
+      fi
+      sed -i "s/__${KV_VAR}__/$kv_id/" "templates/$TEMPLATE/wrangler.jsonc"
+      if ! grep -q "\"id\": \"$kv_id\"" "templates/$TEMPLATE/wrangler.jsonc"; then
+        echo "FAIL: templates/$TEMPLATE/wrangler.jsonc has no __${KV_VAR}__ placeholder in its production kv_namespaces; not deploying." >&2
+        exit 1
+      fi
+      if ! ns_out=$(pnpm --filter "backgold-template-$TEMPLATE" exec wrangler dispatch-namespace get "$namespace" 2>&1); then
+        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
+          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/$TEMPLATE/README.md, Production deploy), then play the job again." >&2
+        else
+          printf '%s\n' "$ns_out" >&2
+          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
+        fi
+        exit 1
+      fi
+      pnpm --filter @backgold/content build
+      pnpm --filter @backgold/astro build
+      CLOUDFLARE_ENV=production pnpm --filter "backgold-template-$TEMPLATE" build
+      built=$(node -p "require('./templates/$TEMPLATE/dist/server/wrangler.json').name")
+      if [ "$built" != "template-$TEMPLATE" ]; then
+        echo "FAIL: the build wrote a deploy config for '$built', not template-$TEMPLATE; not deploying." >&2
+        exit 1
+      fi
+      pnpm --filter "backgold-template-$TEMPLATE" exec wrangler deploy --dispatch-namespace "$namespace"
+
+# deploy-party-staging: templates/party as the Worker `template-party` in `sites-staging`.
+deploy-party-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: party
+    KV_VAR: PARTY_STAGING_KV_ID
   resource_group: party-staging
   # The job exists only while CLOUDFLARE_API_TOKEN is set on this project (it
   # is), so a project without the variable has no deploy job to go red. This
@@ -417,121 +594,71 @@ deploy-party-staging:
     - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
       when: manual
       allow_failure: true
-  script:
-    - |
-      set -euo pipefail
-      namespace=sites-staging
-      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
-        if [ -z "${!var:-}" ]; then
-          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
-          exit 1
-        fi
-      done
-      if ! printf '%s' "${PARTY_STAGING_KV_ID:-}" | grep -Eq '^[0-9a-f]{32}$'; then
-        echo "FAIL: PARTY_STAGING_KV_ID must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/party/README.md, Staging deploy) and set the variable." >&2
-        exit 1
-      fi
-      sed -i "s/__PARTY_STAGING_KV_ID__/$PARTY_STAGING_KV_ID/" templates/party/wrangler.jsonc
-      if ! grep -q "\"id\": \"$PARTY_STAGING_KV_ID\"" templates/party/wrangler.jsonc; then
-        echo "FAIL: templates/party/wrangler.jsonc has no __PARTY_STAGING_KV_ID__ placeholder in its staging kv_namespaces; not deploying." >&2
-        exit 1
-      fi
-      if ! ns_out=$(pnpm --filter backgold-template-party exec wrangler dispatch-namespace get "$namespace" 2>&1); then
-        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
-          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/party/README.md, Staging deploy), then play the job again." >&2
-        else
-          printf '%s\n' "$ns_out" >&2
-          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
-        fi
-        exit 1
-      fi
-      pnpm --filter @backgold/content build
-      pnpm --filter @backgold/astro build
-      CLOUDFLARE_ENV=staging pnpm --filter backgold-template-party build
-      built=$(node -p "require('./templates/party/dist/server/wrangler.json').name")
-      if [ "$built" != "template-party" ]; then
-        echo "FAIL: the build wrote a deploy config for '$built', not template-party; not deploying." >&2
-        exit 1
-      fi
-      pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace "$namespace"
 
-# deploy-party-production: the same template as the Worker `template-party` in
-# the Workers for Platforms dispatch namespace `sites-production`, which the
-# production api Worker (backgold-api) binds as SITES. That api answers every
-# *.backgold.com host and each verified tenant custom domain, and dispatches
-# each request for a site on the party template to this Worker with the site's
-# id in X-BackGold-Site; the Worker reads the Content API first-party through
-# a service binding to backgold-api's FirstParty entrypoint. One deploy serves
-# every party-template site in production. Until this job has run once the
-# namespace holds no script, and those sites answer 503 "This site isn't ready
-# yet." MANUAL ONLY on every main pipeline and never blocking (`allow_failure`
-# defaults to true for a manual job, so an unplayed deploy never holds the
-# pipeline); it deploys the template as committed in the pipeline it is played
-# from, so play it on the newest main pipeline.
-#
-# The script is deploy-party-staging's with the environment names changed: the
-# namespace (sites-production), the CI variable (PARTY_PRODUCTION_KV_ID,
-# written over __PARTY_PRODUCTION_KV_ID__ in the `production` environment of
-# templates/party/wrangler.jsonc), CLOUDFLARE_ENV=production for the build, the
-# GitLab environment and resource group, and the README pointer (Production
-# deploy). It is duplicated, not shared, so each job reads top to bottom. See
-# the staging job's note for why it builds from the workspace, why the build,
-# not the deploy, chooses the environment, and why the job stops before
-# building when the namespace is missing.
-#
-# Variables, besides CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID:
-#   PARTY_PRODUCTION_KV_ID        required. The id of the production
-#                                 BACKGOLD_CACHE KV namespace
-#                                 (backgold-party-production-cache), created
-#                                 once by hand. Not the staging namespace's id.
-# No site key and no secrets, as for staging.
+# deploy-party-production: templates/party as the Worker `template-party` in `sites-production`.
 deploy-party-production:
-  stage: deploy
-  environment: production
-  interruptible: false
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: party
+    KV_VAR: PARTY_PRODUCTION_KV_ID
   resource_group: party-production
   # Exists only while CLOUDFLARE_API_TOKEN is set, as deploy-party-staging.
+
+# deploy-candidate-staging: templates/candidate as the Worker `template-candidate` in `sites-staging`.
+deploy-candidate-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: candidate
+    KV_VAR: CANDIDATE_STAGING_KV_ID
+  resource_group: candidate-staging
   rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+      changes:
+        - templates/candidate/**/*
+        - packages/**/*
+        - packages/template-kit/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
     - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
       when: manual
       allow_failure: true
-  script:
-    - |
-      set -euo pipefail
-      namespace=sites-production
-      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
-        if [ -z "${!var:-}" ]; then
-          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
-          exit 1
-        fi
-      done
-      if ! printf '%s' "${PARTY_PRODUCTION_KV_ID:-}" | grep -Eq '^[0-9a-f]{32}$'; then
-        echo "FAIL: PARTY_PRODUCTION_KV_ID must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/party/README.md, Production deploy) and set the variable." >&2
-        exit 1
-      fi
-      sed -i "s/__PARTY_PRODUCTION_KV_ID__/$PARTY_PRODUCTION_KV_ID/" templates/party/wrangler.jsonc
-      if ! grep -q "\"id\": \"$PARTY_PRODUCTION_KV_ID\"" templates/party/wrangler.jsonc; then
-        echo "FAIL: templates/party/wrangler.jsonc has no __PARTY_PRODUCTION_KV_ID__ placeholder in its production kv_namespaces; not deploying." >&2
-        exit 1
-      fi
-      if ! ns_out=$(pnpm --filter backgold-template-party exec wrangler dispatch-namespace get "$namespace" 2>&1); then
-        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
-          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/party/README.md, Production deploy), then play the job again." >&2
-        else
-          printf '%s\n' "$ns_out" >&2
-          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
-        fi
-        exit 1
-      fi
-      pnpm --filter @backgold/content build
-      pnpm --filter @backgold/astro build
-      CLOUDFLARE_ENV=production pnpm --filter backgold-template-party build
-      built=$(node -p "require('./templates/party/dist/server/wrangler.json').name")
-      if [ "$built" != "template-party" ]; then
-        echo "FAIL: the build wrote a deploy config for '$built', not template-party; not deploying." >&2
-        exit 1
-      fi
-      pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace "$namespace"
+
+# deploy-candidate-production: templates/candidate as the Worker `template-candidate` in `sites-production`.
+deploy-candidate-production:
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: candidate
+    KV_VAR: CANDIDATE_PRODUCTION_KV_ID
+  resource_group: candidate-production
+
+# deploy-petition-drive-staging: templates/petition-drive as the Worker `template-petition-drive` in `sites-staging`.
+deploy-petition-drive-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: petition-drive
+    KV_VAR: PETITION_DRIVE_STAGING_KV_ID
+  resource_group: petition-drive-staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+      changes:
+        - templates/petition-drive/**/*
+        - packages/**/*
+        - packages/template-kit/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+
+# deploy-petition-drive-production: templates/petition-drive as the Worker `template-petition-drive` in `sites-production`.
+deploy-petition-drive-production:
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: petition-drive
+    KV_VAR: PETITION_DRIVE_PRODUCTION_KV_ID
+  resource_group: petition-drive-production
 
 # =========================================================================
 # NPM — MANUAL ONLY. Publishes the two public packages to the npm registry,
