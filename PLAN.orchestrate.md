@@ -21,12 +21,12 @@ Two repositories, two branches:
 ## Tasks
 
 Wave 0 (serial):
-- [ ] **T0 sites-template-kit** (opus, in place on the feature branch): extract the kit from `templates/party`; party consumes it; e2e packs the kit; CI globs. Party e2e + astro check green.
-- [ ] **T0b platform contract** (orchestrator): `SECTION_LAYOUTS.Hero` += `portrait`; CONTRACT §2 row; shared lint/test; then `node scripts/contract-pull.mjs <platform worktree>` on the sites branch after T0 integrates.
+- [x] **T0 sites-template-kit** (d23d4b3 + 11f6c88) (opus, in place on the feature branch): extract the kit from `templates/party`; party consumes it; e2e packs the kit; CI globs. Party e2e + astro check green.
+- [x] **T0b platform contract** (platform 5b547a2b0…37b7c133d; snapshot 2675c3c) (orchestrator): `SECTION_LAYOUTS.Hero` += `portrait`; CONTRACT §2 row; shared lint/test; then `node scripts/contract-pull.mjs <platform worktree>` on the sites branch after T0 integrates.
 
 Wave 1 (parallel, worktrees under `GGPC/backgold-sites-wt/<slug>`, base = the feature branch after T0):
 - [ ] **T1 template-candidate** (opus): `templates/candidate` from the C boards and the draft manifest; layouts Hero `portrait`, QuoteStrip `wall` (kit has it? verify; else add in the template), Countdown `tiles` + `inline`; starter copy in a candidate's voice (no names); README; e2e `--template candidate`.
-- [ ] **T2 template-petition-drive** (opus): `templates/petition-drive` from the deflocksa.org production document, the DeFlock identity mock and the hosted petition-drive seed; dark-first tokens; single page; README; e2e `--template petition-drive`.
+- [x] **T2 template-petition-drive** (1a144ae + 8a88ba0) (opus): `templates/petition-drive` from the deflocksa.org production document, the DeFlock identity mock and the hosted petition-drive seed; dark-first tokens; single page; README; e2e `--template petition-drive`.
 - [ ] **T4 sites-ci-per-template** (sonnet): `.gitlab-ci.yml` check + deploy jobs per template (candidate, petition-drive) mirroring the party's, KV/CI variables named per template; `scripts/check-manifests.mjs` unchanged; README/CLAUDE.md rows.
 
 Wave 2 (after T1 + T2 integrate):
