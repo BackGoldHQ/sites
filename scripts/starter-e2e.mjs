@@ -102,10 +102,10 @@ function run(command, args, cwd, extraEnv = {}) {
  * from answering the Worker until the child exits. Output is collected and
  * printed whole when the child fails.
  */
-function runAsync(command, args, cwd) {
+function runAsync(command, args, cwd, extraEnv = {}) {
   log(`$ ${command} ${args.join(' ')}   (in ${cwd})`)
   return new Promise((resolveRun, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: process.env, detached: true })
+    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...extraEnv }, detached: true })
     children.add(child)
     let output = ''
     child.stdout.on('data', (chunk) => (output += chunk))
@@ -2496,7 +2496,6 @@ async function checkLighthouse(origin, chrome, fixture) {
         '--yes',
         `lighthouse@${LIGHTHOUSE_VERSION}`,
         `${origin}${path}`,
-        `--chrome-path=${chrome}`,
         '--chrome-flags=--headless=new --no-sandbox',
         '--only-categories=performance,accessibility,seo',
         '--output=json',
@@ -2504,6 +2503,10 @@ async function checkLighthouse(origin, chrome, fixture) {
         '--quiet',
       ],
       work,
+      // Lighthouse's launcher finds Chrome through CHROME_PATH (the CLI has no
+      // chrome-path option); without it, it searches the system and fails on an
+      // image whose Chromium is not on a standard path.
+      { CHROME_PATH: chrome },
     )
     log(`  the fixture api answered ${fixture.count() - before} request(s) while Lighthouse loaded ${path}`)
     const { categories } = JSON.parse(readFileSync(report, 'utf8'))
