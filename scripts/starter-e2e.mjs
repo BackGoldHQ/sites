@@ -1583,7 +1583,7 @@ function geoFixtures() {
       centroids: { Alder: [200, 200], Birch: [500, 100], Cedar: [430, 230], Dunmore: [530, 300] },
     }),
   )
-  const texas = file(JSON.stringify(JSON.parse(readFileSync(join(ROOT, 'packages/site/src/geo/tx-counties.json'), 'utf8'))))
+  const texas = file(JSON.stringify(JSON.parse(readFileSync(join(ROOT, 'scripts/fixtures/tx-counties.json'), 'utf8'))))
   return { four, texas, byHash: new Map([four, texas].map((f) => [f.hash, f.json])) }
 }
 

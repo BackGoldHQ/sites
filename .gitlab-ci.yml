@@ -737,9 +737,14 @@ sync-starter:
   cache: []
   before_script: []
   rules:
+    # A package version bump changes the public package.json too (the sync
+    # writes ^<version>), so it runs then as well: yellow until that version
+    # is published, then played by hand.
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
       changes:
         - templates/astro-starter/**/*
+        - packages/*/package.json
+        - scripts/sync-starter.sh
     # A job-level allow_failure other than `true` would make this manual job
     # block the pipeline until played; the rule keeps it non-blocking.
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
