@@ -1,10 +1,10 @@
 ---
 // Petition, every layout, as the kit draws it, with the section's anchor
 // defaulting to `petition` as a hosted BackGold page's Petition does
-// (packages/site urls.ts sectionAnchorId): the Petition's options carry no
-// anchor id of their own, and the drive's header link and its header button,
-// "Sign the petition", go to `/#petition`. A section with an anchor id keeps
-// it. The layout picks the kit's component; one BackGold sends that this
+// (packages/site urls.ts sectionAnchorId): the starter sets `anchorId:
+// "petition"` so the drive's header link and its header button, "Sign the
+// petition", resolve to `/#petition` when the site is seeded; a section with
+// no anchor id of its own gets the same default here. The layout picks the kit's component; one BackGold sends that this
 // template does not list draws as the default, `none`.
 import type { Section } from '@backgold/content'
 import PetitionNone from '@backgold/template-kit/components/sections/Petition/index.astro'

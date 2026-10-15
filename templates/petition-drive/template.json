@@ -93,7 +93,8 @@
               "badgeNoun": "ALPRs",
               "uncategorizedLabel": "Unattributed",
               "volunteerAsk": "on",
-              "recognition": true
+              "recognition": true,
+              "anchorId": "petition"
             },
             "data": {
               "source": "petition",
