@@ -146,7 +146,19 @@ var siteExample = {
     },
     brand: { logo_url: "https://api.backgold.com/api/media-files/med_logo", primary_color: "#1b3a5c", secondary_color: "#f4efe6", accent_color: "#c8102e", palette_id: null },
     social: [{ platform: "facebook", url: "https://facebook.com/pinevalleyliberty" }],
-    seo: { title: "Pine Valley for Liberty", description: "Lower taxes, open books, school choice." }
+    seo: { title: "Pine Valley for Liberty", description: "Lower taxes, open books, school choice." },
+    chrome: {
+      header: { layout: "bar" },
+      footer: {
+        layout: "columns",
+        blurb: "A party for people who would rather be left alone.",
+        address: "PO Box 112\nPine Valley, CA 91962",
+        phone: "(619) 555-0142",
+        legal_links: [{ label: "Privacy policy", url: "https://pinevalleyliberty.org/privacy" }],
+        copyright: null,
+        closing: null
+      }
+    }
   },
   areas: [
     { key: "top_banner", name: "Top banner" },

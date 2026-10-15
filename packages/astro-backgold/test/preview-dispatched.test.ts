@@ -26,7 +26,7 @@ describe('loadPreview in the dispatched form', () => {
   it('reads the draft through the binding as the site the request names', async () => {
     for (const siteId of [SITE_ID, OTHER_SITE_ID]) {
       const result = await loadPreview(asSite(siteId, 'bg_preview=tok_good&path=%2Fissues'))
-      expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues' })
+      expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues', site: CONTENT_API_EXAMPLES.SiteResponse })
       expect(api.headers.at(-1)!.get('X-BackGold-Site')).toBe(siteId)
       expect(api.headers.at(-1)!.has('Authorization')).toBe(false)
     }
@@ -63,6 +63,7 @@ describe('loadPreview in the dispatched form', () => {
     worker.env.BACKGOLD_SITE_ID = SITE_ID
     const result = await loadPreview(asSite(OTHER_SITE_ID, 'bg_preview=tok_good'))
     expect(result.ok).toBe(true)
-    expect(api.headers.map((h) => h.get('X-BackGold-Site'))).toEqual([SITE_ID])
+    // The draft and, beside it, the site as it is now: two reads, both as the site named.
+    expect(api.headers.map((h) => h.get('X-BackGold-Site'))).toEqual([SITE_ID, SITE_ID])
   })
 })

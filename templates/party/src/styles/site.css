@@ -401,6 +401,45 @@ main:focus {
 .header-bar-menu {
   display: none;
 }
+/*
+  The centred header (chrome.header `centered`, A12's Centered name): at the
+  bar width the brand takes a row of its own, centred, and the menu is centred
+  on the row under it with the switch and the header button at that row's
+  right. Under 56rem it is the bar.
+*/
+@media (min-width: 56rem) {
+  .site-header[data-layout='centered'] .site-header-inner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    row-gap: 0.25rem;
+    padding-top: 0.875rem;
+    padding-bottom: 0.625rem;
+  }
+  .site-header[data-layout='centered'] .brand {
+    grid-column: 1 / -1;
+    justify-self: center;
+    margin-right: 0;
+  }
+  .site-header[data-layout='centered'] .brand-words {
+    text-align: center;
+  }
+  /* The second row: the switch at the menu's left, the menu, the button at the right. */
+  .site-header[data-layout='centered'] .header-bar-menu {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .site-header[data-layout='centered'] .mode-toggle {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .site-header[data-layout='centered'] .header-button {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+  }
+}
 .header-bar-menu > ul {
   display: flex;
   align-items: center;
@@ -1383,10 +1422,13 @@ details summary {
 
 /*
   A1's footer, on the contrast band: the brand, the site's line and its
-  social links in the first column, a column per footer-menu group beside
-  it, the legal line boxed across the bottom, then the bottom row (the
-  utility menu and "Powered by BackGold"). On a phone (A13) the columns go
-  two up with the first spanning both.
+  social links in the first column, the Contact column and a column per
+  footer-menu group beside it, the legal line boxed across the bottom, then
+  the bottom row (the utility menu, the footer's legal links, the copyright
+  line and "Powered by BackGold"). On a phone (A13) the columns go two up
+  with the first spanning both. The footer's `data-layout` is the layout the
+  site chose: giving (the donate strip on top), columns, closing (the
+  ClosingCall band above) or compact (one row, .footer-compact).
 */
 .site-footer {
   background: var(--bg-band-background);
@@ -1406,7 +1448,8 @@ details summary {
 .footer-brand {
   grid-column: 1 / -1;
 }
-.site-footer a {
+/* The footer's links take the band's ink; a button (the donate strip's, the closing call's) keeps its own. */
+.site-footer a:not(.button) {
   color: var(--ink);
 }
 .footer-description {
@@ -1497,16 +1540,65 @@ details summary {
   color: var(--ink);
   text-decoration: underline;
 }
+/*
+  The Contact column (the footer's address and phone, from its editor in
+  BackGold): one more column beside the menu's, in the same voice.
+*/
+.footer-address {
+  font-style: normal;
+}
+/*
+  The copyright line and "Powered by BackGold" at the bottom row's end; the
+  copyright is the footer's own line, else "© year name".
+*/
+.footer-copyright {
+  margin-left: auto;
+}
+/*
+  The compact footer (chrome.footer `compact`): one row, the brand beside its
+  social links; the legal line and the bottom row follow as on every layout.
+*/
+.footer-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+.footer-compact .social {
+  margin: 0;
+}
+.site-footer[data-layout='compact'] .site-footer-inner {
+  padding-top: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem);
+}
+.site-footer[data-layout='compact'] .disclaimer {
+  margin-top: 1.75rem;
+}
 @media (min-width: 48rem) {
+  /*
+    The grid is as wide as the columns it holds (--footer-columns: the Contact
+    column and the menu's, counted by the layout): the brand's column, then
+    one per column. With none, the brand and its line stand alone, never at
+    the left of three empty columns.
+  */
   .footer-grid {
-    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.4fr) repeat(var(--footer-columns, 3), minmax(0, 1fr));
     gap: 2.25rem;
+  }
+  .footer-grid[style*='--footer-columns: 0'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .footer-grid[style*='--footer-columns: 0'] .footer-description {
+    max-width: var(--measure);
   }
   .footer-brand {
     grid-column: auto;
   }
-  .footer-powered {
+  .footer-copyright {
     margin-left: auto;
+  }
+  .footer-powered {
+    margin-left: 0;
   }
 }
 

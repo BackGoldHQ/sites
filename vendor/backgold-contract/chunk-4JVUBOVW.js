@@ -134,6 +134,10 @@ var TEMPLATE_SECTION_TYPES = [
   "MediaKit",
   "Booking"
 ];
+var SITE_CHROME_LAYOUTS = {
+  header: ["bar", "centered"],
+  footer: ["columns", "closing", "compact", "giving"]
+};
 function siteKeyKind(key) {
   if (key.startsWith(SITE_KEY_PREFIXES.publishable)) return "publishable";
   if (key.startsWith(SITE_KEY_PREFIXES.secret)) return "secret";
@@ -1531,4 +1535,4 @@ function projectedBlockProps(block, ctx) {
   return props;
 }
 
-export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
