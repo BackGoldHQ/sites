@@ -67,8 +67,8 @@
     "newsletter": { "entry": "issue", "list": "list" }
   },
   "chrome": {
-    "header": "bar",
-    "footer": "giving",
+    "header": ["bar", "centered"],
+    "footer": ["giving", "columns", "closing", "compact"],
     "takeoverBanner": true,
     "legalLine": true
   },

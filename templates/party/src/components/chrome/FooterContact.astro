@@ -1,0 +1,28 @@
+---
+// The footer's Contact column (the words the footer's editor in BackGold
+// holds: `/site` chrome.footer): the postal address, each line its own, and
+// the phone line as a call link. Drawn as one more column beside the footer
+// menu's; nothing when neither is set. The footer's contact email never
+// reaches a site drawn from the Content API, so it is not here.
+interface Props {
+  address: string | null
+  phone: string | null
+}
+
+const { address, phone } = Astro.props
+const lines = address ? address.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : []
+const tel = phone ? phone.replace(/[^\d+]/g, '') : ''
+---
+{(lines.length > 0 || phone) && (
+  <div class="footer-column footer-contact">
+    <h2 class="footer-heading">Contact</h2>
+    <ul>
+      {lines.length > 0 && (
+        <li>
+          <address class="footer-address">{lines.map((line, i) => <>{i > 0 && <br />}{line}</>)}</address>
+        </li>
+      )}
+      {phone && <li>{tel.length >= 7 ? <a href={`tel:${tel}`}>{phone}</a> : <span>{phone}</span>}</li>}
+    </ul>
+  </div>
+)}
