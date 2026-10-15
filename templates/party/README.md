@@ -34,8 +34,7 @@ CI job (`node scripts/check-manifests.mjs`) parses every
 BackGold can read.
 
 BackGold's api and app read the manifest from the platform repository,
-[gitlab.com/polyneural/backgold](https://gitlab.com/polyneural/backgold),
-which keeps its own copy at `packages/shared/site-templates/party.template.json`.
+gitlab.com/backgold/backgold (private), which keeps its own copy at `packages/shared/site-templates/party.template.json`.
 After a change to `template.json` merges here, refresh that copy in a platform
 MR: copy the file to that path and run
 `pnpm --filter @givegold/shared templates:build` there. Until then the
@@ -404,7 +403,12 @@ deploy touches no DNS. A copy of this template for another organization can
 delete the block; the default configuration above it is what the Deploy
 button and `npm run deploy` use.
 
-**Once, before the first run**, in BackGold's account, in this order:
+**Account setup.** In place today: the dispatch namespace `sites-staging`,
+the KV namespace `backgold-party-staging-cache` with its id in the
+`PARTY_STAGING_KV_ID` CI variable, and `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID`, each a masked, protected project variable on this
+repository, so only `main` pipelines see them. To set it up again from
+nothing, in BackGold's account, in this order:
 
 1. Create the dispatch namespace `sites-staging`, with the `cf` CLI
    (`cf workers-for-platforms dispatch-namespaces create --name sites-staging`)
@@ -418,22 +422,13 @@ button and `npm run deploy` use.
 3. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` on this repository,
    masked and protected, under **Settings → CI/CD → Variables** (or with
    `glab variable set … -R backgold/sites`). The two deploy jobs exist only
-   once `CLOUDFLARE_API_TOKEN` is set: setting it is the switch that makes
-   this repository the one deploying `template-party`, and only one
-   repository may deploy it at a time.
+   while `CLOUDFLARE_API_TOKEN` is set. This repository is the only one that
+   deploys `template-party`.
 
 The job needs no site key and no secrets: a first-party read needs no key,
 `/preview` reads drafts through the same binding, and the api keeps `/api/*`
 on every site host, so the template's webhook route
 (`/api/backgold/webhook`) is never reached and needs no signing secret.
-
-**Merge order.**
-
-1. This deploy (the `env.staging` block and the job).
-2. The api's dispatch in the platform repository, which sends
-   party-template sites to the namespace.
-3. The seed with the Westmark site in template mode (`seed:staging`, in the
-   platform repository).
 
 **The job.** `deploy-party-staging` in this repository's `.gitlab-ci.yml`
 runs by itself on a push to `main` that changed `templates/party/`,
@@ -465,8 +460,7 @@ hand on the newest `main` pipeline. After the pipeline's
 sites-staging` and the new version's id. The namespace's script list shows
 `template-party`:
 `cf workers-for-platforms dispatch-namespaces scripts list --dispatch-namespace sites-staging`.
-Once the api's dispatch and the Westmark seed are in, `https://westmark.backgold.dev/`
-answers with the Westmark home page.
+`https://westmark.backgold.dev/` answers with the Westmark home page.
 
 **Content never needs a redeploy.** Publishing in BackGold bumps the site's
 content version, the client notices within a minute when it next checks the
@@ -486,12 +480,10 @@ the party template it hands the request to the namespace's Worker
 and the Worker reads the Content API first-party through the `BACKGOLD_API`
 service binding to the api's `FirstParty` entrypoint, with no site key.
 
-**Until the Worker is deployed in `sites-production`, every production
-template site answers 503 "This site isn't ready yet."** (with a
-`Retry-After` of 60 seconds). The namespace holds no script before the first
-play of the job, and creating the namespace alone changes nothing a visitor
-sees. Play the job before, or at the same time as, the first production site
-is created in template mode.
+**While `sites-production` holds no `template-party` script, every
+production template site answers 503 "This site isn't ready yet."** (with a
+`Retry-After` of 60 seconds). The namespace holds one today; a new namespace
+holds none until the job is played.
 
 The `env.production` block in `wrangler.jsonc` holds that form: the name, the
 service binding (Worker `backgold-api`, entrypoint `FirstParty`),
@@ -500,9 +492,13 @@ namespace. Like staging's it has no routes, Custom Domain or `workers.dev`
 address, and sets neither `BACKGOLD_SITE_KEY` nor `SITE_URL`: the dispatch
 names the site per request.
 
-**Once, before the first run**, in BackGold's account, in this order. There
-is more than one Cloudflare account on the operator's login, so every command
-below names the account (`247651947e3b35805b31daef5ab9eab9`):
+**Account setup.** In place today: the dispatch namespace `sites-production`
+holding `template-party`, the KV namespace `backgold-party-production-cache`
+with its id in the `PARTY_PRODUCTION_KV_ID` CI variable, and the two
+Cloudflare variables staging uses. To set it up again from nothing, in
+BackGold's account, in this order. There is more than one Cloudflare account
+on the operator's login, so every command below names the account
+(`247651947e3b35805b31daef5ab9eab9`):
 
 1. Make sure the dispatch namespace `sites-production` exists. The production
    api's deploy binds it, so it may already be there: read it with
