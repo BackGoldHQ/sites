@@ -269,7 +269,6 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
-        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -279,6 +278,7 @@ declare const contentTypeCreateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
+        tag: "tag";
     }>>;
     routable: z.ZodDefault<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -293,7 +293,6 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
-        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -303,6 +302,7 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
+        tag: "tag";
     }>>;
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -314,8 +314,8 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        long_text: "long_text";
         short_text: "short_text";
+        long_text: "long_text";
         rich_text: "rich_text";
         image: "image";
         pdf: "pdf";
