@@ -850,7 +850,12 @@ function calendarMonthOf(date) {
 
 function fixtureData(ex, kitchenSections) {
   const legal = ex.SiteResponse.legal
-  const site = ex.SiteResponse.site
+  // The example site stores the contract's footer (columns); a site on the
+  // party template stores nothing, so its chrome is the template's own
+  // firsts (the giving footer), which the party checks below expect.
+  const site = PARTY
+    ? { ...ex.SiteResponse.site, chrome: { header: { layout: 'bar' }, footer: { ...ex.SiteResponse.site.chrome.footer, layout: 'giving' } } }
+    : ex.SiteResponse.site
   const hero = ex.PageResponse.sections[0]
   const donate = ex.PageResponse.sections[1]
   const homeAreas = structuredClone(ex.PageResponse.areas)

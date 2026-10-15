@@ -1,0 +1,94 @@
+---
+// The footer's closing call (`/site` chrome.footer.closing, drawn on the
+// footer's `closing` layout): a band across the top of the footer with the
+// headline, the line under it, an italic tagline in the accent and up to two
+// buttons (the first the main call, the second an outline). With a photo the
+// band wears it under the template's scrim and the photo band's inks; without
+// one it sits on the footer's brand ground over a hairline.
+import type { ClosingCall } from '../../lib/chrome'
+
+interface Props {
+  call: ClosingCall
+}
+
+const { call } = Astro.props
+---
+<div class:list={['closing-call', call.imageUrl && 'closing-call-photo on-photo']} style={call.imageUrl ? `background-image:url("${call.imageUrl}")` : undefined}>
+  <div class="closing-call-inner">
+    <div class="closing-call-words">
+      <h2 class="closing-call-headline">{call.headline}</h2>
+      {call.body && <p class="closing-call-body">{call.body}</p>}
+      {call.tagline && <p class="closing-call-tagline">{call.tagline}</p>}
+    </div>
+    {call.buttons.length > 0 && (
+      <p class="closing-call-actions">
+        {call.buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </div>
+</div>
+
+<style>
+  .closing-call {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+  }
+  .closing-call-photo {
+    background-position: center;
+    background-size: cover;
+    border-bottom: 0;
+  }
+  /* The scrim the template lays over a photo, so the words read on any picture. */
+  .closing-call-photo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--band-photo) 62%, transparent);
+  }
+  .closing-call-inner {
+    position: relative;
+    display: grid;
+    gap: 1.5rem 3rem;
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: clamp(2.75rem, 2rem + 2.5vw, 4.5rem) var(--gutter);
+  }
+  .closing-call-headline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--h2);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .closing-call-body {
+    max-width: var(--measure);
+    margin: 0.875rem 0 0;
+    font-size: var(--text-lg);
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .closing-call-tagline {
+    margin: 0.875rem 0 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-lg);
+    color: var(--accent);
+  }
+  .closing-call-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0;
+  }
+  @media (min-width: 48rem) {
+    .closing-call-inner {
+      grid-template-columns: minmax(0, 1.6fr) auto;
+      align-items: center;
+    }
+    .closing-call-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
