@@ -1,4 +1,4 @@
-// POST /api/backgold/webhook — BackGold's content events (docs/WEBHOOKS.md).
+// POST /api/backgold/webhook — BackGold's content events (docs/HEADLESS-CONTENT-API.md §8).
 // The only thing an event changes here is the content version the client
 // trusts; every cached read and every edge-cached page is keyed by it. The
 // isolate that receives the event moves at once (and writes the version to

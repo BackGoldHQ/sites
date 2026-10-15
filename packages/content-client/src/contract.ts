@@ -326,7 +326,7 @@ export type ContentEventType =
   | 'menu.updated'
   | 'redirects.updated'
 
-/** A content event's envelope as BackGold POSTs it (docs/WEBHOOKS.md): ids and the version, never a title, body or person. */
+/** A content event's envelope as BackGold POSTs it (docs/HEADLESS-CONTENT-API.md §8): ids and the version, never a title, body or person. */
 export interface ContentEvent {
   id: string
   type: ContentEventType
