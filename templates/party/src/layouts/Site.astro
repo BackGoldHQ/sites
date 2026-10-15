@@ -27,10 +27,8 @@
 //                    #above-the-footer (the newsletter issue's closing call
 //                    links there when the area holds a sign-up). An email
 //                    sign-up there is drawn in A1's band (SignupBand): its
-//                    kicker and heading beside BackGold's form. Under the
-//                    `giving` footer an item that is only email sign-ups is
-//                    drawn inside the footer instead, over the legal line,
-//                    and #above-the-footer moves with it.
+//                    kicker and heading beside BackGold's form. It stays
+//                    above the footer whatever the footer's layout.
 //   the footer       the layout the site chose (`/site` chrome.footer, one
 //                    of template.json's `chrome.footer`), with the words its
 //                    editor in BackGold holds. `giving` (this template's
@@ -40,12 +38,10 @@
 //                    without one), the brand with its line (the footer's
 //                    blurb, else the site's description) and social links,
 //                    a Contact column (the address and phone) and the footer
-//                    menu as columns (a column per group), the
-//                    Above-the-footer area's email sign-ups in A1's band
-//                    (SignupBand), the legal line, and the bottom row: the
-//                    utility menu, the footer's legal links, the copyright
-//                    line and "Powered by BackGold". `columns`: the same
-//                    with no strip and the sign-ups left above the footer.
+//                    menu as columns (a column per group), the legal line,
+//                    and the bottom row: the utility menu, the footer's
+//                    legal links, the copyright line and "Powered by
+//                    BackGold". `columns`: the same with no strip.
 //                    `closing`: the columns under a closing call
 //                    (ClosingCall: the headline, line, tagline and buttons
 //                    the editor holds, over a photo when one is set).
@@ -72,7 +68,7 @@
 // tag, the 404); the menus apply each link's Shows on rule against it.
 // Every route here passes it: left out, every link and the button show.
 // `areas` is the response's `areas`; null draws no area.
-import type { AreaItem, Areas } from '@backgold/content'
+import type { Areas } from '@backgold/content'
 import { Analytics, Area, Disclaimer, MenuButton, Seo } from '@backgold/astro/components'
 import { headerButtonOf, menuOf, relFor, safeHref, type MenuNode, type MenuPage } from '@backgold/astro/server'
 import Brand from '../components/chrome/Brand.astro'
@@ -80,7 +76,6 @@ import ClosingCall from '../components/chrome/ClosingCall.astro'
 import DonateStrip from '../components/chrome/DonateStrip.astro'
 import FooterColumns from '../components/chrome/FooterColumns.astro'
 import FooterContact from '../components/chrome/FooterContact.astro'
-import FooterSignup from '../components/chrome/FooterSignup.astro'
 import MenuList from '../components/chrome/MenuList.astro'
 import ModeToggle from '../components/chrome/ModeToggle.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
@@ -131,7 +126,7 @@ const social = site.social.flatMap(({ platform, url }) => {
 })
 /** The area map Above the footer: an email sign-up there takes A1's band. */
 const aboveFooter = { ...sections, SignupCapture: SignupBand }
-/** The giving footer: a donate strip on top, the area's email sign-ups inside it. */
+/** The giving footer: a donate strip across its top. */
 const giving = chrome.footer.layout === 'giving'
 const compact = chrome.footer.layout === 'compact'
 /** The footer menu's columns, and the Contact column beside them: the grid is as wide as they are. */
@@ -149,12 +144,6 @@ const donateIn = (nodes: MenuNode[]): MenuNode | null => {
 }
 const headerButton = headerButtonOf(headerItems, pathname, page)
 const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (headerButton?.kind === 'donate' ? headerButton : null)) : null
-/** An Above-the-footer item that is only email sign-ups: the giving footer draws it over the legal line. */
-const signupOnly = (item: AreaItem) => item.sections.length > 0 && item.sections.every((section) => section.type === 'SignupCapture')
-const aboveItems = areas?.above_footer ?? []
-const footerSignups: Areas | null = giving && areas ? { above_footer: aboveItems.filter(signupOnly) } : null
-const aboveAreas: Areas | null = giving && areas ? { ...areas, above_footer: aboveItems.filter((item) => !signupOnly(item)) } : areas
-const signupInFooter = (footerSignups?.above_footer.length ?? 0) > 0
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
 /** The theme's faces, else the template's own (src/lib/fonts.ts). */
@@ -221,8 +210,8 @@ const fonts = siteFonts(site.theme, bg.firstParty)
     </main>
 
     {otherAreas.map((key) => <Area name={key} areas={areas} components={sections} class="bg-area-after-page" />)}
-    <div id={signupInFooter ? undefined : 'above-the-footer'}>
-      <Area name="above_footer" areas={aboveAreas} components={aboveFooter} />
+    <div id="above-the-footer">
+      <Area name="above_footer" areas={areas} components={aboveFooter} />
     </div>
     <footer class="site-footer" data-layout={chrome.footer.layout}>
       {chrome.footer.closing && <ClosingCall call={chrome.footer.closing} />}
@@ -251,9 +240,6 @@ const fonts = siteFonts(site.theme, bg.firstParty)
             <FooterContact address={chrome.footer.address} phone={chrome.footer.phone} />
             <FooterColumns columns={footerColumns} />
           </div>
-        )}
-        {signupInFooter && (
-          <FooterSignup areas={footerSignups} components={aboveFooter} />
         )}
         {/*
           The legal line ("Paid for by …") must appear on every page, as text in

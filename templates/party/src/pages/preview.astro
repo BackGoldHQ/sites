@@ -21,6 +21,14 @@ for (const [name, value] of Object.entries(PREVIEW_HEADERS)) Astro.response.head
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503, headers: PREVIEW_HEADERS })
+// The site as it is right now, read beside the draft: the header and footer
+// just saved in BackGold draw in this frame at once, and the menus read
+// under the current version, rather than as the Worker's cache last knew
+// them (it checks the version once a minute).
+bg.site = result.site.site
+bg.legal = result.site.legal
+bg.version = result.site.version
+await bg.client.setVersion(result.site.version)
 const draft = result.preview
 const siteName = bg.site.name ?? bg.site.domain
 const type = 'entry' in draft ? (await bg.client.types()).types.find((t) => t.key === draft.entry.type) : undefined

@@ -80,8 +80,9 @@ describe('handlePreview', () => {
   it('returns the draft and its path, read with the secret key from the configured api only', async () => {
     const api = fakeApi()
     const result = await handlePreview(link('bg_preview=tok_good&path=%2Fissues'), { secretKey: SK, apiOrigin: API_ORIGIN, fetch: api.fetch })
-    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues' })
-    expect(api.calls.map((u) => u.origin)).toEqual([API_ORIGIN])
+    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues', site: CONTENT_API_EXAMPLES.SiteResponse })
+    // The draft and, beside it, the site as it is now: two reads, both at the api.
+    expect(api.calls.map((u) => u.origin)).toEqual([API_ORIGIN, API_ORIGIN])
   })
 
   it('falls back to / for an unsafe path', async () => {
@@ -106,8 +107,8 @@ describe('handlePreview in first-party mode', () => {
       apiOrigin: API_ORIGIN,
       firstParty: { siteId: SITE_ID, fetch: api.fetch },
     })
-    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues' })
-    expect(api.headers).toHaveLength(1)
+    expect(result).toEqual({ ok: true, preview: CONTENT_API_EXAMPLES.PageResponse, path: '/issues', site: CONTENT_API_EXAMPLES.SiteResponse })
+    expect(api.headers).toHaveLength(2)
     expect(api.headers[0]!.get('X-BackGold-Site')).toBe(SITE_ID)
     expect(api.headers[0]!.has('Authorization')).toBe(false)
   })

@@ -18,7 +18,7 @@
 // nothing internal.
 
 import { BackgoldApiError, createClient, memoryCache, previewFromRequest } from '@backgold/content'
-import type { PreviewResponse } from '@backgold/content'
+import type { PreviewResponse, SiteResponse } from '@backgold/content'
 import { DEFAULT_API_ORIGIN, firstPartyOf, namesNoSite, text, workerEnv } from './env.js'
 import { errorResponse, noSite } from './respond.js'
 import { isApiTimeout, withTimeout } from './timeout.js'
@@ -45,7 +45,20 @@ export interface PreviewDeps {
 }
 
 export type PreviewResult =
-  | { ok: true; preview: PreviewResponse; path: string }
+  | {
+      ok: true
+      preview: PreviewResponse
+      path: string
+      /**
+       * The site as BackGold answers right now (`/site`, read fresh beside the
+       * draft): its chrome, social links, legal line and content version. A
+       * preview page sets it on its locals and hands the version to the
+       * Worker's client (`setVersion`), so the frame draws the header and
+       * footer as they were just saved rather than as the Worker's cache
+       * last knew them (it checks the version once a minute).
+       */
+      site: SiteResponse
+    }
   | { ok: false; response: Response }
 
 const fail = (status: number, code: string, error: string): PreviewResult => ({
@@ -75,9 +88,9 @@ export async function handlePreview(request: Request, deps: PreviewDeps): Promis
     return notConfigured
   }
   try {
-    const preview = await client.preview(asked.token)
+    const [preview, site] = await Promise.all([client.preview(asked.token), client.site()])
     if (!preview) return fail(404, 'NOT_FOUND', 'This preview names a page this site no longer has.')
-    return { ok: true, preview, path: asked.path }
+    return { ok: true, preview, path: asked.path, site }
   } catch (error) {
     if (error instanceof BackgoldApiError && error.code === 'BAD_PREVIEW_TOKEN') {
       return fail(400, 'BAD_PREVIEW_TOKEN', 'This preview link is not valid or has expired.')
