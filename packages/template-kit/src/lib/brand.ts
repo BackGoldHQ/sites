@@ -29,7 +29,10 @@
 //             the call's ink falls short of AA, or the call nearly matches the
 //             ground (under 1.5:1), the primary colour takes its place.
 //             `button-2` is the quieter solid button (RSVP, Sign me up): the
-//             primary colour.
+//             primary colour. On a dark ground it is the band's ink when the
+//             primary would nearly vanish there: under 3:1 in dark mode (a
+//             fill's bar, WCAG 1.4.11), under 1.25:1 on light mode's dark
+//             bands.
 //   link      a text link: the primary colour on light grounds.
 //
 // A section's `band` is a ground, never a colour. The grounds:
@@ -175,6 +178,13 @@ interface Mode {
   lightText: string
   /** The main call's fill in this mode: the accent (dark mode: lightened only as far as a fill needs). */
   call: string
+  /**
+   * How far the primary must stand off a dark ground to fill the quieter
+   * button there; below it the band's ink fills it. Dark mode holds a fill to
+   * 3:1 (WCAG 1.4.11); light mode's dark grounds (contrast, brand, photo)
+   * keep the looser 1.25 the A boards were drawn with.
+   */
+  quietFloor: number
   /** The page's card colour and rules, for every light ground. */
   surface: string
   line: string
@@ -192,7 +202,7 @@ function band(ground: string, m: Mode): Band {
   const buttonInk = inkOn(m.call, m.darkText, LIGHT_INK)
   const callReads = contrast(buttonInk, m.call) >= AA && contrast(m.call, ground) >= 1.5
   const button = callReads ? m.call : readable(m.primary, [ground], NON_TEXT, ink)
-  const button2 = light ? readable(m.primary, [ground], NON_TEXT, ink) : contrast(m.primary, ground) >= 1.25 ? m.primary : ink
+  const button2 = light ? readable(m.primary, [ground], NON_TEXT, ink) : contrast(m.primary, ground) >= m.quietFloor ? m.primary : ink
   return {
     ground,
     ink,
@@ -239,6 +249,7 @@ function lightPalette(brand: BrandColors | null | undefined): Palette {
     darkText,
     lightText: contrast(page, contrastGround) >= AA ? page : LIGHT_INK,
     call: accent,
+    quietFloor: 1.25,
     surface: mix(LIGHT_INK, page, 0.8),
     line: mix(deepen(page, 2), darkText, 0.95),
     lineStrong: mix(deepen(page, 3), darkText, 0.9),
@@ -275,6 +286,7 @@ function darkPalette(brand: BrandColors | null | undefined): Palette {
     darkText,
     lightText,
     call: reaching(accent, LIGHT_INK, 0.7, page, NON_TEXT, accent),
+    quietFloor: NON_TEXT,
     surface: mix(LIGHT_INK, contrastGround, 0.5),
     line: mix(deepen(contrastGround, 2), darkText, 0.95),
     lineStrong: mix(deepen(contrastGround, 3), darkText, 0.9),

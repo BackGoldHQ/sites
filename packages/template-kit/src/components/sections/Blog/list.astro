@@ -5,7 +5,11 @@
 // `maxItems`; "All news" goes to the full list at the organization's blog
 // base. The board's category tabs, search and pager belong to that list, not
 // to the section, and are not drawn here. With nothing published it draws
-// nothing.
+// nothing. It lays out by its own width, not the screen's: the cover beside
+// the words where the list is 40rem or wider, over them where it is not. In
+// a sidebar (board C11's More from the campaign) each row is the category,
+// the title and the date, with a small square cover after the words; on an
+// entry's page the entry being read is left out (latest.ts).
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
@@ -16,7 +20,7 @@ type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading) ?? 'Latest'
-const { entries, listPath } = await latestNews(Astro.locals.backgold, shownOf(section, 4))
+const { entries, listPath } = await latestNews(Astro.locals, shownOf(section, 4))
 const stories = entries.map(storyOf)
 ---
 {stories.length > 0 && (
@@ -47,6 +51,7 @@ const stories = entries.map(storyOf)
 
 <style>
   .post-list {
+    container-type: inline-size;
     margin: 1.5rem 0 0;
     padding: 0;
     list-style: none;
@@ -108,11 +113,40 @@ const stories = entries.map(storyOf)
     color: var(--muted);
     font-size: var(--text-sm);
   }
-  @media (min-width: 40rem) {
+  @container (min-width: 40rem) {
     .post-row-pictured {
       grid-template-columns: minmax(10rem, 13.75rem) minmax(0, 1fr);
       gap: 1.5rem;
     }
+  }
+  /* In a sidebar: the words, then a small square cover beside them (C11). */
+  :global(.rail) .post-row {
+    padding: 1rem 0;
+  }
+  :global(.rail) .post-row:first-child {
+    padding-top: 0;
+  }
+  :global(.rail) .post-row-pictured {
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
+    gap: 1rem;
+    align-items: start;
+  }
+  :global(.rail) .post-row-pictured .post-frame {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  :global(.rail) .post-row-pictured .post-body {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  :global(.rail) .post-cover {
+    aspect-ratio: 1;
+  }
+  :global(.rail) .post-body .post-title {
+    font-size: 1.125rem;
+  }
+  :global(.rail) .post-body .post-summary {
+    display: none;
   }
   @media (prefers-reduced-motion: no-preference) {
     .post-cover {

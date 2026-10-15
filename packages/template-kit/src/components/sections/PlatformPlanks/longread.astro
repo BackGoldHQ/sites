@@ -7,8 +7,9 @@
 // has its number, title and ethos; each plank is a card with its headline,
 // its plain-language line, the full text behind "Read the full plank", and a
 // "Share" link to its own anchor, a plain link that works with scripts off.
-// The anchors are anchors.ts's, shared with the columns layout. With no
-// sections it draws nothing.
+// The anchors are anchors.ts's, shared with the columns layout. The kicker,
+// when one is set, sits over the heading (C3). With no sections it draws
+// nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
@@ -20,10 +21,12 @@ type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
 const parts = partsWithAnchors(section)
 ---
 {parts.length > 0 && (
   <Band section={section} class="platform platform-longread">
+    {kicker && <p class="kicker">{kicker}</p>}
     {heading && <h2>{heading}</h2>}
     <div class="longread">
       <nav class="longread-jump" aria-label={heading ? `${heading}: sections` : 'Platform sections'}>

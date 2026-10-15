@@ -80,7 +80,10 @@ main .bg-section:not([data-type='Donate']):not([data-type='QuickDonate']),
   The header button on its own page (C-6 as drawn): on a page that carries
   the donation form, the header's Donate draws as the current page, an
   outline in the accent, so the form's Donate is the page's one gold
-  affordance.
+  affordance. The kit draws a header button marked aria-current="page" this
+  way, but a Donate link always goes to the organization's BackGold donate
+  page, never to this site's page, so it is never marked; this rule reads
+  the form on the page instead.
 */
 body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] {
   border-color: var(--bg-brand-accent, var(--accent));
@@ -101,14 +104,4 @@ body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] 
 .rail .bg-section[data-type='Countdown'] {
   background: var(--surface);
   box-shadow: var(--shadow);
-}
-
-/*
-  Blog · List in a sidebar (C11's More from the campaign): the rail is too
-  narrow for the cover beside the words at any screen width, so each row
-  stacks, the cover over the words.
-*/
-.rail [data-type='Blog'][data-variant='list'] .post-row-pictured {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.75rem;
 }

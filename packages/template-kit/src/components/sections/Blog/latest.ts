@@ -3,11 +3,13 @@
 // organization's blog base, never one with an address of its own like the
 // newsletter), newest first, and that list's address for its "All news"
 // link. The section carries no rows of its own; its `maxItems` caps the
-// count, else the layout's own number.
+// count, else the layout's own number. On an entry's page (a Blog section in
+// its sidebar, board C11) the entry being read is left out.
 
 import type { Entry, Section } from '@backgold/content'
 import { blogBaseOf, isBlogType, safeHref, safeSrc } from '@backgold/astro/server'
 import { basePath } from '../../../lib/entries'
+import { readingOf } from '../../../lib/reading'
 import { formatDay, formatShortDay, listOf } from '../../../lib/format'
 import { initials } from '../CandidateRoster/candidates'
 
@@ -17,14 +19,23 @@ export function shownOf(section: Section, fallback: number): number {
   return typeof max === 'number' && Number.isFinite(max) && max > 0 ? Math.floor(max) : fallback
 }
 
-/** The newest `count` entries of the blog types, and the news list's path (null on a site with no blog type). */
-export async function latestNews(bg: App.Locals['backgold'], count: number): Promise<{ entries: Entry[]; listPath: string | null }> {
+/**
+ * The newest `count` entries of the blog types but the one this request is
+ * reading (`readingOf`), and the news list's path (null on a site with no
+ * blog type).
+ */
+export async function latestNews(locals: App.Locals, count: number): Promise<{ entries: Entry[]; listPath: string | null }> {
+  const bg = locals.backgold
   if (bg.setup !== null) return { entries: [], listPath: null }
+  const reading = readingOf(locals)
   const { types } = await bg.client.types()
   const base = blogBaseOf(types)
-  const lists = await Promise.all(types.filter(isBlogType).map((t) => bg.client.entries(t.key, { limit: count })))
+  // One more than shown when an entry is being read: it may be among the newest.
+  const limit = reading === null ? count : count + 1
+  const lists = await Promise.all(types.filter(isBlogType).map((t) => bg.client.entries(t.key, { limit })))
   const entries = lists
     .flatMap((list) => list?.entries ?? [])
+    .filter((entry) => entry.id !== reading)
     .sort((a, b) => (b.publish_at ?? '').localeCompare(a.publish_at ?? ''))
     .slice(0, count)
   return { entries, listPath: base === null ? null : basePath(base) }

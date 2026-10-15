@@ -521,7 +521,8 @@ Each page is its own edge-cache entry (see [Caching](#caching)).
   included); `donation_pages` shows where `takes_donations` is true. A group
   shows the children that show, and goes when none does. The header button
   leaves the menu and `<MenuButton>` draws it, as `<a class="bg-menu-button"
-  data-bg-button>` (plus `data-bg-donate` on a Donate link), on the pages
+  data-bg-button>` (plus `data-bg-donate` on a Donate link, and
+  `aria-current="page"` on the page the button links to), on the pages
   its rule names; when it does not show, or has no address, nothing takes
   its place. Without `page`, `<Menu>` draws every link (the header button
   among them) and `<MenuButton>` draws the button everywhere. `menuOf` and

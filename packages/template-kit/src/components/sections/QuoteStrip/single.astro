@@ -1,7 +1,8 @@
 ---
 // QuoteStrip, 'single' layout (Single; board A2-about-platform, section 5):
 // one quote, large and centred in the display serif, with who said it under
-// it. It draws the section's first quote; the heading, when there is one,
+// it and, muted, their role or publication ("Editorial board, September";
+// C4 draws the same). It draws the section's first quote; the heading, when there is one,
 // sits small above it. Nothing is drawn when there is neither a heading nor
 // a quote.
 import type { ComponentProps } from 'astro/types'
@@ -15,8 +16,8 @@ type Props = ComponentProps<typeof Default>
 const { section } = Astro.props
 const heading = text(section.copy.heading)
 const [quote] = rows(section)
-  .map((row) => ({ quote: text(row.quote), attribution: text(row.attribution) }))
-  .filter((q): q is { quote: string; attribution: string | null } => q.quote !== null)
+  .map((row) => ({ quote: text(row.quote), attribution: text(row.attribution), role: text(row.role) }))
+  .filter((q): q is { quote: string; attribution: string | null; role: string | null } => q.quote !== null)
 ---
 {(heading || quote) && (
   <Band section={section} class="quotes">
@@ -25,7 +26,12 @@ const [quote] = rows(section)
       {quote && (
         <figure class="single-quote">
           <blockquote><p>{quote.quote}</p></blockquote>
-          {quote.attribution && <figcaption>{quote.attribution}</figcaption>}
+          {(quote.attribution || quote.role) && (
+            <figcaption>
+              {quote.attribution && <span class="single-name">{quote.attribution}</span>}
+              {quote.role && <span class="single-role">{quote.role}</span>}
+            </figcaption>
+          )}
         </figure>
       )}
     </div>
@@ -72,7 +78,15 @@ const [quote] = rows(section)
   }
   .single-quote figcaption {
     margin-top: 1.25rem;
-    font-weight: 700;
     font-size: var(--text-sm);
+  }
+  .single-name {
+    display: block;
+    font-weight: 700;
+  }
+  .single-role {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--muted);
   }
 </style>

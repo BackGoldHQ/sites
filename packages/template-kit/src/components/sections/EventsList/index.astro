@@ -6,10 +6,14 @@
 // the title the link. Under the time and place, a quiet "Add to calendar"
 // link to the event's calendar file on this site. With no events listed, the
 // section places BackGold's own events-list frame instead, when it has one.
+// Over them the section head: the kicker when one is set, the heading, and
+// the section's links at the right ("All events", C1's EventsList · list).
 import type { Section } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
 import { actionsOf, eventsOf } from './events'
+import { links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 interface Props {
@@ -23,7 +27,7 @@ const buttons = actionsOf(section) === 'buttons'
 const events = eventsOf(section)
 ---
 <Band section={section} class="events">
-  {heading && <h2>{heading}</h2>}
+  <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
   {events.length > 0 && (
     <ul class="event-list" role="list">
       {events.map((event) => (

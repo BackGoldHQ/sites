@@ -57,6 +57,7 @@ import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
 import { entryCard } from '../lib/section'
+import { markReading } from '../lib/reading'
 import template from 'virtual:backgold-template'
 
 const { sections } = template
@@ -154,6 +155,8 @@ const areas: Areas | null =
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term'
       ? resolved.areas
       : event?.areas ?? null
+// The sections in an entry's areas leave out the entry being read (lib/reading.ts).
+if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
 const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
 
 // A list, or a term's list: its layout and what it is given. The filter comes
