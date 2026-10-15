@@ -1,0 +1,144 @@
+---
+// Hero, 'portrait' layout (boards C1 and C9, section 1; proposed, C-1): the
+// office line small over the headline (`copy.kicker`, "State Senate ·
+// District 9"), the candidate's name as the headline set large in capitals
+// at the left, the line under it and the buttons, and the portrait at the
+// right, standing on the band's floor (no gap under it) over a stripe in the
+// accent. On a phone the portrait follows the words, still on the floor.
+// Without a portrait the words take the full width. The page-opening Hero's
+// headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>. A
+// Hero with its signup form on carries an `embed`: BackGold's own form,
+// framed under the buttons.
+import type { ComponentProps } from 'astro/types'
+import { Embed } from '@backgold/astro/components'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
+import { links, media } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, level = 2 } = Astro.props
+const Heading = level === 1 ? 'h1' : 'h2'
+const office = text(section.copy.kicker)
+const headline = text(section.copy.headline)
+const subheadline = text(section.copy.subheadline)
+const portrait = media(section, 'photoUrl', 'imageUrl')
+const buttons = links(section)
+---
+{(headline || subheadline || portrait) && (
+  <Band section={section} class="hero-portrait">
+    <div class:list={['hp', portrait && 'hp-with-portrait']}>
+      <div class="hp-words">
+        {office && <p class="hp-office">{office}</p>}
+        {headline && <Heading class="hp-name">{headline}</Heading>}
+        {subheadline && <p class="hp-lede">{subheadline}</p>}
+        {buttons.length > 0 && (
+          <p class="actions">
+            {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+          </p>
+        )}
+        {section.embed && <Embed embed={section.embed} title="Sign up" />}
+      </div>
+      {portrait && (
+        <img
+          class="hp-portrait"
+          src={portrait.url}
+          alt={portrait.alt}
+          loading={level === 1 ? 'eager' : 'lazy'}
+          fetchpriority={level === 1 ? 'high' : undefined}
+          decoding="async"
+        />
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  /* The portrait stands on the floor: the band keeps its top padding and drops the bottom one, which the stripe replaces. */
+  :global(.bg-section.hero-portrait) {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  :global(.bg-section.hero-portrait)::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0.625rem;
+    background: var(--accent);
+  }
+  .hp {
+    display: grid;
+    align-items: end;
+  }
+  .hp-words {
+    padding-bottom: calc(var(--space) * 0.75 + 0.625rem);
+    min-width: 0;
+  }
+  .hp-office {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .hp-office::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 3px;
+    background: var(--accent);
+  }
+  .hp-name {
+    margin: 1rem 0 0;
+    font-size: clamp(3.5rem, 1.6rem + 7vw, 8.25rem);
+    font-weight: 800;
+    line-height: 0.86;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    max-width: none;
+  }
+  .hp-lede {
+    max-width: 30em;
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .hp-words .actions {
+    margin-top: 1.875rem;
+  }
+  .hp-words > :global(.bg-embed) {
+    margin-top: 1.5rem;
+    max-width: 36rem;
+  }
+  .hp-portrait {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3.4;
+    object-fit: cover;
+    border-radius: 1.25rem 1.25rem 0 0;
+    margin-bottom: 0.625rem;
+  }
+  @media (min-width: 48rem) {
+    .hp-with-portrait {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+      gap: clamp(2rem, 4vw, 2.75rem);
+      min-height: 36rem;
+    }
+    .hp-with-portrait .hp-words {
+      align-self: center;
+      padding-bottom: var(--space);
+    }
+    .hp-portrait {
+      aspect-ratio: 4 / 5;
+      border-radius: 1.625rem 1.625rem 0 0;
+    }
+  }
+</style>

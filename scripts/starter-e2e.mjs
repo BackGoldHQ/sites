@@ -33,6 +33,10 @@
 // read in a headless Chrome, driven over the DevTools protocol. So does
 // --template petition-drive: its starter page (dark first, the anchors, no
 // money, light after the switch) is read the same way.
+// --template candidate, for its own layouts' look (its block, near the end).
+//   node scripts/starter-e2e.mjs --template candidate
+//                                         the candidate template's checks, its
+//                                         starter pages at /candidate-<slug>
 //
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
@@ -1671,7 +1675,7 @@ function previewDraft(page) {
 
 function startFixture(examples, kitchenSections, blogBase = 'blog') {
   const plain = fixtureData(examples, kitchenSections)
-  const data = blogBase === 'news' ? newsBaseData(plain, examples) : plain
+  const data = withCandidate(blogBase === 'news' ? newsBaseData(plain, examples) : plain, examples)
   const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '' }
   const MOUNT = '/api/content/v1'
   // The Content API answers every origin itself (a browser on the site reads
@@ -2519,7 +2523,8 @@ async function headlessChrome(chrome) {
  */
 async function checkLighthouse(origin, chrome, fixture) {
   log(`\nLighthouse ${LIGHTHOUSE_VERSION} (each category must be at least ${LIGHTHOUSE_MIN})`)
-  for (const path of ['/', '/blog/levy-explained']) {
+  // On the candidate template, its starter home too (Hero · portrait, Countdown · tiles).
+  for (const path of ['/', '/blog/levy-explained', ...(CANDIDATE ? ['/candidate-home'] : [])]) {
     const report = join(work, `lighthouse${path.replace(/\W+/g, '-')}.json`)
     const before = fixture.count()
     await runAsync(
@@ -3803,11 +3808,205 @@ async function driveLook() {
 
 // ── petition-drive (end) ─────────────────────────────────────────────────────
 
+// ── The candidate template (--template candidate) ────────────────────────────
+//
+// Its starter pages (templates/candidate/template.json) as the fixture serves
+// them, with what BackGold fills put in: the Countdown's deadline (26 days, 9
+// hours and 41 minutes after the run starts, board C1's), the events, the
+// module frames, a portrait, and the reusable sections the starter's rules
+// place (Get the campaign letter above the footer, Campaign sidebar beside
+// Events). The checks read them at /candidate-<slug> (/candidate-home for
+// home), next to the organization the other checks read; --serve puts them
+// at their own addresses instead, with the starter's menus, so the site looks
+// like a new candidate site (boards C1 to C11). Then the look checks for the
+// template's own layouts: Hero · portrait, Countdown · tiles and inline, and
+// its QuoteStrip · wall, in a headless Chrome at 1440 and 375, light and dark.
+
+const CANDIDATE = TEMPLATE_NAME === 'candidate'
+const CANDIDATE_DEADLINE = new Date(Date.now() + ((26 * 24 + 9) * 60 + 41) * 60000 + 30000).toISOString()
+
+/** The address a candidate starter page is served at: its own under --serve, else /candidate-<slug>. */
+const candidateSlug = (slug) => (SERVE ? slug || 'home' : `candidate-${slug || 'home'}`)
+
+/** `data` with the candidate's starter pages added (only on --template candidate). */
+function withCandidate(data, ex) {
+  if (!CANDIDATE) return data
+  const starter = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8')).starter
+  const donateEmbed = ex.PageResponse.sections.find((s) => s.type === 'Donate').embed
+  const signupEmbed = ex.PageResponse.areas.above_footer[0].sections[0].embed
+  const portrait = { url: 'https://api.backgold.com/api/media-files/med_portrait', alt: 'The candidate on a door-knock' }
+  const fill = (pageId) => (section) => {
+    const s = { options: {}, ...structuredClone(section) }
+    if (s.type === 'Countdown') s.data = { source: 'countdown', items: [{ deadline: CANDIDATE_DEADLINE }] }
+    if (s.type === 'EventsList') s.data = { source: 'events', items: s.options.max ? data.events.upcoming.slice(0, s.options.max) : data.events.upcoming }
+    if (s.type === 'Blog') s.data = { source: 'blog', items: [] }
+    if (s.type === 'Hero' && (s.variant === 'portrait' || s.variant === 'split')) s.media = { photoUrl: portrait }
+    if (s.type === 'Donate') s.embed = donateEmbed
+    if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
+    return s
+  }
+  const reusable = (key, pageId) => {
+    const r = starter.sections.find((x) => x.key === key)
+    return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
+  }
+  const pages = starter.pages.map((p) => {
+    const slug = candidateSlug(p.slug)
+    const id = `lp_candidate_${p.slug || 'home'}`
+    return {
+      summary: { id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z', takes_donations: true },
+      response: {
+        page: { ...ex.PageResponse.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: true, meta: { title: null, description: null, image_url: null } },
+        sections: p.sections.map(fill(id)),
+        areas: {
+          top_banner: [],
+          sidebar: p.slug === 'events' ? [reusable('campaign-sidebar', id)] : [],
+          above_footer: [reusable('get-the-campaign-letter', id)],
+        },
+        legal: data.legal,
+      },
+    }
+  })
+  const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
+  const page = data.page
+  const out = {
+    ...data,
+    pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
+    page: (slug, headline) => bySlug.get(slug) ?? page(slug, headline),
+  }
+  if (!SERVE) return out
+  // --serve: the starter's menus, the reusable sections on the posts, the
+  // boards' brand with no saved theme, and no custom type at /endorsements
+  // (the starter page is there).
+  let n = 0
+  const menuItem = (item) => ({
+    id: `nav_c${++n}`,
+    label: item.label,
+    kind: item.kind,
+    target: { kind: item.kind, ...(item.target.slug !== undefined ? { slug: item.target.slug || 'home' } : {}) },
+    url: item.kind === 'page' ? (item.target.slug ? `/${item.target.slug}` : '/') : item.kind === 'blog' ? `/${data.types.find((t) => t.key === 'post').url_base}` : item.kind === 'donate' ? '/donate' : null,
+    external: false,
+    header_button: item.header_button,
+    shows_on: item.shows_on,
+    children: item.children.map(menuItem),
+  })
+  return {
+    ...out,
+    // The boards' brand (spruce, marigold, chalk) and no saved theme, so the template's own faces draw.
+    site: { ...out.site, name: 'Your campaign', brand: { ...out.site.brand, logo_url: null, primary_color: '#123d38', secondary_color: '#f4f2ea', accent_color: '#f2b233' }, theme: null },
+    types: out.types.filter((t) => t.url_base !== 'endorsements'),
+    menus: {
+      ...out.menus,
+      primary: { menu: { key: 'primary' }, items: starter.menus.primary.map(menuItem) },
+      footer: { menu: { key: 'footer' }, items: starter.menus.footer.map(menuItem) },
+    },
+    entryAreas: {
+      top_banner: [],
+      sidebar: [reusable('campaign-sidebar', 'lp_candidate_news'), reusable('more-from-the-campaign', 'lp_candidate_news')],
+      above_footer: [reusable('get-the-campaign-letter', 'lp_candidate_news')],
+    },
+  }
+}
+
+/** The template's own layouts: present in the HTML, then in Chrome at 1440 and 375, light and dark. */
+async function checkCandidateLook(origin, chrome) {
+  log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall')
+  const at = (slug) => `/${candidateSlug(slug)}`
+  let res = await get(origin, at(''))
+  let html = await res.text()
+  const hero = sectionsOf(html).find((s) => s.type === 'Hero')?.html ?? ''
+  check(
+    res.status === 200 && /data-variant="portrait"/.test(hero) && /<h1 class="hp-name[^"]*"[^>]*>The candidate’s name<\/h1>/.test(hero) && /class="hp-office[^"]*"[^>]*>The office · The district</.test(hero) && /<img class="hp-portrait/.test(hero),
+    'home opens on Hero · portrait: the office line, the name as the one <h1>, the portrait',
+  )
+  const tiles = sectionsOf(html).find((s) => s.type === 'Countdown')?.html ?? ''
+  check(
+    /data-variant="tiles"/.test(tiles) && tiles.includes(`data-countdown-ends="${CANDIDATE_DEADLINE}"`) && /<dl class="ct-tiles[^"]*"[^>]*hidden/.test(tiles) && /<time datetime=/.test(tiles),
+    'Countdown · tiles writes the deadline and the day, its tiles hidden until the browser counts them',
+  )
+  res = await get(origin, at('events'))
+  html = await res.text()
+  const rail = html.slice(html.indexOf('data-bg-area="sidebar"'))
+  check(res.status === 200 && /data-variant="inline"/.test(rail) && rail.includes('class="ci-left') && rail.includes('Two hours this Saturday?'), "Events' Sidebar carries Campaign sidebar: Countdown · inline, then the call to action")
+  res = await get(origin, at('endorsements'))
+  html = await res.text()
+  const wall = sectionsOf(html).find((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))?.html ?? ''
+  check(
+    res.status === 200 && (wall.match(/class="ew-card/g) ?? []).length === 4 && (wall.match(/ew-said/g) ?? []).length === 1 && wall.includes('class="ew-mark ew-initials'),
+    'Endorsements draws QuoteStrip · wall as name cards, the one with words spanning two columns',
+  )
+  res = await get(origin, at('donate'))
+  html = await res.text()
+  check(res.status === 200 && /<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html) && sectionsOf(html).some((s) => s.type === 'Donate'), 'Donate carries the donation form and the header button (drawn as the current page by template.css)')
+
+  const css = (
+    await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
+  ).join('') + html
+  check(
+    /--font-display:\s*var\(--site-font-heading,\s*["']?Barlow Condensed/.test(css),
+    "with no theme heading face the display face is the template's, Barlow Condensed (template.css sets --font-display)",
+  )
+
+  const browser = await headlessChrome(chrome)
+  try {
+    for (const width of [1440, 375]) {
+      await browser.width(width)
+      for (const scheme of ['light', 'dark']) {
+        const where = `${width} ${scheme}`
+        await browser.open(`${origin}${at('')}`, scheme)
+        const home = await browser.evaluate(`(() => {
+          const tiles = document.querySelector('.ct-tiles')
+          const name = document.querySelector('.hp-name')
+          const portrait = document.querySelector('.hp-portrait')
+          const band = document.querySelector('[data-variant="portrait"]')
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            tiles: tiles && !tiles.hidden ? [...tiles.querySelectorAll('dd')].map((d) => d.textContent) : null,
+            face: name ? getComputedStyle(name).fontFamily : '',
+            floor: portrait && band ? Math.round(band.getBoundingClientRect().bottom - portrait.getBoundingClientRect().bottom) : null,
+            beside: portrait && name ? portrait.getBoundingClientRect().left > name.getBoundingClientRect().left + 100 : null,
+            mode: getComputedStyle(document.body).backgroundColor,
+          }
+        })()`)
+        check(home.overflow <= 0, `${where}: home has no horizontal scroll (${home.overflow}px over)`)
+        // The deadline is 26 days, 9 hours and 41 minutes after the run started; the minutes move with the run.
+        check(home.tiles?.[0] === '26' && home.tiles[1] === '09' && /^[0-4]\d$/.test(home.tiles[2]), `${where}: the tiles count the days, hours and minutes left in the browser (${JSON.stringify(home.tiles)})`)
+        check(home.face.startsWith('"Roboto Slab"'), `${where}: the name is set in the site's theme heading face, which wins over the template's (${home.face})`)
+        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor, over the stripe (${home.floor}px)`)
+        check(home.beside === (width >= 768), `${where}: the portrait is ${width >= 768 ? 'beside' : 'under'} the words`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const events = await browser.evaluate(`({ overflow: document.documentElement.scrollWidth - window.innerWidth, left: document.querySelector('.ci-left')?.hidden === false ? document.querySelector('.ci-left').textContent : null })`)
+        check(events.overflow <= 0 && events.left === '26 days', `${where}: Events has no horizontal scroll and Countdown · inline reads "26 days" (${events.overflow}px over, ${JSON.stringify(events.left)})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const endorse = await browser.evaluate(`(() => {
+          const said = document.querySelector('.ew-said')
+          const card = document.querySelector('.ew-card:not(.ew-said)')
+          return { overflow: document.documentElement.scrollWidth - window.innerWidth, ratio: said && card ? said.getBoundingClientRect().width / card.getBoundingClientRect().width : null }
+        })()`)
+        const wide = width >= 640
+        check(
+          endorse.overflow <= 0 && endorse.ratio !== null && (wide ? endorse.ratio > 1.9 : Math.abs(endorse.ratio - 1) < 0.01),
+          `${where}: Endorsements has no horizontal scroll and the quote card spans ${wide ? 'two columns' : 'the one column'} (${endorse.overflow}px over, ${endorse.ratio?.toFixed(2)}×)`,
+        )
+        await browser.open(`${origin}${at('donate')}`, scheme)
+        const donate = await browser.evaluate(`(() => {
+          const b = document.querySelector('.site-header .header-button[data-bg-donate]')
+          return { overflow: document.documentElement.scrollWidth - window.innerWidth, fill: b ? getComputedStyle(b).backgroundColor : null }
+        })()`)
+        check(donate.overflow <= 0 && donate.fill === 'rgba(0, 0, 0, 0)', `${where}: on Donate the header button is an outline, the form's Donate the one gold affordance (${donate.fill})`)
+      }
+    }
+  } finally {
+    await browser.close()
+  }
+}
+// ── end of the candidate template's block ────────────────────────────────────
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
-  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
+  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
   log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
@@ -3822,7 +4021,7 @@ async function main() {
   const leaked = filesUnder(join(siteDir, 'dist')).filter((f) => readFileSync(f, 'utf8').includes(BUILD_CANARY))
   check(leaked.length === 0, `the build machine's environment is not in the built Worker${leaked.length ? ` (found in ${leaked.join(', ')})` : ''}`)
 
-  if (PARTY) await checkFirstPartyLive(siteDir)
+  if (ON_KIT) await checkFirstPartyLive(siteDir)
 
   const examples = await loadExamples()
   if (PARTY) checkFirstPartyFonts(siteDir, examples.SiteResponse.site.theme)
@@ -3869,6 +4068,7 @@ async function main() {
     // ── petition-drive (begin) ──
     if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
     // ── petition-drive (end) ──
+    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)
