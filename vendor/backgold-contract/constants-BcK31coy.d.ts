@@ -1,0 +1,38 @@
+declare const SITE_NAV_ITEM_TYPES: readonly ["page", "section", "external", "campaign_forms", "group", "entry", "term", "blog", "content_list", "donate", "events", "store"];
+type SiteNavItemType = (typeof SITE_NAV_ITEM_TYPES)[number];
+declare const SITE_NAV_SHOWS_ON: readonly ["every_page", "only_pages", "except_pages", "donation_pages"];
+type SiteNavShowsOn = (typeof SITE_NAV_SHOWS_ON)[number];
+declare const SITE_MENU_KEYS: readonly ["primary", "footer", "utility"];
+type SiteMenuKey = (typeof SITE_MENU_KEYS)[number];
+declare const SITE_SECTION_KINDS: readonly ["announcement", "pre_footer", "sidebar", "custom"];
+type SiteSectionKind = (typeof SITE_SECTION_KINDS)[number];
+declare const SITE_SECTION_ROLES: readonly ["header", "footer"];
+type SiteSectionRole = (typeof SITE_SECTION_ROLES)[number];
+declare const SITE_PAGE_MODULE_KINDS: readonly ["donation_form", "form", "signup", "petition", "poll", "event", "store", "advocacy"];
+type SitePageModuleKind = (typeof SITE_PAGE_MODULE_KINDS)[number];
+declare const CONTENT_FIELD_KINDS: readonly ["short_text", "long_text", "rich_text", "image", "pdf", "link", "date", "datetime", "boolean", "choice", "choices", "list", "reference"];
+type ContentFieldKind = (typeof CONTENT_FIELD_KINDS)[number];
+declare const CONTENT_REFERENCE_TARGETS: readonly ["event", "campaign", "candidate", "petition", "form", "fund", "seat"];
+type ContentReferenceTarget = (typeof CONTENT_REFERENCE_TARGETS)[number];
+declare const BYLINE_ROLE_LABELS: readonly ["Written by", "Edited by", "Photos by", "Interview by"];
+type BylineRoleLabel = (typeof BYLINE_ROLE_LABELS)[number];
+declare const CONTENT_TYPE_ICONS: readonly ["doc", "star", "mega", "flag", "users", "cal", "mic", "video", "shield", "tag"];
+type ContentTypeIcon = (typeof CONTENT_TYPE_ICONS)[number];
+declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", "plank", "team_member", "open_role", "newsletter"];
+type BuiltInContentTypeKey = (typeof BUILT_IN_CONTENT_TYPE_KEYS)[number];
+declare const BUILT_IN_TAXONOMY_KEYS: readonly ["category", "tag"];
+type BuiltInTaxonomyKey = (typeof BUILT_IN_TAXONOMY_KEYS)[number];
+declare const SITE_MODES: readonly ["hosted", "headless", "template"];
+type SiteMode = (typeof SITE_MODES)[number];
+declare const SITE_API_KEY_KINDS: readonly ["publishable", "secret"];
+type SiteApiKeyKind = (typeof SITE_API_KEY_KINDS)[number];
+declare const SITE_KEY_PREFIXES: {
+    readonly publishable: "bg_site_pk_";
+    readonly secret: "bg_site_sk_";
+};
+declare const CONTENT_WEBHOOK_EVENTS: readonly ["site.published", "content.published", "content.unpublished", "menu.updated", "redirects.updated"];
+type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
+declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "privacy", "sms-terms"];
+type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
+
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type SiteNavItemType as S, type BylineRoleLabel as a, type SiteNavShowsOn as b, type SiteMenuKey as c, type SiteSectionKind as d, type SiteSectionRole as e, type SiteMode as f, type SiteApiKeyKind as g, type ContentWebhookEvent as h, SITE_KEY_PREFIXES as i, type SitePageModuleKind as j, type BuiltInContentTypeKey as k, type ContentTypeIcon as l, type BuiltInTaxonomyKey as m, type ContentReferenceTarget as n };

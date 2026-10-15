@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
-import { BUILT_IN_CONTENT_TYPES, BUILT_IN_TYPE_FIELDS, isBlogContentType, typesExample } from '@givegold/shared'
-import type { BuiltInFieldDef, ContentFieldKind, ContentTypeField, ContentTypeSummary } from '@givegold/shared'
+import type { ContentFieldKind, ContentTypeField, ContentTypeSummary } from '@backgold/contract/content-api'
+import { typesExample } from '@backgold/contract/content-api-examples'
+import { BUILT_IN_CONTENT_TYPES, BUILT_IN_TYPE_FIELDS, isBlogContentType } from '@backgold/contract/content-types'
+import type { BuiltInFieldDef } from '@backgold/contract/content-types'
 import { generateTypes } from './codegen.js'
 import { renderTypes } from './codegen-render.js'
 

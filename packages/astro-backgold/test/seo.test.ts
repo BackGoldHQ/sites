@@ -1,5 +1,5 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { Author, PageResponse, SiteResponse } from '@backgold/content'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AI_CRAWLERS } from '../src/options.js'

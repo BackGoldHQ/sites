@@ -18,7 +18,7 @@ import {
   sitemapExample,
   termsExample,
   typesExample,
-} from '@givegold/shared/content-api-examples'
+} from '@backgold/contract/content-api-examples'
 import { createClient } from './client.js'
 import { memoryCache } from './cache.js'
 import type { CacheStore, ClientOptions, Entry } from './contract.js'

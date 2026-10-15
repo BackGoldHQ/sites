@@ -2,13 +2,13 @@
 // `holds` list `areas()` sends to `GET /areas` (packages/api/src/lib/
 // content-api/areas.ts parseHolds).
 
-import type { SitePageModuleKind } from '@givegold/shared'
+import type { SitePageModuleKind } from '@backgold/contract/content-api'
 import type { VisibleNow } from './contract.js'
 
 /**
  * The module kinds a route can hold. The api's list is SITE_PAGE_MODULE_KINDS
- * in @givegold/shared constants, which this bundle cannot import at runtime
- * (the shared index pulls in zod); the check below fails the build if the two
+ * in the platform's shared constants; the vendored contract carries only its
+ * type, SitePageModuleKind, and the check below fails the build if the two
  * ever differ.
  */
 const HOLD_KINDS = ['donation_form', 'form', 'signup', 'petition', 'poll', 'event', 'store', 'advocacy'] as const

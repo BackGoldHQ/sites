@@ -5,15 +5,16 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-// The published build (`pnpm build`) must stand alone: the private workspace
-// package and its runtime dependencies are bundled or absent, never imported,
-// and only the Node-only entries may import node: modules. Doc comments may
-// name the private package (the contract's do); an import or export of it may
-// not. The guard reads dist/, so it skips (and says so) until a build exists;
+// The published build (`pnpm build`) must stand alone: the vendored contract
+// package (@backgold/contract, private to this workspace) and its runtime
+// dependencies are bundled or absent, never imported, and only the Node-only
+// entries may import node: modules. @givegold/shared, the platform package the
+// contract is cut from, may not be imported either. Doc comments may name
+// either package (the contract's do); an import or export of it may not. The guard reads dist/, so it skips (and says so) until a build exists;
 // CI and prepublishOnly build first.
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
 const BUILT = existsSync(`${DIST}index.js`)
-const FORBIDDEN = ['@givegold/shared', 'zod', 'markdown-it']
+const FORBIDDEN = ['@backgold/contract', '@givegold/shared', 'zod', 'markdown-it']
 /** fs.js is the filesystem store; cli.js is the `backgold-content` command. */
 const NODE_ONLY = new Set(['fs.js', 'cli.js'])
 const INDEX_BUDGET_BYTES = 25 * 1024
@@ -48,13 +49,13 @@ describe('dist', { skip: BUILT ? false : 'no dist/ — run `pnpm build` first' }
   })
 
   it('finds the imports it guards against', () => {
-    assert.deepEqual(specifiers(`import { a } from '@givegold/shared/content-api';\nexport * from "zod"\nimport 'node:fs'\nawait import('markdown-it')`), [
-      '@givegold/shared/content-api',
+    assert.deepEqual(specifiers(`import { a } from '@backgold/contract/content-api';\nexport * from "zod"\nimport 'node:fs'\nawait import('markdown-it')`), [
+      '@backgold/contract/content-api',
       'zod',
       'node:fs',
       'markdown-it',
     ])
-    assert.deepEqual(specifiers('/** the api\'s own contract type from `@givegold/shared` */'), [])
+    assert.deepEqual(specifiers('/** the api\'s own contract type, vendored as `@backgold/contract/content-api` */'), [])
   })
 
   it('ships no source maps (their sourcesContent would carry the private modules whole)', async () => {
