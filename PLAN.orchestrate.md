@@ -25,16 +25,21 @@ Wave 0 (serial):
 - [x] **T0b platform contract** (platform 5b547a2b0…37b7c133d; snapshot 2675c3c) (orchestrator): `SECTION_LAYOUTS.Hero` += `portrait`; CONTRACT §2 row; shared lint/test; then `node scripts/contract-pull.mjs <platform worktree>` on the sites branch after T0 integrates.
 
 Wave 1 (parallel, worktrees under `GGPC/backgold-sites-wt/<slug>`, base = the feature branch after T0):
-- [ ] **T1 template-candidate** (opus): `templates/candidate` from the C boards and the draft manifest; layouts Hero `portrait`, QuoteStrip `wall` (kit has it? verify; else add in the template), Countdown `tiles` + `inline`; starter copy in a candidate's voice (no names); README; e2e `--template candidate`.
+- [x] **T1 template-candidate** (8507f63) (opus): `templates/candidate` from the C boards and the draft manifest; layouts Hero `portrait`, QuoteStrip `wall` (kit has it? verify; else add in the template), Countdown `tiles` + `inline`; starter copy in a candidate's voice (no names); README; e2e `--template candidate`.
 - [x] **T2 template-petition-drive** (1a144ae + 8a88ba0) (opus): `templates/petition-drive` from the deflocksa.org production document, the DeFlock identity mock and the hosted petition-drive seed; dark-first tokens; single page; README; e2e `--template petition-drive`.
 - [x] **T4 sites-ci-per-template** (3a72757) (sonnet): `.gitlab-ci.yml` check + deploy jobs per template (candidate, petition-drive) mirroring the party's, KV/CI variables named per template; `scripts/check-manifests.mjs` unchanged; README/CLAUDE.md rows.
 
 Wave 1b (platform, orchestrator): Countdown layouts in the contract (3d3ea4be7; snapshot eff9f15).
 
 Wave 2 (after T1 + T2 integrate):
-- [ ] **T3 platform-template-registry** (opus, platform worktree): `SITE_TEMPLATE_KEYS` += `candidate`, `petition-drive`; manifest copies + `templates:build`; blurbs; `COMING_SOON_TEMPLATES` drops Candidate; `/sites/new` gallery + start route sanity; shared starter tests; frontend lint + QUnit for touched components; api lint.
+- [x] **T3 platform-template-registry** (platform d0a8473c4…bb0d3ab4f + e231fcd43; branch rebased onto main) (opus, platform worktree): `SITE_TEMPLATE_KEYS` += `candidate`, `petition-drive`; manifest copies + `templates:build`; blurbs; `COMING_SOON_TEMPLATES` drops Candidate; `/sites/new` gallery + start route sanity; shared starter tests; frontend lint + QUnit for touched components; api lint.
 - [ ] **T6 candidate-comp-walk** (opus, audit-only → fix wave): every C board vs the built template, gap table with evidence.
 - [x] **T5 petition-drive-comparison-migration** (platform ebbadcd50) (opus): deflocksa.org vs the new template at 1440/375 (Playwright, own port), gap table, and the migration mapping for the eight live/draft hosted petition-drive pages (prod D1 list in the scratchpad), written to `docs/design/petition-drive-template-2026-10/COMPARISON.md` on the platform branch.
+
+Wave 3 (sites):
+- [ ] **T7 kit-fixes-candidate-boards** (opus): the kit asks the candidate build handed back (header button current, Blog list in a sidebar, section heads, QuoteStrip, Cta card, planks kicker, dark quiet-button contrast).
+- [ ] **T8 absorb-sites-mr-4** (opus, after T7): rebase the feature branch onto sites main once !4 (party chrome layouts: chrome as lists, `/site.chrome`) merges; move !4's new party/src files into the kit; the three manifests' chrome as lists; re-vendor; four e2e runs green.
+- [ ] **T6 candidate-comp-walk** (opus, after T8).
 
 Ship: combined gates (sites: `pnpm -r lint`, `pnpm -r test`, astro check ×3, e2e ×3; platform: shared/api/frontend lint), changelog files, graph close-out, MRs (sites via glab; platform: see Decisions — Assay names no GitLab landing today).
 
