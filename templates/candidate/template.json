@@ -261,7 +261,16 @@
               "eventsEmptyCta": "Nothing is on the calendar yet. Town halls, door-knocks and coffees show here as soon as they are posted."
             },
             "media": {},
-            "links": [],
+            "links": [
+              {
+                "label": "All events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ],
             "options": {
               "max": 3,
               "actions": "buttons"
@@ -418,7 +427,16 @@
               "heading": "What people who know the candidate say"
             },
             "media": {},
-            "links": [],
+            "links": [
+              {
+                "label": "All endorsements",
+                "target": {
+                  "kind": "page",
+                  "slug": "endorsements"
+                },
+                "url": "/endorsements"
+              }
+            ],
             "data": {
               "source": "quotes",
               "items": [

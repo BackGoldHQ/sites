@@ -3820,7 +3820,10 @@ async function driveLook() {
 // at their own addresses instead, with the starter's menus, so the site looks
 // like a new candidate site (boards C1 to C11). Then the look checks for the
 // template's own layouts: Hero · portrait, Countdown · tiles and inline, and
-// its QuoteStrip · wall, in a headless Chrome at 1440 and 375, light and dark.
+// its QuoteStrip · wall, then what template.css and the starter add to the
+// kit's (the heads' All events and All endorsements, the editorial quote, the
+// sidebar's cards apart, Join's centred card), in a headless Chrome at 1440
+// and 375, light and dark.
 
 const CANDIDATE = TEMPLATE_NAME === 'candidate'
 const CANDIDATE_DEADLINE = new Date(Date.now() + ((26 * 24 + 9) * 60 + 41) * 60000 + 30000).toISOString()
@@ -3910,7 +3913,7 @@ function withCandidate(data, ex) {
 
 /** The template's own layouts: present in the HTML, then in Chrome at 1440 and 375, light and dark. */
 async function checkCandidateLook(origin, chrome) {
-  log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall')
+  log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall, and what template.css adds')
   const at = (slug) => `/${candidateSlug(slug)}`
   let res = await get(origin, at(''))
   let html = await res.text()
@@ -3938,6 +3941,15 @@ async function checkCandidateLook(origin, chrome) {
   res = await get(origin, at('donate'))
   html = await res.text()
   check(res.status === 200 && /<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html) && sectionsOf(html).some((s) => s.type === 'Donate'), 'Donate carries the donation form and the header button (drawn as the current page by template.css)')
+  // The comp walk's fixes: the section heads' links the boards draw (C1's All events, C2's All endorsements) and C8's Join card.
+  const headLink = (sectionHtml, label) => new RegExp(`<p class="section-head-more"[^>]*>(?:(?!</p>).)*<a href="[^"]*"[^>]*>${label}</a>`, 's').test(sectionHtml)
+  html = await (await get(origin, at(''))).text()
+  check(headLink(sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? '', 'All events'), "home's EventsList · list carries All events in its head (C1)")
+  html = await (await get(origin, at('about'))).text()
+  check(headLink(sectionsOf(html).find((s) => s.type === 'QuoteStrip')?.html ?? '', 'All endorsements'), "Meet the candidate's QuoteStrip · row carries All endorsements in its head (C2)")
+  res = await get(origin, at('join'))
+  html = await res.text()
+  check(res.status === 200 && /<header class="page-header"><h1>Join<\/h1><\/header>/.test(html) && sectionsOf(html)[0]?.type === 'Cta' && /data-variant="card"/.test(sectionsOf(html)[0].html), "Join opens with Cta · card under the page's title, its <h1>")
 
   const css = (
     await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
@@ -3994,6 +4006,47 @@ async function checkCandidateLook(origin, chrome) {
           return { overflow: document.documentElement.scrollWidth - window.innerWidth, fill: b ? getComputedStyle(b).backgroundColor : null }
         })()`)
         check(donate.overflow <= 0 && donate.fill === 'rgba(0, 0, 0, 0)', `${where}: on Donate the header button is an outline, the form's Donate the one gold affordance (${donate.fill})`)
+        // The comp walk's fixes, measured.
+        await browser.open(`${origin}${at('')}`, scheme)
+        const stripe = await browser.evaluate(`(() => {
+          const band = document.querySelector('.hero-portrait')
+          const office = document.querySelector('.hp-office')
+          const probe = document.createElement('i')
+          probe.style.background = 'var(--bg-brand-accent)'
+          document.body.append(probe)
+          const accent = getComputedStyle(probe).backgroundColor
+          probe.remove()
+          return { accent, stripe: band ? getComputedStyle(band, '::after').backgroundColor : null, rule: office ? getComputedStyle(office, '::before').backgroundColor : null }
+        })()`)
+        check(stripe.stripe === stripe.accent && stripe.rule === stripe.accent, `${where}: Hero · portrait's stripe and office-line rule are the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const editorial = await browser.evaluate(`(() => { const p = document.querySelector('.single-quote blockquote p'); return p ? getComputedStyle(p).fontStyle + ' ' + getComputedStyle(p).fontWeight : null })()`)
+        check(editorial === 'normal 700', `${where}: QuoteStrip · single sets the editorial upright and bold, template.css over the kit's italic (${editorial})`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const railGap = await browser.evaluate(`(() => {
+          const [a, b] = document.querySelectorAll('.rail .bg-section')
+          return a && b ? Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom) : null
+        })()`)
+        check(railGap !== null && railGap >= 16, `${where}: the Campaign sidebar's Countdown and Cta stand apart (${railGap}px)`)
+        await browser.open(`${origin}${at('join')}`, scheme)
+        const join = await browser.evaluate(`(() => {
+          const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .bg-section-inner')
+          const title = document.querySelector('.page-header')
+          const button = card?.querySelector('.actions .button')
+          if (!card || !button) return null
+          const c = card.getBoundingClientRect()
+          const b = button.getBoundingClientRect()
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            align: getComputedStyle(card).textAlign,
+            centred: Math.abs((c.left + c.right) / 2 - document.documentElement.clientWidth / 2) <= 1 && Math.abs((b.left + b.right) / 2 - (c.left + c.right) / 2) <= 1,
+            titleShown: title ? title.getBoundingClientRect().height > 1 : false,
+          }
+        })()`)
+        check(
+          join && join.overflow <= 0 && join.align === 'center' && join.centred && !join.titleShown,
+          `${where}: Join's Cta · card is one centred card, its button centred, with no title band over it (${JSON.stringify(join)})`,
+        )
       }
     }
   } finally {

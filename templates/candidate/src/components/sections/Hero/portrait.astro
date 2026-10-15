@@ -55,7 +55,13 @@ const buttons = links(section)
 )}
 
 <style>
-  /* The portrait stands on the floor: the band keeps its top padding and drops the bottom one, which the stripe replaces. */
+  /*
+    The portrait stands on the floor: the band keeps its top padding and drops
+    the bottom one, which the stripe replaces. The stripe and the office line's
+    rule are the brand's accent itself in both sets (C1, C9): they are
+    decoration, not text, so they keep the accent where the band's accent for
+    text falls back to its ink.
+  */
   :global(.bg-section.hero-portrait) {
     position: relative;
     overflow: hidden;
@@ -68,7 +74,7 @@ const buttons = links(section)
     right: 0;
     bottom: 0;
     height: 0.625rem;
-    background: var(--accent);
+    background: var(--bg-brand-accent, var(--accent));
   }
   .hp {
     display: grid;
@@ -94,7 +100,7 @@ const buttons = links(section)
     flex: 0 0 auto;
     width: 1.75rem;
     height: 3px;
-    background: var(--accent);
+    background: var(--bg-brand-accent, var(--accent));
   }
   .hp-name {
     margin: 1rem 0 0;

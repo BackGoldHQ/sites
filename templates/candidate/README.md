@@ -63,8 +63,9 @@ file under `src/components/sections/<Type>/` registered in `src/template.ts`:
   and C9). The office line small above (the Hero's `kicker`: "State Senate ·
   District 9"), the candidate's name as the headline set large in capitals at
   the left, the line under it and two buttons, and the portrait at the right,
-  standing on the band's floor over a stripe in the accent. On a phone the
-  portrait follows the words, still on the floor. Without a portrait the
+  standing on the band's floor over a stripe in the brand's accent (the
+  office line's rule too), in both sets. On a phone the portrait follows the
+  words, still on the floor. Without a portrait the
   words take the full width. Leading the page, its headline is the page's
   `<h1>`.
 - **Countdown · tiles** (`Countdown/tiles.astro`, `'Countdown:tiles'`; C1).
@@ -106,8 +107,13 @@ page rendered after it draws no countdown at all.
   donation form, the header's Donate is an outline, so the form's Donate is
   the page's one gold affordance.
 - **The editorial quote** (QuoteStrip · single) is set upright and bold, as
-  C4 draws it, and **Blog · List in a sidebar** stacks each row's cover over
-  its words (C11's More from the campaign).
+  C4 draws it.
+- **Sections together in a sidebar** stand apart as cards (C5's Campaign
+  sidebar: Countdown · inline over the call to action).
+- **Cta · card in the page's column** (C8's Join) is one card centred on its
+  band, its words and button centred; a page that opens with it draws no
+  title band over it (the title stays the page's `<h1>` for screen readers).
+  In a sidebar the kit's own card stays.
 
 ## Starter content
 
@@ -121,10 +127,12 @@ pictures (a section without its picture draws without one).
 
 - **Pages**, as sections in the contract's shape:
   - Home (`""`): Hero · portrait (on the contrast band), Countdown · tiles,
-    Issues · cards, EventsList · list (three, with RSVP buttons), Blog ·
-    cards (three), Cta · banner.
+    Issues · cards, EventsList · list (three, with RSVP buttons, and All
+    events to the Events page in its head), Blog · cards (three), Cta ·
+    banner.
   - Meet the candidate (`about`): Hero · split, About · letter (anchored
-    `why`, signed with the role line), StatCards · row, QuoteStrip · row.
+    `why`, signed with the role line), StatCards · row, QuoteStrip · row
+    (All endorsements to the Endorsements page in its head).
   - Issues (`issues`): Hero · statement, Issues · numbered, PlatformPlanks ·
     longread (anchored `platform`).
   - Endorsements (`endorsements`): Hero · statement, QuoteStrip · single,
@@ -178,6 +186,10 @@ the merge request (README §17, Decisions needed).
   (they need the state's own addresses), and anything in the Top banner.
 - **`press_release` is absent** from `entryLayouts`: the built-in is not
   shipped.
+- **C7's other ways to help keep their link in the head.** The board draws
+  a link inside two of the cards (Volunteer, Ask for a sign); an Issues row
+  has no link of its own in the contract, so the section's one link draws
+  as the kit draws it, beside the heading.
 
 ## Develop locally
 

@@ -91,8 +91,12 @@ body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] 
   color: var(--ink);
 }
 
-/* The editorial quote set upright and bold in the condensed face, larger (C4's QuoteStrip · single). */
-[data-type='QuoteStrip'][data-variant='single'] .single-quote blockquote p {
+/*
+  The editorial quote set upright and bold in the condensed face, larger (C4's
+  QuoteStrip · single). `.bg-section` lifts the rule over the kit layout's
+  scoped one, which carries the same weight and can load after this file.
+*/
+.bg-section[data-type='QuoteStrip'][data-variant='single'] .single-quote blockquote p {
   font-size: clamp(1.875rem, 1.2rem + 2.3vw, 2.875rem);
   font-style: normal;
   font-weight: 700;
@@ -104,4 +108,48 @@ body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] 
 .rail .bg-section[data-type='Countdown'] {
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+/* Sections placed together in a sidebar stand apart, as cards (C5, C10 and C11's Campaign sidebar: Countdown · inline over Cta · card). */
+.rail .bg-section + .bg-section {
+  margin-top: 1rem;
+}
+
+/*
+  Cta · card in the page's column (C8's Join): one card centred on its band, the
+  eyebrow, heading, line and button centred in it. The kit draws a Cta of any
+  layout but banner, strip and photo as its default; in a sidebar the kit's
+  own brand-ground card stays.
+*/
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .bg-section-inner {
+  max-width: 47.5rem;
+  padding: clamp(1.375rem, 0.9rem + 2vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] h2,
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .lede {
+  margin-inline: auto;
+}
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .actions {
+  justify-content: center;
+}
+/*
+  A page that opens with that card (C8's Join) has no title band over it: the
+  card's heading is what the page says first. The page's title stays its
+  <h1> for screen readers, as the kit does over a donation form's story.
+*/
+.layout-main .page-header:has(+ .bg-section[data-type='Cta'][data-variant='card']) {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
