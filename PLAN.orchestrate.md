@@ -48,4 +48,4 @@ Ship: combined gates (sites: `pnpm -r lint`, `pnpm -r test`, astro check ×3, e2
 - Landing path for the platform branch: Assay (`assay project show` names no gate/staging/production) or a glab MR.
 
 ## Feed cursor
-(recorded at dispatch)
+`eyJ2IjoxLCJlbnRpdGllcyI6eyJ0cyI6IjIwMjYtMTAtMTVUMTA6NTE6MDMuODA3WiIsImlkIjoi77-_In0sInJlbGF0aW9ucyI6eyJ0cyI6IjIwMjYtMTAtMTVUMTA6NTE6MDMuODA3WiIsImlkIjoi77-_In0sIm9ic2VydmF0aW9ucyI6eyJ0cyI6IjIwMjYtMTAtMTVUMTA6NTE6MDMuODA3WiIsImlkIjoi77-_In19` (taken 2026-10-15T10:51Z)
