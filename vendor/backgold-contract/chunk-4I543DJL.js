@@ -89,6 +89,8 @@ var SECTION_LAYOUTS = {
   MediaKit: ["kit", "speaker", "press"],
   // match: the political sections (2026-10-13), a matched-gift window.
   Progress: ["bar", "ring", "compact", "match"],
+  // tiles and inline: the candidate template's (2026-10-15), CONTRACT §2's proposed values.
+  Countdown: ["banner", "tiles", "inline"],
   // calendar: ruling 32 (2026-10-09), a month grid beside the agenda, never in its place.
   // shifts and week: the political sections (2026-10-13), volunteer shifts and the next seven days.
   // cohorts: the services sections (2026-10-14), a course's start dates.
@@ -824,6 +826,7 @@ var CONTENT_API_BLOCKS = {
   Countdown: {
     role: "data",
     copy: HEADING_ONLY,
+    variant: "layout",
     options: ["source", "anchorId"],
     data: {
       source: "countdown",

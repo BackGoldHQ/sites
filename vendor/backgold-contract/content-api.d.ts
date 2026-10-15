@@ -305,6 +305,7 @@ declare const SECTION_LAYOUTS: {
     readonly Portfolio: readonly ["grid", "featured", "strip"];
     readonly MediaKit: readonly ["kit", "speaker", "press"];
     readonly Progress: readonly ["bar", "ring", "compact", "match"];
+    readonly Countdown: readonly ["banner", "tiles", "inline"];
     readonly EventsList: readonly ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts", "map"];
     readonly Blog: readonly ["cards", "list", "feature"];
     readonly Collection: readonly ["cards", "list", "compact", "feature", "library", "shelves", "outline"];
@@ -1486,6 +1487,7 @@ declare const CONTENT_API_BLOCKS: {
     readonly Countdown: {
         readonly role: "data";
         readonly copy: readonly ["heading"];
+        readonly variant: "layout";
         readonly options: readonly ["source", "anchorId"];
         readonly data: {
             readonly source: "countdown";
