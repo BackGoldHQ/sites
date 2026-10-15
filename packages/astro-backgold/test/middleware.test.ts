@@ -1,4 +1,4 @@
-import { encodeEntryCursor } from '@givegold/shared/content-api'
+import { encodeEntryCursor } from '@backgold/contract/content-api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor } from '../src/server/context.js'

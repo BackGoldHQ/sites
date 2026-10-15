@@ -4,7 +4,7 @@
 // signWebhookPayload): `X-BackGold-Signature: t=<unix seconds>,v1=<hex>`, the
 // hex being HMAC-SHA256 over `${t}.${rawBody}` keyed with the endpoint secret.
 
-import type { ContentWebhookEvent } from '@givegold/shared'
+import type { ContentWebhookEvent } from '@backgold/contract/content-api'
 import type { ContentEvent, ContentEventType, ParseContentEvent, VerifyBackgoldWebhook } from './contract.js'
 import { hmacSha256Hex } from './hash.js'
 
@@ -12,10 +12,10 @@ import { hmacSha256Hex } from './hash.js'
 const DEFAULT_TOLERANCE_SECONDS = 300
 
 /**
- * The five content events. The api's list is CONTENT_WEBHOOK_EVENTS in
- * @givegold/shared constants, which this bundle cannot import at runtime
- * (the shared index pulls in zod); the two checks below fail the build if
- * this list and the api's, or the contract's union, ever differ.
+ * The five content events. The api's list is CONTENT_WEBHOOK_EVENTS in the
+ * platform's shared constants; the vendored contract carries only its type,
+ * ContentWebhookEvent, and the two checks below fail the build if this list
+ * and the api's, or the contract's union, ever differ.
  */
 const CONTENT_EVENT_TYPES = [
   'site.published',

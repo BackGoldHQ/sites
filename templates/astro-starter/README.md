@@ -1,4 +1,4 @@
-> **This repository is synced from BackGold's source, and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
+> **This repository is synced from `templates/astro-starter` in [gitlab.com/backgold/sites](https://gitlab.com/backgold/sites), and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
 
 # BackGold starter for Astro
 

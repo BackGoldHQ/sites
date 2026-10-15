@@ -5,7 +5,7 @@
 
 import { createClient, memoryCache } from '@backgold/content'
 import type { BackgoldContent, ContentTypeSummary, Entry, EntryDetail } from '@backgold/content'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import { API_ORIGIN, PK, fakeApi } from './fixtures.js'
 
 export const SITE_URL = 'https://pinevalleyliberty.org'

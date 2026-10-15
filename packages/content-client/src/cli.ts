@@ -4,7 +4,7 @@
 // `index` bundle. No message it prints ever carries a site key.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import type { ContentTypeSummary } from '@givegold/shared/content-api'
+import type { ContentTypeSummary } from '@backgold/contract/content-api'
 import { generateTypes } from './codegen.js'
 import { DEFAULT_API_ORIGIN, SITE_KEY_PATTERN, contentApiBase } from './request.js'
 

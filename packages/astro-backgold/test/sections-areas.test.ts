@@ -1,5 +1,5 @@
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
-import { CONTENT_API_EXAMPLES } from '@givegold/shared/content-api-examples'
+import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { AreaItem, Areas, PageResponse, Section as SectionData } from '@backgold/content'
 import { beforeAll, describe, expect, it } from 'vitest'
 import Area from '../components/Area.astro'
