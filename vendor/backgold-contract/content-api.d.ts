@@ -70,60 +70,11 @@ interface SiteResponse {
             title: string | null;
             description: string | null;
         };
-        /** The site's header and footer as its operator set them up (its header and footer sections). */
-        chrome: SiteChromeResponse;
     };
     /** The site's areas in Areas-screen order (0458). */
     areas: SiteArea[];
     legal: ContentApiLegal;
     version: number;
-}
-/** One link on the footer's bottom row (privacy, terms, bylaws). */
-interface SiteChromeLink {
-    label: string;
-    url: string;
-}
-/**
- * The footer's closing call (its `closing` layout): a band over the columns
- * with a headline, a line, an italic tagline, up to two buttons and a photo
- * behind. Null unless the layout is `closing` and a headline was written.
- */
-interface SiteChromeClosing {
-    headline: string;
-    body: string | null;
-    tagline: string | null;
-    image_url: string | null;
-    /** The buttons that have both a label and an address, in order. */
-    buttons: SiteChromeLink[];
-}
-/**
- * The header and footer as the operator set them up in BackGold. The menus
- * they hold come from `/menus/primary`, `/menus/footer` and `/menus/utility`,
- * the social links and the legal line from `/site`; this is the rest: each
- * part's layout (one of SITE_CHROME_LAYOUTS, the stored choice when it is
- * one, else the first) and the footer's own words.
- */
-interface SiteChromeResponse {
-    header: {
-        layout: SiteHeaderLayout;
-    };
-    footer: {
-        layout: SiteFooterLayout;
-        /** The short line under the organization's name. */
-        blurb: string | null;
-        /** The postal address; newlines break lines. */
-        address: string | null;
-        /**
-         * The phone line. The footer's contact email never leaves BackGold: the
-         * Content API answers with no email address at all.
-         */
-        phone: string | null;
-        /** The bottom row's links, in order; every address safe to follow. */
-        legal_links: SiteChromeLink[];
-        /** The copyright line as written; null leaves it to the site ("© year name"). */
-        copyright: string | null;
-        closing: SiteChromeClosing | null;
-    };
 }
 /** One of a site's areas: its name, and its key (the name in code, which never changes). */
 interface SiteArea {
@@ -329,7 +280,7 @@ type SectionBleed = (typeof SECTION_BLEEDS)[number];
  * contract names is never refused.
  */
 declare const SECTION_LAYOUTS: {
-    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating"];
+    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"];
     readonly About: readonly ["right", "left", "letter", "portrait", "books"];
     readonly Issues: readonly ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"];
     readonly StatCards: readonly ["row", "ribbon", "feature", "wall"];
@@ -386,22 +337,6 @@ type SectionLayoutType = keyof typeof SECTION_LAYOUTS;
 declare const TEMPLATE_SECTION_TYPES: readonly ["QuickDonate", "VoterTools", "SampleBallot", "Scorecard", "Membership", "Faq", "Comparison", "Stories", "ShareKit", "Financials", "Services", "CaseStudies", "Resources", "Pathways", "Portfolio", "MediaKit", "Booking"];
 type TemplateSectionType = (typeof TEMPLATE_SECTION_TYPES)[number];
 type SectionLayout<T extends SectionLayoutType> = (typeof SECTION_LAYOUTS)[T][number];
-/**
- * The layouts of the two site parts every site has (CONTRACT.md §2 Chrome,
- * the A12 board's site parts), default first: the header (`SiteNav`, the
- * site's header section) and the footer (`Footer`, its footer section). The
- * choice is stored on the chrome block's `layout` and carried to a template
- * as `/site`'s `chrome`; a template draws the ones its manifest lists and its
- * own default for the rest, BackGold's hosted renderer draws `bar` and the
- * three footers it has (`giving` is template-drawn: the columns with a donate
- * strip and the sign-up over the legal line).
- */
-declare const SITE_CHROME_LAYOUTS: {
-    readonly header: readonly ["bar", "centered"];
-    readonly footer: readonly ["columns", "closing", "compact", "giving"];
-};
-type SiteHeaderLayout = (typeof SITE_CHROME_LAYOUTS.header)[number];
-type SiteFooterLayout = (typeof SITE_CHROME_LAYOUTS.footer)[number];
 /**
  * Where a section's link points. 'surface' is an org-host surface BackGold
  * serves itself (donate, join, store, events, …): its `url` is on the org's
@@ -853,7 +788,7 @@ interface ContentApiDataSpec {
 }
 interface ContentApiBlockSpec {
     role: ContentApiBlockRole;
-    /** Authored string props that are copy. A compliance block lists only its frame's words: `heading` (and Donate's story, a sign-up's kicker and lede). */
+    /** Authored string props that are copy. A compliance block lists only its frame's words: `heading` (and Donate's story, a sign-up's kicker and lede, a petition's addressed-to, goal and volunteer lines). */
     copy?: readonly string[];
     /** Image / video / document URL props. */
     media?: readonly string[];
@@ -895,7 +830,9 @@ declare function signupEmbed(p: Props, ctx: ProjectDocumentContext): SectionEmbe
  *                    draws around the frame: Donate's story, SignupCapture's
  *                    kicker and lede); never fields, form ids, consent copy,
  *                    amounts or a form's switches (SignupCapture's
- *                    `collectZip` stays in the frame).
+ *                    `collectZip` stays in the frame). Petition alone also
+ *                    carries its frame's options and its authored asks and
+ *                    stat tiles as `data`.
  *   data           → `data: { source, items }` from the baked props (and,
  *                    for EventsList, its list frame as an `embed` as well).
  *   presentational → copy, media, links, options (+ data for an authored
@@ -1949,8 +1886,27 @@ declare const CONTENT_API_BLOCKS: {
     };
     readonly Petition: {
         readonly role: "compliance";
-        readonly copy: readonly ["heading"];
+        readonly copy: readonly ["heading", "addressedTo", "goalNote", "volunteerPrompt"];
         readonly variant: "header";
+        readonly options: readonly ["datasetPreset", "datasetArea", "badgeNoun", "uncategorizedLabel", "volunteerAsk", "recognition"];
+        readonly data: {
+            readonly source: "petition";
+            readonly lists: readonly [{
+                readonly prop: "asks";
+                readonly fields: {
+                    readonly title: "title";
+                    readonly body: "body";
+                };
+            }, {
+                readonly prop: "statTiles";
+                readonly group: "tile";
+                readonly fields: {
+                    readonly label: "label";
+                    readonly value: "value";
+                    readonly note: "note";
+                };
+            }];
+        };
         readonly embed: (p: Props, ctx: ProjectDocumentContext) => SectionEmbed | null;
     };
     readonly Store: {
@@ -2020,6 +1976,8 @@ declare const BLOCK_BAND_INTRINSICS: Record<string, {
     role: SectionBand;
     bleed: SectionBleed;
 }>;
+/** A data section's rows written back to the props they were read from. */
+declare function dataProps(spec: ContentApiDataSpec, data: SectionData | undefined): Props;
 /**
  * A baked page document as the Content API's ordered sections. Pure: the api
  * bakes the document (published snapshot, inlined synced sections, bake
@@ -2050,4 +2008,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, contentApiEmbedUrls, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

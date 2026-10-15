@@ -1,5 +1,5 @@
-import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-4JVUBOVW.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS } from './chunk-GWHSPLPC.js';
+import { SECTION_BLEEDS, SECTION_BANDS } from './chunk-WUJ3DEGE.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-UU2RX6DP.js';
 import { z } from 'zod';
 
 var SITE_TEMPLATE_KEYS = ["party"];
@@ -30,7 +30,9 @@ var SITE_TEMPLATE_AUTHORED_DATA_SOURCES = [
   "words",
   "ladder",
   "share",
-  "financials"
+  "financials",
+  // The petition-drive template (2026-10-15): the asks and the typed stat tiles.
+  "petition"
 ];
 var SITE_TEMPLATE_AUTHORED_DATA = {
   Issues: "issues",
@@ -53,7 +55,8 @@ var SITE_TEMPLATE_AUTHORED_DATA = {
   Hero: "words",
   QuickDonate: "ladder",
   ShareKit: "share",
-  Financials: "financials"
+  Financials: "financials",
+  Petition: "petition"
 };
 var starterSectionSchema = z.object({
   id: z.string().min(1).max(64),
@@ -136,7 +139,14 @@ var starterReusableSectionSchema = z.object({
 });
 var entryLayoutSchema = z.object({ entry: layoutName, list: layoutName });
 var siteTemplateManifestSchema = z.object({
-  key: z.enum(SITE_TEMPLATE_KEYS),
+  /**
+   * The template's key, by shape: a template is written in the sites
+   * repository before the platform registers it, so the schema cannot know
+   * the registry. The platform's own copies are held to SITE_TEMPLATE_KEYS by
+   * site-template-manifests.ts, which refuses a copy whose key is not the one
+   * it was filed under.
+   */
+  key: z.string().regex(TEMPLATE_KEY_PATTERN),
   name,
   audience: z.string().regex(/^[a-z][a-z_]{0,39}$/),
   version: z.number().int().min(1),
@@ -154,15 +164,9 @@ var siteTemplateManifestSchema = z.object({
   }),
   /** Routable built-in content type key → its entry layout and its list layout. */
   entryLayouts: z.partialRecord(z.enum(BUILT_IN_CONTENT_TYPE_KEYS), entryLayoutSchema),
-  /**
-   * The site parts the template draws around every page: the header and
-   * footer layouts it draws (SITE_CHROME_LAYOUTS, its default first; the
-   * site's choice is `/site`'s `chrome`), the takeover banner and the legal
-   * line.
-   */
   chrome: z.object({
-    header: z.array(z.enum(SITE_CHROME_LAYOUTS.header)).min(1),
-    footer: z.array(z.enum(SITE_CHROME_LAYOUTS.footer)).min(1),
+    header: layoutName,
+    footer: layoutName,
     takeoverBanner: z.boolean(),
     legalLine: z.boolean()
   }),

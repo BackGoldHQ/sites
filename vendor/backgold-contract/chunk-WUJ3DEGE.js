@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-GWHSPLPC.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-UU2RX6DP.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -46,8 +46,9 @@ var SECTION_BLEEDS = ["full", "contained"];
 var SECTION_LAYOUTS = {
   // donate, video and rotating: sections batch 3 (2026-10-14), a hero with a
   // donate card beside its words, one over a looping video, and one whose
-  // headline's last word cycles through its own `words` rows.
-  Hero: ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating"],
+  // headline's last word cycles through its own `words` rows. portrait is the
+  // candidate template's name-first hero (2026-10-15, proposed, C-1).
+  Hero: ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"],
   // portrait and books: the services sections (2026-10-14), a bio with its
   // credentials and a writer with their books.
   About: ["right", "left", "letter", "portrait", "books"],
@@ -134,10 +135,6 @@ var TEMPLATE_SECTION_TYPES = [
   "MediaKit",
   "Booking"
 ];
-var SITE_CHROME_LAYOUTS = {
-  header: ["bar", "centered"],
-  footer: ["columns", "closing", "compact", "giving"]
-};
 function siteKeyKind(key) {
   if (key.startsWith(SITE_KEY_PREFIXES.publishable)) return "publishable";
   if (key.startsWith(SITE_KEY_PREFIXES.secret)) return "secret";
@@ -1184,10 +1181,22 @@ var CONTENT_API_BLOCKS = {
       return iframeEmbed(target && ctx.embedUrls.poll(target.pageId, target.blockId), ctx);
     }
   },
+  // The petition's own words, switches and lists frame the sign sheet: the
+  // asks, then the stat tiles (`group: 'tile'`), a tile's value a typed figure
+  // or `auto:total` / `auto:signatures` / `auto:category:<value>`. The
+  // bring-your-own dataset URL and the petition picked stay in the block.
   Petition: {
     role: "compliance",
-    copy: HEADING_ONLY,
+    copy: ["heading", "addressedTo", "goalNote", "volunteerPrompt"],
     variant: "header",
+    options: ["datasetPreset", "datasetArea", "badgeNoun", "uncategorizedLabel", "volunteerAsk", "recognition"],
+    data: {
+      source: "petition",
+      lists: [
+        { prop: "asks", fields: { title: "title", body: "body" } },
+        { prop: "statTiles", group: "tile", fields: { label: "label", value: "value", note: "note" } }
+      ]
+    },
     embed: (p, ctx) => iframeEmbed(str(p.petitionSlug) && ctx.embedUrls.petition(ctx.orgSlug, p.petitionSlug), ctx)
   },
   Store: { role: "compliance", copy: HEADING_ONLY, variant: "layout", embed: (_p, ctx) => iframeEmbed(ctx.embedUrls.store(ctx.orgSlug), ctx) },
@@ -1471,7 +1480,7 @@ function projectDocument(doc, ctx) {
       links: compliance ? [] : linksOf(spec, props, ctx),
       options
     };
-    if (spec.data && !compliance) {
+    if (spec.data) {
       const data = dataOf(spec.data, props);
       section.data = ctx.audience === "hosted" ? data : { source: data.source, items: data.items.map((item) => scrub(item, ctx)) };
     }
@@ -1535,4 +1544,4 @@ function projectedBlockProps(block, ctx) {
   return props;
 }
 
-export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
