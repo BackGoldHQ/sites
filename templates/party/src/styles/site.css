@@ -1448,7 +1448,8 @@ details summary {
 .footer-brand {
   grid-column: 1 / -1;
 }
-.site-footer a {
+/* The footer's links take the band's ink; a button (the donate strip's, the closing call's) keeps its own. */
+.site-footer a:not(.button) {
   color: var(--ink);
 }
 .footer-description {
