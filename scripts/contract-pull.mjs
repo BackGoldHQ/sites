@@ -7,6 +7,7 @@
 // platform commit, its branch and the date.
 //
 //   node scripts/contract-pull.mjs <platform checkout>
+//   node scripts/contract-pull.mjs --help    this usage, exit 0
 //
 // Refuses a checkout with uncommitted changes under packages/shared, so the
 // snapshot always names a real commit. Needs node and pnpm; the checkout needs
@@ -33,8 +34,13 @@ function git(checkout, args) {
   return result.status === 0 ? result.stdout.trim() : null
 }
 
+const USAGE = 'Usage: node scripts/contract-pull.mjs <platform checkout>'
 const arg = process.argv[2]
-if (!arg) fail('Usage: node scripts/contract-pull.mjs <platform checkout>')
+if (arg === '--help' || arg === '-h') {
+  process.stdout.write(`${USAGE}\n`)
+  process.exit(0)
+}
+if (!arg) fail(USAGE)
 const platform = resolve(arg)
 const shared = join(platform, 'packages', 'shared')
 
