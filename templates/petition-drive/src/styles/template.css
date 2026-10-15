@@ -6,10 +6,13 @@
   a footer on the page's own ground. Colours stay the band tokens the layout
   writes from the organization's brand (the kit's src/lib/brand.ts); nothing
   here names a colour. The drive opens in the dark set (src/template.ts
-  `defaultAppearance`), so the bands below read, top to bottom on the
-  starter page: the petition on the contrast band, Get involved on the tint,
-  the events on the page, the signers card on the panel, the closing call on
-  the contrast band, each a change of ground from the one before.
+  `defaultAppearance`). The starter page's bands, top to bottom: the
+  petition on the page (`plain`: BackGold's sheet draws its own dark map
+  band and card, as on a hosted petition-drive page), Get involved on the
+  tint, the events on the page, then two contained cards in the page's
+  gutter, the signers and the closing call, both on the panel. Every
+  full-width band changes ground from the one before, and the kit's dark
+  set keeps every one of them dark (its `contrast` band is the light one).
 */
 
 :root {
@@ -131,7 +134,7 @@ h2 {
 .section-head h2 {
   margin-bottom: 0.875rem;
 }
-/* The closing call: a contrast card, its eyebrow in the mono face. */
+/* The closing call's heading, a step under the section heading's size. */
 .bg-section.cta .banner-words h2 {
   font-size: clamp(1.75rem, 1.3rem + 1.5vw, 2.375rem);
 }

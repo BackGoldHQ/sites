@@ -64,6 +64,9 @@ const PARTY = TEMPLATE_NAME === 'party'
 // and dark switch, the kit's lists, entries and 404) and is checked for it;
 // the public starter is not on the kit.
 const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
+// The face a kit template's module frames are asked for: its config's
+// `frameFont`, else the kit's Public Sans.
+const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
 // ── petition-drive (begin) ──
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
@@ -2014,7 +2017,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
     ON_KIT
-      ? /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"/.test(html)
+      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`).test(html)
       : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
     ON_KIT ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
   )
@@ -2668,7 +2671,7 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"`) : null
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
@@ -3702,8 +3705,11 @@ async function checkPetitionDrive(origin, fixture, chrome) {
     )
     check(/<html lang="en" data-gg-opens="dark">/.test(html) && /<style>:root\{color-scheme:dark;/.test(html), 'the page opens in the dark set (data-gg-opens, the dark set on :root)')
     const frame = tags(html, 'iframe').find((t) => t.includes('/embed/petition/')) ?? ''
-    check(/src="[^"]+\/embed\/petition\/lp_home\/Petition-home\?layout=map&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+/.test(frame), "the Petition section frames BackGold's petition in its map layout, wearing the site's look")
-    check(/<section id="petition"[^>]*data-type="Petition"/.test(html), 'the Petition section is anchored at #petition')
+    check(
+      /src="[^"]+\/embed\/petition\/lp_home\/Petition-home\?layout=map&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=inter"/.test(frame),
+      "the Petition section frames BackGold's petition in its map layout, wearing the site's look in the drive's face (font=inter)",
+    )
+    check(/<section id="petition"[^>]*data-type="Petition"[^>]*data-band="plain"/.test(html), 'the Petition section is anchored at #petition, on the page (plain)')
     check(
       /<section id="get-involved"[^>]*data-type="Issues"/.test(html) && /<section id="events"[^>]*data-type="EventsList"/.test(html),
       'Get involved and the events are anchored at #get-involved and #events',
@@ -3735,6 +3741,7 @@ async function checkPetitionDrive(origin, fixture, chrome) {
       await browser.open(`${origin}/`, scheme)
       const look = await browser.evaluate(`(${driveLook})()`)
       check(look.mode === 'dark' && look.page < 0.06, `a visitor whose system is ${scheme} opens the page dark (data-gg-mode ${look.mode}, page luminance ${look.page.toFixed(3)})`)
+      check(look.bands.length === 5 && look.bands.every((b) => b.ground < 0.06), `every band is dark, none a light slab (${look.bands.map((b) => `${b.type} ${b.ground.toFixed(3)}`).join(', ')})`)
       check(look.minRatio >= 4.5, `every heading, lede and step reads at AA on its band in the dark set (lowest ${look.minRatio.toFixed(2)}: ${look.worst})`)
       check(look.anchors.every((a) => a.found), `the three anchors reach their sections (${look.anchors.map((a) => `${a.href}${a.found ? '' : ' missing'}`).join(', ')})`)
     }
@@ -3790,7 +3797,8 @@ async function driveLook() {
     const id = a.getAttribute('href').slice(2)
     return { href: `#${id}`, found: !!document.getElementById(id) }
   })
-  return { mode: document.documentElement.getAttribute('data-gg-mode'), page: luminance(ground(document.body)), minRatio, worst, anchors }
+  const bands = [...document.querySelectorAll('main section.bg-section')].map((el) => ({ type: el.dataset.type, ground: luminance(ground(el)) }))
+  return { mode: document.documentElement.getAttribute('data-gg-mode'), page: luminance(ground(document.body)), minRatio, worst, anchors, bands }
 }
 
 // ── petition-drive (end) ─────────────────────────────────────────────────────

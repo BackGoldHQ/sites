@@ -5,6 +5,11 @@
 // module's frame, asked to wear this site (BackGold's embed look: the section's
 // layout, the colours where it sits, light and dark, the radius and the type)
 // so it draws no ground, card, heading or platform footer of its own. The
+// face is the template's `frameFont` when it is one the embed look accepts
+// (FRAME_FONTS), read from `Astro.locals.template`; where that is unset (a
+// frame drawn outside PageSections: an area, an event's page), Public Sans,
+// as it is for a template that names none. An unknown value is never sent:
+// the api drops a look with a malformed `font` as a whole. The
 // site credits BackGold once, as "Powered by BackGold" in the footer's bottom
 // row, never per module.
 //
@@ -46,6 +51,10 @@ const { embed: sent, band: sectionBand, type, layout, card = false, title, heigh
 const bg = Astro.locals.backgold
 const brand = bg.setup === null ? bg.site.brand : null
 const appearance = bg.setup === null ? appearanceOf(bg.site.style) : 'auto'
+/** The faces BackGold's embed look accepts (the api's EMBED_LOOK_FONTS). */
+const FRAME_FONTS = ['public-sans', 'inter', 'system-sans', 'system-serif']
+const frameFont = Astro.locals.template?.frameFont
+const font = frameFont && FRAME_FONTS.includes(frameFont) ? frameFont : 'public-sans'
 const band: SectionBand = card ? 'panel' : SECTION_BANDS.includes(sectionBand as SectionBand) ? (sectionBand as SectionBand) : 'plain'
 
 /** The module's address with the look query, or as sent when it is not one we can read. */
@@ -60,7 +69,7 @@ function framed(iframe: string | null): string | null {
   url.searchParams.set('layout', layout)
   for (const [key, value] of Object.entries(moduleLook(brand, band, appearance))) url.searchParams.set(key, value)
   url.searchParams.set('radius', '12')
-  url.searchParams.set('font', 'public-sans')
+  url.searchParams.set('font', font)
   return url.toString()
 }
 

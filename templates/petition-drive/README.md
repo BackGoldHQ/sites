@@ -41,7 +41,7 @@ only what is the drive's:
 | File | What it is |
 | --- | --- |
 | `template.json` | The manifest. |
-| `src/template.ts` | The config for the kit: the manifest, the kit's sections with the drive's four layouts added, the kit's entry layouts, the faces, and `defaultAppearance: 'dark'`. |
+| `src/template.ts` | The config for the kit: the manifest, the kit's sections with the drive's four layouts added, the kit's entry layouts, the faces, `defaultAppearance: 'dark'` and `frameFont: 'inter'`. |
 | `src/components/sections/Petition/Anchored.astro` | Every Petition layout as the kit draws it, anchored at `#petition` when the section names no anchor (a hosted page's Petition is). |
 | `src/components/sections/Issues/steps.astro` | Get involved: the kicker, the claim and the lead over numbered step cards (icon, "Step 01" in mono, title, line), then one action row with one filled button. |
 | `src/components/sections/EventsList/list.astro` | Show up in person: a row per event with its date block, type, time and place, live counts, and its RSVP and Details buttons. |
@@ -54,20 +54,22 @@ only what is the drive's:
 A new site on this template begins with one page, Home (`""`), whose
 sections are, top to bottom:
 
-1. **Petition · Map**, on the contrast band, full width: BackGold's petition
+1. **Petition · Map**, on the page (`plain`), full width: BackGold's petition
    with its live map header, seeded with the camera dataset (`datasetPreset`
    `alpr` over `datasetArea` `US-TX`, the hosted seed's choice, so the band is
    live on first publish), the badge noun *ALPRs*, four asks, the
    *Addressed to* line, the goal note, the volunteer box, signer
    recognition, and three tiles (sites mapped and signatures counted live,
-   public votes taken typed as 0).
+   public votes taken typed as 0). The frame draws its own dark map band and
+   sheet, so the section stays the page's ground, as on a hosted
+   petition-drive page.
 2. **Key issues · Steps** (`#get-involved`), on the tint band: the four
    steps of documenting what the drive maps, and three actions: the global
    map (filled), Sign the petition and Join a mapping walk (outlined, to
    `#petition` and `#events`).
 3. **Upcoming events · List** (`#events`), on the page: up to three.
 4. **Movement ticker** (`#signers`), a contained card on the panel band.
-5. **Call to action · Banner**, a contained card on the contrast band: *Put
+5. **Call to action · Banner**, a contained card on the panel band: *Put
    it on the record*, its one button *Add to the map* to `#get-involved`.
 
 The header menu is The petition, Get involved and Events, each an anchor on
@@ -89,7 +91,8 @@ On a template site the Petition section is BackGold's own module. The Content
 API sends it as an embed of the api's `/embed/petition/<page>/<block>`, and
 the kit's `Petition/map.astro` frames it (`ModuleFrame`), asking it to wear
 this site: the layout (`map`), the colours of the band it sits on, light and
-dark, the radius and the type. That frame draws the whole band and sheet: the
+dark, the radius and the type (`frameFont: 'inter'` in `src/template.ts`, the
+drive's text face). That frame draws the whole band and sheet: the
 live MapLibre map, its legend and count badge, the asks, the *Addressed to*
 line, the sign form with its goal meter, the tiles, the volunteer box. The
 template draws none of it twice, and never a field of its own.
@@ -100,7 +103,8 @@ The drive opens in the dark set of the organization's brand whatever the
 visitor's system says (`defaultAppearance: 'dark'` in `src/template.ts`,
 which the kit's `Site.astro` and `brandCss` honour for a site whose appearance
 is `auto`). The header's switch still turns it light, and remembers the
-choice. To pin it, set the site's appearance in BackGold: **light** keeps it
+choice. No starter band uses `contrast`, the one ground the dark set draws
+light, so the whole page opens dark. To pin it, set the site's appearance in BackGold: **light** keeps it
 light for everyone (and drops the switch), **dark** keeps it dark.
 
 The colours are the organization's: the template names none. A drive that

@@ -2,7 +2,7 @@
 // its manifest, the kit's sections with four of the drive's own (every
 // Petition layout anchored at `petition` as a hosted page's is, the Get
 // involved funnel, the event rows, the signers card), the kit's entry
-// layouts, its faces and its dark-first look. astro.config.mjs names this
+// layouts, its faces (the module frames' too) and its dark-first look. astro.config.mjs names this
 // file to the kit's integration, whose routes draw every page with it.
 //
 // The faces, from Google Fonts: Bricolage Grotesque for headings, Inter for
@@ -43,4 +43,7 @@ export default defineTemplate({
   // A drive opens dark, as the hosted petition-drive pages do; the header's
   // switch still turns it light, and a site pinned light in BackGold stays light.
   defaultAppearance: 'dark',
+  // BackGold's module frames (the petition's map band and sign sheet) draw in
+  // Inter, the drive's text face: `inter` is one of the embed look's faces.
+  frameFont: 'inter',
 })

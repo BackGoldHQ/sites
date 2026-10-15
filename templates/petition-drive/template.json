@@ -76,7 +76,7 @@
           {
             "id": "Petition-home",
             "type": "Petition",
-            "band": "contrast",
+            "band": "plain",
             "bleed": "full",
             "variant": "map",
             "copy": {
@@ -202,7 +202,7 @@
           {
             "id": "Cta-home",
             "type": "Cta",
-            "band": "contrast",
+            "band": "panel",
             "bleed": "contained",
             "variant": "banner",
             "copy": {

@@ -52,6 +52,13 @@ export interface TemplateConfig {
    * changes it, and a site pinned `light` or `dark` in BackGold keeps its pin.
    */
   defaultAppearance?: 'light' | 'dark'
+  /**
+   * The face BackGold's module frames draw in (the embed look's `font`, one
+   * of `public-sans`, `inter`, `system-sans`, `system-serif`: the api's
+   * EMBED_LOOK_FONTS). Left out, or not one of those, the frames draw in
+   * Public Sans (sections/modules/ModuleFrame.astro).
+   */
+  frameFont?: string
 }
 
 /** Every section type and layout the kit draws. */
