@@ -152,8 +152,8 @@
     }
   },
   "chrome": {
-    "header": "bar",
-    "footer": "columns",
+    "header": ["bar"],
+    "footer": ["columns"],
     "takeoverBanner": true,
     "legalLine": true
   },
