@@ -1,0 +1,742 @@
+# BackGold sites pipeline: the two public npm packages, the templates built on
+# them, and the party template's deploy.
+#
+# Each check job is path-filtered, so an MR that only touches the starter never
+# re-runs the party template's e2e (the runners are shared with the platform's
+# suites). GitLab evaluates `rules: changes:` against the MR diff natively;
+# each job lists its own paths, what it consumes, and the root list.
+#
+# Fan-out map (a consumer resolves the packages through their built dist/, so
+# each job builds what it consumes first):
+#   packages/content-client → content-client   (@backgold/content on npm)
+#                             + astro-backgold + starter + party
+#                             deploy-party-staging on main (automatic)
+#                             pack-content → publish-content (manual release)
+#   packages/astro-backgold → astro-backgold   (@backgold/astro on npm)
+#                             + starter + party
+#                             deploy-party-staging on main (automatic)
+#                             pack-astro → publish-astro (manual release)
+#   templates/astro-starter → starter          (the e2e, with
+#                                                scripts/starter-e2e.mjs);
+#                             sync-starter on main (automatic: mirrors it to
+#                                                gitlab.com/backgold/backgold-starter)
+#   templates/party         → party            (astro check, then the same e2e
+#                                                with --template party);
+#                             deploy-party-staging on main (automatic: the
+#                                                template into the sites-staging
+#                                                dispatch namespace, built from
+#                                                this workspace);
+#                             deploy-party-production (manual on main: the same
+#                                                into sites-production)
+#   templates/*/template.json → manifests      (each manifest against the
+#                                                vendored contract's schema)
+#   scripts/starter-e2e.mjs → starter + party
+#   scripts/check-manifests.mjs → manifests
+#   vendor/backgold-contract → manifests, and through the root list every
+#                             check job (the Content API contract slice both packages
+#                             bundle and the e2e's fixture api serves)
+#   root config             → every check job (lockfile/workspace/vendor/this file)
+#
+# The party template deploys from this workspace on a push to main; it never
+# waits on npm. Publishing the packages is a release for outside users (the
+# public starter and their own sites), played by hand.
+#
+# CI/CD variables the main-branch jobs read (project-level, protected, so only
+# main pipelines see them; masked unless noted):
+#   CLOUDFLARE_API_TOKEN     deploy-party-staging, deploy-party-production
+#   CLOUDFLARE_ACCOUNT_ID    deploy-party-staging, deploy-party-production
+#   PARTY_STAGING_KV_ID      deploy-party-staging
+#   PARTY_PRODUCTION_KV_ID   deploy-party-production
+#   NPM_TOKEN                publish-content, publish-astro
+#   STARTER_SYNC_KEY         sync-starter (a FILE variable, not masked: it is
+#                            a multi-line private key)
+# A job whose variable is unset stops with a sentence that names it before it
+# does anything; nothing deploys or publishes half-configured.
+#
+# Adding a package or template later: copy a check job, set its `changes:` to
+# its own paths plus whatever it consumes plus the root list. The `gate` job
+# needs no changes.
+
+workflow:
+  rules:
+    # A pushed branch runs nothing until it has an open, ready MR: a push to a
+    # branch with no MR is a `push` event and matches no rule below, and a
+    # draft MR is dropped here. Marking an MR ready does not start a pipeline,
+    # so whoever marks it ready runs one:
+    # `glab mr update <iid> --ready && glab ci run --mr -b <branch>`.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_DRAFT == "true"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # A main pipeline carries the deploy, so the next merge never cancels it:
+    # jobs default to `interruptible: true` (right for MR checks), which would
+    # otherwise let back-to-back merges cancel the only pipeline deploying the
+    # party template. Deploys queue instead.
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      auto_cancel:
+        on_new_commit: none
+
+stages: [check, deploy]
+
+default:
+  image: node:24
+  interruptible: true
+  before_script: &pnpm_install
+    - corepack enable
+    # Activates the exact pnpm from package.json's `packageManager` field.
+    - corepack prepare --activate
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install --frozen-lockfile
+  cache:
+    key:
+      files: [pnpm-lock.yaml]
+    paths: [.pnpm-store]
+
+# ---------------------------------------------------------------------------
+# The root list: a change to any of these can alter every package's build.
+# `changes:` lists do not merge through YAML anchors, so each job repeats its
+# own full `changes:` block below; this anchor is used where the root list is
+# the whole of it.
+# ---------------------------------------------------------------------------
+.root_changes: &root_changes
+  - .gitlab-ci.yml
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - vendor/**/*
+
+# The e2e jobs' image: Microsoft's Playwright image (Ubuntu 24.04, node 24,
+# its Chromium under /ms-playwright), pinned to the multi-arch index digest so
+# amd64 and arm64 runners pull the same build. wrangler dev runs workerd,
+# which needs glibc; Ubuntu has it. The Chromium's directory carries its
+# revision and its architecture (chrome-linux64 on amd64, chrome-linux-arm64
+# on arm64), so the job looks the executable up instead of naming it, and
+# stops with a sentence when the image has none. A job-level before_script
+# replaces the default one, so the pnpm bootstrap follows it here.
+.e2e_before_script: &e2e_before_script
+  - CHROME_BIN=$(ls -d /ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | head -n 1)
+  - |
+    if [ -z "$CHROME_BIN" ] || [ ! -x "$CHROME_BIN" ]; then
+      echo "FAIL: no Chromium under /ms-playwright/chromium-*/ in this image; the e2e's Lighthouse run and the party look checks need one at CHROME_BIN." >&2
+      exit 1
+    fi
+  - export CHROME_BIN
+  - echo "CHROME_BIN=$CHROME_BIN"
+  - *pnpm_install
+
+# =========================================================================
+# CHECK STAGE — runs on every ready MR.
+# =========================================================================
+
+# content-client = @backgold/content (packages/content-client), the public npm
+# client for the headless Content API. Its response types come from the
+# vendored contract slice and are bundled into its own declarations. `test`
+# compiles to dist-test and runs node:test. A hang dies at 15 minutes and
+# retries once; a real failure reds the job on the first run.
+content-client:
+  stage: check
+  timeout: 15m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  script:
+    - pnpm --filter @backgold/content lint
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/content test
+
+# astro-backgold = @backgold/astro (packages/astro-backgold), the public npm
+# package for an Astro site on Workers. It depends on @backgold/content
+# through its built dist, so the client builds first; then its own lint (tsc),
+# build and vitest. A client change re-runs it on the same MR. Same seatbelt
+# as `content-client`.
+astro-backgold:
+  stage: check
+  timeout: 15m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  script:
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/astro lint
+    - pnpm --filter @backgold/astro build
+    - pnpm --filter @backgold/astro test
+
+# starter = the public starter (templates/astro-starter) end to end:
+# scripts/starter-e2e.mjs packs both packages, installs them with npm into a
+# copy of the template outside the repository (so nothing resolves through
+# the workspace, as on a user's machine), builds it, serves it on
+# `wrangler dev` against a fixture api and asserts the pages, the SEO routes
+# and the webhook, then (`--lighthouse`) scores home and an entry page with
+# Lighthouse and fails below 95 on performance, accessibility or SEO, in the
+# image's Chromium at CHROME_BIN. The packages are built here first so their
+# dist exists to pack. A hang dies at 20 minutes and retries once; a real
+# failure reds the job on the first run.
+#
+# Runner architecture: the template copy's `npm install` takes workerd's
+# platform binary (@cloudflare/workerd-linux-x64 or -arm64) as an optional
+# dependency, and npm treats an optional dependency it fails to fetch as
+# skippable: the install reports success and the build then stops with
+# 'The package "@cloudflare/workerd-linux-arm64" could not be found'. On the
+# arm64 Mac runner the platform repository's copy of this e2e failed that way
+# on one run and passed on another, so it is a dropped download, not a
+# missing platform; npm already includes optional dependencies by default and has no
+# setting that makes their failure fatal. When it happens, retry the job.
+# The job does not pin a runner: no runner tags exist to pin to.
+starter:
+  stage: check
+  image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+  timeout: 20m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/astro-starter/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  before_script: *e2e_before_script
+  script:
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/astro build
+    - node scripts/starter-e2e.mjs --lighthouse
+
+# party = the party template (templates/party), first `astro check` (the
+# template's own `check` script) run in place from the workspace, where its
+# @backgold dependencies resolve to the packages just built here; then the
+# same end-to-end checks as `starter`: scripts/starter-e2e.mjs with
+# `--template party` copies templates/party in place of the starter and runs
+# every check, Lighthouse and the party look checks in Chromium included.
+# Same image, timeout, retry and runner note as `starter`.
+party:
+  stage: check
+  image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+  timeout: 20m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/party/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  before_script: *e2e_before_script
+  script:
+    - pnpm --filter @backgold/content build
+    - pnpm --filter @backgold/astro build
+    - pnpm --filter backgold-template-party exec astro check
+    - node scripts/starter-e2e.mjs --template party --lighthouse
+
+# manifests = every templates/<dir>/template.json against
+# siteTemplateManifestSchema from the vendored contract slice, and each
+# manifest's key against its directory (scripts/check-manifests.mjs). The
+# platform keeps a copy of each manifest and checks it with the same schema,
+# so a manifest that passes here is one the platform can take. The install is
+# for the slice's own import of zod.
+manifests:
+  stage: check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/*/template.json
+        - vendor/backgold-contract/**/*
+        - scripts/check-manifests.mjs
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  script:
+    - node scripts/check-manifests.mjs
+
+# Always-on gate. With every real job path-filtered, an MR that touches only
+# docs would otherwise produce a pipeline with no jobs, and "pipelines must
+# succeed" blocks merging when no pipeline exists. This guarantees exactly one
+# cheap, always-green status per pipeline; a failed sibling job still fails
+# the pipeline as a whole.
+gate:
+  stage: check
+  cache: []
+  before_script: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  script:
+    - echo "pipeline present — check jobs run only for changed paths"
+
+# =========================================================================
+# PARTY TEMPLATE DEPLOYS. The MR already ran the checks, so the deploys build
+# straight off the push rather than re-running them. wrangler reads
+# CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the environment.
+# =========================================================================
+
+# deploy-party-staging: templates/party as the Worker `template-party` in the
+# Workers for Platforms dispatch namespace `sites-staging`. The staging api
+# Worker (givegold-api-staging) answers every *.backgold.dev host and
+# dispatches each request for a site on the party template to that Worker
+# with the site's id in X-BackGold-Site; the Worker reads the Content API
+# first-party, through a service binding to the api's FirstParty entrypoint.
+# One deploy serves every party-template site on staging, the Westmark Liberty
+# Party demo (westmark.backgold.dev) among them. A namespace Worker has no
+# routes or Custom Domain, so the deploy touches no DNS. AUTOMATIC on a main
+# push that changed the template, a package, the vendored contract, the
+# lockfile or this file; MANUAL and never blocking on every other main
+# pipeline, to redeploy by hand. It deploys the template as committed in the
+# pipeline it runs in, so play it by hand on the newest main pipeline.
+# Content changes never need it: a publish bumps the site's content version,
+# the client notices within its one-minute version check, and a new version
+# is a miss in the site's cache.
+#
+# It builds from this workspace: the default before_script installs it, the
+# two packages build to their dist, and the template's @backgold dependencies
+# resolve to them, so the deploy carries the packages as committed here,
+# never what is on npm.
+#
+# The staging environment of templates/party/wrangler.jsonc holds the name,
+# the BACKGOLD_API service binding, BACKGOLD_API_ORIGIN and the cache's KV
+# binding. The Cloudflare adapter writes the deploy config
+# (dist/server/wrangler.json) during `astro build`, choosing the environment
+# from CLOUDFLARE_ENV then; `wrangler deploy` reads that file, so a `--env`
+# given only at deploy time would be ignored and the default config (Worker
+# `backgold-party`) deployed. The job therefore builds with
+# CLOUDFLARE_ENV=staging and refuses to deploy unless the built config names
+# template-party. Before building it reads the namespace and stops with a
+# sentence when it does not exist (wrangler's code 100119): creating it is a
+# one-time account step (templates/party/README.md, Staging deploy).
+#
+# Variables, besides CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID:
+#   PARTY_STAGING_KV_ID           required. The id of the BACKGOLD_CACHE KV
+#                                 namespace, created once by hand. Wrangler
+#                                 reads no environment variable in a config, so
+#                                 the job writes it over the placeholder in
+#                                 wrangler.jsonc before the build.
+# No site key and no secrets: a first-party read needs no key (the site comes
+# from X-BackGold-Site, drafts for /preview included), and the api keeps
+# /api/* on every site host, so the template's webhook route is never reached.
+deploy-party-staging:
+  stage: deploy
+  environment: staging
+  interruptible: false
+  resource_group: party-staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - templates/party/**/*
+        - packages/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+  script:
+    - |
+      set -euo pipefail
+      namespace=sites-staging
+      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+        if [ -z "${!var:-}" ]; then
+          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
+          exit 1
+        fi
+      done
+      if ! printf '%s' "${PARTY_STAGING_KV_ID:-}" | grep -Eq '^[0-9a-f]{32}$'; then
+        echo "FAIL: PARTY_STAGING_KV_ID must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/party/README.md, Staging deploy) and set the variable." >&2
+        exit 1
+      fi
+      sed -i "s/__PARTY_STAGING_KV_ID__/$PARTY_STAGING_KV_ID/" templates/party/wrangler.jsonc
+      if ! grep -q "\"id\": \"$PARTY_STAGING_KV_ID\"" templates/party/wrangler.jsonc; then
+        echo "FAIL: templates/party/wrangler.jsonc has no __PARTY_STAGING_KV_ID__ placeholder in its staging kv_namespaces; not deploying." >&2
+        exit 1
+      fi
+      if ! ns_out=$(pnpm --filter backgold-template-party exec wrangler dispatch-namespace get "$namespace" 2>&1); then
+        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
+          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/party/README.md, Staging deploy), then play the job again." >&2
+        else
+          printf '%s\n' "$ns_out" >&2
+          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
+        fi
+        exit 1
+      fi
+      pnpm --filter @backgold/content build
+      pnpm --filter @backgold/astro build
+      CLOUDFLARE_ENV=staging pnpm --filter backgold-template-party build
+      built=$(node -p "require('./templates/party/dist/server/wrangler.json').name")
+      if [ "$built" != "template-party" ]; then
+        echo "FAIL: the build wrote a deploy config for '$built', not template-party; not deploying." >&2
+        exit 1
+      fi
+      pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace "$namespace"
+
+# deploy-party-production: the same template as the Worker `template-party` in
+# the Workers for Platforms dispatch namespace `sites-production`, which the
+# production api Worker (backgold-api) binds as SITES. That api answers every
+# *.backgold.com host and each verified tenant custom domain, and dispatches
+# each request for a site on the party template to this Worker with the site's
+# id in X-BackGold-Site; the Worker reads the Content API first-party through
+# a service binding to backgold-api's FirstParty entrypoint. One deploy serves
+# every party-template site in production. Until this job has run once the
+# namespace holds no script, and those sites answer 503 "This site isn't ready
+# yet." MANUAL ONLY on every main pipeline and never blocking (`allow_failure`
+# defaults to true for a manual job, so an unplayed deploy never holds the
+# pipeline); it deploys the template as committed in the pipeline it is played
+# from, so play it on the newest main pipeline.
+#
+# The script is deploy-party-staging's with the environment names changed: the
+# namespace (sites-production), the CI variable (PARTY_PRODUCTION_KV_ID,
+# written over __PARTY_PRODUCTION_KV_ID__ in the `production` environment of
+# templates/party/wrangler.jsonc), CLOUDFLARE_ENV=production for the build, the
+# GitLab environment and resource group, and the README pointer (Production
+# deploy). It is duplicated, not shared, so each job reads top to bottom. See
+# the staging job's note for why it builds from the workspace, why the build,
+# not the deploy, chooses the environment, and why the job stops before
+# building when the namespace is missing.
+#
+# Variables, besides CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID:
+#   PARTY_PRODUCTION_KV_ID        required. The id of the production
+#                                 BACKGOLD_CACHE KV namespace
+#                                 (backgold-party-production-cache), created
+#                                 once by hand. Not the staging namespace's id.
+# No site key and no secrets, as for staging.
+deploy-party-production:
+  stage: deploy
+  environment: production
+  interruptible: false
+  resource_group: party-production
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+  script:
+    - |
+      set -euo pipefail
+      namespace=sites-production
+      for var in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+        if [ -z "${!var:-}" ]; then
+          echo "FAIL: $var is not set; it is a protected variable on this project (Settings > CI/CD > Variables), so only main pipelines see it. Not deploying." >&2
+          exit 1
+        fi
+      done
+      if ! printf '%s' "${PARTY_PRODUCTION_KV_ID:-}" | grep -Eq '^[0-9a-f]{32}$'; then
+        echo "FAIL: PARTY_PRODUCTION_KV_ID must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/party/README.md, Production deploy) and set the variable." >&2
+        exit 1
+      fi
+      sed -i "s/__PARTY_PRODUCTION_KV_ID__/$PARTY_PRODUCTION_KV_ID/" templates/party/wrangler.jsonc
+      if ! grep -q "\"id\": \"$PARTY_PRODUCTION_KV_ID\"" templates/party/wrangler.jsonc; then
+        echo "FAIL: templates/party/wrangler.jsonc has no __PARTY_PRODUCTION_KV_ID__ placeholder in its production kv_namespaces; not deploying." >&2
+        exit 1
+      fi
+      if ! ns_out=$(pnpm --filter backgold-template-party exec wrangler dispatch-namespace get "$namespace" 2>&1); then
+        if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
+          echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/party/README.md, Production deploy), then play the job again." >&2
+        else
+          printf '%s\n' "$ns_out" >&2
+          echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2
+        fi
+        exit 1
+      fi
+      pnpm --filter @backgold/content build
+      pnpm --filter @backgold/astro build
+      CLOUDFLARE_ENV=production pnpm --filter backgold-template-party build
+      built=$(node -p "require('./templates/party/dist/server/wrangler.json').name")
+      if [ "$built" != "template-party" ]; then
+        echo "FAIL: the build wrote a deploy config for '$built', not template-party; not deploying." >&2
+        exit 1
+      fi
+      pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace "$namespace"
+
+# =========================================================================
+# NPM — MANUAL ONLY. Publishes the two public packages to the npm registry,
+# each through a pair of jobs:
+#   pack-content → publish-content   @backgold/content (packages/content-client)
+#   pack-astro   → publish-astro     @backgold/astro   (packages/astro-backgold)
+# A person plays ONE job, the pack job, on a main pipeline; its publish job
+# starts by itself when the pack job succeeds. With `sync-starter` they are
+# the only jobs that put source in a public place. Nothing in this repository
+# waits on a publish: the party template deploys from the workspace. A
+# release is for outside users, the public starter among them.
+#
+# The pack job does everything that runs repository or dependency code:
+# `pnpm install` (the default before_script, with dependency install
+# scripts), builds what the package links against, the package's lint, build
+# and test, then `pnpm pack` (which rewrites `workspace:` ranges to real
+# ones). It refuses a version already on npm, a packed manifest that still
+# names a `workspace:` range, and one that depends on an @backgold version npm
+# does not have, so @backgold/astro never ships pointing at an unpublished
+# client. Its only artifact is the tarball, kept for a day. It never uses the
+# npm token; every read it makes of npm is anonymous.
+#
+# The publish job holds the token and runs no repository or dependency code:
+# no checkout (GIT_STRATEGY none), no install, no cache, and only the pack
+# job's tarball as input. It checks the token is set, writes an npmrc into
+# its own temp dir holding the literal `${NPM_TOKEN}` reference (npm expands
+# it when it sends a request, so the token never reaches disk), runs
+# `npm whoami`, re-checks the version is not on npm, and runs
+# `npm publish <tarball> --access public`. No line prints the token and
+# nothing runs under `set -x`. Never commit an .npmrc.
+#
+# NPM_TOKEN is a masked, protected project variable holding a granular npm
+# token with 2FA bypass, so only pipelines on main see it. The publish jobs
+# declare the environment `npm` (action `access`: GitLab hands them variables
+# scoped to `npm` but records no deployment, so the publish history stays in
+# npm and in these job logs). Until the variable is scoped to that
+# environment, every job of a main pipeline receives it; scoping it limits it
+# to the two publish jobs, and both jobs work either way. GitLab's API needs
+# the value to change a variable's scope, so the scope change is a second
+# variable plus a delete, with the token piped in from the clipboard so it
+# never sits on a command line (JHL, once, on a Mac with the token copied):
+#   pbpaste | glab variable set NPM_TOKEN --scope npm --masked --protected -R backgold/sites && glab variable delete NPM_TOKEN --scope '*' -R backgold/sites
+#
+# REVISIT BEFORE JANUARY 2027: npm retires token publishing in early 2027
+# (github.blog changelog, 2026-07-08). Its replacement, trusted publishing,
+# accepts only GitLab.com-hosted runners, which this project does not use, so
+# the release path has to change before then.
+#
+# To release: bump `version` in the package's package.json in an MR, merge,
+# then play the pack job on that merge's pipeline. Publish @backgold/content
+# first when @backgold/astro needs its new version. A version already on npm
+# is refused up front, so re-running after a half-finished attempt stops with
+# a message instead of a registry error.
+# =========================================================================
+
+.pack-npm:
+  stage: deploy
+  # A pack cancelled halfway leaves nothing to publish; one cancelled while
+  # its publish job waits would strand a release. Never interrupt either.
+  interruptible: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+  script:
+    - |
+      VERSION=$(node -p "require('./${PUBLISH_DIR}/package.json').version")
+      # `npm view` prints the version when it exists, prints nothing when the
+      # package exists without it, and exits non-zero when the package does not
+      # exist yet (the first publish).
+      PUBLISHED=$(npm view "${PUBLISH_PACKAGE}@${VERSION}" version 2>/dev/null || true)
+      if [ "$PUBLISHED" = "$VERSION" ]; then
+        echo "FAIL: ${PUBLISH_PACKAGE}@${VERSION} is already on npm. Bump the version in ${PUBLISH_DIR}/package.json in an MR, then publish from that merge's pipeline."
+        exit 1
+      fi
+    - for dep in $PUBLISH_BUILD_FIRST; do pnpm --filter "$dep" build; done
+    - pnpm --filter "$PUBLISH_PACKAGE" lint
+    - pnpm --filter "$PUBLISH_PACKAGE" build
+    - pnpm --filter "$PUBLISH_PACKAGE" test
+    - |
+      PACK_DIR="$CI_PROJECT_DIR/npm-tarball"
+      rm -rf "$PACK_DIR"
+      mkdir -p "$PACK_DIR"
+      (cd "$PUBLISH_DIR" && pnpm pack --pack-destination "$PACK_DIR")
+      TARBALL=$(ls "$PACK_DIR"/*.tgz)
+      CHECK_DIR=$(mktemp -d)
+      tar -xzOf "$TARBALL" package/package.json > "$CHECK_DIR/manifest.json"
+      node -e '
+        const m = require(process.argv[1]);
+        const deps = { ...m.peerDependencies, ...m.optionalDependencies, ...m.dependencies };
+        for (const [name, range] of Object.entries(deps)) console.log(name + " " + range);
+      ' "$CHECK_DIR/manifest.json" > "$CHECK_DIR/deps.txt"
+      while read -r name range; do
+        case "$range" in
+          workspace:*)
+            echo "FAIL: the packed ${PUBLISH_PACKAGE} still depends on ${name}@${range}; pnpm pack should have rewritten it."
+            exit 1
+            ;;
+        esac
+        case "$name" in @backgold/*) ;; *) continue ;; esac
+        if [ -z "$(npm view "${name}@${range}" version 2>/dev/null || true)" ]; then
+          echo "FAIL: the packed ${PUBLISH_PACKAGE} depends on ${name}@${range}, which is not on npm. Publish ${name} first."
+          exit 1
+        fi
+        echo "${name}@${range} resolves on npm"
+      done < "$CHECK_DIR/deps.txt"
+      echo "Packed ${PUBLISH_PACKAGE}@${VERSION} as $(basename "$TARBALL"); its publish job starts next."
+  artifacts:
+    paths:
+      - npm-tarball/*.tgz
+    expire_in: 1 day
+
+.publish-npm:
+  stage: deploy
+  interruptible: false
+  environment:
+    name: npm
+    action: access
+  variables:
+    GIT_STRATEGY: none
+  before_script: []
+  cache: []
+  # No `when: manual`: the job waits on its pack job (`needs`, per job below)
+  # and runs as soon as that one succeeds.
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  script:
+    - |
+      if [ -z "${NPM_TOKEN:-}" ]; then
+        echo "FAIL: NPM_TOKEN is empty. It is a protected variable, so only main pipelines see it, and only jobs in the npm environment when it is scoped there; check it under Settings > CI/CD > Variables."
+        exit 1
+      fi
+      NPM_CONFIG_USERCONFIG="$(mktemp -d)/npmrc"
+      export NPM_CONFIG_USERCONFIG
+      printf '%s\n' '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
+    - npm --version
+    - npm whoami
+    - |
+      # ./ in front: npm reads a bare `dir/file.tgz` as a GitHub `owner/repo`
+      # shorthand and tries to clone it; a leading ./ makes it a file.
+      set -- ./npm-tarball/*.tgz
+      if [ "$#" != 1 ] || [ ! -f "$1" ]; then
+        echo "FAIL: expected exactly one tarball from the pack job in npm-tarball/."
+        exit 1
+      fi
+      TARBALL="$1"
+      ID=$(tar -xzOf "$TARBALL" package/package.json | node -e '
+        let s = "";
+        process.stdin.on("data", (d) => (s += d)).on("end", () => {
+          const m = JSON.parse(s);
+          process.stdout.write(m.name + " " + m.version);
+        });
+      ')
+      NAME=${ID% *}
+      VERSION=${ID#* }
+      if [ "$NAME" != "$PUBLISH_PACKAGE" ]; then
+        echo "FAIL: the tarball is ${NAME}, not ${PUBLISH_PACKAGE}."
+        exit 1
+      fi
+      PUBLISHED=$(npm view "${NAME}@${VERSION}" version 2>/dev/null || true)
+      if [ "$PUBLISHED" = "$VERSION" ]; then
+        echo "FAIL: ${NAME}@${VERSION} is already on npm."
+        exit 1
+      fi
+      echo "Publishing ${NAME}@${VERSION} from $(basename "$TARBALL")"
+      npm publish "$TARBALL" --access public
+
+pack-content:
+  extends: .pack-npm
+  variables:
+    PUBLISH_PACKAGE: "@backgold/content"
+    PUBLISH_DIR: packages/content-client
+    # Nothing to build first: the contract slice it bundles is plain files.
+
+publish-content:
+  extends: .publish-npm
+  needs:
+    - job: pack-content
+      artifacts: true
+  variables:
+    PUBLISH_PACKAGE: "@backgold/content"
+
+pack-astro:
+  extends: .pack-npm
+  variables:
+    PUBLISH_PACKAGE: "@backgold/astro"
+    PUBLISH_DIR: packages/astro-backgold
+    # The client it depends on, through its dist.
+    PUBLISH_BUILD_FIRST: "@backgold/content"
+
+publish-astro:
+  extends: .publish-npm
+  needs:
+    - job: pack-astro
+      artifacts: true
+  variables:
+    PUBLISH_PACKAGE: "@backgold/astro"
+
+# =========================================================================
+# STARTER SYNC — templates/astro-starter → gitlab.com/backgold/backgold-starter
+# (public), the repository Cloudflare's Deploy button clones, with the Astro
+# starter as its root. AUTOMATIC on a main push that touched the template;
+# MANUAL on every other main pipeline, so it can be re-run by hand (after
+# publishing a package the template needs, or to restore a public repository
+# someone edited). This job is the public repository's only writer.
+#
+# scripts/sync-starter.sh does the work. It always syncs main's NEWEST
+# commit, whichever pipeline's job runs it: it fetches this repository's
+# origin main (the job's shallow, detached checkout is fine) and takes the
+# template from that commit, not from this pipeline's. Playing an older
+# pipeline's job pushes the newest template or finds nothing to change, so it
+# can never revert the public repository, and two merges landing close
+# together both end with the newest template synced. It refuses to push
+# unless the @backgold/astro and @backgold/content ranges the public
+# template's package.json names resolve on npm (the public starter must
+# always install, so publish first), replaces the public tree with the
+# template as committed (deletions propagate, nothing outside the template is
+# copied), commits as `BackGold <noreply@backgold.com>` with
+# `Sync from backgold@<short sha of main's newest commit>`, and pushes to main
+# as a plain fast-forward. Nothing changed, nothing pushed. A push rejected
+# because the public main moved after the clone fails the job; re-run it.
+#
+# A starter range that is not on npm yet exits 3, which `allow_failure`
+# turns into a warning: the merge that adds or bumps a template dependency
+# leaves main yellow, not red, until the package is published; then play
+# this job on any main pipeline. On the automatic run every other failure
+# (main cannot be fetched, bad key, unreadable repository, a range npm
+# cannot install at all, a rejected push) exits 1 and fails the job. A
+# run played by hand is a manual job and, like every manual job here, never
+# fails the pipeline; read its log.
+#
+# It pushes over SSH with the write deploy key on backgold/backgold-starter:
+# STARTER_SYNC_KEY is a protected FILE variable (not masked: it is
+# multi-line) holding the private half. The script pins gitlab.com's host
+# keys rather than trusting a scan at run time, and ignores the image's
+# system known_hosts and any ssh config. `resource_group` keeps two
+# syncs from racing for the same branch.
+# =========================================================================
+
+sync-starter:
+  stage: deploy
+  interruptible: false
+  resource_group: starter-sync
+  allow_failure:
+    exit_codes: [3]
+  # git, ssh and npm come with node:24; nothing from the workspace is needed.
+  cache: []
+  before_script: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - templates/astro-starter/**/*
+    # A job-level allow_failure other than `true` would make this manual job
+    # block the pipeline until played; the rule keeps it non-blocking.
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+  script:
+    - bash scripts/sync-starter.sh
