@@ -77,6 +77,12 @@ workflow:
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
       auto_cancel:
         on_new_commit: none
+    # A main pipeline started by hand (Run pipeline in the UI, `glab ci run -b
+    # main`) carries the manual deploy, release and sync jobs, so any of them
+    # can be played without waiting for a push.
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "web"
+      auto_cancel:
+        on_new_commit: none
 
 stages: [check, deploy]
 
@@ -302,7 +308,7 @@ gate:
   before_script: []
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")
   script:
     - echo "pipeline present — check jobs run only for changed paths"
 
@@ -372,7 +378,7 @@ deploy-party-staging:
         - vendor/**/*
         - pnpm-lock.yaml
         - .gitlab-ci.yml
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
       when: manual
       allow_failure: true
   script:
@@ -450,7 +456,7 @@ deploy-party-production:
   resource_group: party-production
   # Exists only once CLOUDFLARE_API_TOKEN is set, as deploy-party-staging.
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
       when: manual
       allow_failure: true
   script:
@@ -551,7 +557,7 @@ deploy-party-production:
   # its publish job waits would strand a release. Never interrupt either.
   interruptible: false
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")
       when: manual
   script:
     - |
@@ -614,7 +620,7 @@ deploy-party-production:
   # No `when: manual`: the job waits on its pack job (`needs`, per job below)
   # and runs as soon as that one succeeds.
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")
   script:
     - |
       if [ -z "${NPM_TOKEN:-}" ]; then
@@ -750,7 +756,7 @@ sync-starter:
         - scripts/sync-starter.sh
     # A job-level allow_failure other than `true` would make this manual job
     # block the pipeline until played; the rule keeps it non-blocking.
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $STARTER_SYNC_KEY
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $STARTER_SYNC_KEY
       when: manual
       allow_failure: true
   script:
