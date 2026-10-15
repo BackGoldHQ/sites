@@ -850,7 +850,12 @@ function calendarMonthOf(date) {
 
 function fixtureData(ex, kitchenSections) {
   const legal = ex.SiteResponse.legal
-  const site = ex.SiteResponse.site
+  // The example site stores the contract's footer (columns); a site on the
+  // party template stores nothing, so its chrome is the template's own
+  // firsts (the giving footer), which the party checks below expect.
+  const site = PARTY
+    ? { ...ex.SiteResponse.site, chrome: { header: { layout: 'bar' }, footer: { ...ex.SiteResponse.site.chrome.footer, layout: 'giving' } } }
+    : ex.SiteResponse.site
   const hero = ex.PageResponse.sections[0]
   const donate = ex.PageResponse.sections[1]
   const homeAreas = structuredClone(ex.PageResponse.areas)
@@ -1998,17 +2003,9 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(html.includes(banner.sections[0].copy.headline) && html.includes(banner.sections[0].copy.pitch), "the Top banner's TakeoverBanner shows its headline and pitch")
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'published home carries no section markers and no preview meta')
   check(html.indexOf('data-bg-area="top_banner"') < html.indexOf('<main'), 'the Top banner sits above the main column')
-  if (PARTY) {
-    // The party template's footer is `giving`: an Above-the-footer item made
-    // only of email sign-ups (home's) is drawn inside the footer, above the
-    // legal line.
-    check(
-      html.indexOf('data-bg-area="above_footer"') > html.indexOf('<footer') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('class="disclaimer"'),
-      'the sign-up Above the footer sits inside the footer, above the legal line (giving footer)',
-    )
-  } else {
-    check(html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('<footer'), 'Above the footer sits between the main column and the footer')
-  }
+  // On every template and every footer layout (the party's giving footer
+  // included), Above the footer sits above the footer, as board A1 draws it.
+  check(html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>') && html.indexOf('data-bg-area="above_footer"') < html.indexOf('<footer'), 'Above the footer sits between the main column and the footer')
   const windowScripts = html.split('[data-bg-area-item][data-from]').length - 1
   check(windowScripts === 1, `the areas' window script is on the page once (found ${windowScripts})`)
   check(/<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html), 'home (it takes donations) shows the Donate header button')

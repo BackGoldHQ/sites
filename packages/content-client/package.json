@@ -1,6 +1,6 @@
 {
   "name": "@backgold/content",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Typed, cache-aware client for the BackGold headless Content API (/api/content/v1)",
   "license": "MIT",
   "type": "module",
