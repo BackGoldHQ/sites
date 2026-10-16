@@ -2,7 +2,8 @@
 // The menu's header button: the one link marked `header_button`, drawn on
 // the pages its Shows on rule names (every page without `page`). Renders
 // nothing when the button does not show or its address is unsafe; nothing
-// takes its place. A Donate button carries `data-bg-donate`.
+// takes its place. A Donate button carries `data-bg-donate`; on its own page
+// (its address is the page being drawn) it carries `aria-current="page"`.
 import type { MenuItem } from '@backgold/content'
 import { headerButtonOf, type MenuPage } from '../dist/render.js'
 
@@ -20,6 +21,7 @@ const button = headerButtonOf(items, Astro.url.pathname, page)
     class:list={['bg-menu-button', className]}
     href={button.href}
     rel={button.rel}
+    aria-current={button.current ? 'page' : undefined}
     data-bg-button
     data-bg-donate={button.kind === 'donate' ? '' : undefined}
   >{button.label}</a>

@@ -1,0 +1,162 @@
+---
+// QuoteStrip, 'wall' layout as the candidate template draws it (board C4,
+// sections 3 to 5; the endorsements wall, C-2): the heading, then a wall of
+// name cards, four across on a wide screen, two from 40rem, one on a phone.
+// Each card is the endorser's mark (their logo from a safe address, else the
+// initials of the name in a disc) beside the name and, muted, the role. A
+// row with words is a quote card: it spans two columns, the quote in curly
+// quotes (left as typed when the operator typed their own) over the name. A
+// row with neither a name nor words is left out. One section is one group
+// (Organizations, Elected officials, Neighbors). Nothing is drawn with no
+// heading and no card.
+import type { ComponentProps } from 'astro/types'
+import { safeSrc } from '@backgold/astro/server'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import type Default from '@backgold/template-kit/components/sections/QuoteStrip/index.astro'
+import { rows } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const OPENS = /^["'“”‘’„«»]/
+const CLOSES = /["'“”‘’»«]$/
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const cards = rows(section).flatMap((row) => {
+  const name = text(row.attribution)?.trim() || null
+  const quote = text(row.quote)?.trim() || null
+  if (!name && !quote) return []
+  const words = (name ?? '').split(/\s+/).filter((w) => /^\p{L}/u.test(w))
+  const initials = (words.length > 1 ? words[0][0] + words[words.length - 1][0] : (words[0] ?? '').slice(0, 2)).toUpperCase()
+  return [{
+    name,
+    role: text(row.role)?.trim() || null,
+    quote,
+    quoted: quote !== null && quote.length > 1 && OPENS.test(quote) && CLOSES.test(quote),
+    logo: safeSrc(row.logoUrl),
+    initials,
+  }]
+})
+---
+{(heading || cards.length > 0) && (
+  <Band section={section} class="quotes quotes-wall endorse-wall">
+    <SectionHead kicker={null} heading={heading} more={[]} />
+    {cards.length > 0 && (
+      <ul class="ew" role="list">
+        {cards.map((card) => (
+          <li class:list={['ew-card', card.quote && 'ew-said']}>
+            <figure>
+              {card.logo ? (
+                <img class="ew-mark" src={card.logo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                card.initials && <span class="ew-mark ew-initials" aria-hidden="true">{card.initials}</span>
+              )}
+              <div class="ew-words">
+                {card.quote && (
+                  <blockquote>
+                    <p class:list={['ew-quote', card.quoted && 'ew-quoted']}>{card.quote}</p>
+                  </blockquote>
+                )}
+                {(card.name || card.role) && (
+                  <figcaption>
+                    {card.name && <span class="ew-name">{card.name}</span>}
+                    {card.role && <span class="ew-role">{card.role}</span>}
+                  </figcaption>
+                )}
+              </div>
+            </figure>
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}
+
+<style>
+  .ew {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ew-card {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 0.875rem;
+    background: var(--surface);
+  }
+  .ew-card figure {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 100%;
+    margin: 0;
+    padding: 0.875rem 1rem;
+  }
+  .ew-said figure {
+    align-items: flex-start;
+  }
+  .ew-mark {
+    flex: 0 0 auto;
+    width: 2.625rem;
+    height: 2.625rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .ew-initials {
+    display: grid;
+    place-items: center;
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .ew-words {
+    min-width: 0;
+  }
+  .ew-card blockquote {
+    margin: 0 0 0.5rem;
+  }
+  .ew-quote {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+  .ew-quote:not(.ew-quoted)::before {
+    content: open-quote;
+  }
+  .ew-quote:not(.ew-quoted)::after {
+    content: close-quote;
+  }
+  .ew-name {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .ew-role {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+  @media (min-width: 40rem) {
+    .ew {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .ew-said {
+      grid-column: span 2;
+    }
+  }
+  @media (min-width: 60rem) {
+    .ew {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

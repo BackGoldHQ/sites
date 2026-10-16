@@ -1,0 +1,7 @@
+{
+  // `pnpm lint`: `astro check` type-checks the .astro files and the .ts they
+  // import; `tsc --noEmit` the .ts and the integration's .js.
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "src/**/*", "astro.config.mjs"],
+  "exclude": ["node_modules", "dist"]
+}

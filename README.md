@@ -21,15 +21,17 @@ gitlab.com/backgold/backgold (private).
 | --- | --- |
 | `packages/content-client` | [`@backgold/content`](https://www.npmjs.com/package/@backgold/content) on npm: the typed, cache-aware client for the Content API (`/api/content/v1`), and the `backgold-content` command that writes a site's content types. |
 | `packages/astro-backgold` | [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro) on npm: the plumbing for an Astro site on Cloudflare Workers (routing, the edge cache keyed by content version, the webhook, preview, redirects, the SEO routes and the components). It reads content with `@backgold/content`. |
+| `packages/template-kit` | `@backgold/template-kit`, private to this workspace: what every BackGold template draws the same way (the section, entry and chrome components, the Site layout, `lib`, the stylesheets) and an Astro integration that serves its routes with a template's config. Consumed as source; no build. A template is its manifest, its `src/template.ts`, its `src/styles/template.css` and any layouts of its own. |
 | `templates/astro-starter` | The public starter. `scripts/sync-starter.sh` mirrors it to [gitlab.com/backgold/backgold-starter](https://gitlab.com/backgold/backgold-starter), the repository Cloudflare's Deploy button clones. |
-| `templates/party` | The party template, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
+| `templates/party` | The party template, drawn by the template kit, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
+| `templates/candidate`, `templates/petition-drive` | The candidate and petition-drive templates, drawn by the template kit and deployed like the party: Workers `template-candidate` and `template-petition-drive`, with the CI variables `CANDIDATE_STAGING_KV_ID`, `CANDIDATE_PRODUCTION_KV_ID`, `PETITION_DRIVE_STAGING_KV_ID` and `PETITION_DRIVE_PRODUCTION_KV_ID`. |
 
 Beside them:
 
 | Path | What it is |
 | --- | --- |
 | `vendor/backgold-contract` | A snapshot of the Content API contract (response types, example responses, built-in content types, the template manifest schema) built in the platform repository. It is the private workspace package `@backgold/contract`; `@backgold/content` bundles what it uses of it. Never edit it; pull a new one (below). |
-| `scripts/starter-e2e.mjs` | The end-to-end check: packs both packages, installs them with npm into a copy of a template outside the repository, builds it, and runs it on `wrangler dev` against a fixture Content API. |
+| `scripts/starter-e2e.mjs` | The end-to-end check: packs both packages (and the template kit and the contract, for a template on the kit), installs them with npm into a copy of a template outside the repository, builds it, and runs it on `wrangler dev` against a fixture Content API. |
 | `scripts/check-manifests.mjs` | Parses every `templates/*/template.json` with the vendored manifest schema. |
 | `scripts/contract-pull.mjs` | Refreshes `vendor/backgold-contract` from a platform checkout. |
 | `scripts/sync-starter.sh` | Mirrors the starter to its public repository. |
@@ -97,12 +99,15 @@ draft runs nothing), and each check job runs only when the paths it covers
 changed. Marking an MR ready does not start a pipeline:
 `glab mr update <iid> --ready && glab ci run --mr -b <branch>`.
 
-- **The party template deploys on push to `main`.** `deploy-party-staging`
-  runs by itself when a push changed the template, a package, the vendored
+- **Each template deploys on push to `main`.** The party, candidate and
+  petition-drive templates share one deploy shape: `deploy-<template>-staging`
+  runs by itself when a push changed that template, a package, the vendored
   contract, the lockfile or the CI file, building everything from this
-  workspace; it never waits on npm. `deploy-party-production` is a manual job
-  on every `main` pipeline. Both exist only once `CLOUDFLARE_API_TOKEN` is set
-  on the project. The party template's README covers the one-time setup.
+  workspace; it never waits on npm. `deploy-<template>-production` is a manual
+  job on every `main` pipeline. All six exist only once `CLOUDFLARE_API_TOKEN`
+  is set on the project, and each reads its own KV namespace id from
+  `PARTY_`, `CANDIDATE_` or `PETITION_DRIVE_` plus `STAGING_KV_ID` or
+  `PRODUCTION_KV_ID`. Each template's README covers the one-time setup.
 - **Releasing a package to npm** is for outside users (the public starter and
   their own sites). Bump `version` in the package's `package.json` in an MR,
   merge it, then play `pack-content` or `pack-astro` on that merge's `main`

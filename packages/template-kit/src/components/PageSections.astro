@@ -1,0 +1,38 @@
+---
+// A page's sections, in BackGold's order. A page has one <h1>: when it opens
+// with a Hero that has a headline, that headline is it; otherwise the page's
+// title (the site's name on the home page) is the <h1> above the sections,
+// shown on screen unless the page opens with a module that leads with words
+// of its own (a donate form's story, a petition's header), as boards A8 and
+// A10 draw them with no title band above. Every section, the leading Hero included, goes through
+// <Section>, which writes the preview marker the BackGold editor scrolls to,
+// through the template's sections map (`Astro.locals.template` carries it to
+// LeadingHero, which <Section> passes nothing else).
+import type { PageResponse } from '@backgold/content'
+import { Section } from '@backgold/astro/components'
+import LeadingHero from './LeadingHero.astro'
+import { text } from '../lib/format'
+import type { TemplateConfig } from '../template'
+
+interface Props {
+  template: TemplateConfig
+  page: PageResponse
+  siteName: string
+}
+
+const { template, page, siteName } = Astro.props
+const { sections } = template
+Astro.locals.template = template
+const [first, ...rest] = page.sections
+const heroLeads = first?.type === 'Hero' && text(first.copy.headline) !== null
+const title = (page.page.is_home ? siteName : text(page.page.title)) ?? siteName
+const quietTitle = first?.type === 'Donate' || first?.type === 'Petition'
+---
+{heroLeads && first ? <Section section={first} components={{ Hero: LeadingHero }} /> : (
+  quietTitle ? <h1 class="visually-hidden">{title}</h1> : (
+    <header class="page-header">
+      <h1>{title}</h1>
+    </header>
+  )
+)}
+{(heroLeads ? rest : page.sections).map((section) => <Section section={section} components={sections} />)}

@@ -1,0 +1,43 @@
+---
+// Issues (Cards, the default): the section head (the kicker and the heading;
+// a section with one link draws it beside them as a text link, C1's "Read
+// the whole plan"), a lead paragraph, then one card per issue, and a section
+// with more than one link draws them under the cards as buttons, the first
+// the main call. `variant` is the card style chosen in BackGold, kept as
+// `data-variant` on the section for your CSS.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import SectionHead from '../SectionHead.astro'
+import { links, rows } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const issues = rows(section).filter((row) => text(row.title) || text(row.body))
+const ctas = links(section)
+const headLink = ctas.length === 1
+---
+<Band section={section} class="issues">
+  <SectionHead kicker={text(section.copy.kicker)} heading={text(section.copy.heading)} more={headLink ? ctas : []} />
+  <Prose value={section.copy.lead} class="lede" />
+  {issues.length > 0 && (
+    <ul class="grid grid-3" role="list">
+      {issues.map((issue) => (
+        <li class="tile">
+          {text(issue.title) && <h3>{text(issue.title)}</h3>}
+          <Prose value={issue.body} />
+        </li>
+      ))}
+    </ul>
+  )}
+  {!headLink && ctas.length > 0 && (
+    <p class="actions">
+      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>
