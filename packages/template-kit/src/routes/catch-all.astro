@@ -41,9 +41,12 @@
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
 // page, an entry, a list, a term and an event pass their areas to the layout
-// (Top banner and Above the footer); all but the event draw their Sidebar
-// beside the main column when it has an item (under it on a phone); with none
-// they are one column.
+// (Top banner and Above the footer). A page, an entry, a list and a term
+// draw their Sidebar beside the main column when it has an item (under it on
+// a phone); with none they are one column. A page that opens with a Hero
+// puts the Hero over both columns, so the Sidebar starts under it, beside
+// what follows (board C5). An event has no column beside it: its Sidebar
+// items draw under the event, full width (board C6's "More chances").
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
 import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
@@ -56,7 +59,7 @@ import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
-import { entryCard } from '../lib/section'
+import { entryCard, leadsWithHero } from '../lib/section'
 import { markReading } from '../lib/reading'
 import template from 'virtual:backgold-template'
 
@@ -158,6 +161,8 @@ const areas: Areas | null =
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
 const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
+const heroOverSplit = sidebar && resolved.kind === 'page' && leadsWithHero(resolved.page.sections)
+const eventMore = event !== null && areaEntriesOf(event.areas, 'sidebar').length > 0
 
 // A list, or a term's list: its layout and what it is given. The filter comes
 // from the type's whole first page, so every term with an entry on it stays
@@ -181,6 +186,7 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
       term: resolved.kind === 'term' ? { taxonomy: resolved.taxonomy, term: resolved.term } : null,
       search: news ? { action: base, q } : null,
       intro: resolved.kind === 'index' ? resolved.intro : null,
+      areas,
     },
   }
 }
@@ -205,11 +211,13 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
   )}
 
   {resolved.kind === 'not_found' && (event ? <EventPage event={event.event} /> : <NotFound />)}
+  {eventMore && event && <Area name="sidebar" areas={event.areas} components={sections} class="event-more" />}
 
+  {heroOverSplit && resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only="lead" />}
   {resolved.kind !== 'author' && resolved.kind !== 'not_found' && (
     <div class:list={['layout', sidebar && 'layout-split']}>
       <div class="layout-main">
-        {resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} />}
+        {resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only={heroOverSplit ? 'rest' : undefined} />}
         {resolved.kind === 'entry' && EntryLayout && <EntryLayout entry={resolved.entry} type={resolved.type} areas={areas} />}
         {ListLayout && list && <ListLayout {...list.props} />}
       </div>

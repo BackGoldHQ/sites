@@ -27,8 +27,9 @@ const cards: Card[] = rows(section).flatMap((row) => {
       href: safeHref(row.url, { anchors: true }),
       summary: text(row.summary),
       image: image ? { url: image, alt: '' } : null,
+      category: terms[0] ?? null,
       date: text(row.publish_at),
-      meta: [terms.join(' · '), authors.length > 0 ? `By ${listOf(authors)}` : ''].filter(Boolean).join(' — ') || null,
+      meta: authors.length > 0 ? `By ${listOf(authors)}` : null,
     },
   ]
 })

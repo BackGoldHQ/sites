@@ -4,7 +4,9 @@
 // what it points at; a repeat gets a number, and a section or plank with no
 // words is numbered by its place ("#platform-2", "#plank-2-1"). A section is
 // kept when it has a title or a plank with a headline; a plank when it has a
-// headline.
+// headline. A section's `num` is the row's own ("01"), else its place in the
+// list written the same way, so the jump list and the headings count the
+// sections (boards A2 and C3) whether or not the author typed numbers.
 
 import type { Section } from '@backgold/content'
 import { nested, rows } from '../../../lib/section'
@@ -20,7 +22,8 @@ export interface Plank {
 
 export interface Part {
   id: string
-  num: string | null
+  /** "01": the row's own number, else its place in the list. */
+  num: string
   title: string | null
   ethos: string | null
   planks: Plank[]
@@ -44,7 +47,7 @@ export function partsWithAnchors(section: Section): Part[] {
 
   return rows(section)
     .map((row, i) => {
-      const num = text(row.num)
+      const num = text(row.num) ?? String(i + 1).padStart(2, '0')
       const title = text(row.title)
       return {
         id: anchor('platform', title, String(i + 1)),

@@ -389,7 +389,123 @@
   content: '→' / '';
 }
 
-/* Post rows (A4): the picture beside the words, above them on a phone. */
+/* The news list's invitation when nothing is published (C10): a dashed card with what will show here and where to go meanwhile. */
+.list-empty {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  padding: 1.75rem;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+}
+.list-empty-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.875rem;
+  background: var(--band-wash);
+  color: var(--band-wash-link);
+}
+.list-empty-heading {
+  margin: 0 0 0.375rem;
+  font-size: calc(var(--h3) * 1.15);
+}
+.list-empty p {
+  margin: 0;
+  color: var(--muted);
+}
+.list-empty .actions {
+  margin-top: 1rem;
+}
+@media (max-width: 30rem) {
+  .list-empty {
+    flex-direction: column;
+  }
+}
+
+/* The lead post on the list's first page (C10): the cover over the words, the title large. */
+.post-lead {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.post-lead-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+}
+.post-lead-body > * {
+  margin: 0 0 0.625rem;
+}
+.post-lead-body > :last-child {
+  margin-bottom: 0;
+}
+.post-lead-title {
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.25rem);
+  line-height: 1.1;
+}
+.post-lead-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.post-lead-title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.post-lead:hover .post-lead-title a {
+  text-decoration: underline;
+}
+.post-lead:focus-within {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.post-lead-title a:focus-visible {
+  outline: none;
+}
+.post-lead-summary {
+  color: var(--muted);
+  font-size: var(--text-lg);
+  max-width: var(--measure);
+}
+.post-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+/* A list's byline: the writers in the ink, the day after them; the lead's with the first writer's picture or initials. */
+.post-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.post-byline b {
+  color: var(--ink);
+}
+.post-avatar {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--band-wash);
+  color: var(--band-wash-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Post rows (A4, C10): the picture beside the words, above them on a phone. */
 .post-rows,
 .episode-rows,
 .issue-rows {
@@ -411,15 +527,19 @@
 .post-row-image {
   display: block;
   width: 100%;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: var(--radius);
 }
 .post-row-body > * {
   margin: 0 0 0.5rem;
 }
+.post-row-body > :last-child {
+  margin-bottom: 0;
+}
 .post-row-title {
   font-size: var(--h3);
+  font-weight: 600;
 }
 .post-row-title a,
 .episode-row-title a,
@@ -453,7 +573,7 @@
 }
 @media (min-width: 40rem) {
   .post-row article {
-    grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
+    grid-template-columns: minmax(10rem, 13.75rem) minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
   }

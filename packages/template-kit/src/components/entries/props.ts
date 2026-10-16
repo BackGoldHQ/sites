@@ -38,6 +38,8 @@ export interface ListLayoutProps {
    * sits at that address.
    */
   intro?: PageResponse | null
+  /** The list page's areas (the empty list's invitation looks for a sign-up in them). */
+  areas?: Areas | null
 }
 
 export interface ListSearch {

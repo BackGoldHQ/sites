@@ -15,6 +15,7 @@ import { Area, PreviewBar } from '@backgold/astro/components'
 import Site from '../layouts/Site.astro'
 import { entryLayoutFor } from '../components/entries'
 import PageSections from '../components/PageSections.astro'
+import { leadsWithHero } from '../lib/section'
 import template from 'virtual:backgold-template'
 
 const { sections } = template
@@ -40,13 +41,16 @@ const title = 'page' in draft ? (draft.page.title ?? siteName) : draft.entry.tit
 const menuPage: MenuPage | null = 'page' in draft ? { id: draft.page.id, takes_donations: draft.page.takes_donations } : null
 const areas = draft.areas ?? null
 const sidebar = areaEntriesOf(areas, 'sidebar').length > 0
+// A page that opens with a Hero puts it over both columns, as the live route does.
+const heroOverSplit = sidebar && 'page' in draft && leadsWithHero(draft.sections)
 const EntryLayout = 'entry' in draft ? entryLayoutFor(template, draft.entry.type) : null
 ---
 <Site template={template} title={`Preview: ${title}`} canonicalPath={result.path} noindex page={menuPage} areas={areas}>
   <PreviewBar />
+  {heroOverSplit && 'page' in draft && <PageSections template={template} page={draft} siteName={siteName} only="lead" />}
   <div class:list={['layout', sidebar && 'layout-split']}>
     <div class="layout-main">
-      {'page' in draft && <PageSections template={template} page={draft} siteName={siteName} />}
+      {'page' in draft && <PageSections template={template} page={draft} siteName={siteName} only={heroOverSplit ? 'rest' : undefined} />}
       {EntryLayout && 'entry' in draft && <EntryLayout entry={draft.entry} type={type} areas={areas} />}
     </div>
     {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}

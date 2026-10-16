@@ -1,0 +1,15 @@
+---
+// Issues · cards as boards C1 and C7 draw them ("Three things she will fix
+// first", "Other ways to help"): the kit's cards, each counted in a disc.
+// The party's A8 draws the same cards uncounted, which is the kit's own.
+import type { Section } from '@backgold/content'
+import IssuesCards from '@backgold/template-kit/components/sections/Issues/index.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+---
+<IssuesCards section={section} variant={variant} numbered />
