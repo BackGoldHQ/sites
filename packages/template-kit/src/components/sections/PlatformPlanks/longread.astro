@@ -4,7 +4,8 @@
 // the platform's sections ("01 · Your money") sits beside the text on a wide
 // screen (sticky, with a reading bar that fills as the text scrolls by, where
 // the browser can do that in CSS alone) and above it on a phone. Each section
-// has its number, title and ethos; each plank is a card with its headline,
+// has its number (the row's, else its place), title and ethos; each plank is
+// a card on the band's card colour, as wide as the text column, with its headline,
 // its plain-language line, the full text behind "Read the full plank", and a
 // "Share" link to its own anchor, a plain link that works with scripts off.
 // The anchors are anchors.ts's, shared with the columns layout. The kicker,
@@ -34,7 +35,7 @@ const parts = partsWithAnchors(section)
         <ol role="list">
           {parts.map((part) => (
             <li>
-              <a href={`#${part.id}`}>{[part.num, part.title ?? (part.num ? null : 'Untitled')].filter(Boolean).join(' · ')}</a>
+              <a href={`#${part.id}`}>{[part.num, part.title].filter(Boolean).join(' · ')}</a>
             </li>
           ))}
         </ol>
@@ -42,12 +43,10 @@ const parts = partsWithAnchors(section)
       <div class="longread-body">
         {parts.map((part) => (
           <article class="longread-part" id={part.id}>
-            {(part.num || part.title) && (
-              <h3 class="longread-title">
-                {part.num && <span class="longread-num">{part.num}</span>}
-                {part.title && <span>{part.title}</span>}
-              </h3>
-            )}
+            <h3 class="longread-title">
+              <span class="longread-num">{part.num}</span>
+              {part.title && <span>{part.title}</span>}
+            </h3>
             {part.ethos && <p class="longread-ethos">{part.ethos}</p>}
             {part.planks.length > 0 && (
               <ul class="longread-planks" role="list">
@@ -146,13 +145,12 @@ const parts = partsWithAnchors(section)
     gap: 0.625rem;
     padding: 0;
     list-style: none;
-    max-width: calc(var(--measure) + 4rem);
   }
   .longread-plank {
     padding: 0.875rem 1rem;
-    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: color-mix(in srgb, var(--page) 70%, transparent);
+    background: var(--surface);
     scroll-margin-top: 1rem;
   }
   :global(.bg-band-contrast) .longread-plank {

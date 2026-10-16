@@ -57,18 +57,29 @@ export interface Card {
   href: string | null
   summary: string | null
   image: Media | null
+  /** The entry's category, drawn as a chip: a `category` term first, else its first term. */
+  category: string | null
   date: string | null
+  /** What the card says under its summary, before the day it was published. */
   meta: string | null
 }
 
 export function entryCard(entry: Entry): Card {
   const image = entry.hero ? safeSrc(entry.hero.url) : null
+  const category = entry.terms.find((t) => t.taxonomy === 'category') ?? entry.terms[0]
   return {
     title: entry.title,
     href: entry.url ? safeHref(entry.url) : null,
     summary: entry.summary,
     image: image ? { url: image, alt: '' } : null,
+    category: category?.label ?? null,
     date: entry.publish_at,
-    meta: entry.terms.map((t) => t.label).join(' · ') || null,
+    meta: null,
   }
+}
+
+/** A page opens with a Hero that has a headline: that headline is its <h1>, and the Hero leads the page. */
+export function leadsWithHero(sections: Section[]): boolean {
+  const first = sections[0]
+  return first?.type === 'Hero' && text(first.copy.headline) !== null
 }

@@ -1,9 +1,13 @@
 ---
-// EventsList · Compact (boards A4 and A6, the sidebar's "Coming up"): a small
-// card with the heading, then a row per event: its day as a numeral over the
-// month ("14 / OCT") in the accent, the title linking to the event's page on
-// this site, and the place and time on one line; the section's "All events"
-// link closes the card. With no events it draws nothing.
+// EventsList · Compact: the next few events in little. In a sidebar (boards
+// A4 and A6, "Coming up") it is a card (site.css draws every sidebar section
+// as one): the heading, a row per event with its day as a numeral over its
+// month in the accent, its title linking to the event's page on this site,
+// and its place and time on one line, then the section's "All events" link
+// under the rows. In the page's column (board C6, "More chances to meet …"
+// under an event) the heading and the link share a head, as a section head
+// does, and the rows run three across, each under a rule. With no events it
+// draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
@@ -20,55 +24,73 @@ const more = links(section)
 ---
 {events.length > 0 && (
   <Band section={section} class="events events-compact">
-    {heading && <h2>{heading}</h2>}
-    <ul class="compact-events" role="list">
-      {events.map((event) => (
-        <li>
-          {event.when && event.startsAt && (
-            <time class="compact-day" datetime={event.startsAt}>
-              <b aria-hidden="true">{event.when.day}</b>
-              <span aria-hidden="true">{event.when.monthShort}</span>
-              <span class="visually-hidden">{event.when.full}</span>
-            </time>
-          )}
-          <div>
-            <h3>{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
-            {(event.place || event.when?.time) && <p>{[event.place, event.when?.time].filter(Boolean).join(' · ')}</p>}
-          </div>
-        </li>
-      ))}
-    </ul>
-    {more.length > 0 && <p class="compact-more">{more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}</p>}
+    <div class="compact">
+      {heading && <h2 class="compact-heading">{heading}</h2>}
+      <ul class="compact-events" role="list">
+        {events.map((event) => (
+          <li>
+            {event.when && event.startsAt && (
+              <time class="compact-day" datetime={event.startsAt}>
+                <b aria-hidden="true">{event.when.day}</b>
+                <span aria-hidden="true">{event.when.monthShort}</span>
+                <span class="visually-hidden">{event.when.full}</span>
+              </time>
+            )}
+            <div>
+              <h3>{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
+              {(event.place || event.when?.time) && <p>{[event.when?.time, event.place].filter(Boolean).join(' · ')}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {more.length > 0 && <p class="compact-more">{more.map((link) => <a href={link.href} rel={link.rel}>{link.label}</a>)}</p>}
+    </div>
   </Band>
 )}
 
 <style>
-  :global(.bg-section.events-compact) {
-    border: 1px solid var(--line);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    box-shadow: var(--shadow);
+  /* In the page's column (C6): the heading and the link on one line over three rows across. */
+  .compact {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'head more'
+      'list list';
+    gap: 0 1.5rem;
+    align-items: end;
   }
-  :global(.events-compact h2) {
-    margin: 0 0 0.75rem;
-    font-size: var(--h3);
+  .compact-heading {
+    grid-area: head;
+    margin: 0 0 1.5rem;
+  }
+  .compact-more {
+    grid-area: more;
+    margin: 0 0 1.5rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .compact-more a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
   }
   .compact-events {
+    grid-area: list;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
   }
   .compact-events li {
     display: grid;
-    grid-template-columns: 2.5rem minmax(0, 1fr);
+    grid-template-columns: 3.25rem minmax(0, 1fr);
     gap: 0.75rem;
-    align-items: start;
-    padding: 0.75rem 0;
-    border-top: 1px solid var(--line);
-  }
-  .compact-events li:first-child {
-    border-top: 0;
-    padding-top: 0.25rem;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 2px solid var(--ink);
   }
   .compact-day {
     display: grid;
@@ -77,7 +99,7 @@ const more = links(section)
   }
   .compact-day b {
     font-family: var(--font-display);
-    font-size: 1.375rem;
+    font-size: 1.875rem;
     font-weight: 800;
   }
   .compact-day span[aria-hidden] {
@@ -85,7 +107,7 @@ const more = links(section)
     color: var(--accent);
     font-size: 0.6875rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
   }
   .compact-events h3 {
@@ -107,14 +129,35 @@ const more = links(section)
     color: var(--muted);
     font-size: var(--text-sm);
   }
-  .compact-more {
-    margin: 0.5rem 0 0;
-    font-size: var(--text-sm);
-    font-weight: 700;
+  /* In a sidebar (A4, A6): one column, the rows between rules, the link under them. */
+  :global(.rail) .compact {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'list'
+      'more';
   }
-  .compact-more a {
-    color: var(--link);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  :global(.rail) .compact-heading {
+    margin-bottom: 0.75rem;
+  }
+  :global(.rail) .compact-events {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  :global(.rail) .compact-events li {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    align-items: start;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--line);
+  }
+  :global(.rail) .compact-events li:first-child {
+    padding-top: 0.25rem;
+    border-top: 0;
+  }
+  :global(.rail) .compact-day b {
+    font-size: 1.375rem;
+  }
+  :global(.rail) .compact-more {
+    margin: 0.5rem 0 0;
   }
 </style>
