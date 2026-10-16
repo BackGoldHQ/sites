@@ -1029,7 +1029,6 @@ main:focus {
 .hero-image {
   display: block;
   width: 100%;
-  margin-top: 2rem;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: calc(var(--radius) * 2);
@@ -1049,12 +1048,10 @@ main:focus {
   font-size: 0.6875rem;
   line-height: 1.4;
 }
+/* The photo's frame: the caption chip is positioned against it. */
 .hero-photo {
   position: relative;
   margin-top: 2rem;
-}
-.hero-photo .hero-image {
-  margin-top: 0;
 }
 @media (min-width: 48rem) {
   .hero-split .hero-photo {
@@ -1067,7 +1064,6 @@ main:focus {
     align-items: center;
   }
   .hero-split .hero-image {
-    margin-top: 0;
     aspect-ratio: 4 / 3;
   }
 }
