@@ -602,7 +602,6 @@ deploy-party-production:
     TEMPLATE: party
     KV_VAR: PARTY_PRODUCTION_KV_ID
   resource_group: party-production
-  # Exists only while CLOUDFLARE_API_TOKEN is set, as deploy-party-staging.
 
 # deploy-candidate-staging: templates/candidate as the Worker `template-candidate` in `sites-staging`.
 deploy-candidate-staging:
