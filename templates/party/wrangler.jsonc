@@ -32,7 +32,7 @@
   // `deploy-party-staging` job in this repository's .gitlab-ci.yml, which
   // runs by itself on a push to main that changed the template, a package,
   // vendor/, the lockfile or the CI file) and `sites-production` (the manual
-  // `deploy-party-production` job there), each uploaded with
+  // `deploy-party-production` job there, run from the `deploy-production` button), each uploaded with
   // `wrangler deploy --dispatch-namespace <namespace>`. Nothing above changes
   // for the Deploy button; a copy of this template can delete this block. An
   // env inherits main, compatibility, assets and observability from above,
