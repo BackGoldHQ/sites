@@ -7,16 +7,20 @@
 // event links to its page on this site (/events/<slug>), which frames
 // BackGold's RSVP and tickets (never build an RSVP form here):
 // `options.actions` 'buttons' puts the event's button on each row, 'link'
-// (or none) makes the title the link. With no events listed, the section
-// places BackGold's own events-list frame instead, when it has one, else
-// says so.
+// (or none) makes the title the link; either way the whole row opens it. On
+// the events page (/events, /events/<type>) a line under the rows names their
+// one zone and offers every event as one calendar file (CalendarLine, as the
+// Agenda draws it). With no events listed, the section places BackGold's own
+// events-list frame instead, when it has one, else says so.
 import type { Section } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
 import EventRows from './EventRows.astro'
 import LiveCounts from './LiveCounts.astro'
+import CalendarLine from './CalendarLine.astro'
 import SectionHead from '../SectionHead.astro'
-import { actionsOf, eventsOf } from './events'
+import { actionsOf, eventsOf, sharedZone } from './events'
+import { onEventsPage } from '../../../lib/events'
 import { links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
@@ -29,10 +33,13 @@ const { section } = Astro.props
 const heading = text(section.copy.heading)
 const buttons = actionsOf(section) === 'buttons'
 const events = eventsOf(section)
+const calendarLine = events.length > 0 && onEventsPage(Astro.url.pathname)
+const zone = calendarLine ? sharedZone(events) : null
 ---
 <Band section={section} class="events events-list">
   <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
-  {events.length > 0 && <EventRows events={events} buttons={buttons} level={3} />}
+  {events.length > 0 && <EventRows events={events} buttons={buttons} level={3} zoneless={zone !== null} />}
+  {calendarLine && <CalendarLine zone={zone} />}
   {events.length > 0 && <LiveCounts />}
   {events.length === 0 && section.embed && <Embed embed={section.embed} title={heading ?? 'Upcoming events'} />}
   {events.length === 0 && !section.embed && <p class="empty">No upcoming events right now.</p>}

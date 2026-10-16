@@ -7,7 +7,8 @@
 // ("December is open.") with the section's empty-events line, never as a
 // blank. The rows are EventRows, the ones every events list shares;
 // `buttons` puts the event's button on each row, otherwise the title is the
-// link. With no events it draws nothing.
+// link; `zoneless` leaves the zone's name off the times. With no events it
+// draws nothing.
 import EventRows from './EventRows.astro'
 import { monthName, type EventRow } from './events'
 
@@ -16,9 +17,10 @@ interface Props {
   buttons: boolean
   /** The section's empty-events line, for an empty month's invitation. */
   invitation: string | null
+  zoneless?: boolean
 }
 
-const { events, buttons, invitation } = Astro.props
+const { events, buttons, invitation, zoneless = false } = Astro.props
 
 interface Month {
   label: string
@@ -53,7 +55,7 @@ const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
           {month.label} <span class="agenda-count">{month.events.length > 0 ? count(month.events.length) : 'nothing yet'}</span>
         </h3>
         {month.events.length > 0 ? (
-          <EventRows events={month.events} buttons={buttons} level={4} />
+          <EventRows events={month.events} buttons={buttons} level={4} zoneless={zoneless} />
         ) : (
           <p class="agenda-open">
             <strong>{month.name} is open.</strong>

@@ -783,6 +783,10 @@ main:focus {
   .layout-split .layout-rail {
     padding: var(--space) var(--gutter) var(--space) 0;
   }
+  /* Where the main column's first band joins the Hero's, the rail starts with it, at the Hero's floor (C5). */
+  .bg-bleed-full.bg-band-plain + .layout-split:has(> .layout-main > .bg-bleed-full.bg-band-plain:first-of-type) > .layout-rail {
+    padding-top: 0;
+  }
 }
 
 /* ── Sections ── */
@@ -801,12 +805,31 @@ main:focus {
   margin: var(--gutter) auto;
   border-radius: 1.5rem;
 }
-/* Two full-width bands of the same ground in a row read as one: no doubled gap between them. */
+/*
+  A contained band on the page's own ground has no box to show: it draws as a
+  full one, its content the column's width (C2's StatCards, C7's Progress).
+*/
+.bg-bleed-contained.bg-band-plain {
+  width: auto;
+  margin: 0;
+  border-radius: 0;
+}
+/*
+  Two full-width bands of the same ground in a row read as one: no doubled gap
+  between them. That holds across a page's opening Hero and the two columns
+  under it (C5): the main column's first band and the rail start at the
+  Hero's floor.
+*/
 .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
 .bg-bleed-full.bg-band-tint + .bg-bleed-full.bg-band-tint,
 .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel,
 .bg-bleed-full.bg-band-wash + .bg-bleed-full.bg-band-wash,
-.bg-bleed-full.bg-band-contrast + .bg-bleed-full.bg-band-contrast {
+.bg-bleed-full.bg-band-contrast + .bg-bleed-full.bg-band-contrast,
+.bg-bleed-full.bg-band-plain + .layout-split > .layout-main > .bg-bleed-full.bg-band-plain:first-of-type,
+.bg-bleed-full.bg-band-tint + .layout-split > .layout-main > .bg-bleed-full.bg-band-tint:first-of-type,
+.bg-bleed-full.bg-band-panel + .layout-split > .layout-main > .bg-bleed-full.bg-band-panel:first-of-type,
+.bg-bleed-full.bg-band-wash + .layout-split > .layout-main > .bg-bleed-full.bg-band-wash:first-of-type,
+.bg-bleed-full.bg-band-contrast + .layout-split > .layout-main > .bg-bleed-full.bg-band-contrast:first-of-type {
   padding-top: 0;
 }
 .bg-section .bg-section-inner > :last-child {
@@ -991,8 +1014,12 @@ main:focus {
   .grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /*
+    At most three tracks, so three cards fill the row; auto-fill keeps a lone
+    card (one post, one person) a card's width rather than the row's.
+  */
   .grid-3 {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(max(min(100%, 15rem), (100% - 2 * clamp(1rem, 2vw, 1.75rem)) / 3), 1fr));
   }
   .stat-list,
   .quotes .grid {

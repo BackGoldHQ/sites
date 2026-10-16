@@ -4,22 +4,27 @@
 // at the left, then its type as a chip, its title, and its time and place on
 // one line with its live counts ("142 going", "12 seats left", filled in by
 // LiveCounts after the page loads; empty without scripts) and whether it
-// still takes registrations. With `buttons` the event's button sits at the
-// right in the quieter solid style ("Get tickets" when it sells tickets,
-// "RSVP" otherwise, "Details" once registration has closed); without it the
-// title is the link. Either way the link is the event's page on this site,
-// /events/<slug>. The layout that places the rows places LiveCounts once.
-// `level` is the titles' heading level: 3 under a section's heading, 4 under
-// the agenda's month headings.
+// still takes registrations. The whole card opens the event's page on this
+// site, /events/<slug>: the title is its one link, stretched over the card,
+// so a keyboard and a screen reader meet each event once, by its title. With
+// `buttons` the event's button sits at the right in the quieter solid style
+// ("Get tickets" when it sells tickets, "RSVP" otherwise, "Details" once
+// registration has closed), above the card's link and clickable on its own;
+// on a phone it takes the card's full width (board C9). `zoneless` drops the
+// zone's name from each time, for rows under a line that names it (the
+// layout's "Times are Mountain Time."). The layout that places the rows
+// places LiveCounts once. `level` is the titles' heading level: 3 under a
+// section's heading, 4 under the agenda's month headings.
 import type { EventRow } from './events'
 
 interface Props {
   events: EventRow[]
   buttons: boolean
   level: 3 | 4
+  zoneless?: boolean
 }
 
-const { events, buttons, level } = Astro.props
+const { events, buttons, level, zoneless = false } = Astro.props
 const Title = level === 4 ? 'h4' : 'h3'
 ---
 <ul class="event-rows" role="list">
@@ -36,10 +41,10 @@ const Title = level === 4 ? 'h4' : 'h3'
       )}
       <div class="event-body">
         {event.type && <p class="event-chip"><span class="chip chip-wash">{event.type}</span></p>}
-        <Title class="event-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</Title>
+        <Title class="event-title">{event.link ? <a class="event-link" href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</Title>
         {(event.when?.time || event.place || event.closed || event.id) && (
           <p class="event-meta">
-            {[event.when?.time, event.place].filter(Boolean).map((part) => <span>{part}</span>)}
+            {[zoneless ? event.when?.clock : event.when?.time, event.place].filter(Boolean).map((part) => <span>{part}</span>)}
             {event.id && <span class="event-live" data-bg-live={event.id}></span>}
             {event.closed && <span class="event-closed">Registration closed</span>}
           </p>
@@ -65,6 +70,7 @@ const Title = level === 4 ? 'h4' : 'h3'
     list-style: none;
   }
   .event-row {
+    position: relative;
     display: grid;
     grid-template-columns: 4rem minmax(0, 1fr);
     gap: 0.875rem;
@@ -114,8 +120,24 @@ const Title = level === 4 ? 'h4' : 'h3'
     color: var(--ink);
     text-decoration: none;
   }
-  .event-title a:hover {
+  /* The title's link covers the card (the kit's .card-title pattern); the button sits above it. */
+  .event-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .event-row:hover .event-link {
     text-decoration: underline;
+  }
+  @supports selector(:has(*)) {
+    .event-link:focus-visible {
+      outline: none;
+    }
+    .event-row:has(.event-link:focus-visible) {
+      outline: 3px solid var(--ink);
+      outline-offset: 3px;
+    }
   }
   .event-body .event-meta {
     display: flex;
@@ -136,8 +158,14 @@ const Title = level === 4 ? 'h4' : 'h3'
     font-weight: 700;
   }
   .event-action {
+    position: relative;
+    z-index: 1;
     grid-column: 1 / -1;
     margin: 0;
+  }
+  .event-action .button {
+    display: flex;
+    width: 100%;
   }
   @media (min-width: 40rem) {
     .event-row {
@@ -147,6 +175,10 @@ const Title = level === 4 ? 'h4' : 'h3'
     }
     .event-action {
       grid-column: auto;
+    }
+    .event-action .button {
+      display: inline-flex;
+      width: auto;
     }
   }
   @media (prefers-reduced-motion: no-preference) {

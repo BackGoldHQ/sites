@@ -2,7 +2,9 @@
 // Hero, 'portrait' layout (boards C1 and C9, section 1; proposed, C-1): the
 // office line small over the headline (`copy.kicker`, "State Senate ·
 // District 9"), the candidate's name as the headline set large in capitals
-// at the left, the line under it and the buttons, and the portrait at the
+// at the left, on two lines when it is two words (the first name over the
+// last, C1 and C9's "IRIS / DELACORTE"), the line under
+// it and the buttons, and the portrait at the
 // right, standing on the band's floor (no gap under it) over a stripe in the
 // accent. On a phone the portrait follows the words, still on the floor.
 // The portrait's alt text is `copy.imageAlt`, and its caption
@@ -27,6 +29,9 @@ const office = text(section.copy.kicker)
 const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
+// A two-word name breaks between its words; any other headline wraps as it falls.
+const words = headline?.trim().split(/\s+/) ?? []
+const lines = words.length === 2 ? words : null
 const portrait = heroPhoto(section, 'photoUrl', 'imageUrl')
 const buttons = links(section)
 ---
@@ -35,7 +40,7 @@ const buttons = links(section)
     <div class:list={['hp', portrait && 'hp-with-portrait']}>
       <div class="hp-words">
         {office && <p class="hp-office">{office}</p>}
-        {headline && <Heading class="hp-name">{headline}</Heading>}
+        {headline && <Heading class="hp-name">{lines ? <><span>{lines[0]}</span> <span>{lines[1]}</span></> : headline}</Heading>}
         {subheadline && <p class="hp-lede">{subheadline}</p>}
         {buttons.length > 0 && (
           <p class="actions">
@@ -111,12 +116,16 @@ const buttons = links(section)
   }
   .hp-name {
     margin: 1rem 0 0;
-    font-size: clamp(3.5rem, 1.6rem + 7vw, 8.25rem);
+    /* C9's 58px on a phone, C1's 132px on a wide screen. */
+    font-size: clamp(3.625rem, 1.6rem + 7vw, 8.25rem);
     font-weight: 800;
     line-height: 0.86;
     letter-spacing: -0.01em;
     text-transform: uppercase;
     max-width: none;
+  }
+  .hp-name span {
+    display: block;
   }
   .hp-lede {
     max-width: 30em;
