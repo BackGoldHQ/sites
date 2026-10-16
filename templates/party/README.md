@@ -552,12 +552,13 @@ on the operator's login, so every command below names the account
    be deployed with the `FirstParty` entrypoint, because the service binding
    names `backgold-api` and that export; if production's api predates it,
    play `deploy-api-production` on the platform repository's pipeline first.
-5. Play `deploy-party-production` on a `main` pipeline, the newest one.
+5. Play `deploy-production` on a `main` pipeline, the newest one; it runs
+   `deploy-party-production` (and the other templates' production jobs).
 
 **The job.** `deploy-party-production` in this repository's `.gitlab-ci.yml`
-is a manual job on every `main` pipeline once `CLOUDFLARE_API_TOKEN` is set
-(environment `production`, resource group `party-production`); it never runs
-by itself and never blocks the pipeline. It is `deploy-party-staging` with
+runs on a `main` pipeline once the `deploy-production` button has been played
+there (environment `production`, resource group `party-production`); it is
+never played on its own and the unplayed button never blocks the pipeline. It is `deploy-party-staging` with
 the production names, step for step (see Staging deploy above): it refuses to
 start without `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and a
 `PARTY_PRODUCTION_KV_ID` that is a 32-character namespace id, writes the id
