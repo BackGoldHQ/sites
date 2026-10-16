@@ -1,0 +1,25 @@
+---
+// Petition, every layout, as the kit draws it, with the section's anchor
+// defaulting to `petition` as a hosted BackGold page's Petition does
+// (packages/site urls.ts sectionAnchorId): the starter sets `anchorId:
+// "petition"` so the drive's header link and its header button, "Sign the
+// petition", resolve to `/#petition` when the site is seeded; a section with
+// no anchor id of its own gets the same default here. The layout picks the kit's component; one BackGold sends that this
+// template does not list draws as the default, `none`.
+import type { Section } from '@backgold/content'
+import PetitionNone from '@backgold/template-kit/components/sections/Petition/index.astro'
+import PetitionImage from '@backgold/template-kit/components/sections/Petition/image.astro'
+import PetitionMap from '@backgold/template-kit/components/sections/Petition/map.astro'
+import PetitionCoverage from '@backgold/template-kit/components/sections/Petition/coverage.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const LAYOUTS = { image: PetitionImage, map: PetitionMap, coverage: PetitionCoverage } as const
+const Layout = variant && Object.hasOwn(LAYOUTS, variant) ? LAYOUTS[variant as keyof typeof LAYOUTS] : PetitionNone
+const anchored: Section = { ...section, options: { anchorId: 'petition', ...section.options } }
+---
+<Layout section={anchored} variant={variant} />

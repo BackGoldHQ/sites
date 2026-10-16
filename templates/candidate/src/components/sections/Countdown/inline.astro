@@ -1,0 +1,72 @@
+---
+// Countdown, 'inline' layout (board C5, the Campaign sidebar's first
+// section): one line of time left, "26 days" in the display face, under the
+// heading set small as a kicker ("Election Day") and over the day. The
+// number is counted in the visitor's browser (the page is cached until the
+// content changes), in days, or in hours on the last day; without script the
+// heading and the day read plainly. It is written once and never ticks. Once
+// the deadline has passed the section hides itself (C-8 as drawn), and a
+// page rendered after it draws nothing.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import { rows } from '@backgold/template-kit/lib/section'
+import { formatDay, text } from '@backgold/template-kit/lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const deadline = text(rows(section)[0]?.deadline)
+const day = formatDay(deadline)
+const end = deadline ? Date.parse(deadline) : NaN
+const ahead = Number.isFinite(end) && end > Date.now()
+---
+{deadline && day && ahead && (
+  <Band section={section} class="countdown-inline">
+    <div class="ci" data-countdown-ends={deadline}>
+      {heading && <p class="kicker ci-heading">{heading}</p>}
+      <p class="ci-left" hidden></p>
+      <p class="ci-day"><time datetime={deadline}>{day}</time></p>
+    </div>
+    <script is:inline>
+      (function (box) {
+        var end = Date.parse(box.getAttribute('data-countdown-ends'))
+        if (isNaN(end)) return
+        var ms = end - Date.now()
+        if (ms <= 0) {
+          box.closest('.bg-section').hidden = true
+          return
+        }
+        var days = Math.floor(ms / 86400000)
+        var hours = Math.max(1, Math.floor(ms / 3600000))
+        var left = box.querySelector('.ci-left')
+        left.textContent = days > 0 ? days + (days === 1 ? ' day' : ' days') : hours + (hours === 1 ? ' hour' : ' hours')
+        left.hidden = false
+      })(document.currentScript.previousElementSibling)
+    </script>
+  </Band>
+)}
+
+<style>
+  .ci-heading {
+    margin: 0 0 0.375rem;
+  }
+  .ci-left {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ci-left[hidden] {
+    display: none;
+  }
+  .ci-day {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+</style>

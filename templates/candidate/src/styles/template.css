@@ -1,0 +1,155 @@
+/*
+  What the candidate template draws differently from the kit's stylesheet
+  (@backgold/template-kit's src/styles/site.css and entries.css), drawn to
+  boards C1 to C11 in docs/design/sites-unification-2026-10/mockups. The
+  boards use set A's CSS, so everything not named here is the kit's; what
+  changes is the display face and what a condensed face needs around it.
+  The colours stay the organization's: nothing here names one, only the
+  short names a band sets. This file loads after the kit's on every page.
+*/
+
+:root {
+  /*
+    The faces: the site's own when it wears a saved theme in BackGold, else
+    the boards': Barlow Condensed for display (headings, numerals, the
+    wordmark), Public Sans for text, which the layout loads (`fonts` in
+    src/template.ts).
+  */
+  --font: var(--site-font-body, 'Public Sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+  --font-display: var(--site-font-heading, 'Barlow Condensed', 'Arial Narrow', ui-sans-serif, system-ui, sans-serif);
+  /* A condensed face sets larger for the same weight on the page: h2 34 → 50, h3 22 → 26 (C1). */
+  --h2: clamp(2.125rem, 1.45rem + 2.3vw, 3.125rem);
+  --h3: clamp(1.375rem, 1.25rem + 0.4vw, 1.625rem);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.004em;
+}
+
+/* The wordmark in capitals, the second line muted (C1's header and footer). */
+.brand-name {
+  font-size: 1.6875rem;
+  line-height: 0.95;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.site-header .brand-rest {
+  color: var(--muted);
+  letter-spacing: 0.14em;
+}
+@media (max-width: 40rem) {
+  .brand-name {
+    font-size: 1.3125rem;
+  }
+}
+
+/* Long reading stays in the body face; the condensed face is for headings and the drop cap (C2's letter, C11's post). */
+.entry-article .entry-body,
+.entry-issue .entry-body {
+  font-family: var(--font);
+  font-size: 1.09375rem;
+}
+.entry-article .entry-body > p:first-child::first-letter {
+  font-family: var(--font-display);
+}
+[data-type='About'][data-variant='letter'] .letter-body {
+  font-family: var(--font);
+  font-size: 1.09375rem;
+}
+[data-type='About'][data-variant='letter'] .letter-body p:first-child::first-letter {
+  font-family: var(--font-display);
+}
+
+/*
+  One gold affordance (C-7 as drawn): the accent's filled button is Donate's
+  alone, the header button and the donation form. Everywhere else in the
+  page (a list's tabs, every other section) and its areas the main call takes the quieter solid button's
+  colours, the primary (or, on a dark band, the light ink), so a call to
+  action, an RSVP or a current tab is never gold; outlines stay outlines.
+*/
+main,
+main .bg-section:not([data-type='Donate']):not([data-type='QuickDonate']),
+.bg-area .bg-section:not([data-type='Donate']):not([data-type='QuickDonate']) {
+  --button: var(--button-2);
+  --button-ink: var(--button-2-ink);
+}
+
+/*
+  The header button on its own page (C-6 as drawn): on a page that carries
+  the donation form, the header's Donate draws as the current page, an
+  outline in the accent, so the form's Donate is the page's one gold
+  affordance. The kit draws a header button marked aria-current="page" this
+  way, but a Donate link always goes to the organization's BackGold donate
+  page, never to this site's page, so it is never marked; this rule reads
+  the form on the page instead.
+*/
+body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] {
+  border-color: var(--bg-brand-accent, var(--accent));
+  background: transparent;
+  color: var(--ink);
+}
+
+/*
+  The editorial quote set upright and bold in the condensed face, larger (C4's
+  QuoteStrip · single). `.bg-section` lifts the rule over the kit layout's
+  scoped one, which carries the same weight and can load after this file.
+*/
+.bg-section[data-type='QuoteStrip'][data-variant='single'] .single-quote blockquote p {
+  font-size: clamp(1.875rem, 1.2rem + 2.3vw, 2.875rem);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.004em;
+}
+
+/* Countdown · inline in a sidebar sits on a card, as C5's Campaign sidebar draws it. */
+.rail .bg-section[data-type='Countdown'] {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Sections placed together in a sidebar stand apart, as cards (C5, C10 and C11's Campaign sidebar: Countdown · inline over Cta · card). */
+.rail .bg-section + .bg-section {
+  margin-top: 1rem;
+}
+
+/*
+  Cta · card in the page's column (C8's Join): one card centred on its band, the
+  eyebrow, heading, line and button centred in it. The kit draws a Cta of any
+  layout but banner, strip and photo as its default; in a sidebar the kit's
+  own brand-ground card stays.
+*/
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .bg-section-inner {
+  max-width: 47.5rem;
+  padding: clamp(1.375rem, 0.9rem + 2vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] h2,
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .lede {
+  margin-inline: auto;
+}
+.layout-main .bg-section[data-type='Cta'][data-variant='card'] .actions {
+  justify-content: center;
+}
+/*
+  A page that opens with that card (C8's Join) has no title band over it: the
+  card's heading is what the page says first. The page's title stays its
+  <h1> for screen readers, as the kit does over a donation form's story.
+*/
+.layout-main .page-header:has(+ .bg-section[data-type='Cta'][data-variant='card']) {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

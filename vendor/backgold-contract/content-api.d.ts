@@ -33,6 +33,10 @@ declare function isSafeContentHref(href: string): boolean;
  * form ids, consent copy or amounts.
  */
 
+/** The Content API mount. */
+declare const CONTENT_API_PREFIX = "/api/content/v1";
+/** The most days a GET /events window spans, first and last included: six weeks, a month grid's whole face. */
+declare const EVENTS_WINDOW_MAX_DAYS = 42;
 /** Every error the Content API answers with. */
 interface ContentApiError {
     error: string;
@@ -329,7 +333,7 @@ type SectionBleed = (typeof SECTION_BLEEDS)[number];
  * contract names is never refused.
  */
 declare const SECTION_LAYOUTS: {
-    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating"];
+    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"];
     readonly About: readonly ["right", "left", "letter", "portrait", "books"];
     readonly Issues: readonly ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"];
     readonly StatCards: readonly ["row", "ribbon", "feature", "wall"];
@@ -354,6 +358,7 @@ declare const SECTION_LAYOUTS: {
     readonly Portfolio: readonly ["grid", "featured", "strip"];
     readonly MediaKit: readonly ["kit", "speaker", "press"];
     readonly Progress: readonly ["bar", "ring", "compact", "match"];
+    readonly Countdown: readonly ["banner", "tiles", "inline"];
     readonly EventsList: readonly ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts", "map"];
     readonly Blog: readonly ["cards", "list", "feature"];
     readonly Collection: readonly ["cards", "list", "compact", "feature", "library", "shelves", "outline"];
@@ -722,6 +727,14 @@ interface ContentApiEmbedUrls {
      *  (an area item has no page of its own). */
     signupSection(sectionId: string, blockId: string): string;
     petition(orgSlug: string, slug: string): string;
+    /** A page's Petition block framed under its map or coverage header: the
+     *  hosted sheet with the band the block's own data source, legend, asks and
+     *  stat tiles draw (api routes/form-embed.ts petitionEmbed). */
+    petitionBlock(pageId: string, blockId: string): string;
+    /** A page's MovementMap block framed: the live map its visitors can zoom
+     *  and explore, with the block's legend, count badge and stat tiles (api
+     *  routes/form-embed.ts movementMapEmbed). */
+    movementMapBlock(pageId: string, blockId: string): string;
     event(orgSlug: string, slug: string): string;
     events(orgSlug: string): string;
     calendar(orgSlug: string): string;
@@ -853,7 +866,7 @@ interface ContentApiDataSpec {
 }
 interface ContentApiBlockSpec {
     role: ContentApiBlockRole;
-    /** Authored string props that are copy. A compliance block lists only its frame's words: `heading` (and Donate's story, a sign-up's kicker and lede). */
+    /** Authored string props that are copy. A compliance block lists only its frame's words: `heading` (and Donate's story, a sign-up's kicker and lede, a petition's addressed-to, goal and volunteer lines). */
     copy?: readonly string[];
     /** Image / video / document URL props. */
     media?: readonly string[];
@@ -895,7 +908,9 @@ declare function signupEmbed(p: Props, ctx: ProjectDocumentContext): SectionEmbe
  *                    draws around the frame: Donate's story, SignupCapture's
  *                    kicker and lede); never fields, form ids, consent copy,
  *                    amounts or a form's switches (SignupCapture's
- *                    `collectZip` stays in the frame).
+ *                    `collectZip` stays in the frame). Petition alone also
+ *                    carries its frame's options and its authored asks and
+ *                    stat tiles as `data`.
  *   data           → `data: { source, items }` from the baked props (and,
  *                    for EventsList, its list frame as an `embed` as well).
  *   presentational → copy, media, links, options (+ data for an authored
@@ -1098,7 +1113,8 @@ declare const CONTENT_API_BLOCKS: {
             readonly href: "sourceHref";
         }];
         readonly options: readonly ["datasetPreset", "datasetArea", "categoryProperty", "centerLat", "centerLng", "zoom", "anchorId"];
-        readonly hosted: readonly ["datasetPath"];
+        readonly hosted: readonly ["datasetPath", "pageId"];
+        readonly embed: (p: Props, ctx: ProjectDocumentContext) => SectionEmbed | null;
         readonly data: {
             readonly source: "movement_map";
             readonly lists: readonly [{
@@ -1549,6 +1565,7 @@ declare const CONTENT_API_BLOCKS: {
     readonly Countdown: {
         readonly role: "data";
         readonly copy: readonly ["heading"];
+        readonly variant: "layout";
         readonly options: readonly ["source", "anchorId"];
         readonly data: {
             readonly source: "countdown";
@@ -1558,8 +1575,6 @@ declare const CONTENT_API_BLOCKS: {
                 }[];
                 readonly write: ([row]: Props[]) => {
                     deadline: unknown;
-                } | {
-                    deadline?: undefined;
                 };
             };
         };
@@ -1949,8 +1964,28 @@ declare const CONTENT_API_BLOCKS: {
     };
     readonly Petition: {
         readonly role: "compliance";
-        readonly copy: readonly ["heading"];
+        readonly copy: readonly ["heading", "addressedTo", "goalNote", "volunteerPrompt"];
         readonly variant: "header";
+        readonly options: readonly ["datasetPreset", "datasetArea", "badgeNoun", "uncategorizedLabel", "volunteerAsk", "recognition", "anchorId"];
+        readonly data: {
+            readonly source: "petition";
+            readonly lists: readonly [{
+                readonly prop: "asks";
+                readonly fields: {
+                    readonly title: "title";
+                    readonly body: "body";
+                };
+            }, {
+                readonly prop: "statTiles";
+                readonly group: "tile";
+                readonly fields: {
+                    readonly label: "label";
+                    readonly value: "value";
+                    readonly note: "note";
+                };
+            }];
+        };
+        readonly hosted: readonly ["pageId"];
         readonly embed: (p: Props, ctx: ProjectDocumentContext) => SectionEmbed | null;
     };
     readonly Store: {
@@ -2020,6 +2055,8 @@ declare const BLOCK_BAND_INTRINSICS: Record<string, {
     role: SectionBand;
     bleed: SectionBleed;
 }>;
+/** A data section's rows written back to the props they were read from. */
+declare function dataProps(spec: ContentApiDataSpec, data: SectionData | undefined): Props;
 /**
  * A baked page document as the Content API's ordered sections. Pure: the api
  * bakes the document (published snapshot, inlined synced sections, bake
@@ -2050,4 +2087,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, contentApiEmbedUrls, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

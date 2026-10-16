@@ -1,0 +1,184 @@
+---
+// Issues · Steps, the petition drive's "Get involved" funnel (the hosted
+// petition-drive page's GET INVOLVED band, as polished 2026-09-04): the
+// kicker, the claim (the heading) and the lead, then the steps as numbered
+// cards, four across on a wide screen, two on a tablet, one on a phone. Each
+// card carries its icon (when the row names one the hosted page draws, see
+// icons.ts) and "Step 01" in the mono face over its title and line. The
+// section's links follow as one action row: the link the author marked
+// primary (else the first) is the filled button, outline links are bordered
+// buttons, ghost links plain links, so the row has one dominant action.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { linkOf, rows } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import { issueIcon } from './icons'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const kicker = text(section.copy.kicker)
+const steps = rows(section).filter((row) => text(row.title) || text(row.body))
+const authored = (section.links ?? []).flatMap((l) => {
+  const link = linkOf(l.label, l.url)
+  return link ? [{ ...link, style: l.style ?? null }] : []
+})
+const lead = Math.max(0, authored.findIndex((l) => l.style === 'primary'))
+const actions = authored.map((link, i) => ({
+  ...link,
+  kind: i === lead ? 'primary' : link.style === 'ghost' ? 'ghost' : 'outline',
+}))
+const number = (i: number) => String(i + 1).padStart(2, '0')
+---
+<Band section={section} class="issues drive-steps">
+  <div class="drive-steps-head">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {heading && <h2>{heading}</h2>}
+    <Prose value={section.copy.lead} class="lede" />
+  </div>
+  {steps.length > 0 && (
+    <ol class="drive-step-grid" role="list">
+      {steps.map((step, i) => {
+        const icon = issueIcon(step.icon)
+        return (
+          <li class="drive-step">
+            <div class="drive-step-top">
+              {icon && (
+                <span class="drive-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d={icon} /></svg>
+                </span>
+              )}
+              <span class="drive-step-label">Step {number(i)}</span>
+            </div>
+            {text(step.title) && <h3>{text(step.title)}</h3>}
+            <Prose value={step.body} class="drive-step-body" />
+          </li>
+        )
+      })}
+    </ol>
+  )}
+  {actions.length > 0 && (
+    <p class="actions drive-step-actions">
+      {actions.map((link) => (
+        <a class:list={[link.kind !== 'ghost' && 'button', link.kind === 'outline' && 'button-quiet', link.kind === 'ghost' && 'drive-step-ghost']} href={link.href} rel={link.rel}>
+          {link.label}
+        </a>
+      ))}
+    </p>
+  )}
+</Band>
+
+<style>
+  .drive-steps-head {
+    max-width: 44rem;
+  }
+  .drive-steps-head h2 {
+    margin-bottom: 0.75rem;
+  }
+  .drive-steps-head :global(.lede) {
+    margin-bottom: 0;
+  }
+  .drive-step-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.875rem;
+    list-style: none;
+    margin: clamp(1.5rem, 1rem + 1.5vw, 2.25rem) 0 0;
+    padding: 0;
+  }
+  @media (min-width: 40rem) {
+    .drive-step-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 64rem) {
+    .drive-step-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .drive-step {
+    position: relative;
+    min-width: 0;
+    padding: 1.25rem 1.25rem 1.375rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  /* A hairline of the accent across the card's top: the funnel reads as one row of steps. */
+  .drive-step::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+  .drive-step-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .drive-step-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    border-radius: min(var(--radius), 0.5rem);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+  .drive-step-icon svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .drive-step-label {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .drive-step h3 {
+    margin: 0 0 0.375rem;
+    font-size: 1.0625rem;
+    line-height: 1.25;
+  }
+  .drive-step :global(.drive-step-body) {
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .drive-step :global(.drive-step-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .drive-step-actions {
+    margin-top: clamp(1.5rem, 1rem + 1vw, 2rem);
+  }
+  .drive-step-ghost {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    color: var(--link);
+    font-weight: 600;
+  }
+  @media (max-width: 30rem) {
+    .drive-step-actions .button {
+      flex: 1 1 100%;
+    }
+  }
+</style>

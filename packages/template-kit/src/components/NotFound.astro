@@ -1,0 +1,20 @@
+---
+// The 404 page's content, used by src/routes/not-found.astro and by the catch-all
+// page for an address the site does not have: one <h1>, what happened, and
+// the way back (home, and the news when the site has any). The legal line is
+// the footer's, as on every page.
+import { blogBaseOf } from '@backgold/astro/server'
+import { basePath } from '../lib/entries'
+
+const bg = Astro.locals.backgold
+const news = bg.setup === null ? blogBaseOf((await bg.client.types()).types) : null
+---
+<div class="page-header not-found">
+  <p class="kicker">Page not found</p>
+  <h1>That page is not here.</h1>
+  <p class="lede">It may have moved, or the link may have a typo in it. Everything we publish starts from the home page.</p>
+  <p class="actions">
+    <a class="button" href="/">Go to the home page</a>
+    {news && <a class="button button-quiet" href={basePath(news)}>Read the news</a>}
+  </p>
+</div>

@@ -1,0 +1,16 @@
+---
+// Astro's own 404 page, for anything the catch-all page does not answer.
+// The catch-all renders the same NotFound content for an unknown address.
+// The kit's integration serves it at /404, for the template its `template`
+// option names (`virtual:backgold-template`).
+import Site from '../layouts/Site.astro'
+import NotFound from '../components/NotFound.astro'
+import template from 'virtual:backgold-template'
+
+Astro.response.status = 404
+const bg = Astro.locals.backgold
+const siteName = bg.setup === null ? (bg.site.name ?? bg.site.domain) : ''
+---
+<Site template={template} title={`Page not found · ${siteName}`} canonicalPath={Astro.url.pathname} noindex page={null}>
+  <NotFound />
+</Site>

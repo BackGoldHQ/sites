@@ -145,6 +145,12 @@ describe('MenuButton', () => {
     expect((await render(MenuButton, { props: { items: menu.items.filter((i) => !i.header_button) }, request: at('/') })).trim()).toBe('')
   })
 
+  it('marks the button as the current page on the page it links to, and only there', async () => {
+    const items = [link('x', { rule: 'every_page' }, { label: 'Join', url: '/join', header_button: true })]
+    expect(await render(MenuButton, { props: { items, page: null }, request: at('/join/') })).toBe('<a class="bg-menu-button" href="/join" aria-current="page" data-bg-button>Join</a>')
+    expect(await render(MenuButton, { props: { items, page: null }, request: at('/joint') })).not.toContain('aria-current')
+  })
+
   it('carries no data-bg-donate on another kind, and escapes the label', async () => {
     const items = [link('x', { rule: 'every_page' }, { label: '<b>Join</b>', url: '/join', header_button: true })]
     expect(await render(MenuButton, { props: { items, page: null }, request: at('/') })).toBe('<a class="bg-menu-button" href="/join" data-bg-button>&lt;b&gt;Join&lt;/b&gt;</a>')

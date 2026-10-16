@@ -41,9 +41,27 @@ MR: copy the file to that path and run
 platform's `templates-drift` CI job, which compares its copy with this file
 on this repository's `main`, shows yellow; it never fails a platform pipeline.
 
+## Where the files live
+
+The party template draws everything with the template kit,
+[`packages/template-kit`](../../packages/template-kit) (`@backgold/template-kit`,
+a private package of this workspace), which every BackGold template shares:
+the section, entry and chrome components, the Site layout, `lib`, the
+stylesheets and the routes. In what follows a path under `src/` is the
+kit's (`packages/template-kit/src/…`) unless it says otherwise. This
+directory holds only what is the party's:
+
+| File | What it is |
+| --- | --- |
+| `template.json` | The manifest (below). |
+| `src/template.ts` | The template's config for the kit: `template.json` parsed with the contract's schema (so a bad manifest fails the build), the kit's sections and entry layouts, and the party's two faces, Fraunces and Public Sans. A layout of the party's own would live under this directory's `src/components/` and be registered here. |
+| `src/styles/template.css` | What the party draws differently from the kit's stylesheet: nothing, since the kit's values are the party's. It loads after the kit's on every page. |
+| `astro.config.mjs` | Astro on Workers, with `@backgold/astro`'s integration and the kit's, `templateKit({ template: './src/template.ts' })`, which serves the kit's routes (`/preview`, `/backgold-setup`, the 404 and every other address) with this config. The template has no `src/pages`. |
+| `wrangler.jsonc`, `package.json` | The Worker and its dependencies. |
+
 ## Layouts are files
 
-Each section type the template draws has a directory under
+Each section type the template draws has a directory under the kit's
 `src/components/sections/`:
 
 ```
@@ -75,8 +93,12 @@ type Props = ComponentProps<typeof Default>
 ```
 
 To give a layout its design, replace that file's contents; `index.ts` already
-points at it. To add a layout, add it to the type's list in `template.json`,
-add the file, and register it in `index.ts`. The page's leading Hero (the one
+points at it. To add a layout every template can draw, add the file in the
+kit and register it in `index.ts`; to add one only this template draws, add
+the file under this directory's `src/components/sections/<Type>/` and
+register it in `src/template.ts` (`sections: { ...kitSections,
+'Hero:portrait': HeroPortrait }`). Either way, add it to the type's list in
+`template.json`. The page's leading Hero (the one
 whose headline is the page's `<h1>`) goes through the same lookup, with
 `level={1}`.
 
@@ -86,8 +108,9 @@ A post, an episode, a video and a newsletter issue are entries, not pages of
 sections: the operator writes them in BackGold and the template draws their
 fields in a fixed order. `template.json`'s `entryLayouts` names one entry
 layout and one list layout per routable built-in type, and each is a file
-under `src/components/entries/`, registered in its `index.ts` as
-`'<type>:<layout>'`:
+under the kit's `src/components/entries/`, registered in its `index.ts` as
+`'<type>:<layout>'` (`kitEntries`, which `src/template.ts` passes as the
+template's `entries`):
 
 | Type | Entry layout | List layout |
 | --- | --- | --- |
@@ -98,9 +121,9 @@ under `src/components/entries/`, registered in its `index.ts` as
 
 A content type the organization adds is drawn with the post layouts, its own
 fields through `src/components/FieldValue.astro` by their kind, so it needs
-no change here. `src/pages/[...path].astro` picks the layout by the entry's
-type (an entry) or the list's type (a list, or a category's or tag's list),
-and `src/pages/preview.astro` draws a draft entry the same way.
+no change here. The kit's `src/routes/catch-all.astro` picks the layout by
+the entry's type (an entry) or the list's type (a list, or a category's or
+tag's list), and `src/routes/preview.astro` draws a draft entry the same way.
 
 BackGold serves the built-in post, podcast and video types as one list, News,
 at the organization's blog address: `/news` for an organization made since
@@ -191,8 +214,8 @@ says, each with the package's `<Area>`:
   a Call to action in its Strip layout is the slim announcement strip, a
   takeover banner fills the first screen before the page;
 - **Sidebar** (`sidebar`), beside the main column of a page, an entry or a
-  list, under it on a phone, in `src/pages/[...path].astro` and
-  `src/pages/preview.astro`; with nothing in it the page keeps one column;
+  list, under it on a phone, in `src/routes/catch-all.astro` and
+  `src/routes/preview.astro`; with nothing in it the page keeps one column;
 - **Above the footer** (`above_footer`), over the footer, in `Site.astro`;
 - **any other area**, after the page, full width, in the order BackGold lists
   the site's areas, in `Site.astro`.
@@ -232,16 +255,19 @@ menu and is drawn at the right of the header on the pages its rule names.
 
 ## Restyle it
 
-- **Spacing is the template's; the faces are the site's.** `src/styles/site.css`
-  sets the type scale, the spacing, the radii and every component's shape. The
+- **Spacing is the template's; the faces are the site's.** The kit's
+  `src/styles/site.css` sets the type scale, the spacing, the radii and every
+  component's shape, and this directory's `src/styles/template.css`, loaded
+  after it, is where the party would set its own. The
   faces are the site's saved theme in BackGold when it has one: `/site`'s
   `theme.fonts` heading and body, which `src/lib/fonts.ts` declares as a hosted
   BackGold page does (`@font-face` rules for the woff2 files BackGold serves
   under `/lp-runtime`, on the site's own host first-party, else on the api's;
   a system face downloads nothing) and sets as `--site-font-heading` and
   `--site-font-body`. A site with no theme, or a slot its theme leaves empty,
-  keeps the template's own faces: Fraunces for headings and numerals, Public
-  Sans for text, both from Google Fonts. `Site.astro` loads whichever applies.
+  keeps the template's own faces, the `fonts` of this directory's
+  `src/template.ts`: Fraunces for headings and numerals, Public Sans for text,
+  both from Google Fonts. `Site.astro` loads whichever applies.
 - **Colours are the organization's.** `src/lib/brand.ts` turns the brand
   colours set in BackGold into CSS custom properties, a light set and a dark
   set: `--bg-brand-primary`,
@@ -299,7 +325,7 @@ its section's words, and where the frame would be, one line saying the module
 is not available ("Online donations are not available right now.", the words
 a hosted BackGold page uses), never nothing.
 
-In a preview (`src/pages/preview.astro`), the form, poll and sign-up frames
+In a preview (`src/routes/preview.astro`), the form, poll and sign-up frames
 that show the draft arrive with the preview link's token on their address:
 they show the draft as it stands, say they are a preview, and send nothing.
 The donate, petition, event and store frames are addressed by their record,
@@ -349,9 +375,10 @@ step by step; the steps are the same here.
 
 Requires Node 22.12 or later and pnpm (the version the repository root's
 `package.json` names in `packageManager`). The template is part of this repository's
-pnpm workspace and depends on `@backgold/astro` and `@backgold/content` as
-`workspace:^`, so it builds against the packages in `packages/`, not the
-copies on npm. From the repository root:
+pnpm workspace and depends on `@backgold/astro`, `@backgold/content` and
+`@backgold/template-kit` as `workspace:^` (and on the vendored contract,
+`@backgold/contract`, as `workspace:*`), so it builds against the packages in
+`packages/`, not the copies on npm. From the repository root:
 
 ```bash
 pnpm install
@@ -360,7 +387,7 @@ pnpm --filter @backgold/astro build
 ```
 
 The template reads each package's built `dist/`, so build a package again
-after changing it. Then, in `templates/party` (or from the root as
+after changing it; the kit has no build, and a change to it shows at once. Then, in `templates/party` (or from the root as
 `pnpm --filter backgold-template-party run <script>`):
 
 | Command | |
@@ -371,9 +398,9 @@ after changing it. Then, in `templates/party` (or from the root as
 | `pnpm run check` | Type-check the project with `astro check`. |
 | `pnpm run types` | Write `src/backgold.d.ts` from the site's content types. |
 
-A copy of the template outside this repository installs with npm once its
-two `workspace:^` ranges are published ones (`^` and the version in each
-package's `package.json`), as the public starter's are.
+The kit and the contract are private to this workspace and not on npm, so a
+copy of the template outside this repository installs only with their
+tarballs (`pnpm pack` in each), as the end-to-end check below installs it.
 
 In this repository, `node scripts/starter-e2e.mjs --template party` builds
 this template against the packages' current source and checks it end to end

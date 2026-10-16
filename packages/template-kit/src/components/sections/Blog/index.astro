@@ -1,0 +1,37 @@
+---
+// Blog (Cards, the default): the newest posts. The section carries no rows of
+// its own, so it reads the newest entries of the blog types (posts, podcasts,
+// videos: every type the news list shows), three or the section's
+// `maxItems`. Over them the section head (C1's Blog · cards): the kicker when
+// one is set, the heading and its "All news" link (the section's own link,
+// else "All news" to the news list at the organization's blog base), as Lead
+// story draws it.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import EntryCard from '../../EntryCard.astro'
+import SectionHead from '../SectionHead.astro'
+import { entryCard, links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+import { latestNews, shownOf } from './latest'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading) ?? 'Latest'
+const own = links(section)
+const { entries, listPath } = await latestNews(Astro.locals, shownOf(section, 3))
+const more = entries.length === 0 ? [] : own.length > 0 ? own : listPath ? [{ label: 'All news', href: listPath, rel: undefined }] : []
+---
+<Band section={section} class="entries">
+  <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={more} />
+  {entries.length > 0 ? (
+    <div class="grid grid-3">
+      {entries.map((entry) => <EntryCard card={entryCard(entry)} level={3} />)}
+    </div>
+  ) : (
+    <p class="empty">Nothing published yet.</p>
+  )}
+</Band>
