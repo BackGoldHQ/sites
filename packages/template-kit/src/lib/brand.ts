@@ -21,7 +21,9 @@
 //   accent    "accent text": kickers, numerals, date lines, the wordmark's
 //             second line. The accent colour itself when it reads at AA on
 //             the ground; else taken darker (light grounds) or lighter (dark
-//             grounds) a twentieth at a time, only until it does.
+//             grounds) a twentieth at a time, only until it does, up to seven
+//             twentieths of the way (C1's marigold reads as a dark marigold on
+//             the page, not as ink); past that, the band's ink.
 //   button    the main call (Donate, Join the party): the accent colour, with
 //             whichever ink reads on it. In dark mode the accent stays itself
 //             when it holds 3:1 against the page, as a fill must (WCAG
@@ -197,7 +199,7 @@ function band(ground: string, m: Mode): Band {
   const muted = light
     ? firstReadable([0.78, 0.84, 0.9].map((a) => mix(mix(m.primary, ink, 0.5), ground, a)), ground, ink)
     : firstReadable([0.72, 0.78, 0.84, 0.9].map((a) => mix(LIGHT_INK, ground, a)), ground, ink)
-  const accent = light ? reaching(m.accent, BLACK, 0.4, ground, AA, ink) : reaching(m.accent, LIGHT_INK, 0.7, ground, AA, ink)
+  const accent = light ? reaching(m.accent, BLACK, 0.7, ground, AA, ink) : reaching(m.accent, LIGHT_INK, 0.7, ground, AA, ink)
   const link = light ? readable(m.primary, [ground], AA, ink) : firstReadable([mix(LIGHT_INK, m.primary, 0.72)], ground, ink)
   const buttonInk = inkOn(m.call, m.darkText, LIGHT_INK)
   const callReads = contrast(buttonInk, m.call) >= AA && contrast(m.call, ground) >= 1.5

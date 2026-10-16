@@ -215,7 +215,12 @@ says, each with the package's `<Area>`:
   takeover banner fills the first screen before the page;
 - **Sidebar** (`sidebar`), beside the main column of a page, an entry or a
   list, under it on a phone, in `src/routes/catch-all.astro` and
-  `src/routes/preview.astro`; with nothing in it the page keeps one column;
+  `src/routes/preview.astro`; with nothing in it the page keeps one column.
+  A page that opens with a Hero puts the Hero over both columns, so the
+  sidebar starts under it. Every section in the sidebar is a card on its
+  band's card colour, a call to action on the brand's ground, a rem apart.
+  An event's page has no column beside it: its sidebar items draw under the
+  event, full width;
 - **Above the footer** (`above_footer`), over the footer, in `Site.astro`;
 - **any other area**, after the page, full width, in the order BackGold lists
   the site's areas, in `Site.astro`.
@@ -276,7 +281,8 @@ menu and is drawn at the right of the header on the pages its rule names.
   `-button-2`, `-button-2-ink`, `-surface`, `-line` and `-line-strong`, each
   text colour chosen to meet WCAG AA on its ground whatever the brand is. A
   brand colour that already reads stays itself: the accent is taken darker
-  (light grounds) or lighter (dark grounds) only as far as AA needs, and in
+  (light grounds) or lighter (dark grounds) only as far as AA needs, up to
+  seven twentieths of the way before the band's ink takes over, and in
   dark mode the main call's fill only as far as 3:1 against the page. A button
   keeps its own ink wherever it sits, the header included. `site.css` reads
   only these names; it has no colour of its own.

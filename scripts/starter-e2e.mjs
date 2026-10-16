@@ -2919,7 +2919,7 @@ async function checkPartyBoards(origin, fixture) {
       filled.evt_w3.length === 2,
     `it fills each slot: "142 going", "88 going · 12 seats left", and nothing for an event left out or with no one going (${JSON.stringify(filled)})`,
   )
-  const actions = (markup) => [...markup.matchAll(/<a class="button" href="([^"]*)"[^>]*>([^<]*)<span class="visually-hidden"[^>]*>: ([^<]*)<\/span>/g)].map((m) => [decode(m[3]), m[2], decode(m[1])])
+  const actions = (markup) => [...markup.matchAll(/<a class="button[^"]*" href="([^"]*)"[^>]*>\s*([^<]*?)\s*<span class="visually-hidden"[^>]*>: ([^<]*)<\/span>/g)].map((m) => [decode(m[3]), m[2], decode(m[1])])
   const agendaActions = Object.fromEntries(actions(agenda).map(([title, label, href]) => [title, `${label} ${href}`]))
   check(
     agendaActions['Get-out-the-vote dinner'] === 'Get tickets /events/gotv-dinner' &&
@@ -2985,7 +2985,7 @@ async function checkPartyBoards(origin, fixture) {
   check(
     phone !== '' &&
       JSON.stringify(slotIds(phone)) === JSON.stringify(['evt_c1', 'evt_c2', 'evt_c3']) &&
-      [...phone.matchAll(/class="agenda-title"[^>]*><a href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
+      [...phone.matchAll(/class="event-title"[^>]*><a href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
     "on a phone the same month is the agenda's rows, each with its live slot and its title linking to /events/<slug>",
   )
   check(
@@ -3949,7 +3949,22 @@ async function checkCandidateLook(origin, chrome) {
   check(headLink(sectionsOf(html).find((s) => s.type === 'QuoteStrip')?.html ?? '', 'All endorsements'), "Meet the candidate's QuoteStrip · row carries All endorsements in its head (C2)")
   res = await get(origin, at('join'))
   html = await res.text()
-  check(res.status === 200 && /<header class="page-header"><h1>Join<\/h1><\/header>/.test(html) && sectionsOf(html)[0]?.type === 'Cta' && /data-variant="card"/.test(sectionsOf(html)[0].html), "Join opens with Cta · card under the page's title, its <h1>")
+  check(res.status === 200 && /<h1 class="visually-hidden">Join<\/h1>/.test(html) && sectionsOf(html)[0]?.type === 'Cta' && /data-variant="card"/.test(sectionsOf(html)[0].html), "Join opens with Cta · card, the page's title kept as its <h1> for screen readers")
+  // The kit layouts drawn to the C boards: C1's event rows and counted issue cards, C3's counted sections, C10's lead post.
+  html = await (await get(origin, at(''))).text()
+  const homeEvents = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
+  check(
+    (homeEvents.match(/<li class="event-row"/g) ?? []).length === 3 &&
+      (homeEvents.match(/class="chip chip-wash"/g) ?? []).length === 3 &&
+      (homeEvents.match(/class="button button-2 button-small"[^>]*>\s*(?:RSVP|Get tickets|Details)</g) ?? []).length === 3,
+    "home's EventsList · list draws each event as a card with its day, its type as a chip and its button in the quieter solid style (C1)",
+  )
+  check((sectionsOf(html).find((s) => s.type === 'Issues')?.html.match(/<span class="issue-num"/g) ?? []).length === 3, "home's Issues · cards count their three cards in discs (C1)")
+  html = await (await get(origin, at('issues'))).text()
+  const longread = sectionsOf(html).find((s) => s.type === 'PlatformPlanks')?.html ?? ''
+  check(/<a href="#platform-[^"]+"[^>]*>01 · /.test(longread) && /<span class="longread-num"[^>]*>01<\/span>/.test(longread), 'the platform counts its sections in the jump list and the headings, 01 up, with no numbers typed (C3)')
+  html = await (await get(origin, '/blog')).text()
+  check(/<article class="post-lead"/.test(html) && (html.match(/<li class="post-row"/g) ?? []).length === 1, 'the news list leads with its newest post and lists the rest as rows (C10)')
 
   const css = (
     await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
@@ -3989,6 +4004,15 @@ async function checkCandidateLook(origin, chrome) {
         await browser.open(`${origin}${at('events')}`, scheme)
         const events = await browser.evaluate(`({ overflow: document.documentElement.scrollWidth - window.innerWidth, left: document.querySelector('.ci-left')?.hidden === false ? document.querySelector('.ci-left').textContent : null })`)
         check(events.overflow <= 0 && events.left === '26 days', `${where}: Events has no horizontal scroll and Countdown · inline reads "26 days" (${events.overflow}px over, ${JSON.stringify(events.left)})`)
+        const railStart = await browser.evaluate(`(() => {
+          const hero = document.querySelector('main [data-type="Hero"]')
+          const rail = document.querySelector('.layout-rail')
+          const main = document.querySelector('.layout-main')
+          if (!hero || !rail || !main) return null
+          const [h, r, m] = [hero, rail, main].map((el) => el.getBoundingClientRect())
+          return { underHero: r.top >= h.bottom - 1, beside: ${width} < 768 ? r.top >= m.bottom - 1 : Math.abs(r.top - m.top) <= 1 }
+        })()`)
+        check(railStart !== null && railStart.underHero && railStart.beside, `${where}: the Campaign sidebar starts under the hero, ${width >= 768 ? 'beside' : 'under'} the list (${JSON.stringify(railStart)})`)
         await browser.open(`${origin}${at('endorsements')}`, scheme)
         const endorse = await browser.evaluate(`(() => {
           const said = document.querySelector('.ew-said')
@@ -4030,7 +4054,7 @@ async function checkCandidateLook(origin, chrome) {
         check(railGap !== null && railGap >= 16, `${where}: the Campaign sidebar's Countdown and Cta stand apart (${railGap}px)`)
         await browser.open(`${origin}${at('join')}`, scheme)
         const join = await browser.evaluate(`(() => {
-          const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .bg-section-inner')
+          const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .cta-card-box')
           const title = document.querySelector('.page-header')
           const button = card?.querySelector('.actions .button')
           if (!card || !button) return null

@@ -56,7 +56,7 @@ This directory holds only what is the candidate's:
 
 ## Its own layouts
 
-Three layouts the kit does not draw, and one it draws differently, each a
+Three layouts the kit does not draw, and two it draws differently, each a
 file under `src/components/sections/<Type>/` registered in `src/template.ts`:
 
 - **Hero · portrait** (`Hero/portrait.astro`, `'Hero:portrait'`; boards C1
@@ -77,7 +77,11 @@ file under `src/components/sections/<Type>/` registered in `src/template.ts`:
   tiles are drawn.
 - **Countdown · inline** (`Countdown/inline.astro`, `'Countdown:inline'`;
   C5's sidebar). One line, "26 days", under the heading set small and over
-  the day; in the Sidebar it sits on a card.
+  the day; in the Sidebar it sits on a card, as every sidebar section does.
+- **Issues · cards** (`Issues/cards.astro`, `'Issues:cards'`; C1 and C7). The
+  kit's cards (raised, on the band's card colour), each counted in a disc,
+  "1", "2", "3". The party's A8 draws the same cards uncounted, which is what
+  the kit draws on its own.
 - **QuoteStrip · wall** (`QuoteStrip/wall.astro`, `'QuoteStrip:wall'`, in
   place of the kit's; C4). The endorsements wall: name cards, four across, each
   the endorser's logo (or the initials of the name in a disc), the name and
@@ -108,12 +112,12 @@ page rendered after it draws no countdown at all.
   the page's one gold affordance.
 - **The editorial quote** (QuoteStrip · single) is set upright and bold, as
   C4 draws it.
-- **Sections together in a sidebar** stand apart as cards (C5's Campaign
-  sidebar: Countdown · inline over the call to action).
-- **Cta · card in the page's column** (C8's Join) is one card centred on its
-  band, its words and button centred; a page that opens with it draws no
-  title band over it (the title stays the page's `<h1>` for screen readers).
-  In a sidebar the kit's own card stays.
+
+Everything else the C boards draw is the kit's: the event rows (C1), the
+sidebar's cards a rem apart and its start under the page's opening Hero
+(C5), Cta · card and the quiet title over it (C8), the counted platform
+(C3), the news list's lead post (C10), and the accent taken darker, not to
+ink, on light bands.
 
 ## Starter content
 
