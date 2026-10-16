@@ -65,7 +65,7 @@ flowchart TB
   astro -->|"reads through"| content
   client -->|"Workers Builds or npm run deploy"| clientWorker
   clientWorker -->|"GET with a site key"| api
-  party -->|"deploy-party-staging (auto) / deploy-party-production (manual)"| wfp
+  party -->|"deploy-party-staging (auto) / deploy-production (one button)"| wfp
   api -->|"dispatches each party-template site"| wfp
   wfp -->|"first-party reads, no key"| api
 ```
@@ -234,9 +234,10 @@ Merge an MR to `main` (see [Merge requests](#merge-requests-in-this-repository))
 changed `templates/party/`, `packages/`, `vendor/`, `pnpm-lock.yaml` or
 `.gitlab-ci.yml`, and deploys the template, built from this workspace, into
 `sites-staging`. Check it on staging (`https://westmark.backgold.dev`).
-Production is `deploy-party-production`, a manual job on every `main`
-pipeline: play it on the newest one. It deploys the template as committed in
-the pipeline it is played from. Never merge anything you would not put on
+Production is one button, `deploy-production`, on every `main` pipeline: play
+it on the newest one and every template this repository owns deploys into
+`sites-production` (`deploy-party-production`, `deploy-candidate-production`
+run from it, in that pipeline, as committed there). Never merge anything you would not put on
 staging.
 
 ## Shared material
@@ -439,8 +440,8 @@ What a merge to `main` does: `deploy-party-staging` (automatic when the party
 template, a package, `vendor/`, the lockfile or the CI file changed) and
 `sync-starter` (automatic when `templates/astro-starter/`, a package's
 `package.json` or `scripts/sync-starter.sh` changed). Manual on every `main`
-pipeline: `deploy-party-production`, `pack-content`, `pack-astro`, and both of
-the automatic jobs again.
+pipeline: `deploy-production` (which runs the `deploy-*-production` jobs),
+`pack-content`, `pack-astro`, and both of the automatic jobs again.
 
 ## Briefing your agent
 
@@ -521,8 +522,8 @@ gitlab.com/backgold/sites is public.
 
 **The party template looks wrong on a production site after my merge.** A
 merge deploys to staging only. Production runs whatever
-`deploy-party-production` last deployed; play it on the newest `main`
-pipeline once staging looks right.
+`deploy-production` last deployed; play it on the newest `main` pipeline once
+staging looks right.
 
 **Can I push a change to gitlab.com/backgold/backgold-starter?** No. Change
 `templates/astro-starter` here; `sync-starter` mirrors it on merge.
