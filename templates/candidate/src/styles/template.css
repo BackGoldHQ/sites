@@ -103,3 +103,9 @@ body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] 
   line-height: 1.08;
   letter-spacing: -0.004em;
 }
+
+/* The news list's name in capitals, 64 → 104 (C10's "NEWS"), its intro's headline the same. */
+.listing {
+  --list-title-size: clamp(4rem, 3.12rem + 3.76vw, 6.5rem);
+  --list-title-case: uppercase;
+}

@@ -3881,10 +3881,26 @@ function withCandidate(data, ex) {
   })
   const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
   const page = data.page
+  // C10 and C11's terms: the posts filed under categories the organization
+  // orders by position, not by label, one post also under the featured Press
+  // releases; and an entry's Sidebar ends with More from the campaign.
+  const categories = {
+    taxonomy: { key: 'category', label: 'Categories', hierarchical: false },
+    terms: ['On the road', 'Schools', 'Endorsements', 'Press releases'].map((label, position) => ({
+      id: `term_c${position}`, slug: label.toLowerCase().replaceAll(' ', '-'), label, parent_id: null, position,
+    })),
+  }
+  const category = (slug) => ({ taxonomy: 'category', slug, label: categories.terms.find((t) => t.slug === slug).label })
+  const filed = { 'levy-explained': [category('schools')], 'open-books': [category('endorsements'), category('press-releases')] }
+  const file = (entry) => (filed[entry.slug] ? { ...entry, terms: [...entry.terms, ...filed[entry.slug]] } : entry)
   const out = {
     ...data,
     pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
     page: (slug, headline) => bySlug.get(slug) ?? page(slug, headline),
+    entries: { ...data.entries, post: data.entries.post.map(file) },
+    entry: { ...data.entry, post: Object.fromEntries(Object.entries(data.entry.post).map(([slug, entry]) => [slug, file(entry)])) },
+    terms: { ...data.terms, category: categories },
+    entryAreas: { ...data.entryAreas, sidebar: [...data.entryAreas.sidebar, reusable('more-from-the-campaign', 'lp_candidate_news')] },
   }
   if (!SERVE) return out
   // --serve: the starter's menus, the reusable sections on the posts, the
@@ -3902,8 +3918,22 @@ function withCandidate(data, ex) {
     shows_on: item.shows_on,
     children: item.children.map(menuItem),
   })
+  // The news list's intro as the seed writes one (C10): its Hero, the name and the subhead, and nothing else.
+  const intro = {
+    page: { ...ex.PageResponse.page, id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, meta: { title: null, description: null, image_url: null } },
+    sections: [
+      {
+        id: 'Hero-news', type: 'Hero', band: 'plain', bleed: 'full', variant: 'statement',
+        copy: { headline: 'News', subheadline: 'Updates from Your campaign, newest first.' },
+        media: {}, links: [], options: {},
+      },
+    ],
+    areas: { top_banner: [], sidebar: [], above_footer: [] },
+    legal: data.legal,
+  }
   return {
     ...out,
+    page: (slug, headline) => (slug === 'news' ? intro : out.page(slug, headline)),
     // The boards' brand (spruce, marigold, chalk) and no saved theme, so the template's own faces draw.
     site: { ...out.site, name: 'Your campaign', brand: { ...out.site.brand, logo_url: null, primary_color: '#123d38', secondary_color: '#f4f2ea', accent_color: '#f2b233' }, theme: null },
     types: out.types.filter((t) => t.url_base !== 'endorsements'),
@@ -3994,6 +4024,46 @@ async function checkCandidateLook(origin, chrome) {
   check(/<a href="#platform-[^"]+"[^>]*>01 · /.test(longread) && /<span class="longread-num"[^>]*>01<\/span>/.test(longread), 'the platform counts its sections in the jump list and the headings, 01 up, with no numbers typed (C3)')
   html = await (await get(origin, '/blog')).text()
   check(/<article class="post-lead"/.test(html) && (html.match(/<li class="post-row"/g) ?? []).length === 1, 'the news list leads with its newest post and lists the rest as rows (C10)')
+  // The comp walk's news and post fixes (C10, C11).
+  const filterRow = /<nav class="list-filter"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? ''
+  const chipLabels = [...filterRow.matchAll(/<li><a href="[^"]*"[^>]*>([^<]*)<\/a><\/li>/g)].map((m) => m[1])
+  check(
+    JSON.stringify(chipLabels) === JSON.stringify(['All', 'Schools', 'Endorsements']),
+    `the filter's chips follow the categories' positions, not their labels, and leave the featured category out (${chipLabels.join(', ')})`,
+  )
+  check(
+    /<\/ul>\s*<a class="list-featured" href="\/blog\/category\/press-releases"[^>]*>\s*Press releases\s*<svg/.test(filterRow),
+    'the filter row ends with the link to the Press releases category (C10)',
+  )
+  const head = /<div class="list-head">([\s\S]*?)<nav class="list-filter"/.exec(html)?.[1] ?? ''
+  check(/<h1>Blog<\/h1>/.test(head) && /<form class="list-search"/.test(head), "with no intro the list's head is its name, the one <h1>, with the search beside it")
+  res = await get(origin, '/blog/category/press-releases')
+  html = await res.text()
+  check(res.status === 200 && /<a class="list-featured"[^>]*aria-current="page"/.test(html) && html.includes('Open books, line by line'), "on the Press releases list its link is marked as the current page")
+  res = await get(origin, '/blog/levy-explained')
+  html = await res.text()
+  check(
+    /<nav class="crumbs" aria-label="Breadcrumb">\s*<a href="\/blog">Blog<\/a><span class="crumbs-sep" aria-hidden="true">›<\/span><span>Schools<\/span><span class="visually-hidden" aria-current="page">The levy, explained<\/span>\s*<\/nav>/.test(html),
+    "the post's breadcrumb is its list as a link, then its category, the post named as the current page (C11)",
+  )
+  check(
+    /<ul class="entry-terms" role="list">\s*<li><a class="chip chip-wash" href="\/blog\/category\/schools">Schools<\/a><\/li><li><a class="chip" href="\/blog\/tag\/taxes">Taxes<\/a><\/li>\s*<\/ul>/.test(html) && !html.includes('class="kicker entry-terms'),
+    "the post's terms are chips over its title, the category on the wash first, then the tag (C11)",
+  )
+  const byline = /<div class="byline">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? ''
+  check(!plain(byline).includes('Written by') && /<a href="\/authors\/dana-k">Dana K\.<\/a>/.test(byline), 'the byline names the writer without "Written by" (C11)')
+  const authorBox = /<div class="author-box">([\s\S]*?)<\/section>/.exec(html)?.[1] ?? ''
+  check(
+    /<span class="author-box-avatar" aria-hidden="true">DK<\/span>/.test(authorBox) &&
+      /<p class="kicker author-box-role">Written by<\/p>\s*<p class="author-box-name"><a href="\/authors\/dana-k">Dana K\.<\/a><\/p>/.test(authorBox) &&
+      plain(authorBox).includes('Treasurer.'),
+    'the author box: the initials disc, "Written by" as its kicker, the name as its heading, the bio (C11)',
+  )
+  const more = html.slice(html.indexOf('More from the campaign'))
+  check(
+    /class="blog-row[^"]*"/.test(more) && /<span class="blog-day-short"[^>]*>Sep 20<\/span>/.test(more) && !/class="post-(?:row|byline)/.test(more),
+    "the Sidebar's More from the campaign draws its own rows, each with the short date (C11)",
+  )
 
   const css = (
     await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
@@ -4059,6 +4129,51 @@ async function checkCandidateLook(origin, chrome) {
           return { overflow: document.documentElement.scrollWidth - window.innerWidth, fill: b ? getComputedStyle(b).backgroundColor : null }
         })()`)
         check(donate.overflow <= 0 && donate.fill === 'rgba(0, 0, 0, 0)', `${where}: on Donate the header button is an outline, the form's Donate the one gold affordance (${donate.fill})`)
+        await browser.open(`${origin}/blog`, scheme)
+        const news = await browser.evaluate(`(() => {
+          const h1 = document.querySelector('.list-head h1')
+          const words = document.querySelector('.list-head-words')
+          const search = document.querySelector('.list-head .list-search')
+          const filter = document.querySelector('.list-filter')
+          if (!h1 || !words || !search || !filter) return null
+          const w = words.getBoundingClientRect()
+          const q = search.getBoundingClientRect()
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            size: parseFloat(getComputedStyle(h1).fontSize),
+            caps: getComputedStyle(h1).textTransform,
+            beside: q.left >= w.right - 1 && Math.abs(q.bottom - w.bottom) <= 2,
+            under: q.top >= w.bottom - 1,
+            searchWidth: Math.round(q.width),
+            rule: getComputedStyle(filter).borderBottomWidth + ' ' + getComputedStyle(filter).borderBottomStyle,
+          }
+        })()`)
+        check(
+          news && news.overflow <= 0 && news.caps === 'uppercase' && Math.abs(news.size - (width >= 1440 ? 104 : 64)) <= 1 && (width >= 768 ? news.beside && news.searchWidth <= 270 : news.under) && news.rule === '2px solid',
+          `${where}: the news list's name in capitals at C10's size, the search a pill ${width >= 768 ? 'beside it' : 'under it'}, a line under the filter (${JSON.stringify(news)})`,
+        )
+        await browser.open(`${origin}/blog/levy-explained`, scheme)
+        const post = await browser.evaluate(`(() => {
+          const box = document.querySelector('.author-box')
+          const disc = box?.querySelector('.author-box-avatar')
+          const meta = document.querySelector('.rail .blog-meta')
+          const probe = document.createElement('i')
+          probe.style.background = 'var(--band-tint)'
+          document.body.append(probe)
+          const tint = getComputedStyle(probe).backgroundColor
+          probe.remove()
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            tinted: box ? getComputedStyle(box).backgroundColor === tint : false,
+            disc: disc ? Math.round(disc.getBoundingClientRect().width) + ' ' + getComputedStyle(disc).backgroundImage.startsWith('linear-gradient') : null,
+            meta: meta ? meta.innerText.trim() : null,
+            metaLines: meta ? Math.round(meta.getBoundingClientRect().height / parseFloat(getComputedStyle(meta).lineHeight)) : null,
+          }
+        })()`)
+        check(
+          post.overflow <= 0 && post.tinted && post.disc === '56 true' && post.meta === 'Sep 20' && post.metaLines === 1,
+          `${where}: the author box on the tint with the large disc, and More from the campaign's rows read "Sep 20" on one line (${JSON.stringify(post)})`,
+        )
         // The comp walk's fixes, measured.
         await browser.open(`${origin}${at('')}`, scheme)
         const stripe = await browser.evaluate(`(() => {
@@ -4106,6 +4221,47 @@ async function checkCandidateLook(origin, chrome) {
     await browser.close()
   }
 }
+/** At /news, with the intro page's Hero as the list's head (C10): its headline at the list's title size, the search beside its subhead. */
+async function checkCandidateNewsIntro(origin, chrome) {
+  log('\nCandidate: the news list under its intro (C10)')
+  const res = await get(origin, '/news')
+  const html = await res.text()
+  const head = /<div class="list-head">([\s\S]*?)<nav class="list-filter"/.exec(html)?.[1] ?? ''
+  check(
+    res.status === 200 && /<h1 class="statement-headline[^"]*"[^>]*>From the party<\/h1>/.test(head) && head.includes('Announcements and the occasional argument.') && /<form class="list-search"[^>]*action="\/news"/.test(head),
+    "the intro's Hero is the list's head, its headline the <h1> and its subhead under it, with the search",
+  )
+  check(head.indexOf('list-search') > head.indexOf('Announcements') && head.indexOf('Hear it from us first') > head.indexOf('list-search'), "the intro's other sections follow the head, before the filter")
+  const browser = await headlessChrome(chrome)
+  try {
+    for (const width of [1440, 375]) {
+      await browser.width(width)
+      await browser.open(`${origin}/news`, 'light')
+      const intro = await browser.evaluate(`(() => {
+        const h1 = document.querySelector('.list-head h1')
+        const lede = document.querySelector('.list-head .statement-lede')
+        const search = document.querySelector('.list-head .list-search')
+        if (!h1 || !lede || !search) return null
+        const l = lede.getBoundingClientRect()
+        const q = search.getBoundingClientRect()
+        return {
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          size: parseFloat(getComputedStyle(h1).fontSize),
+          caps: getComputedStyle(h1).textTransform,
+          gap: Math.round(l.top - h1.getBoundingClientRect().bottom),
+          beside: q.left >= l.right - 1 && Math.abs(q.bottom - l.bottom) <= 4,
+          under: q.top >= l.bottom - 1,
+        }
+      })()`)
+      check(
+        intro && intro.overflow <= 0 && intro.caps === 'uppercase' && Math.abs(intro.size - (width >= 1440 ? 104 : 64)) <= 1 && intro.gap >= 12 && intro.gap <= 20 && (width >= 768 ? intro.beside : intro.under),
+        `${width}: the intro's headline at the list's title size, the subhead under it, the search ${width >= 768 ? 'beside the subhead' : 'under it'} (${JSON.stringify(intro)})`,
+      )
+    }
+  } finally {
+    await browser.close()
+  }
+}
 // ── end of the candidate template's block ────────────────────────────────────
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -4134,7 +4290,8 @@ async function main() {
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
-  const fixture = await startFixture(examples, kitchen.sections)
+  // --serve --template candidate: the organization at /news, its list with the intro the seed writes (C10).
+  const fixture = await startFixture(examples, kitchen.sections, CANDIDATE && SERVE ? 'news' : 'blog')
   log(`Fixture Content API: ${fixture.origin}`)
   // ── petition-drive (begin) ──
   // --serve: home is the drive's starter page, under its menus; a JSON brand
@@ -4190,6 +4347,7 @@ async function main() {
   })
   try {
     await checkNewsBase(atNews.origin, newsFixture)
+    if (CANDIDATE) await checkCandidateNewsIntro(atNews.origin, chrome)
   } finally {
     await killTree(atNews.child)
   }

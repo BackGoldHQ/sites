@@ -76,7 +76,8 @@ export interface ListFilter {
 /**
  * The filter a list offers: its categories, or its tags when no listed entry
  * carries a category. Only terms a listed entry carries are offered, so a term
- * with nothing published under it never shows; they are in label order.
+ * with nothing published under it never shows; they are in label order here,
+ * and the list frame puts them in the organization's order (`listTermsOf`).
  */
 export function filterOf(entries: Entry[]): ListFilter | null {
   for (const taxonomy of ['category', 'tag']) {
@@ -90,6 +91,48 @@ export function filterOf(entries: Entry[]): ListFilter | null {
     }
   }
   return null
+}
+
+/**
+ * The term a list frame draws as a link at the end of its filter row instead
+ * of as one of its chips (board C10's "Press releases →"): the category with
+ * this slug, when the organization has one. Named by its slug, so featuring
+ * it asks the Content API for nothing new; an organization that names its
+ * press category otherwise gets it as an ordinary chip.
+ */
+const FEATURED_TERM = { taxonomy: 'category', slug: 'press-releases' } as const
+
+/** What a list frame's filter row draws: the chips, in order, and the featured term's link. */
+export interface ListTerms {
+  chips: ListFilter['terms']
+  /** `key` is `<taxonomy>/<slug>`, as a term's list names its term. */
+  featured: { key: string; label: string; href: string } | null
+}
+
+/**
+ * The filter's terms in the organization's order (each term's `position` from
+ * GET /terms, label order among equals and for a term /terms does not list),
+ * the featured term taken out of them, and the featured term's link under the
+ * list at `base` when its taxonomy lists it, whether or not a listed entry
+ * carries it.
+ */
+export async function listTermsOf(client: BackgoldContent, base: string, filter: ListFilter | null): Promise<ListTerms> {
+  const read = (taxonomy: string) => client.terms(taxonomy).catch(() => null)
+  const [own, featuredTaxonomy] = await Promise.all([
+    filter ? read(filter.taxonomy) : null,
+    filter?.taxonomy === FEATURED_TERM.taxonomy ? null : read(FEATURED_TERM.taxonomy),
+  ])
+  const position = new Map((own?.terms ?? []).map((t) => [t.slug, t.position]))
+  const at = (slug: string) => position.get(slug) ?? Number.POSITIVE_INFINITY
+  const featuredIn = filter?.taxonomy === FEATURED_TERM.taxonomy ? own : featuredTaxonomy
+  const featured = featuredIn?.terms.find((t) => t.slug === FEATURED_TERM.slug) ?? null
+  const chips = (filter?.terms ?? [])
+    .filter((t) => !(featured && filter?.taxonomy === FEATURED_TERM.taxonomy && t.slug === featured.slug))
+    .sort((a, b) => at(a.slug) - at(b.slug) || a.label.localeCompare(b.label))
+  return {
+    chips,
+    featured: featured ? { key: `${FEATURED_TERM.taxonomy}/${featured.slug}`, label: featured.label, href: termPath(base, FEATURED_TERM.taxonomy, featured.slug) } : null,
+  }
 }
 
 /** The entry's first term in the list's filter taxonomy (else its first term): the line over a row's title. */
