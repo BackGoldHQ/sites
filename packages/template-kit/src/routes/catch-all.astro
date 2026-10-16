@@ -28,6 +28,11 @@
 // a response with a calendar's `?month=`, nor a page with a calendar section
 // at all: the month it shows and its today move with the clock.
 //
+// A page that draws a Donate frame (a section or an area item of type Donate)
+// names the donate query names its frame copies (READS_QUERY_HEADER,
+// lib/donate-frame.ts), so the edge cache never answers `?amount=25` with
+// the bare page's copy, and a request that carries one is never stored.
+//
 // `/events/<type>` is the events page with its Agenda and Calendar sections
 // narrowed to that type (the Agenda's rows read from the Content API's `GET
 // /events?type=`, src/lib/events.ts; the Calendar reads its month by type
@@ -49,7 +54,7 @@
 // items draw under the event, full width (board C6's "More chances").
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
-import { areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
+import { READS_QUERY_HEADER, areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryCard from '../components/EntryCard.astro'
 import EventPage from '../components/EventPage.astro'
@@ -60,6 +65,7 @@ import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
 import { entryCard, leadsWithHero } from '../lib/section'
+import { DONATE_READS_QUERY, carriesDonateQuery, drawsDonateFrame } from '../lib/donate-frame'
 import { markReading } from '../lib/reading'
 import template from 'virtual:backgold-template'
 
@@ -158,6 +164,10 @@ const areas: Areas | null =
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term'
       ? resolved.areas
       : event?.areas ?? null
+if (drawsDonateFrame(resolved.kind === 'page' ? resolved.page.sections : [], areas)) {
+  Astro.response.headers.set(READS_QUERY_HEADER, DONATE_READS_QUERY)
+  if (carriesDonateQuery(Astro.url.searchParams)) Astro.response.headers.set('Cache-Control', 'no-store')
+}
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
 const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0

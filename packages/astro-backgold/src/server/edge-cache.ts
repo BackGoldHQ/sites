@@ -37,6 +37,28 @@ const BROWSER_CACHE_CONTROL = 'X-Backgold-Cache-Control'
 /** `HIT` or `MISS` on every response the edge cache looked at. */
 export const CACHE_STATUS_HEADER = 'X-Backgold-Cache'
 
+/**
+ * Set by a render whose page reads query names the key leaves out (the
+ * template kit's Donate frame copies the page URL's donate keys into its
+ * address): the names, comma-separated, a trailing `*` standing for every name
+ * with that prefix. A stored copy that carries it is never served to a request
+ * that carries one of those names, which renders instead; that render says
+ * `no-store`, so it never takes the entry either.
+ */
+export const READS_QUERY_HEADER = 'X-Backgold-Reads-Query'
+
+/** Whether the request's query carries a name the stored copy's READS_QUERY_HEADER lists. */
+export function readsRequestQuery(stored: Response, url: URL): boolean {
+  const listed = stored.headers.get(READS_QUERY_HEADER)
+  if (!listed) return false
+  const names = listed.split(',').map((name) => name.trim()).filter(Boolean)
+  for (const [name, value] of url.searchParams) {
+    if (!value) continue
+    if (names.some((n) => (n.endsWith('*') ? name.startsWith(n.slice(0, -1)) : name === n))) return true
+  }
+  return false
+}
+
 /** The site's preview page (a draft, BackGold's signed token in its query). */
 export function isPreviewPath(pathname: string): boolean {
   return pathname === '/preview' || pathname.startsWith('/preview/')
