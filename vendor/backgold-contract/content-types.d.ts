@@ -314,17 +314,17 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
+        date: "date";
+        link: "link";
+        list: "list";
+        datetime: "datetime";
+        pdf: "pdf";
+        image: "image";
         short_text: "short_text";
         long_text: "long_text";
         rich_text: "rich_text";
-        image: "image";
-        pdf: "pdf";
-        link: "link";
-        date: "date";
-        datetime: "datetime";
         choice: "choice";
         choices: "choices";
-        list: "list";
         reference: "reference";
     }>;
     required: z.ZodDefault<z.ZodBoolean>;

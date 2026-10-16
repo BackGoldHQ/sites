@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-NQP7MJJF.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-M63RVOZK.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -287,10 +287,12 @@ var CONTENT_API_BLOCKS = {
   // `monthly`, read as QuickDonate reads them, its donate link the first link)
   // and the `words` rows (each a `title`, the rotating headline's last word in
   // turn) are a template's donate and rotating layouts' (sections batch 3,
-  // added 2026-10-14). The hosted block draws neither.
+  // added 2026-10-14). The hosted block draws neither. `caption` is the line
+  // under the in-layout photo and `imageAlt` that photo's alt text (photoUrl's,
+  // else imageUrl's); the hosted block draws both under and on its photo.
   Hero: {
     role: "presentational",
-    copy: ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note"],
+    copy: ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note", "caption", "imageAlt"],
     media: ["imageUrl", "photoUrl", "videoUrl", "videoPosterUrl"],
     links: [
       { label: "ctaText", href: "donateHref" },
@@ -857,7 +859,8 @@ var CONTENT_API_BLOCKS = {
   },
   Countdown: {
     role: "data",
-    copy: HEADING_ONLY,
+    copy: ["eyebrow", "heading", "body", "linkText"],
+    links: [{ label: "linkText", href: "linkHref" }],
     variant: "layout",
     options: ["source", "anchorId"],
     data: {

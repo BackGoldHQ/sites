@@ -953,7 +953,7 @@ declare const CONTENT_API_BLOCKS: {
     };
     readonly Hero: {
         readonly role: "presentational";
-        readonly copy: readonly ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note"];
+        readonly copy: readonly ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note", "caption", "imageAlt"];
         readonly media: readonly ["imageUrl", "photoUrl", "videoUrl", "videoPosterUrl"];
         readonly links: readonly [{
             readonly label: "ctaText";
@@ -1564,7 +1564,11 @@ declare const CONTENT_API_BLOCKS: {
     };
     readonly Countdown: {
         readonly role: "data";
-        readonly copy: readonly ["heading"];
+        readonly copy: readonly ["eyebrow", "heading", "body", "linkText"];
+        readonly links: readonly [{
+            readonly label: "linkText";
+            readonly href: "linkHref";
+        }];
         readonly variant: "layout";
         readonly options: readonly ["source", "anchorId"];
         readonly data: {

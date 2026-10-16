@@ -33,6 +33,15 @@ export function media(section: Section, ...keys: string[]): Media | null {
   return null
 }
 
+/**
+ * A Hero's photo: the first of `keys` the section has media for, its alt text
+ * the section's `copy.imageAlt` (empty when the section has none).
+ */
+export function heroPhoto(section: Section, ...keys: string[]): Media | null {
+  const m = media(section, ...keys)
+  return m ? { url: m.url, alt: text(section.copy.imageAlt) ?? '' } : null
+}
+
 export interface Link {
   label: string
   href: string

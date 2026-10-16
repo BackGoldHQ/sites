@@ -3844,6 +3844,15 @@ function withCandidate(data, ex) {
     if (s.type === 'EventsList') s.data = { source: 'events', items: s.options.max ? data.events.upcoming.slice(0, s.options.max) : data.events.upcoming }
     if (s.type === 'Blog') s.data = { source: 'blog', items: [] }
     if (s.type === 'Hero' && (s.variant === 'portrait' || s.variant === 'split')) s.media = { photoUrl: portrait }
+    // What an author adds to the starter's home, as board C1 has it: the Countdown's eyebrow, body line and link, the
+    // portrait's caption and alt text; the sidebar's Countdown keeps its heading as the kicker and gains C5's link.
+    if (s.id === 'Countdown-home') {
+      s.copy = { ...s.copy, eyebrow: 'Election Day', body: 'Early voting runs October 19 to 31 at every county clerk’s office.', linkText: 'Find where to vote' }
+      s.links = [{ label: 'Find where to vote', target: { kind: 'external' }, url: 'https://vote.example.gov/polling-places' }]
+    }
+    if (s.id === 'Countdown-campaign-sidebar') s.links = [{ label: 'Find where to vote', target: { kind: 'external' }, url: 'https://vote.example.gov/polling-places' }]
+    if (s.id === 'Hero-home') s.copy = { ...s.copy, caption: 'Photo: the candidate at the county fair', imageAlt: 'The candidate at the county fair' }
+    if (s.id === 'Hero-about') s.copy = { ...s.copy, caption: 'Photo: the candidate at home' }
     if (s.type === 'Donate') s.embed = donateEmbed
     if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
     if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
@@ -3922,15 +3931,35 @@ async function checkCandidateLook(origin, chrome) {
     res.status === 200 && /data-variant="portrait"/.test(hero) && /<h1 class="hp-name[^"]*"[^>]*>The candidate’s name<\/h1>/.test(hero) && /class="hp-office[^"]*"[^>]*>The office · The district</.test(hero) && /<img class="hp-portrait/.test(hero),
     'home opens on Hero · portrait: the office line, the name as the one <h1>, the portrait',
   )
+  check(
+    /<p class="photo-caption hp-caption[^"]*"[^>]*>Photo: the candidate at the county fair<\/p>/.test(hero) && /<img class="hp-portrait[^"]*"[^>]*alt="The candidate at the county fair"/.test(hero),
+    "Hero · portrait draws the photo's caption as a chip and its alt text from the section (C1)",
+  )
   const tiles = sectionsOf(html).find((s) => s.type === 'Countdown')?.html ?? ''
   check(
     /data-variant="tiles"/.test(tiles) && tiles.includes(`data-countdown-ends="${CANDIDATE_DEADLINE}"`) && /<dl class="ct-tiles[^"]*"[^>]*hidden/.test(tiles) && /<time datetime=/.test(tiles),
     'Countdown · tiles writes the deadline and the day, its tiles hidden until the browser counts them',
   )
+  check(
+    /<p class="kicker ct-eyebrow[^"]*"[^>]*>Election Day<\/p>\s*<h2 class="ct-heading[^"]*"[^>]*>Election Day\. Make your plan to vote\.<\/h2>/.test(tiles) &&
+      /<p class="ct-body[^"]*"[^>]*>\s*Early voting runs October 19 to 31 at every county clerk’s office\. <a class="text-link[^"]*" href="https:\/\/vote\.example\.gov\/polling-places"[^>]*>Find where to vote<\/a>/.test(tiles),
+    'Countdown · tiles draws the eyebrow over the heading and the body line with its link after it (C1)',
+  )
+  html = await (await get(origin, at('about'))).text()
+  const split = sectionsOf(html).find((s) => s.type === 'Hero')?.html ?? ''
+  // Astro writes an empty alt as a bare `alt`; the photo's own media alt is not the section's alt text.
+  check(
+    /<p class="photo-caption[^"]*"[^>]*>Photo: the candidate at home<\/p>/.test(split) && /<img class="split-image[^"]*"[^>]*\salt(?:="")?[\s>]/.test(split) && !/<img class="split-image[^>]*door-knock/.test(split),
+    "Hero · split draws the photo's caption, and an empty alt where the section has no alt text",
+  )
   res = await get(origin, at('events'))
   html = await res.text()
   const rail = html.slice(html.indexOf('data-bg-area="sidebar"'))
   check(res.status === 200 && /data-variant="inline"/.test(rail) && rail.includes('class="ci-left') && rail.includes('Two hours this Saturday?'), "Events' Sidebar carries Campaign sidebar: Countdown · inline, then the call to action")
+  check(
+    /<p class="kicker ci-heading[^"]*"[^>]*>Election Day<\/p>/.test(rail) && !rail.includes('class="ci-title') && /<p class="ci-body[^"]*"[^>]*>\s*<a class="text-link[^"]*"[^>]*>Find where to vote<\/a>/.test(rail),
+    'Countdown · inline with no eyebrow sets its heading as the kicker, and draws its link under the day (C5)',
+  )
   res = await get(origin, at('endorsements'))
   html = await res.text()
   const wall = sectionsOf(html).find((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))?.html ?? ''
