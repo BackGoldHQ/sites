@@ -54,7 +54,7 @@
 #   CLOUDFLARE_API_TOKEN     every deploy-<name>-staging and -production job
 #   CLOUDFLARE_ACCOUNT_ID    every deploy-<name>-staging and -production job
 #   PARTY_STAGING_KV_ID, PARTY_PRODUCTION_KV_ID
-#                            deploy-party-staging, deploy-party-production
+#                            deploy-party-staging, deploy-production (-> deploy-*-production)
 #   CANDIDATE_STAGING_KV_ID, CANDIDATE_PRODUCTION_KV_ID
 #                            deploy-candidate-staging, deploy-candidate-production
 #   PETITION_DRIVE_STAGING_KV_ID, PETITION_DRIVE_PRODUCTION_KV_ID
@@ -529,10 +529,12 @@ gate:
   stage: deploy
   environment: production
   interruptible: false
+  # Runs by itself once `deploy-production` (the one button an operator plays)
+  # has succeeded on the same pipeline; it is never played on its own.
+  needs:
+    - job: deploy-production
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
-      when: manual
-      allow_failure: true
   script:
     - |
       set -euo pipefail
@@ -594,6 +596,22 @@ deploy-party-staging:
     - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
       when: manual
       allow_failure: true
+
+# deploy-production: the one production button. Playing it on a `main`
+# pipeline deploys every template this repository owns into `sites-production`
+# through the deploy-*-production jobs below, which `needs` this job and run as
+# soon as it succeeds. The pipeline shows "manual" until someone plays it; a
+# failed template deploy is retried from its own job and the rest are unaffected.
+deploy-production:
+  stage: deploy
+  interruptible: false
+  resource_group: sites-production
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+  script:
+    - 'echo "Deploying $CI_COMMIT_SHORT_SHA to sites-production (template-party, template-candidate) through the deploy-*-production jobs."'
 
 # deploy-party-production: templates/party as the Worker `template-party` in `sites-production`.
 deploy-party-production:
