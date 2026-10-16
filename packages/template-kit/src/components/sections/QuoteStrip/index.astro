@@ -1,0 +1,58 @@
+---
+// QuoteStrip (Row, the default; board C2, section 5): the section head (the
+// kicker when one is set, the heading, and the section's links at the right:
+// "All endorsements"), then a row of quote cards on the band's surface, three
+// across on a wide screen and one on a phone. Each card sets the quote, curly
+// quotes added unless the operator typed their own, over who said it: their
+// mark (the logo from a safe address, else the initials of the name in a
+// disc in the primary colour), the name and, muted, the role. Nothing is
+// drawn with no heading and no quote.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import { initials } from '../CandidateRoster/candidates'
+import { quotesOf } from './quotes'
+import { links } from '../../../lib/section'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const quotes = quotesOf(section)
+---
+{(heading || quotes.length > 0) && (
+  <Band section={section} class="quotes">
+    <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
+    {quotes.length > 0 && (
+      <ul class="grid grid-3" role="list">
+        {quotes.map((q) => {
+          const mark = q.attribution ? initials(q.attribution) : ''
+          return (
+            <li>
+              <figure class="quote">
+                <blockquote><p class:list={['quote-words', q.quoted && 'quote-quoted']}>{q.quote}</p></blockquote>
+                {(q.attribution || q.role) && (
+                  <figcaption class="quote-by">
+                    {q.logo ? (
+                      <img class="quote-mark" src={q.logo} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      mark && <span class="quote-mark quote-initials" aria-hidden="true">{mark}</span>
+                    )}
+                    <span class="quote-who">
+                      {q.attribution && <span class="quote-name">{q.attribution}</span>}
+                      {q.role && <span class="quote-role">{q.role}</span>}
+                    </span>
+                  </figcaption>
+                )}
+              </figure>
+            </li>
+          )
+        })}
+      </ul>
+    )}
+  </Band>
+)}

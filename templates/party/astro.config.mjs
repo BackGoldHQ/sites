@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config'
 import cloudflare from '@astrojs/cloudflare'
 import backgold from '@backgold/astro'
+import templateKit from '@backgold/template-kit'
 
 export default defineConfig({
   output: 'server',
@@ -10,5 +11,6 @@ export default defineConfig({
   // namespace. Turn either on here if you add a use for it.
   adapter: cloudflare({ imageService: 'passthrough' }),
   session: false,
-  integrations: [backgold()],
+  // The kit draws every page (its routes) with this template's config.
+  integrations: [backgold(), templateKit({ template: './src/template.ts' })],
 })

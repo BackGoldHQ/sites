@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// The starter template (or another template under templates/) and the two
+// The starter template (or another template under templates/) and the
 // packages it is built on, end to end on workerd: builds @backgold/content
-// and @backgold/astro, packs them, installs them with npm into a copy of the
-// template outside the repository (its package.json pointed at the tarballs,
-// so nothing resolves through the pnpm workspace or from npm's copies of the
+// and @backgold/astro, packs them (and the workspace packages a template on
+// the kit also names: @backgold/template-kit and the vendored contract,
+// @backgold/contract), installs them with npm into a copy of the template
+// outside the repository (its package.json pointed at the tarballs, so
+// nothing resolves through the pnpm workspace or from npm's copies of the
 // packages), checks that npm put workerd's binary for this platform there
 // (installing once more when it did not), builds it, and runs it on
 // `wrangler dev` against a fixture Content API served from
@@ -28,7 +30,13 @@
 //
 // --template party needs Chrome at $CHROME_BIN too: the party template's look
 // (the header button's contrast, the accent, the faces, light and dark) is
-// read in a headless Chrome, driven over the DevTools protocol.
+// read in a headless Chrome, driven over the DevTools protocol. So does
+// --template petition-drive: its starter page (dark first, the anchors, no
+// money, light after the switch) is read the same way.
+// --template candidate, for its own layouts' look (its block, near the end).
+//   node scripts/starter-e2e.mjs --template candidate
+//                                         the candidate template's checks, its
+//                                         starter pages at /candidate-<slug>
 //
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
@@ -55,6 +63,17 @@ const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
 // counts, event types, news search, seats, the roster's levels); only it is
 // checked for those drawings.
 const PARTY = TEMPLATE_NAME === 'party'
+// A template on the kit (@backgold/template-kit: a src/template.ts) draws
+// what the kit draws (BackGold's modules framed in the site's look, the light
+// and dark switch, the kit's lists, entries and 404) and is checked for it;
+// the public starter is not on the kit.
+const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
+// The face a kit template's module frames are asked for: its config's
+// `frameFont`, else the kit's Public Sans.
+const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
+// ── petition-drive (begin) ──
+const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
+// ── petition-drive (end) ──
 const SERVE = process.argv.includes('--serve')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
@@ -141,11 +160,20 @@ function buildAndPack(packDir) {
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/astro-backgold'))
+  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
+  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'vendor/backgold-contract'))
   const files = readdirSync(packDir)
-  const content = files.find((f) => /^backgold-content-.*\.tgz$/.test(f))
-  const astro = files.find((f) => /^backgold-astro-.*\.tgz$/.test(f))
-  if (!content || !astro) throw new Error(`pnpm pack wrote ${files.join(', ')}`)
-  return { content: join(packDir, content), astro: join(packDir, astro) }
+  const tarball = (pattern) => {
+    const file = files.find((f) => pattern.test(f))
+    if (!file) throw new Error(`pnpm pack wrote ${files.join(', ')}`)
+    return join(packDir, file)
+  }
+  return {
+    content: tarball(/^backgold-content-.*\.tgz$/),
+    astro: tarball(/^backgold-astro-.*\.tgz$/),
+    kit: tarball(/^backgold-template-kit-.*\.tgz$/),
+    contract: tarball(/^backgold-contract-.*\.tgz$/),
+  }
 }
 
 // ── 2. The template, installed from the tarballs ─────────────────────────────
@@ -161,9 +189,14 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // @backgold/astro depends on @backgold/content; the override makes that
-  // the tarball too, never the copy on npm.
-  pkg.overrides = { '@backgold/content': content }
+  // A template on the kit names the kit and the contract (which its
+  // src/template.ts parses template.json with); neither is on npm.
+  if (pkg.dependencies['@backgold/template-kit']) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
+  if (pkg.dependencies['@backgold/contract']) pkg.dependencies['@backgold/contract'] = `file:${tarballs.contract}`
+  // @backgold/astro depends on @backgold/content, and the kit names both as
+  // peers; the overrides make every one of them the tarball, never the copy
+  // on npm.
+  pkg.overrides = { '@backgold/content': content, '@backgold/astro': astro }
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
   const install = ['install', '--no-audit', '--no-fund', '--loglevel=error']
   run('npm', install, siteDir)
@@ -765,7 +798,7 @@ function kitchenSinkDocument() {
  * `news`, every post address and the menu's link to the list are under
  * `/news`, and a published page sits at `/news` (on the party template, the
  * starter's News page) with a Hero and a call to action, the list's intro.
- * On the party template its home's Blog section is the List layout, so the
+ * On a template on the kit its home's Blog section is the List layout, so the
  * section draws "All news".
  */
 function newsBaseData(data, ex) {
@@ -796,7 +829,7 @@ function newsBaseData(data, ex) {
     page: (slug, headline) => {
       if (slug === 'news') return intro
       const found = page(slug, headline)
-      if (slug !== 'home' || !PARTY) return found
+      if (slug !== 'home' || !ON_KIT) return found
       return { ...found, sections: found.sections.map((sec) => (sec.type === 'Blog' ? { ...sec, variant: 'list' } : sec)) }
     },
     entries: move(data.entries),
@@ -820,7 +853,7 @@ async function kitchenSink() {
   return {
     blocks: shared.CONTENT_API_BLOCKS,
     areaBlocks: shared.CONTENT_API_AREA_BLOCKS,
-    // Drawn by the party template. The public starter has no component for
+    // Drawn by a template on the kit. The public starter has no component for
     // them and falls through to DefaultSection.
     templateSections: new Set(shared.TEMPLATE_SECTION_TYPES),
     doc,
@@ -1642,7 +1675,7 @@ function previewDraft(page) {
 
 function startFixture(examples, kitchenSections, blogBase = 'blog') {
   const plain = fixtureData(examples, kitchenSections)
-  const data = blogBase === 'news' ? newsBaseData(plain, examples) : plain
+  const data = withCandidate(blogBase === 'news' ? newsBaseData(plain, examples) : plain, examples)
   const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '' }
   const MOUNT = '/api/content/v1'
   // The Content API answers every origin itself (a browser on the site reads
@@ -1687,6 +1720,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     }
     const auth = req.headers.authorization ?? ''
     const key = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+    // ── petition-drive (begin) ──
+    if (PETITION_DRIVE && url.pathname.startsWith('/embed/petition/')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      return res.end(petitionStubFrame(url.search))
+    }
+    // ── petition-drive (end) ──
     if (path === null) {
       res.writeHead(404, { 'Content-Type': 'application/json' })
       return res.end(JSON.stringify({ error: 'Not found', code: 'NOT_FOUND' }))
@@ -1981,10 +2020,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   const ld = jsonLdBlocks(html)
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
-    PARTY
-      ? /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"/.test(html)
+    ON_KIT
+      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`).test(html)
       : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
-    PARTY ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
+    ON_KIT ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
   )
   check(!html.includes('auto:total'), 'a live (auto:) stat is not printed')
   check(
@@ -2024,8 +2063,8 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(!html.includes('data-bg-section') && !html.includes('name="backgold-preview"'), 'a published entry carries no section markers and no preview meta')
   // An entry loads no script but JSON-LD, the areas' one window script because
   // its areas hold a dated item, the frames' one resize script because an
-  // area's sign-up is framed by its reusable section, and on the party
-  // template the light and dark switch's two (the head's kept choice, the
+  // area's sign-up is framed by its reusable section, and on a template on
+  // the kit the light and dark switch's two (the head's kept choice, the
   // header button's).
   const areaItems = Object.values(fixture.data.entryAreas).flat()
   const dated = areaItems.some((item) => item.from !== null || item.until !== null)
@@ -2038,8 +2077,8 @@ async function checkConfigured(origin, fixture, disclaimer) {
     scripts.length === entryWindowScripts + entryResizeScripts + entryModeScripts &&
       entryWindowScripts === (dated ? 1 : 0) &&
       entryResizeScripts === (framed ? 1 : 0) &&
-      entryModeScripts === (PARTY ? 2 : 0),
-    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${PARTY ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
+      entryModeScripts === (ON_KIT ? 2 : 0),
+    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${ON_KIT ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
   )
   const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
   check(
@@ -2155,7 +2194,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
     `the preview frames the draft's form and the area's sign-up with the token (${formFrame}, ${signupFrame})`,
   )
   check(!!donateFrame && !new URL(donateFrame).searchParams.has('bg_preview'), `the donate frame, addressed by its form, carries no token (${donateFrame})`)
-  if (PARTY) {
+  if (ON_KIT) {
     const petition = sectionWith(html, 'Petition', 'Put every party on the ballot')
     check(
       petition !== '' && petition.includes('This petition is not available right now.') && tags(petition, 'iframe').length === 0,
@@ -2269,7 +2308,7 @@ async function checkNewsBase(origin, fixture) {
     crumbs?.itemListElement?.[1]?.name === 'News' && crumbs.itemListElement[1].item === `${origin}/news`,
     `the list's breadcrumb is News at ${origin}/news (${JSON.stringify(crumbs?.itemListElement?.[1] ?? null)})`,
   )
-  if (PARTY) {
+  if (ON_KIT) {
     check(/<form class="list-search"[^>]*action="\/news"/.test(html), 'the "Search news" box sends ?q= to /news')
     res = await get(origin, '/news?q=levy')
     html = await res.text()
@@ -2284,13 +2323,13 @@ async function checkNewsBase(origin, fixture) {
     entryCrumbs?.itemListElement?.[1]?.name === 'News' && entryCrumbs.itemListElement[1].item === `${origin}/news`,
     "the entry's breadcrumb goes back to News at /news",
   )
-  if (PARTY) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
+  if (ON_KIT) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
 
   res = await get(origin, '/')
   html = await res.text()
   check(
-    res.status === 200 && (PARTY ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
-    `home's Blog section links ${PARTY ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
+    res.status === 200 && (ON_KIT ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
+    `home's Blog section links ${ON_KIT ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
   )
   res = await get(origin, '/kitchen-sink')
   html = await res.text()
@@ -2301,7 +2340,7 @@ async function checkNewsBase(origin, fixture) {
     await res.text()
     check(res.status === 404, `${path} is a 404 on an organization at /news (got ${res.status})`)
   }
-  if (PARTY) {
+  if (ON_KIT) {
     res = await get(origin, '/no-such-page')
     html = await res.text()
     check(res.status === 404 && /<a class="button button-quiet" href="\/news"[^>]*>Read the news<\/a>/.test(html), 'the 404 offers Read the news at /news')
@@ -2484,7 +2523,8 @@ async function headlessChrome(chrome) {
  */
 async function checkLighthouse(origin, chrome, fixture) {
   log(`\nLighthouse ${LIGHTHOUSE_VERSION} (each category must be at least ${LIGHTHOUSE_MIN})`)
-  for (const path of ['/', '/blog/levy-explained']) {
+  // On the candidate template, its starter home too (Hero · portrait, Countdown · tiles).
+  for (const path of ['/', '/blog/levy-explained', ...(CANDIDATE ? ['/candidate-home'] : [])]) {
     const report = join(work, `lighthouse${path.replace(/\W+/g, '-')}.json`)
     const before = fixture.count()
     await runAsync(
@@ -2635,8 +2675,8 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (own) failures.push(`${type}: renders a <${own[1]}> of its own`)
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
-        // The party template asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = PARTY ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=public-sans"`) : null
+        // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
@@ -2658,10 +2698,10 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
     }
 
     const rowText = ROW_TEXT[type]
-    // The party template's components must show every column. The public
+    // A kit template's components must show every column. The public
     // starter draws these through DefaultSection, which shows the heading
-    // and the row fields it knows, not each column the party component draws.
-    const plainFallback = !PARTY && kitchen.templateSections.has(type)
+    // and the row fields it knows, not each column the kit's component draws.
+    const plainFallback = !ON_KIT && kitchen.templateSections.has(type)
     if (section.data && !rowText && !plainFallback) {
       failures.push(`${type}: a data block with no row rule in starter-e2e.mjs ROW_TEXT`)
       continue
@@ -2732,7 +2772,7 @@ function probe(siteDir, name, body) {
     file,
     `import { createServer } from 'vite'
 import { getViteConfig } from 'astro/config'
-const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
+const config = await getViteConfig({ logLevel: 'error', server: { middlewareMode: true, hmr: false, ws: false }, ssr: { noExternal: ['@backgold/template-kit'] } }, { configFile: false, logLevel: 'silent' })({ command: 'serve', mode: 'test' })
 const server = await createServer({ ...config, configFile: false })
 try {
 ${body}
@@ -2751,7 +2791,7 @@ ${body}
 // Renders LiveCounts.astro alone with Astro's container, with a first-party
 // locals.backgold, and prints the markup.
 const FIRST_PARTY_PROBE = `  const { experimental_AstroContainer } = await server.ssrLoadModule('astro/container')
-  const { default: LiveCounts } = await server.ssrLoadModule('/src/components/sections/EventsList/LiveCounts.astro')
+  const { default: LiveCounts } = await server.ssrLoadModule('@backgold/template-kit/components/sections/EventsList/LiveCounts.astro')
   const container = await experimental_AstroContainer.create()
   const html = await container.renderToString(LiveCounts, { locals: { backgold: { firstParty: true } } })
   console.log('PROBE ' + JSON.stringify(html))`
@@ -2791,22 +2831,30 @@ async function checkFirstPartyLive(siteDir) {
   )
 }
 
+/** The party template's own faces, as its src/template.ts gives them to the kit. */
+const PARTY_FACES = {
+  heading: 'Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500',
+  body: 'Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400',
+}
+
 /**
  * First-party faces, unit-level (the Worker under test reads with a site key):
- * src/lib/fonts.ts names each theme file by its same-origin path, as a hosted
+ * the kit's src/lib/fonts.ts, given the party's own faces (PARTY_FACES, as
+ * templates/party/src/template.ts names them), names each theme file by its same-origin path, as a hosted
  * page does, with nothing to preconnect; a system face downloads nothing; a
  * face it cannot read keeps the template's own face for that slot alone.
  */
 function checkFirstPartyFonts(siteDir, theme) {
-  log('\nFirst-party faces (src/lib/fonts.ts alone)')
+  log('\nFirst-party faces (the kit\'s src/lib/fonts.ts alone, with the party\'s faces)')
   const fonts = probe(
     siteDir,
     'fonts-first-party',
-    `  const { siteFonts } = await server.ssrLoadModule('/src/lib/fonts.ts')
+    `  const { siteFonts } = await server.ssrLoadModule('@backgold/template-kit/lib/fonts')
+  const own = ${JSON.stringify(PARTY_FACES)}
   const theme = ${JSON.stringify(theme)}
   const system = { ...theme, fonts: { ...theme.fonts, heading: { family: 'Georgia', stack: "Georgia,'Times New Roman',Times,serif", source: 'system', files: [] } } }
   const unreadable = { ...theme, fonts: { ...theme.fonts, heading: { ...theme.fonts.heading, stack: '"Roboto Slab"}body{color:red' } } }
-  console.log('PROBE ' + JSON.stringify({ theme: siteFonts(theme, true), system: siteFonts(system, true), unreadable: siteFonts(unreadable, true) }))`,
+  console.log('PROBE ' + JSON.stringify({ theme: siteFonts(theme, true, own), system: siteFonts(system, true, own), unreadable: siteFonts(unreadable, true, own) }))`,
   )
   const sources = (css) => [...css.matchAll(/src:url\(([^)]+)\)/g)].map((m) => m[1])
   const paths = [theme.fonts.heading, theme.fonts.body].flatMap((face) => face.files.map((file) => new URL(file.url).pathname))
@@ -3522,34 +3570,496 @@ async function checkPartyLook(origin, fixture, chrome) {
 /**
  * Every non-chrome block type has a component of its own in the template (the
  * starter: every non-chrome, non-compliance one, except TEMPLATE_SECTION_TYPES,
- * which the party template draws and the starter leaves to DefaultSection).
- * The party template draws the compliance modules for their frame (heading
+ * which a template on the kit draws and the starter leaves to DefaultSection).
+ * A template on the kit draws the compliance modules for their frame (heading
  * and card around BackGold's own frame), all but SocialFrame, which has no
  * frame a site can place. A block the api projects only inside an area
  * (areaBlocks) counts with its area role.
  */
 function checkSectionsMap(chromeBlocks, areaBlocks, templateSections) {
   const blocks = { ...chromeBlocks, ...areaBlocks }
-  const source = readFileSync(join(TEMPLATE, 'src/components/sections/index.ts'), 'utf8')
+  // A template on the kit draws the kit's sections map (its own layouts add keys of the form 'Type:layout', never a type).
+  const own = join(TEMPLATE, 'src/components/sections/index.ts')
+  const source = readFileSync(existsSync(own) ? own : join(ROOT, 'packages/template-kit/src/components/sections/index.ts'), 'utf8')
   const body = /export const sections = \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? ''
   const keys = new Set([...body.matchAll(/^\s*([A-Za-z]+)\s*(?::|,)/gm)].map((m) => m[1]))
   const unframed = ['SocialFrame']
-  const delegated = PARTY ? new Set() : templateSections
+  const delegated = ON_KIT ? new Set() : templateSections
   const missing = Object.entries(blocks)
-    .filter(([type, spec]) => spec.role !== 'chrome' && (PARTY || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
+    .filter(([type, spec]) => spec.role !== 'chrome' && (ON_KIT || spec.role !== 'compliance') && !unframed.includes(type) && !delegated.has(type) && !keys.has(type))
     .map(([type]) => type)
   const extra = [...keys].filter(
-    (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!PARTY && blocks[key].role === 'compliance'),
+    (key) => !(key in blocks) || blocks[key].role === 'chrome' || unframed.includes(key) || (!ON_KIT && blocks[key].role === 'compliance'),
   )
   check(missing.length === 0, `the template has a section component for every presentational, data and compliance block${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`)
   check(extra.length === 0, `and none for a chrome block, SocialFrame, or a type BackGold does not have${extra.length ? ` (${extra.join(', ')})` : ''}`)
 }
 
+// ── petition-drive (begin) ───────────────────────────────────────────────────
+
+/**
+ * The stand-in the fixture serves for BackGold's petition frame
+ * (`/embed/petition/<page>/<block>`): the api's frame draws the live map
+ * band and the sign sheet, which the fixture has no map or petition for, so
+ * this page says what would be there, wears the look the site asked for
+ * (`look`, `look_dark` and the parent's `backgold:mode`, as the api's frame
+ * does) and reports its height.
+ */
+function petitionStubFrame(search) {
+  const params = new URLSearchParams(search)
+  const set = (value) => {
+    const parts = (value ?? '').split('.')
+    return parts.length === 11 && parts.every((p) => /^[0-9a-f]{6}$/i.test(p)) ? parts.map((p) => `#${p}`) : null
+  }
+  const vars = (c) => `--ink:${c[0]};--muted:${c[1]};--accent:${c[2]};--line:${c[10]}`
+  const light = set(params.get('look')) ?? ['#16191f', '#5b6170', '#8a5a00', '#1f3a5f', '#1f3a5f', '#ffffff', '#1f3a5f', '#ffffff', '#ffffff', '#d9d4ca', '#b9b2a5']
+  const dark = set(params.get('look_dark'))
+  const css =
+    `:root{color-scheme:light dark;${vars(light)}}` +
+    (dark ? `@media (prefers-color-scheme:dark){:root:not([data-mode="light"]){${vars(dark)}}}:root[data-mode="dark"]{${vars(dark)}}` : '') +
+    'html,body{margin:0;background:transparent;font:15px/1.5 system-ui,sans-serif;color:var(--ink)}' +
+    '.stub{box-sizing:border-box;margin:4px;padding:28px;min-height:420px;display:grid;align-content:center;gap:8px;border:1.5px dashed var(--line);border-radius:13px}' +
+    '.stub b{color:var(--accent);font:600 11px/1.2 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}.stub p{margin:0;color:var(--muted)}'
+  const script =
+    "addEventListener('message',function(e){var d=e.data;if(d&&d.type==='backgold:mode'&&(d.mode==='light'||d.mode==='dark'))document.documentElement.setAttribute('data-mode',d.mode)});" +
+    "function h(){parent.postMessage({type:'givegold:resize',height:document.querySelector('.stub').offsetHeight+8},'*')}addEventListener('load',h);h()"
+  return (
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Petition (fixture stand-in)</title><style>${css}</style></head>` +
+    `<body><div class="stub" data-petition-stub data-layout="${params.get('layout') === 'map' ? 'map' : 'other'}"><b>BackGold's petition frame</b>` +
+    '<h2 style="margin:0">The live map band and the sign sheet draw here</h2>' +
+    '<p>The legend, the count badge, the asks, Addressed to, the form, its goal meter and the three stat tiles are the api&rsquo;s frame. This is the e2e fixture&rsquo;s stand-in: it has no map.</p>' +
+    `</div><script>${script}</script></body></html>`
+  )
+}
+
+/**
+ * The petition drive's one starter page as the Content API sends it: the
+ * template.json starter sections, the Petition framed (the fixture's
+ * stand-in, above), three of the fixture's events in the events list, typed
+ * figures on the ticker; and its menus as BackGold projects the starter's.
+ */
+function petitionDriveFixture(fixture) {
+  const manifest = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
+  const home = fixture.data.page('home', fixture.state.headline)
+  // Three of the fixture's upcoming events (none of them a fundraiser): one with registration closed.
+  const events = fixture.data.events.upcoming.filter((e) => e.type !== 'fundraiser')
+  const sections = manifest.starter.pages[0].sections.map((s) => {
+    const section = { id: s.id, type: s.type, band: s.band, bleed: s.bleed, variant: s.variant, copy: s.copy, media: s.media, links: s.links, options: s.options ?? {} }
+    if (s.data) section.data = s.data
+    if (s.type === 'Petition') {
+      // The api sends the asks and tiles inside the frame, not as rows a site draws.
+      delete section.data
+      section.embed = { iframe: `${fixture.origin}/embed/petition/lp_home/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    }
+    if (s.type === 'EventsList') section.data = { source: 'events', items: events.slice(0, 3) }
+    if (s.type === 'MovementTicker') {
+      section.data = { source: 'movement', items: [{ value: '1,204', label: 'neighbors signed' }, { value: '38', label: 'mapping walks' }, { value: 'auto:signatures', label: 'signatures (live)' }] }
+    }
+    return section
+  })
+  let n = 0
+  const item = (m) => ({
+    id: `nav_pd_${++n}`,
+    label: m.label,
+    kind: m.kind,
+    target: { kind: m.kind, page_id: 'lp_home', slug: 'home', anchor: m.target.anchor },
+    url: `/#${m.target.anchor}`,
+    external: false,
+    header_button: m.header_button,
+    shows_on: { rule: 'every_page' },
+    children: [],
+  })
+  return {
+    page: { ...home, sections, areas: { top_banner: [], sidebar: [], above_footer: [] } },
+    menus: {
+      primary: { menu: { key: 'primary' }, items: manifest.starter.menus.primary.map(item) },
+      footer: { menu: { key: 'footer' }, items: manifest.starter.menus.footer.map(item) },
+    },
+  }
+}
+
+/**
+ * The petition drive's starter page on the Worker, in a headless Chrome:
+ * the order of its bands, the framed petition, no money anywhere, the header
+ * button, the three anchors, dark on first open whatever the visitor's
+ * system says, light after the switch and still readable, and no sideways
+ * scroll on a phone. The fixture's home and menus are put back after, and
+ * home read once under them, as Lighthouse expects to find it.
+ */
+async function checkPetitionDrive(origin, fixture, chrome) {
+  log('\nPetition drive: the starter page (headless Chrome, dark first, light after the switch)')
+  const own = { page: fixture.data.page, menus: fixture.data.menus }
+  const drive = petitionDriveFixture(fixture)
+  const publish = async () => {
+    const version = fixture.bump(fixture.state.headline)
+    const hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+    if (hook.status !== 204) throw new Error(`the webhook for content version ${version} answered ${hook.status}`)
+  }
+  fixture.data.page = (slug, headline) => (slug === 'home' ? drive.page : own.page(slug, headline))
+  fixture.data.menus = { ...own.menus, ...drive.menus }
+  await publish()
+  const browser = await headlessChrome(chrome)
+  try {
+    const res = await get(origin, '/')
+    const html = await res.text()
+    check(res.status === 200, `the drive's home renders (got ${res.status})`)
+    const types = [...html.matchAll(/<section\b[^>]*data-type="([A-Za-z]+)"/g)].map((m) => m[1])
+    check(
+      types.join(' ') === 'Petition Issues EventsList MovementTicker Cta',
+      `its bands run Petition, Issues, EventsList, MovementTicker, Cta (${types.join(', ')})`,
+    )
+    check(/<html lang="en" data-gg-opens="dark">/.test(html) && /<style>:root\{color-scheme:dark;/.test(html), 'the page opens in the dark set (data-gg-opens, the dark set on :root)')
+    const frame = tags(html, 'iframe').find((t) => t.includes('/embed/petition/')) ?? ''
+    check(
+      /src="[^"]+\/embed\/petition\/lp_home\/Petition-home\?layout=map&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=inter"/.test(frame),
+      "the Petition section frames BackGold's petition in its map layout, wearing the site's look in the drive's face (font=inter)",
+    )
+    check(/<section id="petition"[^>]*data-type="Petition"[^>]*data-band="plain"/.test(html), 'the Petition section is anchored at #petition, on the page (plain)')
+    check(
+      /<section id="get-involved"[^>]*data-type="Issues"/.test(html) && /<section id="events"[^>]*data-type="EventsList"/.test(html),
+      'Get involved and the events are anchored at #get-involved and #events',
+    )
+    const button = /<a\b[^>]*class="[^"]*header-button[^"]*"[^>]*>[\s\S]*?<\/a>/.exec(html)?.[0] ?? ''
+    check(/href="\/#petition"/.test(button) && />\s*Sign the petition\s*</.test(button), `the header button is Sign the petition, to #petition (${button.replace(/\s+/g, ' ').slice(0, 160)})`)
+    const nav = /<nav class="header-bar-menu"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? ''
+    check(['/#petition', '/#get-involved', '/#events'].every((href) => nav.includes(`href="${href}"`)), 'the header menu links The petition, Get involved and Events to their anchors')
+    const visible = html.replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<style\b[\s\S]*?<\/style>/g, '')
+    check(
+      !/data-bg-donate|\/donate\b|>\s*Donate\s*<|chip in/i.test(visible) && !/donate-strip/.test(visible),
+      'nothing on the page asks for money (no Donate link, button or strip)',
+    )
+    const steps = /<section\b[^>]*data-type="Issues"[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+    check((steps.match(/<li class="drive-step"/g) ?? []).length === 4 && /Step 01/.test(steps) && /<path d="M9\.663/.test(steps), 'Get involved draws four numbered steps, each with its icon')
+    check(
+      /<a class="button"[^>]*href="https:\/\/maps\.deflock\.org"/.test(steps) && (steps.match(/<a class="button button-quiet"/g) ?? []).length === 2,
+      'and one filled action (the global map) beside two outlined ones',
+    )
+    check(!html.includes('auto:signatures') && html.includes('1,204'), "the ticker shows its typed figures and leaves the live one out")
+    const eventsBand = /<section\b[^>]*data-type="EventsList"[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+    check(
+      (eventsBand.match(/<li class="drive-event"/g) ?? []).length === 3 && />RSVP<span/.test(eventsBand) && />Details<span/.test(eventsBand),
+      'Show up in person lists three events, each with its button to its page (RSVP, or Details once closed)',
+    )
+
+    for (const scheme of ['light', 'dark']) {
+      await browser.width(1440)
+      await browser.open(`${origin}/`, scheme)
+      const look = await browser.evaluate(`(${driveLook})()`)
+      check(look.mode === 'dark' && look.page < 0.06, `a visitor whose system is ${scheme} opens the page dark (data-gg-mode ${look.mode}, page luminance ${look.page.toFixed(3)})`)
+      check(look.bands.length === 5 && look.bands.every((b) => b.ground < 0.06), `every band is dark, none a light slab (${look.bands.map((b) => `${b.type} ${b.ground.toFixed(3)}`).join(', ')})`)
+      check(look.minRatio >= 4.5, `every heading, lede and step reads at AA on its band in the dark set (lowest ${look.minRatio.toFixed(2)}: ${look.worst})`)
+      check(look.anchors.every((a) => a.found), `the three anchors reach their sections (${look.anchors.map((a) => `${a.href}${a.found ? '' : ' missing'}`).join(', ')})`)
+    }
+    await browser.evaluate(`document.querySelector('[data-mode-toggle]').click()`)
+    const light = await browser.evaluate(`(${driveLook})()`)
+    check(light.mode === 'light' && light.page > 0.5, `the switch turns it light (data-gg-mode ${light.mode}, page luminance ${light.page.toFixed(3)})`)
+    check(light.minRatio >= 4.5, `and light mode still reads at AA (lowest ${light.minRatio.toFixed(2)}: ${light.worst})`)
+    await browser.width(375)
+    await browser.open(`${origin}/`, 'light')
+    const phone = await browser.evaluate('({ scroll: document.documentElement.scrollWidth, width: innerWidth })')
+    check(phone.scroll <= phone.width, `no sideways scroll at 375 (${phone.scroll} wide in ${phone.width})`)
+  } finally {
+    await browser.close()
+    fixture.data.page = own.page
+    fixture.data.menus = own.menus
+    await publish()
+    await (await get(origin, '/')).text()
+  }
+}
+
+/** In the page: its mode, the page ground's luminance, the lowest text contrast on the starter's bands, and whether each header anchor has its target. */
+async function driveLook() {
+  await document.fonts.ready
+  const channels = (value) => {
+    const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(value)
+    return m ? { rgb: [m[1], m[2], m[3]].map(Number), alpha: m[4] === undefined ? 1 : Number(m[4]) } : null
+  }
+  const luminance = (rgb) => {
+    const [r, g, b] = rgb.map((c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  /** The first opaque ground behind `el`. */
+  const ground = (el) => {
+    for (let node = el; node; node = node.parentElement) {
+      const c = channels(getComputedStyle(node).backgroundColor)
+      if (c && c.alpha === 1) return c.rgb
+    }
+    return [255, 255, 255]
+  }
+  let minRatio = 21
+  let worst = ''
+  for (const el of document.querySelectorAll('main h2, main h3, main .kicker, main .lede p, main .drive-step-body p, main .drive-ticker-name, main .drive-event-meta, footer .disclaimer p')) {
+    const ink = channels(getComputedStyle(el).color)
+    if (!ink) continue
+    const [hi, lo] = [luminance(ink.rgb), luminance(ground(el))].sort((a, b) => b - a)
+    const ratio = (hi + 0.05) / (lo + 0.05)
+    if (ratio < minRatio) {
+      minRatio = ratio
+      worst = `${el.tagName.toLowerCase()}.${el.className || ''} "${el.textContent.trim().slice(0, 40)}"`
+    }
+  }
+  const anchors = [...document.querySelectorAll('.header-bar-menu a[href^="/#"]')].map((a) => {
+    const id = a.getAttribute('href').slice(2)
+    return { href: `#${id}`, found: !!document.getElementById(id) }
+  })
+  const bands = [...document.querySelectorAll('main section.bg-section')].map((el) => ({ type: el.dataset.type, ground: luminance(ground(el)) }))
+  return { mode: document.documentElement.getAttribute('data-gg-mode'), page: luminance(ground(document.body)), minRatio, worst, anchors, bands }
+}
+
+// ── petition-drive (end) ─────────────────────────────────────────────────────
+
+// ── The candidate template (--template candidate) ────────────────────────────
+//
+// Its starter pages (templates/candidate/template.json) as the fixture serves
+// them, with what BackGold fills put in: the Countdown's deadline (26 days, 9
+// hours and 41 minutes after the run starts, board C1's), the events, the
+// module frames, a portrait, and the reusable sections the starter's rules
+// place (Get the campaign letter above the footer, Campaign sidebar beside
+// Events). The checks read them at /candidate-<slug> (/candidate-home for
+// home), next to the organization the other checks read; --serve puts them
+// at their own addresses instead, with the starter's menus, so the site looks
+// like a new candidate site (boards C1 to C11). Then the look checks for the
+// template's own layouts: Hero · portrait, Countdown · tiles and inline, and
+// its QuoteStrip · wall, then what template.css and the starter add to the
+// kit's (the heads' All events and All endorsements, the editorial quote, the
+// sidebar's cards apart, Join's centred card), in a headless Chrome at 1440
+// and 375, light and dark.
+
+const CANDIDATE = TEMPLATE_NAME === 'candidate'
+const CANDIDATE_DEADLINE = new Date(Date.now() + ((26 * 24 + 9) * 60 + 41) * 60000 + 30000).toISOString()
+
+/** The address a candidate starter page is served at: its own under --serve, else /candidate-<slug>. */
+const candidateSlug = (slug) => (SERVE ? slug || 'home' : `candidate-${slug || 'home'}`)
+
+/** `data` with the candidate's starter pages added (only on --template candidate). */
+function withCandidate(data, ex) {
+  if (!CANDIDATE) return data
+  const starter = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8')).starter
+  const donateEmbed = ex.PageResponse.sections.find((s) => s.type === 'Donate').embed
+  const signupEmbed = ex.PageResponse.areas.above_footer[0].sections[0].embed
+  const portrait = { url: 'https://api.backgold.com/api/media-files/med_portrait', alt: 'The candidate on a door-knock' }
+  const fill = (pageId) => (section) => {
+    const s = { options: {}, ...structuredClone(section) }
+    if (s.type === 'Countdown') s.data = { source: 'countdown', items: [{ deadline: CANDIDATE_DEADLINE }] }
+    if (s.type === 'EventsList') s.data = { source: 'events', items: s.options.max ? data.events.upcoming.slice(0, s.options.max) : data.events.upcoming }
+    if (s.type === 'Blog') s.data = { source: 'blog', items: [] }
+    if (s.type === 'Hero' && (s.variant === 'portrait' || s.variant === 'split')) s.media = { photoUrl: portrait }
+    if (s.type === 'Donate') s.embed = donateEmbed
+    if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
+    return s
+  }
+  const reusable = (key, pageId) => {
+    const r = starter.sections.find((x) => x.key === key)
+    return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
+  }
+  const pages = starter.pages.map((p) => {
+    const slug = candidateSlug(p.slug)
+    const id = `lp_candidate_${p.slug || 'home'}`
+    return {
+      summary: { id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z', takes_donations: true },
+      response: {
+        page: { ...ex.PageResponse.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: true, meta: { title: null, description: null, image_url: null } },
+        sections: p.sections.map(fill(id)),
+        areas: {
+          top_banner: [],
+          sidebar: p.slug === 'events' ? [reusable('campaign-sidebar', id)] : [],
+          above_footer: [reusable('get-the-campaign-letter', id)],
+        },
+        legal: data.legal,
+      },
+    }
+  })
+  const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
+  const page = data.page
+  const out = {
+    ...data,
+    pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
+    page: (slug, headline) => bySlug.get(slug) ?? page(slug, headline),
+  }
+  if (!SERVE) return out
+  // --serve: the starter's menus, the reusable sections on the posts, the
+  // boards' brand with no saved theme, and no custom type at /endorsements
+  // (the starter page is there).
+  let n = 0
+  const menuItem = (item) => ({
+    id: `nav_c${++n}`,
+    label: item.label,
+    kind: item.kind,
+    target: { kind: item.kind, ...(item.target.slug !== undefined ? { slug: item.target.slug || 'home' } : {}) },
+    url: item.kind === 'page' ? (item.target.slug ? `/${item.target.slug}` : '/') : item.kind === 'blog' ? `/${data.types.find((t) => t.key === 'post').url_base}` : item.kind === 'donate' ? '/donate' : null,
+    external: false,
+    header_button: item.header_button,
+    shows_on: item.shows_on,
+    children: item.children.map(menuItem),
+  })
+  return {
+    ...out,
+    // The boards' brand (spruce, marigold, chalk) and no saved theme, so the template's own faces draw.
+    site: { ...out.site, name: 'Your campaign', brand: { ...out.site.brand, logo_url: null, primary_color: '#123d38', secondary_color: '#f4f2ea', accent_color: '#f2b233' }, theme: null },
+    types: out.types.filter((t) => t.url_base !== 'endorsements'),
+    menus: {
+      ...out.menus,
+      primary: { menu: { key: 'primary' }, items: starter.menus.primary.map(menuItem) },
+      footer: { menu: { key: 'footer' }, items: starter.menus.footer.map(menuItem) },
+    },
+    entryAreas: {
+      top_banner: [],
+      sidebar: [reusable('campaign-sidebar', 'lp_candidate_news'), reusable('more-from-the-campaign', 'lp_candidate_news')],
+      above_footer: [reusable('get-the-campaign-letter', 'lp_candidate_news')],
+    },
+  }
+}
+
+/** The template's own layouts: present in the HTML, then in Chrome at 1440 and 375, light and dark. */
+async function checkCandidateLook(origin, chrome) {
+  log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall, and what template.css adds')
+  const at = (slug) => `/${candidateSlug(slug)}`
+  let res = await get(origin, at(''))
+  let html = await res.text()
+  const hero = sectionsOf(html).find((s) => s.type === 'Hero')?.html ?? ''
+  check(
+    res.status === 200 && /data-variant="portrait"/.test(hero) && /<h1 class="hp-name[^"]*"[^>]*>The candidate’s name<\/h1>/.test(hero) && /class="hp-office[^"]*"[^>]*>The office · The district</.test(hero) && /<img class="hp-portrait/.test(hero),
+    'home opens on Hero · portrait: the office line, the name as the one <h1>, the portrait',
+  )
+  const tiles = sectionsOf(html).find((s) => s.type === 'Countdown')?.html ?? ''
+  check(
+    /data-variant="tiles"/.test(tiles) && tiles.includes(`data-countdown-ends="${CANDIDATE_DEADLINE}"`) && /<dl class="ct-tiles[^"]*"[^>]*hidden/.test(tiles) && /<time datetime=/.test(tiles),
+    'Countdown · tiles writes the deadline and the day, its tiles hidden until the browser counts them',
+  )
+  res = await get(origin, at('events'))
+  html = await res.text()
+  const rail = html.slice(html.indexOf('data-bg-area="sidebar"'))
+  check(res.status === 200 && /data-variant="inline"/.test(rail) && rail.includes('class="ci-left') && rail.includes('Two hours this Saturday?'), "Events' Sidebar carries Campaign sidebar: Countdown · inline, then the call to action")
+  res = await get(origin, at('endorsements'))
+  html = await res.text()
+  const wall = sectionsOf(html).find((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))?.html ?? ''
+  check(
+    res.status === 200 && (wall.match(/class="ew-card/g) ?? []).length === 4 && (wall.match(/ew-said/g) ?? []).length === 1 && wall.includes('class="ew-mark ew-initials'),
+    'Endorsements draws QuoteStrip · wall as name cards, the one with words spanning two columns',
+  )
+  res = await get(origin, at('donate'))
+  html = await res.text()
+  check(res.status === 200 && /<a\b[^>]*data-bg-donate[^>]*>Donate<\/a>/.test(html) && sectionsOf(html).some((s) => s.type === 'Donate'), 'Donate carries the donation form and the header button (drawn as the current page by template.css)')
+  // The comp walk's fixes: the section heads' links the boards draw (C1's All events, C2's All endorsements) and C8's Join card.
+  const headLink = (sectionHtml, label) => new RegExp(`<p class="section-head-more"[^>]*>(?:(?!</p>).)*<a href="[^"]*"[^>]*>${label}</a>`, 's').test(sectionHtml)
+  html = await (await get(origin, at(''))).text()
+  check(headLink(sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? '', 'All events'), "home's EventsList · list carries All events in its head (C1)")
+  html = await (await get(origin, at('about'))).text()
+  check(headLink(sectionsOf(html).find((s) => s.type === 'QuoteStrip')?.html ?? '', 'All endorsements'), "Meet the candidate's QuoteStrip · row carries All endorsements in its head (C2)")
+  res = await get(origin, at('join'))
+  html = await res.text()
+  check(res.status === 200 && /<header class="page-header"><h1>Join<\/h1><\/header>/.test(html) && sectionsOf(html)[0]?.type === 'Cta' && /data-variant="card"/.test(sectionsOf(html)[0].html), "Join opens with Cta · card under the page's title, its <h1>")
+
+  const css = (
+    await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
+  ).join('') + html
+  check(
+    /--font-display:\s*var\(--site-font-heading,\s*["']?Barlow Condensed/.test(css),
+    "with no theme heading face the display face is the template's, Barlow Condensed (template.css sets --font-display)",
+  )
+
+  const browser = await headlessChrome(chrome)
+  try {
+    for (const width of [1440, 375]) {
+      await browser.width(width)
+      for (const scheme of ['light', 'dark']) {
+        const where = `${width} ${scheme}`
+        await browser.open(`${origin}${at('')}`, scheme)
+        const home = await browser.evaluate(`(() => {
+          const tiles = document.querySelector('.ct-tiles')
+          const name = document.querySelector('.hp-name')
+          const portrait = document.querySelector('.hp-portrait')
+          const band = document.querySelector('[data-variant="portrait"]')
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            tiles: tiles && !tiles.hidden ? [...tiles.querySelectorAll('dd')].map((d) => d.textContent) : null,
+            face: name ? getComputedStyle(name).fontFamily : '',
+            floor: portrait && band ? Math.round(band.getBoundingClientRect().bottom - portrait.getBoundingClientRect().bottom) : null,
+            beside: portrait && name ? portrait.getBoundingClientRect().left > name.getBoundingClientRect().left + 100 : null,
+            mode: getComputedStyle(document.body).backgroundColor,
+          }
+        })()`)
+        check(home.overflow <= 0, `${where}: home has no horizontal scroll (${home.overflow}px over)`)
+        // The deadline is 26 days, 9 hours and 41 minutes after the run started; the minutes move with the run.
+        check(home.tiles?.[0] === '26' && home.tiles[1] === '09' && /^[0-4]\d$/.test(home.tiles[2]), `${where}: the tiles count the days, hours and minutes left in the browser (${JSON.stringify(home.tiles)})`)
+        check(home.face.startsWith('"Roboto Slab"'), `${where}: the name is set in the site's theme heading face, which wins over the template's (${home.face})`)
+        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor, over the stripe (${home.floor}px)`)
+        check(home.beside === (width >= 768), `${where}: the portrait is ${width >= 768 ? 'beside' : 'under'} the words`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const events = await browser.evaluate(`({ overflow: document.documentElement.scrollWidth - window.innerWidth, left: document.querySelector('.ci-left')?.hidden === false ? document.querySelector('.ci-left').textContent : null })`)
+        check(events.overflow <= 0 && events.left === '26 days', `${where}: Events has no horizontal scroll and Countdown · inline reads "26 days" (${events.overflow}px over, ${JSON.stringify(events.left)})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const endorse = await browser.evaluate(`(() => {
+          const said = document.querySelector('.ew-said')
+          const card = document.querySelector('.ew-card:not(.ew-said)')
+          return { overflow: document.documentElement.scrollWidth - window.innerWidth, ratio: said && card ? said.getBoundingClientRect().width / card.getBoundingClientRect().width : null }
+        })()`)
+        const wide = width >= 640
+        check(
+          endorse.overflow <= 0 && endorse.ratio !== null && (wide ? endorse.ratio > 1.9 : Math.abs(endorse.ratio - 1) < 0.01),
+          `${where}: Endorsements has no horizontal scroll and the quote card spans ${wide ? 'two columns' : 'the one column'} (${endorse.overflow}px over, ${endorse.ratio?.toFixed(2)}×)`,
+        )
+        await browser.open(`${origin}${at('donate')}`, scheme)
+        const donate = await browser.evaluate(`(() => {
+          const b = document.querySelector('.site-header .header-button[data-bg-donate]')
+          return { overflow: document.documentElement.scrollWidth - window.innerWidth, fill: b ? getComputedStyle(b).backgroundColor : null }
+        })()`)
+        check(donate.overflow <= 0 && donate.fill === 'rgba(0, 0, 0, 0)', `${where}: on Donate the header button is an outline, the form's Donate the one gold affordance (${donate.fill})`)
+        // The comp walk's fixes, measured.
+        await browser.open(`${origin}${at('')}`, scheme)
+        const stripe = await browser.evaluate(`(() => {
+          const band = document.querySelector('.hero-portrait')
+          const office = document.querySelector('.hp-office')
+          const probe = document.createElement('i')
+          probe.style.background = 'var(--bg-brand-accent)'
+          document.body.append(probe)
+          const accent = getComputedStyle(probe).backgroundColor
+          probe.remove()
+          return { accent, stripe: band ? getComputedStyle(band, '::after').backgroundColor : null, rule: office ? getComputedStyle(office, '::before').backgroundColor : null }
+        })()`)
+        check(stripe.stripe === stripe.accent && stripe.rule === stripe.accent, `${where}: Hero · portrait's stripe and office-line rule are the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const editorial = await browser.evaluate(`(() => { const p = document.querySelector('.single-quote blockquote p'); return p ? getComputedStyle(p).fontStyle + ' ' + getComputedStyle(p).fontWeight : null })()`)
+        check(editorial === 'normal 700', `${where}: QuoteStrip · single sets the editorial upright and bold, template.css over the kit's italic (${editorial})`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const railGap = await browser.evaluate(`(() => {
+          const [a, b] = document.querySelectorAll('.rail .bg-section')
+          return a && b ? Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom) : null
+        })()`)
+        check(railGap !== null && railGap >= 16, `${where}: the Campaign sidebar's Countdown and Cta stand apart (${railGap}px)`)
+        await browser.open(`${origin}${at('join')}`, scheme)
+        const join = await browser.evaluate(`(() => {
+          const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .bg-section-inner')
+          const title = document.querySelector('.page-header')
+          const button = card?.querySelector('.actions .button')
+          if (!card || !button) return null
+          const c = card.getBoundingClientRect()
+          const b = button.getBoundingClientRect()
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            align: getComputedStyle(card).textAlign,
+            centred: Math.abs((c.left + c.right) / 2 - document.documentElement.clientWidth / 2) <= 1 && Math.abs((b.left + b.right) / 2 - (c.left + c.right) / 2) <= 1,
+            titleShown: title ? title.getBoundingClientRect().height > 1 : false,
+          }
+        })()`)
+        check(
+          join && join.overflow <= 0 && join.align === 'center' && join.centred && !join.titleShown,
+          `${where}: Join's Cta · card is one centred card, its button centred, with no title band over it (${JSON.stringify(join)})`,
+        )
+      }
+    }
+  } finally {
+    await browser.close()
+  }
+}
+// ── end of the candidate template's block ────────────────────────────────────
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
-  const chrome = LIGHTHOUSE || PARTY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : '--template party') : null
+  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
   log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
@@ -3564,7 +4074,7 @@ async function main() {
   const leaked = filesUnder(join(siteDir, 'dist')).filter((f) => readFileSync(f, 'utf8').includes(BUILD_CANARY))
   check(leaked.length === 0, `the build machine's environment is not in the built Worker${leaked.length ? ` (found in ${leaked.join(', ')})` : ''}`)
 
-  if (PARTY) await checkFirstPartyLive(siteDir)
+  if (ON_KIT) await checkFirstPartyLive(siteDir)
 
   const examples = await loadExamples()
   if (PARTY) checkFirstPartyFonts(siteDir, examples.SiteResponse.site.theme)
@@ -3573,6 +4083,23 @@ async function main() {
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
   const fixture = await startFixture(examples, kitchen.sections)
   log(`Fixture Content API: ${fixture.origin}`)
+  // ── petition-drive (begin) ──
+  // --serve: home is the drive's starter page, under its menus; a JSON brand
+  // in PETITION_DRIVE_BRAND ({ primary_color, secondary_color, accent_color,
+  // logo_url }) replaces the fixture's brand, and the fixture's saved theme is
+  // dropped so the template's own faces show: the drive in another
+  // organization's colours.
+  if (PETITION_DRIVE && SERVE) {
+    const drive = petitionDriveFixture(fixture)
+    const own = fixture.data.page
+    fixture.data.page = (slug, headline) => (slug === 'home' ? drive.page : own(slug, headline))
+    fixture.data.menus = { ...fixture.data.menus, ...drive.menus }
+    if (process.env.PETITION_DRIVE_BRAND) {
+      fixture.data.site.brand = { ...fixture.data.site.brand, ...JSON.parse(process.env.PETITION_DRIVE_BRAND) }
+      fixture.data.site.theme = null
+    }
+  }
+  // ── petition-drive (end) ──
   writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
 
   // SITE_URL is the Worker's own address, so canonicals point at the page Lighthouse reads.
@@ -3591,6 +4118,10 @@ async function main() {
     if (PARTY) await checkPartyUnwired(configured.origin)
     if (PARTY) await checkPartyChrome(configured.origin)
     if (PARTY) await checkPartyLook(configured.origin, fixture, chrome)
+    // ── petition-drive (begin) ──
+    if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
+    // ── petition-drive (end) ──
+    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

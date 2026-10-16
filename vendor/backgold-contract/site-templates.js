@@ -1,8 +1,8 @@
-import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-4JVUBOVW.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS } from './chunk-GWHSPLPC.js';
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-DNTYW7H4.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-NQP7MJJF.js';
 import { z } from 'zod';
 
-var SITE_TEMPLATE_KEYS = ["party"];
+var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive"];
 var name = z.string().trim().min(1).max(120);
 var layoutName = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/);
 var slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$|^$/, "a page slug (lower case, words joined by -; empty for home)");
@@ -30,7 +30,9 @@ var SITE_TEMPLATE_AUTHORED_DATA_SOURCES = [
   "words",
   "ladder",
   "share",
-  "financials"
+  "financials",
+  // The petition-drive template (2026-10-15): the asks and the typed stat tiles.
+  "petition"
 ];
 var SITE_TEMPLATE_AUTHORED_DATA = {
   Issues: "issues",
@@ -53,7 +55,8 @@ var SITE_TEMPLATE_AUTHORED_DATA = {
   Hero: "words",
   QuickDonate: "ladder",
   ShareKit: "share",
-  Financials: "financials"
+  Financials: "financials",
+  Petition: "petition"
 };
 var starterSectionSchema = z.object({
   id: z.string().min(1).max(64),
@@ -136,7 +139,14 @@ var starterReusableSectionSchema = z.object({
 });
 var entryLayoutSchema = z.object({ entry: layoutName, list: layoutName });
 var siteTemplateManifestSchema = z.object({
-  key: z.enum(SITE_TEMPLATE_KEYS),
+  /**
+   * The template's key, by shape: a template is written in the sites
+   * repository before the platform registers it, so the schema cannot know
+   * the registry. The platform's own copies are held to SITE_TEMPLATE_KEYS by
+   * site-template-manifests.ts, which refuses a copy whose key is not the one
+   * it was filed under.
+   */
+  key: z.string().regex(TEMPLATE_KEY_PATTERN),
   name,
   audience: z.string().regex(/^[a-z][a-z_]{0,39}$/),
   version: z.number().int().min(1),

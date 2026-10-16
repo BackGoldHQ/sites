@@ -1,0 +1,1186 @@
+{
+  "key": "candidate",
+  "name": "Candidate",
+  "audience": "candidate",
+  "version": 1,
+  "variants": {
+    "Hero": [
+      "centered",
+      "split",
+      "statement",
+      "portrait"
+    ],
+    "About": [
+      "right",
+      "left",
+      "letter"
+    ],
+    "Issues": [
+      "cards",
+      "steps",
+      "numbered"
+    ],
+    "StatCards": [
+      "row"
+    ],
+    "Cta": [
+      "card",
+      "banner",
+      "strip"
+    ],
+    "QuoteStrip": [
+      "row",
+      "single",
+      "wall"
+    ],
+    "Map": [
+      "directory"
+    ],
+    "MovementMap": [
+      "full"
+    ],
+    "VideoEmbed": [
+      "auto",
+      "landscape",
+      "portrait",
+      "square"
+    ],
+    "PdfEmbed": [
+      "short",
+      "medium",
+      "tall",
+      "card"
+    ],
+    "Progress": [
+      "bar"
+    ],
+    "Countdown": [
+      "banner",
+      "tiles",
+      "inline"
+    ],
+    "Leaderboard": [
+      "table"
+    ],
+    "SocialFeed": [
+      "grid"
+    ],
+    "MovementTicker": [
+      "ticker"
+    ],
+    "EventsList": [
+      "list",
+      "agenda",
+      "compact"
+    ],
+    "Blog": [
+      "cards",
+      "list"
+    ],
+    "Collection": [
+      "cards"
+    ],
+    "ContentPost": [
+      "card"
+    ],
+    "PlatformPlanks": [
+      "numbered",
+      "longread"
+    ],
+    "CandidateRoster": [
+      "cards"
+    ],
+    "TeamGrid": [
+      "grid"
+    ],
+    "Donate": [
+      "form",
+      "story"
+    ],
+    "SignupCapture": [
+      "card",
+      "band"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "PollBlock": [
+      "card"
+    ],
+    "Petition": [
+      "none"
+    ],
+    "Store": [
+      "grid"
+    ],
+    "Event": [
+      "detail"
+    ],
+    "Calendar": [
+      "month"
+    ],
+    "SocialFrame": [
+      "ring"
+    ],
+    "Advocacy": [
+      "full"
+    ]
+  },
+  "areas": {
+    "top_banner": "Above the header",
+    "sidebar": "Beside the page, under it on a phone",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": {
+      "entry": "article",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
+      "list": "list"
+    },
+    "video": {
+      "entry": "watch",
+      "list": "grid"
+    },
+    "newsletter": {
+      "entry": "issue",
+      "list": "list"
+    }
+  },
+  "chrome": {
+    "header": ["bar"],
+    "footer": ["columns"],
+    "takeoverBanner": true,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [
+      {
+        "slug": "",
+        "title": "Home",
+        "sections": [
+          {
+            "id": "Hero-home",
+            "type": "Hero",
+            "band": "contrast",
+            "bleed": "full",
+            "variant": "portrait",
+            "copy": {
+              "kicker": "The office · The district",
+              "headline": "The candidate’s name",
+              "subheadline": "Who you are and why you are running, in a sentence or two: what you will fix first, in the words you would use on a neighbor’s porch.",
+              "ctaText": "Volunteer",
+              "secondaryText": "Meet the candidate"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              },
+              {
+                "label": "Meet the candidate",
+                "target": {
+                  "kind": "page",
+                  "slug": "about"
+                },
+                "url": "/about"
+              }
+            ]
+          },
+          {
+            "id": "Countdown-home",
+            "type": "Countdown",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "tiles",
+            "copy": {
+              "heading": "Election Day. Make your plan to vote."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-home",
+            "type": "Issues",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "Where the candidate stands",
+              "heading": "Three things the candidate will fix first",
+              "lead": ""
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Read the whole plan",
+                "target": {
+                  "kind": "page",
+                  "slug": "issues"
+                },
+                "url": "/issues",
+                "style": "ghost"
+              }
+            ],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Keep teachers in the classroom",
+                  "body": "Pay that keeps experienced teachers in the district, and a budget that funds classrooms before consultants."
+                },
+                {
+                  "title": "Fix the roads we drive",
+                  "body": "A repair list the public can read, ranked by need, not by whose district it is."
+                },
+                {
+                  "title": "Put the books online",
+                  "body": "Every payment the state makes, searchable within a week, by anyone."
+                }
+              ]
+            }
+          },
+          {
+            "id": "EventsList-home",
+            "type": "EventsList",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "list",
+            "copy": {
+              "kicker": "On the road",
+              "heading": "Meet the candidate this month",
+              "eventsEmptyCta": "Nothing is on the calendar yet. Town halls, door-knocks and coffees show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "All events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ],
+            "options": {
+              "max": 3,
+              "actions": "buttons"
+            }
+          },
+          {
+            "id": "Blog-home",
+            "type": "Blog",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "News",
+              "heading": "From the campaign"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "maxItems": 3
+            }
+          },
+          {
+            "id": "Cta-home",
+            "type": "Cta",
+            "band": "contrast",
+            "bleed": "full",
+            "variant": "banner",
+            "copy": {
+              "eyebrow": "Take part",
+              "heading": "Knock doors with the campaign this Saturday.",
+              "body": "Two hours, a partner and a list of neighbors. We train you on the spot.",
+              "donateButtonText": "Volunteer",
+              "volunteerButtonText": "Host a yard sign"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              },
+              {
+                "label": "Host a yard sign",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "about",
+        "title": "Meet the candidate",
+        "sections": [
+          {
+            "id": "Hero-about",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "split",
+            "copy": {
+              "headline": "One line that says who the candidate is.",
+              "subheadline": "Where you live, what you have done there, and the job you are asking for. Two or three sentences, in your own words.",
+              "ctaText": "Volunteer",
+              "secondaryText": "Why I’m running"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              },
+              {
+                "label": "Why I’m running",
+                "target": {
+                  "kind": "section",
+                  "slug": "about",
+                  "anchor": "why"
+                },
+                "url": "/about#why"
+              }
+            ]
+          },
+          {
+            "id": "About-about",
+            "type": "About",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "letter",
+            "copy": {
+              "heading": "Why I’m running",
+              "body": "Start with what you have seen up close: the meeting, the budget, the road, the classroom that made you decide to run.\n\nThen say what you know that the office needs, and what you will do with it in the first year.\n\nEnd with the people you are running for, and how they will be able to reach you once you win.",
+              "signature": "Your name, as you sign it",
+              "role": "Candidate for the office, the district"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "why"
+            }
+          },
+          {
+            "id": "StatCards-about",
+            "type": "StatCards",
+            "band": "plain",
+            "bleed": "contained",
+            "variant": "row",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "stats",
+              "items": [
+                {
+                  "label": "years living and working in the district",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": true
+                },
+                {
+                  "label": "years in the job that taught you the most",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                },
+                {
+                  "label": "a number that says who you are",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "QuoteStrip-about",
+            "type": "QuoteStrip",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "row",
+            "copy": {
+              "heading": "What people who know the candidate say"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "All endorsements",
+                "target": {
+                  "kind": "page",
+                  "slug": "endorsements"
+                },
+                "url": "/endorsements"
+              }
+            ],
+            "data": {
+              "source": "quotes",
+              "items": [
+                {
+                  "quote": "A line someone who has worked beside you said about you, in their words.",
+                  "attribution": "Who said it",
+                  "role": "Their role, and where"
+                },
+                {
+                  "quote": "A second line, from someone who knows a different side of your work.",
+                  "attribution": "Who said it",
+                  "role": "Their role, and where"
+                },
+                {
+                  "quote": "A third, from a neighbor or someone you helped.",
+                  "attribution": "Who said it",
+                  "role": "Their role, and where"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "issues",
+        "title": "Issues",
+        "sections": [
+          {
+            "id": "Hero-issues",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "The plan, in plain words.",
+              "subheadline": "What the candidate will work on in office, what comes first, and how voters will be able to check."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-issues",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "numbered",
+            "copy": {
+              "kicker": "What comes first",
+              "heading": "The first three jobs in office",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "File the open-budget bill",
+                  "body": "On the first day: every state payment online within a week, searchable by anyone."
+                },
+                {
+                  "title": "Ask for the road list",
+                  "body": "A public repair list for the district, ranked by need, with the date each job is due."
+                },
+                {
+                  "title": "Hold office hours across the district",
+                  "body": "Every other Saturday, in a different town each time. No appointment needed."
+                }
+              ]
+            }
+          },
+          {
+            "id": "PlatformPlanks-issues",
+            "type": "PlatformPlanks",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "longread",
+            "copy": {
+              "kicker": "The platform",
+              "heading": "Where the candidate stands"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "platform"
+            },
+            "data": {
+              "source": "platform",
+              "items": [
+                {
+                  "title": "Schools",
+                  "ethos": "Keep good teachers in the district and fund classrooms before consultants.",
+                  "planks": [
+                    {
+                      "headline": "Pay that keeps teachers here",
+                      "plain": "A retention stipend for teachers who stay five years in a district school."
+                    },
+                    {
+                      "headline": "The budget on time",
+                      "plain": "The school budget passed in the spring, so boards are not guessing in June."
+                    }
+                  ]
+                },
+                {
+                  "title": "Roads and water",
+                  "ethos": "Fix what we drive on and drink first, and let people see the list.",
+                  "planks": [
+                    {
+                      "headline": "A public repair list",
+                      "plain": "Every road and bridge project in the district, ranked by need, with its due date."
+                    },
+                    {
+                      "headline": "Clean wells",
+                      "plain": "Free well testing for every household outside a water district."
+                    }
+                  ]
+                },
+                {
+                  "title": "Open books",
+                  "ethos": "If the state spends it, you can see it within a week, without filing a request.",
+                  "planks": [
+                    {
+                      "headline": "Every payment online",
+                      "plain": "A searchable ledger of state payments, updated weekly."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "endorsements",
+        "title": "Endorsements",
+        "sections": [
+          {
+            "id": "Hero-endorsements",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "People who know the district.",
+              "subheadline": "Neighbors, local leaders and the organizations that have watched the candidate work. Every name here asked to be on this page."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "QuoteStrip-endorsements-single",
+            "type": "QuoteStrip",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "single",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "quotes",
+              "items": [
+                {
+                  "quote": "The strongest line anyone has written about the candidate goes here: an editorial, or a statement of support, in their words.",
+                  "attribution": "Who said it",
+                  "role": "Where, and when"
+                }
+              ]
+            }
+          },
+          {
+            "id": "QuoteStrip-endorsements-wall",
+            "type": "QuoteStrip",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wall",
+            "copy": {
+              "heading": "Who stands with the candidate"
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "quotes",
+              "items": [
+                {
+                  "quote": "An endorser who said something can have it here, in their words.",
+                  "attribution": "An endorsing organization",
+                  "role": "Who they are, and where"
+                },
+                {
+                  "attribution": "An elected official",
+                  "role": "Their office"
+                },
+                {
+                  "attribution": "A local leader",
+                  "role": "Their role, and where"
+                },
+                {
+                  "attribution": "A neighbor",
+                  "role": "Their town"
+                }
+              ]
+            }
+          },
+          {
+            "id": "FormBlock-endorsements",
+            "type": "FormBlock",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "Add your name"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "events",
+        "title": "Events",
+        "sections": [
+          {
+            "id": "Hero-events",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "Meet the candidate.",
+              "subheadline": "Town halls, door-knocks, coffees in living rooms and the odd forum. Everything is free and open to the public."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "EventsList-events",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "agenda",
+            "copy": {
+              "heading": "",
+              "eventsEmptyCta": "Want the candidate in your living room? Host a coffee for ten neighbors and tell us when."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "actions": "buttons"
+            }
+          }
+        ]
+      },
+      {
+        "slug": "donate",
+        "title": "Donate",
+        "sections": [
+          {
+            "id": "Donate-donate",
+            "type": "Donate",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "story",
+            "copy": {
+              "heading": "Donate",
+              "storyHeadline": "Every gift here comes from people in the district.",
+              "storyBody": "Say what a gift pays for, in one or two sentences: door hangers, postage, the gas to reach every porch."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-donate",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "Other ways to help",
+              "heading": "Not today? There are other ways.",
+              "lead": ""
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              }
+            ],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Mail a check",
+                  "body": "Your campaign’s mailing address goes here, with what the law asks a donor to include."
+                },
+                {
+                  "title": "Knock doors",
+                  "body": "Two hours on a Saturday, with a partner and a list."
+                },
+                {
+                  "title": "Host a yard sign",
+                  "body": "A sign on your lawn is worth more than you would think. We drop it off."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "volunteer",
+        "title": "Volunteer",
+        "sections": [
+          {
+            "id": "Hero-volunteer",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "Two hours. One list. A partner.",
+              "subheadline": "Most of this campaign happens on porches and phones. Tell us when you are free and what you would like to do, and someone from the campaign calls you within two days."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-volunteer",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Sign up to volunteer"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-volunteer",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "steps",
+            "copy": {
+              "kicker": "After you sign up",
+              "heading": "What happens next",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "We call you",
+                  "body": "Within two days, to find a shift that fits."
+                },
+                {
+                  "title": "You pick a shift",
+                  "body": "Saturday door-knocks, weeknight calls, or postcards from your kitchen table."
+                },
+                {
+                  "title": "Bring a friend",
+                  "body": "Every shift goes faster in pairs, and it is more fun."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "join",
+        "title": "Join",
+        "sections": [
+          {
+            "id": "Cta-join",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "eyebrow": "Join the team",
+              "heading": "Make it official.",
+              "body": "Supporters who join hear about events first, get a yard sign if they want one, and help decide where the campaign goes next. Pick how you join on the next page.",
+              "donateButtonText": "Join the team"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Join the team",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "primary": [
+        {
+          "label": "Meet the candidate",
+          "kind": "page",
+          "target": {
+            "slug": "about"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Issues",
+          "kind": "page",
+          "target": {
+            "slug": "issues"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Endorsements",
+          "kind": "page",
+          "target": {
+            "slug": "endorsements"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Events",
+          "kind": "page",
+          "target": {
+            "slug": "events"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "News",
+          "kind": "blog",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Get involved",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Volunteer",
+              "kind": "page",
+              "target": {
+                "slug": "volunteer"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Join the team",
+              "kind": "page",
+              "target": {
+                "slug": "join"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Donate",
+          "kind": "donate",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": true,
+          "children": []
+        }
+      ],
+      "footer": [
+        {
+          "label": "The candidate",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Meet the candidate",
+              "kind": "page",
+              "target": {
+                "slug": "about"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Issues",
+              "kind": "page",
+              "target": {
+                "slug": "issues"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Endorsements",
+              "kind": "page",
+              "target": {
+                "slug": "endorsements"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "News",
+              "kind": "blog",
+              "target": {},
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Take part",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Volunteer",
+              "kind": "page",
+              "target": {
+                "slug": "volunteer"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Events",
+              "kind": "page",
+              "target": {
+                "slug": "events"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Join the team",
+              "kind": "page",
+              "target": {
+                "slug": "join"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    "sections": [
+      {
+        "key": "campaign-sidebar",
+        "label": "Campaign sidebar",
+        "kind": "sidebar",
+        "document": [
+          {
+            "id": "Countdown-campaign-sidebar",
+            "type": "Countdown",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "inline",
+            "copy": {
+              "heading": "Election Day"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Cta-campaign-sidebar",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "Two hours this Saturday?",
+              "body": "Door-knocks leave every Saturday morning. Bring a friend, or we will find you a partner.",
+              "donateButtonText": "Volunteer"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "volunteer"
+                },
+                "url": "/volunteer"
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "sidebar",
+            "shows_on": "entry_types",
+            "content_types": [
+              "post"
+            ]
+          },
+          {
+            "area_key": "sidebar",
+            "shows_on": "type_lists",
+            "content_types": [
+              "post"
+            ]
+          },
+          {
+            "area_key": "sidebar",
+            "shows_on": "pages",
+            "pages": [
+              "events"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "more-from-the-campaign",
+        "label": "More from the campaign",
+        "kind": "sidebar",
+        "document": [
+          {
+            "id": "Blog-more-from-the-campaign",
+            "type": "Blog",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "list",
+            "copy": {
+              "heading": "More from the campaign"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "maxItems": 3
+            }
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "sidebar",
+            "shows_on": "entry_types",
+            "content_types": [
+              "post"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "get-the-campaign-letter",
+        "label": "Get the campaign letter",
+        "kind": "pre_footer",
+        "document": [
+          {
+            "id": "SignupCapture-campaign-letter",
+            "type": "SignupCapture",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "band",
+            "copy": {
+              "kicker": "The campaign letter",
+              "heading": "One email a week from the road.",
+              "lede": "Where the candidate was, what they heard, and where they are going next."
+            },
+            "media": {},
+            "links": []
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "above_footer",
+            "shows_on": "every_page"
+          }
+        ]
+      }
+    ]
+  }
+}
