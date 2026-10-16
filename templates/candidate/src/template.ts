@@ -2,8 +2,8 @@
 // manifest, the kit's sections and entry layouts with the template's own
 // layouts added (Hero · portrait, Countdown · tiles and inline, its
 // QuoteStrip · wall, the endorsements wall, in place of the kit's, and its
-// Issues · cards, the kit's counted), and its
-// own faces, Barlow Condensed for headings and Public Sans for text, from
+// Issues · cards, the kit's counted), the news search beside the news
+// list's head (C10), and its own faces, Barlow Condensed for headings and Public Sans for text, from
 // Google Fonts. astro.config.mjs names this file to the kit's integration,
 // whose routes draw every page with it.
 
@@ -32,4 +32,6 @@ export default defineTemplate({
     heading: 'Barlow+Condensed:wght@500;600;700;800',
     body: 'Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400',
   },
+  // The news search beside the list's head, on its subhead's line (C10).
+  newsSearch: 'head',
 })

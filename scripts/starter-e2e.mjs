@@ -23,6 +23,11 @@
 //   node scripts/starter-e2e.mjs --serve  skip the checks: keep the fixture api
 //                                         and the configured site running until
 //                                         Ctrl-C, to look at it in a browser
+//   node scripts/starter-e2e.mjs --serve --news
+//                                         the same, the organization at /news
+//                                         with its list's intro (newsBaseData);
+//                                         --template candidate serves at /news
+//                                         without it
 //   node scripts/starter-e2e.mjs --lighthouse
 //                                         also score home and an entry page with
 //                                         Lighthouse (performance, accessibility,
@@ -75,6 +80,8 @@ const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(joi
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
 const SERVE = process.argv.includes('--serve')
+// --serve: the organization at /news (newsBaseData), always on the candidate template.
+const SERVE_NEWS = SERVE && (process.argv.includes('--news') || TEMPLATE_NAME === 'candidate')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
 const LIGHTHOUSE_VERSION = '13.5.0'
@@ -3127,6 +3134,7 @@ async function checkPartyBoards(origin, fixture) {
     `/blog draws the "Search news" box (a GET form to /blog with q), and no search was stored under its address (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`,
   )
   check(!/results? for|Nothing matches/.test(plain(html)), 'the bare list shows no search sentence')
+  check(/<div class="list-bar">\s*<nav class="list-filter"[\s\S]*?<\/nav>\s*<form class="list-search"/.test(html), 'the search ends the filter row, beside the chips (A4)')
   res = await get(origin, '/endorsements')
   check(!/class="list-search"/.test(await res.text()), 'a list other than News has no search box')
 
@@ -4134,7 +4142,7 @@ async function checkCandidateLook(origin, chrome) {
           const h1 = document.querySelector('.list-head h1')
           const words = document.querySelector('.list-head-words')
           const search = document.querySelector('.list-head .list-search')
-          const filter = document.querySelector('.list-filter')
+          const filter = document.querySelector('.list-bar')
           if (!h1 || !words || !search || !filter) return null
           const w = words.getBoundingClientRect()
           const q = search.getBoundingClientRect()
@@ -4162,8 +4170,13 @@ async function checkCandidateLook(origin, chrome) {
           document.body.append(probe)
           const tint = getComputedStyle(probe).backgroundColor
           probe.remove()
+          const title = document.querySelector('.entry-header h1')
+          const entry = document.querySelector('.layout-main .entry')
+          const main = document.querySelector('.layout-main')
           return {
             overflow: document.documentElement.scrollWidth - window.innerWidth,
+            title: title ? Math.round(parseFloat(getComputedStyle(title).fontSize)) : null,
+            start: entry && main ? Math.round(entry.getBoundingClientRect().left - main.getBoundingClientRect().left) : null,
             tinted: box ? getComputedStyle(box).backgroundColor === tint : false,
             disc: disc ? Math.round(disc.getBoundingClientRect().width) + ' ' + getComputedStyle(disc).backgroundImage.startsWith('linear-gradient') : null,
             meta: meta ? meta.innerText.trim() : null,
@@ -4171,8 +4184,8 @@ async function checkCandidateLook(origin, chrome) {
           }
         })()`)
         check(
-          post.overflow <= 0 && post.tinted && post.disc === '56 true' && post.meta === 'Sep 20' && post.metaLines === 1,
-          `${where}: the author box on the tint with the large disc, and More from the campaign's rows read "Sep 20" on one line (${JSON.stringify(post)})`,
+          post.overflow <= 0 && post.title === (width >= 1440 ? 60 : 38) && post.start === 0 && post.tinted && post.disc === '56 true' && post.meta === 'Sep 20' && post.metaLines === 1,
+          `${where}: the post's title at C11's size at the start of the main column, the author box on the tint with the large disc, and More from the campaign's rows read "Sep 20" on one line (${JSON.stringify(post)})`,
         )
         // The comp walk's fixes, measured.
         await browser.open(`${origin}${at('')}`, scheme)
@@ -4290,8 +4303,8 @@ async function main() {
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
-  // --serve --template candidate: the organization at /news, its list with the intro the seed writes (C10).
-  const fixture = await startFixture(examples, kitchen.sections, CANDIDATE && SERVE ? 'news' : 'blog')
+  // --serve --news (and --serve --template candidate, with the intro the seed writes, C10): the organization at /news.
+  const fixture = await startFixture(examples, kitchen.sections, SERVE_NEWS ? 'news' : 'blog')
   log(`Fixture Content API: ${fixture.origin}`)
   // ── petition-drive (begin) ──
   // --serve: home is the drive's starter page, under its menus; a JSON brand

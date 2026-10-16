@@ -104,8 +104,56 @@ body:has(main [data-type='Donate']) .site-header .header-button[data-bg-donate] 
   letter-spacing: -0.004em;
 }
 
-/* The news list's name in capitals, 64 → 104 (C10's "NEWS"), its intro's headline the same. */
-.listing {
-  --list-title-size: clamp(4rem, 3.12rem + 3.76vw, 6.5rem);
-  --list-title-case: uppercase;
+/*
+  The news list (C10): the head is the list's name, or its intro's opening
+  Hero, in capitals at 64 → 104, the subhead 16 under it, with no band
+  padding of the Hero's own; the search sits beside the head
+  (src/template.ts `newsSearch: 'head'`), the whole width under it on a
+  phone; a line under the filter row.
+*/
+.listing .list-head {
+  margin-bottom: 1.5rem;
+}
+.listing .list-head .bg-section {
+  padding-block: 0;
+}
+.listing .list-head h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(4rem, 3.12rem + 3.76vw, 6.5rem);
+  font-weight: 800;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+.listing .list-head :is(.statement-lede, .lede) {
+  max-width: 34em;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: var(--text-lg);
+}
+.listing .list-bar {
+  margin-bottom: 1.875rem;
+  padding-bottom: 1.375rem;
+  border-bottom: 2px solid var(--ink);
+}
+@media (max-width: 47.5rem) {
+  .listing .list-head .list-search {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+  .listing .list-bar {
+    margin-bottom: 1.375rem;
+    padding-bottom: 1rem;
+  }
+}
+
+/* A post (C11): its title 38 → 60, the column at the start of the main column beside the Sidebar, not centred in it. */
+.entry-header h1 {
+  margin: 1rem 0;
+  font-size: clamp(2.375rem, 1.88rem + 2.1vw, 3.75rem);
+  font-weight: 800;
+  line-height: 0.98;
+}
+.layout-split .entry {
+  margin-inline: 0;
 }

@@ -309,45 +309,27 @@
 /* ── Lists ── */
 
 /*
-  The list's head (C10): the name, or the intro's opening Hero, at the list's
-  title size, the subhead under it, and the news list's search pill beside
-  them on the subhead's line; on a phone the search goes under them. A
-  template sets the title's size and case with --list-title-size and
-  --list-title-case.
+  The list's head: its name, or the intro's opening Hero as the Hero draws
+  it (board A4's "From the party"), then the intro's other sections. A
+  template that puts the news search beside the head (`newsSearch: 'head'`,
+  board C10) gets it on the head's last line, under it on a phone.
 */
 .list-head {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 1.125rem 1.75rem;
-  margin-bottom: 1.5rem;
 }
 .list-head-words {
   flex: 1 1 20rem;
   min-width: 0;
 }
-/* The intro's sections are drawn inside the list's own column: no second gutter, and the opening Hero is the head, with no band padding of its own. */
+/* The intro's sections are drawn inside the list's own column: no second gutter. */
 .list-intro .bg-section,
 .list-head .bg-section {
   padding-inline: 0;
 }
-.list-head .bg-section {
-  padding-block: 0;
-}
-.listing .list-head h1 {
-  max-width: none;
-  margin: 0;
-  font-size: var(--list-title-size, var(--h1));
-  font-weight: 800;
-  line-height: 0.92;
-  text-transform: var(--list-title-case, none);
-}
-.listing .list-head :is(.statement-lede, .lede) {
-  max-width: 34em;
-  margin: 1rem 0 0;
-  color: var(--muted);
-  font-size: var(--text-lg);
-}
+.list-header,
 .list-intro {
   margin-bottom: 1.5rem;
 }
@@ -355,15 +337,19 @@
   color: inherit;
   text-decoration: none;
 }
-/* The filter row (C10): the chips, a short rule, the featured category's link, and a line under the row. */
+/* The filter row (A4): the chips, a short rule and the featured category's link, and on the news list the search at the row's end. */
+.list-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 0.875rem;
+  margin-bottom: 1.5rem;
+}
 .list-filter {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.625rem;
-  margin-bottom: 1.875rem;
-  padding-bottom: 1.375rem;
-  border-bottom: 2px solid var(--ink);
 }
 .list-filter ul {
   display: flex;
@@ -414,20 +400,16 @@
   background: var(--line-strong);
 }
 @media (max-width: 47.5rem) {
-  .list-filter {
-    margin-bottom: 1.375rem;
-    padding-bottom: 1rem;
-  }
   .list-filter ul + .list-featured::before {
     display: none;
   }
 }
-/* The news list's search (C10): a compact pill, the magnifier at its start, beside the head. */
+/* The news search: a pill, the magnifier at its start, at the end of its row: the filter row's (A4; on its own line, at the end, when the chips fill the row) or the head's (C10). */
 .list-search {
   display: flex;
-  flex: 0 0 16.25rem;
+  flex: 0 1 16.25rem;
   align-items: center;
-  min-width: 0;
+  min-width: 12.5rem;
   margin: 0 0 0 auto;
   border: 1.5px solid var(--line-strong);
   border-radius: var(--pill);
@@ -454,7 +436,7 @@
 .list-search input:focus-visible {
   outline: none;
 }
-/* The button comes after the field (the field is reached first) and draws at its start, as C10's magnifier. */
+/* The button comes after the field (the field is reached first) and draws at its start. */
 .list-search-go {
   order: -1;
   display: grid;
@@ -475,12 +457,6 @@
 .list-search-go:focus-visible {
   outline: 3px solid var(--ink);
   outline-offset: -3px;
-}
-@media (max-width: 47.5rem) {
-  .list-search {
-    flex: 1 1 100%;
-    margin-left: 0;
-  }
 }
 .list-results {
   margin: 0 0 1.25rem;
