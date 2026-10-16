@@ -1,7 +1,10 @@
 ---
 // One entry in a list: indexes, term pages, the Blog and Collection sections.
+// A raised card (boards A1 and C1): the cover, the entry's category as a
+// chip, its title, its summary, and its line under them: the card's `meta`
+// (what the section that made it says there) and the day it was published.
 import type { Card } from '../lib/section'
-import { formatDay } from '../lib/format'
+import { formatShortDay } from '../lib/format'
 
 interface Props {
   card: Card
@@ -11,16 +14,22 @@ interface Props {
 
 const { card, level = 2 } = Astro.props
 const Heading = level === 2 ? 'h2' : 'h3'
-const day = formatDay(card.date)
+const day = formatShortDay(card.date)
 ---
 <article class="card">
   {card.image && <img class="card-image" src={card.image.url} alt={card.image.alt} loading="lazy" decoding="async" />}
   <div class="card-body">
-    {card.meta && <p class="card-meta">{card.meta}</p>}
+    {card.category && <p class="card-chips"><span class="chip chip-wash">{card.category}</span></p>}
     <Heading class="card-title">
       {card.href ? <a href={card.href}>{card.title}</a> : card.title}
     </Heading>
     {card.summary && <p class="card-summary">{card.summary}</p>}
-    {day && card.date && <time class="card-date" datetime={card.date}>{day}</time>}
+    {(card.meta || day) && (
+      <p class="card-meta">
+        {card.meta}
+        {card.meta && day && ' · '}
+        {day && card.date && <time datetime={card.date}>{day}</time>}
+      </p>
+    )}
   </div>
 </article>

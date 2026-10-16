@@ -1,10 +1,14 @@
 ---
-// Issues (Cards, the default): the section head (the kicker and the heading;
-// a section with one link draws it beside them as a text link, C1's "Read
-// the whole plan"), a lead paragraph, then one card per issue, and a section
-// with more than one link draws them under the cards as buttons, the first
-// the main call. `variant` is the card style chosen in BackGold, kept as
-// `data-variant` on the section for your CSS.
+// Issues (Cards, the default; boards A8, C1 and C7): the section head (the
+// kicker and the heading; a section with one link draws it beside them as a
+// text link, C1's "Read the whole plan"), a lead paragraph, then one raised
+// card per issue on the band's card colour with its title and its line,
+// counted in a disc when `numbered` is set (the candidate template's
+// Issues · cards, C1's "Three things she will fix first"; the party's A8
+// draws the same cards uncounted), and a section with more than one link
+// draws them under the cards as buttons, the first the main call. `variant`
+// is the card style chosen in BackGold, kept as `data-variant` on the
+// section for your CSS.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
@@ -15,9 +19,11 @@ import { text } from '../../../lib/format'
 interface Props {
   section: Section
   variant?: string
+  /** Count the cards, 1 up, each in a disc. */
+  numbered?: boolean
 }
 
-const { section } = Astro.props
+const { section, numbered = false } = Astro.props
 const issues = rows(section).filter((row) => text(row.title) || text(row.body))
 const ctas = links(section)
 const headLink = ctas.length === 1
@@ -26,11 +32,12 @@ const headLink = ctas.length === 1
   <SectionHead kicker={text(section.copy.kicker)} heading={text(section.copy.heading)} more={headLink ? ctas : []} />
   <Prose value={section.copy.lead} class="lede" />
   {issues.length > 0 && (
-    <ul class="grid grid-3" role="list">
-      {issues.map((issue) => (
-        <li class="tile">
-          {text(issue.title) && <h3>{text(issue.title)}</h3>}
-          <Prose value={issue.body} />
+    <ul class="issue-cards" role="list">
+      {issues.map((issue, i) => (
+        <li class="issue-card">
+          {numbered && <span class="issue-num" aria-hidden="true">{i + 1}</span>}
+          {text(issue.title) && <h3 class="issue-title">{text(issue.title)}</h3>}
+          <Prose value={issue.body} class="issue-body" />
         </li>
       ))}
     </ul>
@@ -41,3 +48,67 @@ const headLink = ctas.length === 1
     </p>
   )}
 </Band>
+
+<style>
+  .issue-cards {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .issue-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 1.25rem 1.375rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .issue-card > * {
+    margin: 0;
+  }
+  /* C1's disc: the count in the display face on the wash, in the link's colour. */
+  .issue-num {
+    display: grid;
+    place-items: center;
+    width: 2.125rem;
+    height: 2.125rem;
+    margin-bottom: 0.25rem;
+    border-radius: 50%;
+    background: var(--band-wash);
+    color: var(--band-wash-link);
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .issue-title {
+    font-size: var(--h3);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .issue-card :global(.issue-body) {
+    color: var(--muted);
+    font-size: 0.96875rem;
+  }
+  .issue-card :global(.issue-body) > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .issue-card {
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    /* The boards' motion note: a card lifts 2px with a deeper shadow on hover. */
+    .issue-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow), 0 14px 28px -18px color-mix(in srgb, var(--shadow-ink) 45%, transparent);
+    }
+  }
+</style>

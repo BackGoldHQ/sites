@@ -1,13 +1,17 @@
 ---
-// The post list layout, `list` (board A4): News, and the list of every type
-// the organization adds. One entry per row: its picture, the line over its
-// title (its term in the list's filter, or its type for an episode or a
-// video in News), the title, the summary, and who wrote it and when.
+// The post list layout, `list` (boards A4 and C10): News, and the list of
+// every type the organization adds. On the list's first page the newest
+// entry leads, large: its cover, the line over its title as a chip (its term
+// in the list's filter, or its type for an episode or a video in News), the
+// title, the summary, and who wrote it (with their picture, or their
+// initials) and when. Every other entry is a row: its picture beside the
+// words, the chip, the title, the summary, and the byline. A later page, and
+// a search's results, are rows alone.
 import { safeHref, safeSrc } from '@backgold/astro/server'
 import ListFrame from '../ListFrame.astro'
 import type { ListLayoutProps } from '../props'
-import { rowTerm, singularOf, writers } from '../../../lib/entries'
-import { formatDay } from '../../../lib/format'
+import { initials, rowTerm, singularOf, writers } from '../../../lib/entries'
+import { formatShortDay } from '../../../lib/format'
 
 type Props = ListLayoutProps
 
@@ -17,36 +21,65 @@ const types = props.type === 'blog' && bg.setup === null ? (await bg.client.type
 const rows = props.entries.map((entry) => {
   const term = rowTerm(entry, props.filter?.taxonomy)
   const kind = entry.type !== 'post' ? singularOf(types, entry.type) : null
+  const by = writers(entry.authors)
+  const first = by[0]
   return {
     entry,
     href: entry.url ? safeHref(entry.url) : null,
     image: entry.hero ? safeSrc(entry.hero.url) : null,
     line: [kind, term?.label].filter(Boolean).join(' · ') || null,
-    by: writers(entry.authors).map((a) => a.display_name).join(', ') || null,
-    day: formatDay(entry.publish_at),
+    by: by.map((a) => a.display_name).join(', ') || null,
+    avatar: first ? { url: safeSrc(first.avatar_url), initials: initials(first.display_name) } : null,
+    day: formatShortDay(entry.publish_at),
   }
 })
+const lead = props.pager.newest === null && props.search?.q == null ? (rows[0] ?? null) : null
+const rest = lead ? rows.slice(1) : rows
 ---
 <ListFrame {...props} noun={props.type === 'blog' ? 'posts' : props.type.plural_label.toLowerCase()} class="list-posts">
-  <ol class="post-rows" role="list">
-    {rows.map((row) => (
-      <li class="post-row">
-        <article>
-          {row.image && <img class="post-row-image" src={row.image} alt="" loading="lazy" decoding="async" />}
-          <div class="post-row-body">
-            {row.line && <p class="kicker">{row.line}</p>}
-            <h2 class="post-row-title">{row.href ? <a href={row.href}>{row.entry.title}</a> : row.entry.title}</h2>
-            {row.entry.summary && <p class="post-row-summary">{row.entry.summary}</p>}
-            {(row.by || row.day) && (
-              <p class="post-row-byline">
-                {row.by}
-                {row.by && row.day && ' · '}
-                {row.day && row.entry.publish_at && <time datetime={row.entry.publish_at}>{row.day}</time>}
-              </p>
-            )}
-          </div>
-        </article>
-      </li>
-    ))}
-  </ol>
+  {lead && (
+    <article class="post-lead">
+      {lead.image && <img class="post-lead-image" src={lead.image} alt="" loading="lazy" decoding="async" />}
+      <div class="post-lead-body">
+        {lead.line && <p class="post-chips"><span class="chip chip-wash">{lead.line}</span></p>}
+        <h2 class="post-lead-title">{lead.href ? <a href={lead.href}>{lead.entry.title}</a> : lead.entry.title}</h2>
+        {lead.entry.summary && <p class="post-lead-summary">{lead.entry.summary}</p>}
+        {(lead.by || lead.day) && (
+          <p class="post-byline post-lead-byline">
+            {lead.avatar && (lead.avatar.url ? <img class="post-avatar" src={lead.avatar.url} alt="" loading="lazy" decoding="async" /> : <span class="post-avatar" aria-hidden="true">{lead.avatar.initials}</span>)}
+            <span>
+              {lead.by && <b>{lead.by}</b>}
+              {lead.by && lead.day && ' · '}
+              {lead.day && lead.entry.publish_at && <time datetime={lead.entry.publish_at}>{lead.day}</time>}
+            </span>
+          </p>
+        )}
+      </div>
+    </article>
+  )}
+  {rest.length > 0 && (
+    <ol class="post-rows" role="list">
+      {rest.map((row) => (
+        <li class="post-row">
+          <article>
+            {row.image && <img class="post-row-image" src={row.image} alt="" loading="lazy" decoding="async" />}
+            <div class="post-row-body">
+              {row.line && <p class="post-chips"><span class="chip chip-wash">{row.line}</span></p>}
+              <h2 class="post-row-title">{row.href ? <a href={row.href}>{row.entry.title}</a> : row.entry.title}</h2>
+              {row.entry.summary && <p class="post-row-summary">{row.entry.summary}</p>}
+              {(row.by || row.day) && (
+                <p class="post-byline post-row-byline">
+                  <span>
+                    {row.by && <b>{row.by}</b>}
+                    {row.by && row.day && ' · '}
+                    {row.day && row.entry.publish_at && <time datetime={row.entry.publish_at}>{row.day}</time>}
+                  </span>
+                </p>
+              )}
+            </div>
+          </article>
+        </li>
+      ))}
+    </ol>
+  )}
 </ListFrame>

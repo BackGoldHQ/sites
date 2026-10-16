@@ -1,0 +1,164 @@
+---
+// The rows every events list shares (boards A6, C1 and C5): each event a
+// card on the band's card colour with its day as a numeral over its weekday
+// at the left, then its type as a chip, its title, and its time and place on
+// one line with its live counts ("142 going", "12 seats left", filled in by
+// LiveCounts after the page loads; empty without scripts) and whether it
+// still takes registrations. With `buttons` the event's button sits at the
+// right in the quieter solid style ("Get tickets" when it sells tickets,
+// "RSVP" otherwise, "Details" once registration has closed); without it the
+// title is the link. Either way the link is the event's page on this site,
+// /events/<slug>. The layout that places the rows places LiveCounts once.
+// `level` is the titles' heading level: 3 under a section's heading, 4 under
+// the agenda's month headings.
+import type { EventRow } from './events'
+
+interface Props {
+  events: EventRow[]
+  buttons: boolean
+  level: 3 | 4
+}
+
+const { events, buttons, level } = Astro.props
+const Title = level === 4 ? 'h4' : 'h3'
+---
+<ul class="event-rows" role="list">
+  {events.map((event) => (
+    <li class="event-row">
+      {event.when && event.startsAt ? (
+        <time class="event-day" datetime={event.startsAt}>
+          <b aria-hidden="true">{event.when.day}</b>
+          {event.when.weekday && <small aria-hidden="true">{event.when.weekday}</small>}
+          <span class="visually-hidden">{event.when.full}</span>
+        </time>
+      ) : (
+        <span class="event-day" aria-hidden="true"><b>–</b></span>
+      )}
+      <div class="event-body">
+        {event.type && <p class="event-chip"><span class="chip chip-wash">{event.type}</span></p>}
+        <Title class="event-title">{event.link && !buttons ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</Title>
+        {(event.when?.time || event.place || event.closed || event.id) && (
+          <p class="event-meta">
+            {[event.when?.time, event.place].filter(Boolean).map((part) => <span>{part}</span>)}
+            {event.id && <span class="event-live" data-bg-live={event.id}></span>}
+            {event.closed && <span class="event-closed">Registration closed</span>}
+          </p>
+        )}
+      </div>
+      {event.action && buttons && (
+        <p class="event-action">
+          <a class="button button-2 button-small" href={event.action.href} rel={event.action.rel}>
+            {event.action.label}<span class="visually-hidden">: {event.title}</span>
+          </a>
+        </p>
+      )}
+    </li>
+  ))}
+</ul>
+
+<style>
+  .event-rows {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .event-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 0.875rem;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .event-day {
+    display: block;
+    padding-right: 0.75rem;
+    border-right: 1px solid var(--line);
+    text-align: center;
+  }
+  .event-day b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.4rem + 1vw, 2.375rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .event-day small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .event-body > * {
+    margin: 0;
+  }
+  .event-body .event-chip {
+    margin-bottom: 0.375rem;
+  }
+  .event-body .event-title {
+    font-family: var(--font-display);
+    font-size: 1.3125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .event-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .event-title a:hover {
+    text-decoration: underline;
+  }
+  .event-body .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 0.75rem;
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .event-live {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .event-live:empty {
+    display: none;
+  }
+  .event-closed {
+    font-weight: 700;
+  }
+  .event-action {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  @media (min-width: 40rem) {
+    .event-row {
+      grid-template-columns: 5.25rem minmax(0, 1fr) auto;
+      gap: 1.375rem;
+      padding: 1rem 1.25rem;
+    }
+    .event-action {
+      grid-column: auto;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .event-row {
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    /* The boards' motion note: a card lifts 2px with a deeper shadow on hover. */
+    .event-row:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow), 0 14px 28px -18px color-mix(in srgb, var(--shadow-ink) 45%, transparent);
+    }
+  }
+</style>

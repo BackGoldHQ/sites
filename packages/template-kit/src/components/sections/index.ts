@@ -64,6 +64,7 @@ import CollectionLibrary from './Collection/library.astro'
 import CollectionShelves from './Collection/shelves.astro'
 import CollectionOutline from './Collection/outline.astro'
 import CtaBanner from './Cta/banner.astro'
+import CtaCard from './Cta/card.astro'
 import CtaPhoto from './Cta/photo.astro'
 import CtaStrip from './Cta/strip.astro'
 import EventsListCards from './EventsList/cards.astro'
@@ -211,6 +212,7 @@ export const sections = {
   'StatCards:feature': StatCardsFeature,
   'StatCards:wall': StatCardsWall,
   Cta,
+  'Cta:card': CtaCard,
   'Cta:banner': CtaBanner,
   'Cta:strip': CtaStrip,
   'Cta:photo': CtaPhoto,
