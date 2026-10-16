@@ -1,0 +1,10 @@
+---
+// Donate · story as board C7 draws it: the kit's story beside the form, with
+// no kicker over the story's headline (the party's A8 sets the section's
+// heading there, which is the kit's own).
+import type { ComponentProps } from 'astro/types'
+import Default from '@backgold/template-kit/components/sections/Donate/index.astro'
+
+type Props = ComponentProps<typeof Default>
+---
+<Default {...Astro.props} variant="story" kicker={false} />

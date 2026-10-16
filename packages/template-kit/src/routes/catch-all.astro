@@ -36,7 +36,8 @@
 // a page or an entry is that event's own page (src/components/EventPage.astro),
 // read from `GET /events/<slug>`; a slug the api has no event for is a 404. A
 // type's tab wins over an event slugged like the type while the type has an
-// upcoming event.
+// upcoming event. `/events.ics` is every upcoming event as one calendar file
+// and `/events/<slug>.ics` one event's (src/lib/events.ts).
 //
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
@@ -58,7 +59,7 @@ import PageSections from '../components/PageSections.astro'
 import { entryLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
-import { MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, typedEventsPage } from '../lib/events'
+import { EVENTS_CALENDAR_PATH, MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, eventsCalendar, typedEventsPage } from '../lib/events'
 import { entryCard, leadsWithHero } from '../lib/section'
 import { markReading } from '../lib/reading'
 import template from 'virtual:backgold-template'
@@ -71,6 +72,15 @@ if (bg.setup !== null) return new Response(null, { status: 503 })
 const { client, site, siteUrl } = bg
 const siteName = site.name ?? site.domain
 const pathname = Astro.url.pathname
+// `/events.ics` is every upcoming event as one calendar file (the events
+// list's "Add every event to your calendar").
+if (pathname === EVENTS_CALENDAR_PATH) {
+  const file = await eventsCalendar(client, siteUrl, `${siteName} events`)
+  if (!file) return new Response('Not found', { status: 404 })
+  return new Response(file, {
+    headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'attachment; filename="events.ics"' },
+  })
+}
 // `/events/<slug>.ics` is the event's calendar file (its page's Add to calendar).
 const calendarSlug = calendarSlugOf(pathname)
 if (calendarSlug !== null) {

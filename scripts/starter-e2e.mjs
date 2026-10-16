@@ -2938,6 +2938,37 @@ async function checkPartyBoards(origin, fixture) {
     `the agenda's type tabs: All (current), then each type with an upcoming event; no tab for Rallies (${tabs.map((t) => t.label).join(', ')})`,
   )
   check(!cards.includes('agenda-tabs'), 'the Cards section draws no tabs')
+  // The rows open their events (C5): the title is each row's one link, stretched over the row, the button its own link beside it.
+  const rows = [...agenda.matchAll(/<li class="event-row"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1])
+  const titleLinks = rows.map((row) => /class="event-title"[^>]*><a class="event-link" href="([^"]*)"[^>]*>([^<]*)<\/a>/.exec(row))
+  check(
+    rows.length === upcomingIds.length &&
+      titleLinks.every((m) => m !== null) &&
+      JSON.stringify(titleLinks.map((m) => m[1])) === JSON.stringify(['/events/candidate-forum', '/events/door-knock', '/events/gotv-dinner', '/events/new-member-night']) &&
+      rows.every((row) => (row.match(/<a\b/g) ?? []).length === 2 && !/<a\b(?:(?!<\/a>).)*<a\b/s.test(row)),
+    `with buttons, each agenda row's title still links to the event's page (the row's one stretched link) beside its button, no link inside another (${titleLinks.map((m) => m?.[1]).join(', ')})`,
+  )
+  // The line under the agenda (A6, C5): the rows' one zone by name, their times without it, and every event as one calendar file.
+  const times = [...agenda.matchAll(/<p class="event-meta"[^>]*>\s*<span[^>]*>([^<]*)<\/span>/g)].map((m) => m[1])
+  check(
+    /<p class="fine events-calendar-line[^"]*"[^>]*>\s*Times are Mountain Time\. <a class="text-link[^"]*" href="\/events\.ics"[^>]*>Add every event to your calendar<\/a>/.test(agenda) &&
+      times.length > 0 &&
+      times.every((t) => /^\d{1,2}:\d{2} [AP]M$/.test(t)),
+    `under the agenda: "Times are Mountain Time." and Add every event to your calendar (/events.ics); the rows' times leave the zone off (${times.join(', ')})`,
+  )
+  check(!cards.includes('events-calendar-line'), 'the Cards section draws no calendar line')
+  const icsRes = await get(origin, '/events.ics')
+  const allIcs = await icsRes.text()
+  const vevents = allIcs.split('BEGIN:VEVENT').length - 1
+  check(
+    icsRes.status === 200 &&
+      /^text\/calendar/.test(icsRes.headers.get('content-type') ?? '') &&
+      /^BEGIN:VCALENDAR\r\n/.test(allIcs) &&
+      /\r\nX-WR-CALNAME:[^\r]+ events\r\n/.test(allIcs) &&
+      vevents === upcomingIds.length &&
+      /DTSTART:20261101T183000Z\r\n[\s\S]*?SUMMARY:Get-out-the-vote dinner\r\n[\s\S]*?URL:[^\r]*\/events\/gotv-dinner\r\nEND:VEVENT/.test(allIcs),
+    `/events.ics is every upcoming event as one calendar file, each linking to its page (got ${icsRes.status}, ${vevents} events)`,
+  )
 
   // Ruling 32: the Calendar, a month at a time.
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -2985,7 +3016,7 @@ async function checkPartyBoards(origin, fixture) {
   check(
     phone !== '' &&
       JSON.stringify(slotIds(phone)) === JSON.stringify(['evt_c1', 'evt_c2', 'evt_c3']) &&
-      [...phone.matchAll(/class="event-title"[^>]*><a href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
+      [...phone.matchAll(/class="event-title"[^>]*><a class="event-link" href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
     "on a phone the same month is the agenda's rows, each with its live slot and its title linking to /events/<slug>",
   )
   check(
@@ -3081,9 +3112,24 @@ async function checkPartyBoards(origin, fixture) {
   check(/<link rel="canonical" href="[^"]*\/events\/gotv-dinner"/.test(html), '/events/gotv-dinner is its own canonical address')
   check(
     /<a href="\/events\/gotv-dinner\.ics"[^>]*>Add to calendar<\/a>/.test(main) &&
-      /<a href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=39\.5%2C-105\.25"[^>]*>Get directions<\/a>/.test(main) &&
-      /<iframe class="event-map"[^>]*src="https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=[^"]*marker=39\.50000%2C-105\.25000"/.test(main),
-    'the event page offers Add to calendar and Get directions, and frames a map of the venue from its coordinates',
+      /<a href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=39\.5%2C-105\.25"[^>]*>Get directions<\/a>/.test(main),
+    'the event page offers Add to calendar and Get directions',
+  )
+  check(/\d{1,2}:\d{2} [AP]M Mountain Time · <a href="\/events\/gotv-dinner\.ics"/.test(main) && !/\b[MC][DS]T\b/.test(plain(main)), "the event's time names its zone as a reader knows it, Mountain Time, not MDT (C6)")
+  // C6's map: the kit's own, drawn in the browser; with scripts off, the place and a link to it on OpenStreetMap.
+  const mapEl = /<div class="event-map"[^>]*>[\s\S]*?<\/a>\s*<\/div>\s*<\/div>/.exec(main)?.[0] ?? ''
+  check(
+    /<div class="event-map"[^>]*role="region"[^>]*aria-label="Map: Fenwick Union Depot"[^>]*data-event-map[^>]*data-lat="39\.5"[^>]*data-lng="-105\.25"/.test(mapEl) &&
+      /<div class="event-map-fallback"[^>]*data-event-map-fallback[^>]*>[\s\S]*<p[^>]*>Fenwick Union Depot<\/p>\s*<a class="text-link[^"]*" href="https:\/\/www\.openstreetmap\.org\/\?mlat=39\.50000&amp;mlon=-105\.25000#map=17\/39\.50000\/-105\.25000"[^>]*>Open in OpenStreetMap<\/a>/.test(mapEl) &&
+      !/openstreetmap\.org\/export\/embed/.test(html) &&
+      !/<iframe class="event-map/.test(html),
+    "the event page draws the kit's map of the venue, its no-script view the place and Open in OpenStreetMap; no OpenStreetMap frame",
+  )
+  const mapScript = [...html.matchAll(/<script\b[^>]*\bsrc="(\/_astro\/[^"]+)"/g)].map((m) => m[1]).find((src) => /EventMap/.test(src))
+  const mapLoader = mapScript ? await (await get(origin, mapScript)).text() : ''
+  check(
+    mapLoader !== '' && /IntersectionObserver/.test(mapLoader) && /import\(/.test(mapLoader) && mapLoader.length < 4000,
+    `the page loads a small map loader that imports MapLibre only near the screen (${mapScript ?? 'no script'}, ${mapLoader.length} bytes)`,
   )
   res = await get(origin, '/events/gotv-dinner.ics')
   const ics = await res.text()
@@ -3862,6 +3908,16 @@ function withCandidate(data, ex) {
     const r = starter.sections.find((x) => x.key === key)
     return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
   }
+  // Endorsements as board C4 groups them: the starter's wall, then two more walls on its ground, each a group under its heading.
+  const wallOf = (id, heading, items) => ({ id, type: 'QuoteStrip', band: 'plain', bleed: 'full', variant: 'wall', copy: { heading }, media: {}, links: [], options: {}, data: { source: 'quotes', items } })
+  const moreWalls = [
+    wallOf('QuoteStrip-elected', 'Elected officials', ['A mayor', 'A county commissioner', 'A city council member', 'A school board chair'].map((attribution) => ({ attribution, role: 'Their office' }))),
+    wallOf('QuoteStrip-neighbors', 'Neighbors', [
+      { quote: 'A neighbor who said something can have it here.', attribution: 'A neighbor', role: 'Their town' },
+      ...['A second neighbor', 'A third neighbor', 'A fourth neighbor', 'A fifth neighbor', 'A sixth neighbor'].map((attribution) => ({ attribution, role: 'Their town' })),
+    ]),
+  ]
+  const withWalls = (sections) => sections.flatMap((s) => (s.type === 'QuoteStrip' && s.variant === 'wall' ? [s, ...moreWalls] : [s]))
   const pages = starter.pages.map((p) => {
     const slug = candidateSlug(p.slug)
     const id = `lp_candidate_${p.slug || 'home'}`
@@ -3869,7 +3925,7 @@ function withCandidate(data, ex) {
       summary: { id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z', takes_donations: true },
       response: {
         page: { ...ex.PageResponse.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: true, meta: { title: null, description: null, image_url: null } },
-        sections: p.sections.map(fill(id)),
+        sections: withWalls(p.sections.map(fill(id))),
         areas: {
           top_banner: [],
           sidebar: p.slug === 'events' ? [reusable('campaign-sidebar', id)] : [],
@@ -3921,7 +3977,7 @@ function withCandidate(data, ex) {
 }
 
 /** The template's own layouts: present in the HTML, then in Chrome at 1440 and 375, light and dark. */
-async function checkCandidateLook(origin, chrome) {
+async function checkCandidateLook(origin, chrome, fixture) {
   log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall, and what template.css adds')
   const at = (slug) => `/${candidateSlug(slug)}`
   let res = await get(origin, at(''))
@@ -3994,6 +4050,41 @@ async function checkCandidateLook(origin, chrome) {
   check(/<a href="#platform-[^"]+"[^>]*>01 · /.test(longread) && /<span class="longread-num"[^>]*>01<\/span>/.test(longread), 'the platform counts its sections in the jump list and the headings, 01 up, with no numbers typed (C3)')
   html = await (await get(origin, '/blog')).text()
   check(/<article class="post-lead"/.test(html) && (html.match(/<li class="post-row"/g) ?? []).length === 1, 'the news list leads with its newest post and lists the rest as rows (C10)')
+
+  // The C-board fix wave: endorsement groups, the donate story's ground and kicker, the events list's rows and line, the type tabs.
+  html = await (await get(origin, at('endorsements'))).text()
+  const walls = sectionsOf(html).filter((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))
+  check(
+    walls.length === 3 && walls.map((w) => plain(/<h2\b[^>]*>([\s\S]*?)<\/h2>/.exec(w.html)?.[1] ?? '')).join(' | ') === 'Who stands with the candidate | Elected officials | Neighbors',
+    'Endorsements draws each group as its own wall under its heading (C4)',
+  )
+  html = await (await get(origin, at('donate'))).text()
+  const story = sectionsOf(html).find((s) => s.type === 'Donate')?.html ?? ''
+  check(
+    /data-band="tint"/.test(story) && /data-variant="story"/.test(story) && !/<p class="kicker/.test(story) && /<h2\b/.test(story),
+    "Donate · story on the panel band sits on the tint, its form the raised card, with no kicker over the story's headline (C7)",
+  )
+  html = await (await get(origin, at('events'))).text()
+  const agendaHtml = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
+  check(
+    /Times are Mountain Time\. <a class="text-link[^"]*" href="\/events\.ics"[^>]*>Add every event to your calendar<\/a>/.test(agendaHtml) &&
+      (agendaHtml.match(/<a class="event-link" href="\/events\/[^"]+"/g) ?? []).length === fixture.data.events.upcoming.length,
+    'the events list ends on "Times are Mountain Time." and Add every event to your calendar, and every row links to its event (C5)',
+  )
+  // One event type: no tabs ("All | Event" filters nothing).
+  const types = fixture.data.events.types
+  fixture.data.events.types = [{ key: 'blank', label: 'Event', upcoming: fixture.data.events.upcoming.length }]
+  let version = fixture.bump(fixture.state.headline)
+  let hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  res = await get(origin, '/events')
+  html = await res.text()
+  const oneType = sectionsOf(html).find((s) => s.type === 'EventsList' && /class="agenda"/.test(s.html))?.html ?? ''
+  check(hook.status === 204 && res.status === 200 && oneType !== '' && !oneType.includes('agenda-tabs'), `with one event type the agenda draws no type tabs (got ${res.status})`)
+  fixture.data.events.types = types
+  version = fixture.bump(fixture.state.headline)
+  hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  html = await (await get(origin, '/events')).text()
+  check(hook.status === 204 && (sectionsOf(html).find((s) => /class="agenda"/.test(s.html))?.html ?? '').includes('agenda-tabs'), 'with more than one type the tabs are back')
 
   const css = (
     await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
@@ -4081,6 +4172,66 @@ async function checkCandidateLook(origin, chrome) {
           return a && b ? Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom) : null
         })()`)
         check(railGap !== null && railGap >= 16, `${where}: the Campaign sidebar's Countdown and Cta stand apart (${railGap}px)`)
+        // The C-board fix wave, measured.
+        await browser.open(`${origin}${at('')}`, scheme)
+        const name = await browser.evaluate(`(() => { const n = document.querySelector('.hp-name'); return n ? getComputedStyle(n).fontSize : null })()`)
+        if (width < 768) check(name === '58px', `${where}: the portrait's name is set at C9's 58px on a phone (${name})`)
+        const issues = await browser.evaluate(`(() => {
+          const list = document.querySelector('.issue-cards')
+          const cards = list ? [...list.children] : []
+          if (!list || cards.length !== 3) return null
+          return Math.round(list.getBoundingClientRect().right - cards[2].getBoundingClientRect().right)
+        })()`)
+        check(issues !== null && issues <= 1, `${where}: home's three issue cards fill their row, no empty track at the right (${issues}px left over)`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const rows = await browser.evaluate(`(() => {
+          const row = document.querySelector('.event-row')
+          const day = row?.querySelector('.event-day')
+          const button = row?.querySelector('.event-action .button')
+          if (!row || !day || !button) return null
+          const at = (el) => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('a') }
+          const list = document.querySelector('.layout-main > .bg-section')
+          const rail = document.querySelector('.layout-rail')
+          return {
+            day: at(day)?.className ?? null,
+            button: at(button)?.className ?? null,
+            buttonShare: button.getBoundingClientRect().width / row.getBoundingClientRect().width,
+            listTop: list ? getComputedStyle(list).paddingTop : null,
+            railTop: rail ? getComputedStyle(rail).paddingTop : null,
+          }
+        })()`)
+        check(rows !== null && rows.day === 'event-link' && /\bbutton\b/.test(rows.button ?? ''), `${where}: a press anywhere on an event row opens the event, the button its own link above it (${JSON.stringify(rows)})`)
+        check(width >= 640 ? rows.buttonShare < 0.3 : rows.buttonShare > 0.8, `${where}: the row's button is ${width >= 640 ? 'at the right' : 'the row\'s full width (C9)'} (${rows.buttonShare.toFixed(2)} of the row)`)
+        check(rows.listTop === '0px' && (width < 768 || rows.railTop === '0px'), `${where}: under the Hero on its own ground the list ${width >= 768 ? 'and the rail start' : 'starts'} at the Hero's floor, no doubled gap (${rows.listTop}, ${rows.railTop})`)
+        await browser.open(`${origin}/events/gotv-dinner`, scheme)
+        const map = await browser.evaluate(`(() => {
+          const map = document.querySelector('.event-map')
+          const column = document.querySelector('.event-words')
+          const fallback = document.querySelector('[data-event-map-fallback]')
+          if (!map || !column || !fallback) return null
+          return { share: map.getBoundingClientRect().width / column.getBoundingClientRect().width, fallback: !fallback.hidden && fallback.getBoundingClientRect().height > 0, overflow: document.documentElement.scrollWidth - window.innerWidth }
+        })()`)
+        check(map !== null && Math.abs(map.share - 1) < 0.01 && map.fallback && map.overflow <= 0, `${where}: the event's map is the main column's width (C6), and with no tiles to draw it shows the place and its OpenStreetMap link (${JSON.stringify(map)})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const groups = await browser.evaluate(`(() => {
+          const walls = [...document.querySelectorAll('[data-type="QuoteStrip"][data-variant="wall"]')]
+          const width = (w) => w.querySelector('.ew-card:not(.ew-said)')?.getBoundingClientRect().width ?? null
+          const disc = document.querySelector('.ew-initials')
+          return { tops: walls.slice(1).map((w) => getComputedStyle(w).paddingTop), widths: walls.map((w) => Math.round(width(w))), disc: disc ? getComputedStyle(disc).backgroundImage : null }
+        })()`)
+        check(
+          groups.tops.length === 2 && groups.tops.every((t) => t === '0px') && new Set(groups.widths).size === 1 && /linear-gradient/.test(groups.disc ?? ''),
+          `${where}: the groups follow on one ground with no doubled gap, their cards one width, the initials on the brand's spruce-to-gold ground (${JSON.stringify(groups)})`,
+        )
+        await browser.open(`${origin}${at('about')}`, scheme)
+        const stats = await browser.evaluate(`(() => {
+          const band = document.querySelector('[data-type="StatCards"][data-bleed="contained"]')
+          const list = band?.querySelector('.stat-list')
+          const hero = document.querySelector('[data-type="Hero"] .bg-section-inner')
+          if (!band || !list || !hero) return null
+          return { list: Math.round(list.getBoundingClientRect().width), column: Math.round(hero.getBoundingClientRect().width), margin: getComputedStyle(band).marginTop }
+        })()`)
+        check(stats !== null && Math.abs(stats.list - stats.column) <= 1 && stats.margin === '0px', `${where}: a contained StatCards on the page's own ground is the column's width, no extra margin or inset (C2) (${JSON.stringify(stats)})`)
         await browser.open(`${origin}${at('join')}`, scheme)
         const join = await browser.evaluate(`(() => {
           const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .cta-card-box')
@@ -4174,7 +4325,7 @@ async function main() {
     // ── petition-drive (begin) ──
     if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
     // ── petition-drive (end) ──
-    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome)
+    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome, fixture)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

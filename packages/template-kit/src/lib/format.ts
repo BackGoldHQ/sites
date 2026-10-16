@@ -1,7 +1,9 @@
 // Dates, money and copy as the components show them. A moment given with a
 // time zone (an event row carries its own IANA `timezone`) is shown in that
 // zone and named by the zone's short name ("CDT"), so an event reads in its
-// own day and time wherever the page is served. Without a usable zone a value
+// own day and time wherever the page is served; `zoneName` spells the zone
+// out ("Mountain Time") for a line that names it once for a whole page, and
+// formatWhen leaves it off the time beside such a line. Without a usable zone a value
 // is shown as written: the calendar day and clock time in the value itself,
 // so a server in another time zone never moves it to another day, and a time
 // written in UTC (ending in `Z`) says "UTC". A date with no time is a
@@ -25,24 +27,44 @@ const DAY_AND_TIME_PARTS: Intl.DateTimeFormatOptions = {
 }
 const DAY_AND_TIME = new Intl.DateTimeFormat('en-US', { ...DAY_AND_TIME_PARTS, timeZone: 'UTC' })
 
-// One formatter per zone, built on first use (building one is the costly
-// part); null for a name Intl does not know.
+// One formatter per zone and naming, built on first use (building one is the
+// costly part); null for a name Intl does not know.
 const IN_ZONE = new Map<string, Intl.DateTimeFormat | null>()
 
-function inZone(timeZone: unknown): Intl.DateTimeFormat | null {
-  const zone = text(timeZone)?.trim()
-  if (!zone) return null
-  let format = IN_ZONE.get(zone)
+function formatter(zone: string, options: Intl.DateTimeFormatOptions, key: string): Intl.DateTimeFormat | null {
+  let format = IN_ZONE.get(`${key}\n${zone}`)
   if (format === undefined) {
     try {
-      format = new Intl.DateTimeFormat('en-US', { ...DAY_AND_TIME_PARTS, timeZone: zone, timeZoneName: 'short' })
+      format = new Intl.DateTimeFormat('en-US', { ...options, timeZone: zone })
     } catch (err) {
       if (!(err instanceof RangeError)) throw err
       format = null
     }
-    IN_ZONE.set(zone, format)
+    IN_ZONE.set(`${key}\n${zone}`, format)
   }
   return format
+}
+
+function inZone(timeZone: unknown, named: boolean): Intl.DateTimeFormat | null {
+  const zone = text(timeZone)?.trim()
+  if (!zone) return null
+  return named ? formatter(zone, { ...DAY_AND_TIME_PARTS, timeZoneName: 'short' }, 'short') : formatter(zone, DAY_AND_TIME_PARTS, 'none')
+}
+
+const zonePart = (format: Intl.DateTimeFormat | null): string | null =>
+  format?.formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value ?? null
+
+/**
+ * The zone as a name a reader knows, "Mountain Time" for America/Denver (its
+ * generic name, the same in summer and winter); its short name ("UTC") for a
+ * zone with no generic name but an offset; null for no zone or one Intl does
+ * not know.
+ */
+export function zoneName(timeZone: unknown): string | null {
+  const zone = text(timeZone)?.trim()
+  if (!zone) return null
+  const generic = zonePart(formatter(zone, { timeZoneName: 'longGeneric' }, 'generic'))
+  return generic && !/^GMT\b/.test(generic) ? generic : zonePart(formatter(zone, { timeZoneName: 'short' }, 'zone'))
 }
 
 function wallClock(value: string): { date: Date; hasTime: boolean } | null {
@@ -69,17 +91,18 @@ export function formatShortDay(value: unknown): string | null {
 
 /**
  * "Saturday, October 10, 2026 at 10:00 AM CDT" for a moment shown in
- * `timeZone`. With no usable zone: "… at 7:00 PM UTC" for a UTC time, the
+ * `timeZone` ("… at 10:00 AM" with `named` false, beside a line that names
+ * the zone). With no usable zone: "… at 7:00 PM UTC" for a UTC time, the
  * clock time as written for any other. "October 10, 2026" for a date with no
  * time, zone or not. Null when the value is not a date.
  */
-export function formatWhen(value: unknown, timeZone?: unknown): string | null {
+export function formatWhen(value: unknown, timeZone?: unknown, named = true): string | null {
   if (typeof value !== 'string') return null
   const parsed = wallClock(value)
   if (!parsed) return null
   if (!parsed.hasTime) return DAY.format(parsed.date)
   const trimmed = value.trim()
-  const zoned = INSTANT.test(trimmed) ? inZone(timeZone) : null
+  const zoned = INSTANT.test(trimmed) ? inZone(timeZone, named) : null
   if (zoned) return zoned.format(new Date(trimmed))
   return /z$/i.test(trimmed) ? `${DAY_AND_TIME.format(parsed.date)} UTC` : DAY_AND_TIME.format(parsed.date)
 }

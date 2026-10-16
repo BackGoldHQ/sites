@@ -7,7 +7,10 @@
 //          the checkout card at the right (under it on a phone)
 // The asks, the fields, the attestation, the limits and the receipt are
 // BackGold's; the layout only places the story beside them. With no form to
-// frame, the card says donations are not available (ModuleFrame).
+// frame, the card says donations are not available (ModuleFrame). The card is
+// the panel, so a section on the panel band sits on the tint (A8, C7: the
+// card raised off the band, never white on white). A template whose story
+// draws no kicker (the candidate's C7) passes `kicker={false}`.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
@@ -18,21 +21,24 @@ import { text } from '../../../lib/format'
 interface Props {
   section: Section
   variant?: string
+  /** The story's heading as its kicker; true unless the template's board draws none. */
+  kicker?: boolean
 }
 
-const { section, variant } = Astro.props
+const { section, variant, kicker = true } = Astro.props
+const ground: Section = section.band === 'panel' ? { ...section, band: 'tint' } : section
 const heading = text(section.copy.heading)
 const storyHeadline = text(section.copy.storyHeadline)
 const photo = media(section, 'storyImageUrl')
 const story = variant === 'story' && (storyHeadline || text(section.copy.storyBody) || photo)
 const layout = story ? 'story' : 'form'
 ---
-<Band section={section} class:list={['donate', `donate-${layout}`]}>
+<Band section={ground} class:list={['donate', `donate-${layout}`]}>
   {story ? (
     <div class="donate-story">
       <div class="donate-words">
         {photo && <img class="donate-photo" src={photo.url} alt={photo.alt} loading="lazy" />}
-        {heading && <p class="kicker">{heading}</p>}
+        {kicker && heading && <p class="kicker">{heading}</p>}
         {storyHeadline && <h2>{storyHeadline}</h2>}
         <Prose value={section.copy.storyBody} class="lede" />
         <p class="donate-share" data-share>
