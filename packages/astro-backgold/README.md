@@ -352,6 +352,14 @@ check, is dropped from the key, so `?utm_source=…`, `?cursor=junk` and
 cursor's or search's page is keyed by the content version like every other
 page, so a publish retires it too.
 
+A page that reads a query parameter the key drops says so with an
+`X-Backgold-Reads-Query` header (`READS_QUERY_HEADER` from
+`@backgold/astro/server`): the names, comma-separated, a trailing `*` standing
+for every name with that prefix (`amount,place,utm_*`). Its stored copy is not
+served to a request that carries one of those names with a value; that
+request renders, and the page sets `Cache-Control: no-store` on that render so
+it never takes the bare path's entry.
+
 Never stored: `/preview` (your page), `/api/backgold/*`, the setup page,
 anything but a 200, a render that sets a cookie, and one whose
 `Cache-Control` says `no-store`, `no-cache` or `private`. The render's own

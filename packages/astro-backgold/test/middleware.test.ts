@@ -214,6 +214,33 @@ describe('edge cache', () => {
     expect(hit.headers.get('X-Backgold-Cache')).toBe('HIT')
   })
 
+  it('never serves a stored page that reads a query name to a request that carries it', async () => {
+    const d = deps()
+    const reads = { 'X-Backgold-Reads-Query': 'amount,place,utm_*' }
+    await runMiddleware(fakeContext('/donate'), html({ headers: reads }), d)
+    expect(d.cache.stored.size).toBe(1)
+
+    for (const path of ['/donate?amount=25', '/donate?place=spring-mailer', '/donate?utm_id=fall']) {
+      const next = html({ headers: { ...reads, 'Cache-Control': 'no-store' } })
+      const res = await runMiddleware(fakeContext(path), next, d)
+      expect(next).toHaveBeenCalled()
+      expect(res.headers.get('X-Backgold-Cache')).toBe('MISS')
+    }
+    expect(d.cache.stored.size).toBe(1)
+
+    for (const path of ['/donate', '/donate?amount=', '/donate?cachebuster=1']) {
+      const res = await runMiddleware(fakeContext(path), html(), d)
+      expect(res.headers.get('X-Backgold-Cache')).toBe('HIT')
+    }
+  })
+
+  it('keeps serving a page that names no query it reads to any query', async () => {
+    const d = deps()
+    await runMiddleware(fakeContext('/about'), html(), d)
+    const res = await runMiddleware(fakeContext('/about?amount=25&utm_source=mailer'), html(), d)
+    expect(res.headers.get('X-Backgold-Cache')).toBe('HIT')
+  })
+
   it('keys two different search terms apart', async () => {
     const d = deps()
     await runMiddleware(fakeContext('/blog?q=levy'), html(), d)
