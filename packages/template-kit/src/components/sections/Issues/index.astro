@@ -53,7 +53,8 @@ const headLink = ctas.length === 1
   .issue-cards {
     display: grid;
     gap: 1.25rem;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    /* auto-fit: three cards share the row (C1, C7), never leaving an empty fourth track. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
     margin: 1.5rem 0 0;
     padding: 0;
     list-style: none;

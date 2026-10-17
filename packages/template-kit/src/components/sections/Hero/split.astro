@@ -1,15 +1,16 @@
 ---
 // Hero, 'split' layout (board A2-about-platform, section 1): the headline,
 // the line under it and the buttons on the left, the photo on the right;
-// on a phone the photo follows the words. Without a photo the words take the
-// full width. The page-opening Hero's headline is the page's <h1>
+// on a phone the photo follows the words, its alt text `copy.imageAlt` and
+// its caption (`copy.caption`) a chip at its lower left. Without a photo the
+// words take the full width, with no caption. The page-opening Hero's headline is the page's <h1>
 // (`level={1}`); any other Hero's is an <h2>. A Hero with its signup form on
 // carries an `embed`: BackGold's own form, framed under the buttons.
 import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
 import type Default from './index.astro'
-import { links, media } from '../../../lib/section'
+import { heroPhoto, links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -18,7 +19,8 @@ const { section, level = 2 } = Astro.props
 const Heading = level === 1 ? 'h1' : 'h2'
 const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
-const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const caption = text(section.copy.caption)
+const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const buttons = links(section)
 ---
 <Band section={section} class="hero-split-layout">
@@ -34,14 +36,17 @@ const buttons = links(section)
       {section.embed && <Embed embed={section.embed} title="Sign up" />}
     </div>
     {picture && (
-      <img
-        class="split-image"
-        src={picture.url}
-        alt={picture.alt}
-        loading={level === 1 ? 'eager' : 'lazy'}
-        fetchpriority={level === 1 ? 'high' : undefined}
-        decoding="async"
-      />
+      <div class="split-photo">
+        <img
+          class="split-image"
+          src={picture.url}
+          alt={picture.alt}
+          loading={level === 1 ? 'eager' : 'lazy'}
+          fetchpriority={level === 1 ? 'high' : undefined}
+          decoding="async"
+        />
+        {caption && <p class="photo-caption">{caption}</p>}
+      </div>
     )}
   </div>
 </Band>
@@ -69,6 +74,10 @@ const buttons = links(section)
   }
   .split-words > :global(.bg-embed) {
     margin-top: 1.5rem;
+  }
+  .split-photo {
+    position: relative;
+    min-width: 0;
   }
   .split-image {
     display: block;

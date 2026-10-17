@@ -1,0 +1,23 @@
+---
+// The line under the events page's list (boards A6 and C5): "Times are
+// Mountain Time." when the rows share one zone (their times then leave its
+// name off), then "Add every event to your calendar", every upcoming event as
+// one calendar file on this site (/events.ics, src/routes/catch-all.astro).
+import { EVENTS_CALENDAR_PATH } from '../../../lib/events'
+
+interface Props {
+  /** The rows' one zone as a name ("Mountain Time"), or null when they share none. */
+  zone: string | null
+}
+
+const { zone } = Astro.props
+---
+<p class="fine events-calendar-line">
+  {zone && <>Times are {zone}. </>}<a class="text-link" href={EVENTS_CALENDAR_PATH}>Add every event to your calendar</a>
+</p>
+
+<style>
+  .events-calendar-line {
+    margin: 1rem 0 0;
+  }
+</style>

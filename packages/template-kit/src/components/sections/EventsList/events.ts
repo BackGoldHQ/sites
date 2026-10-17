@@ -6,11 +6,13 @@
 // section's `max` of them. Dates are lib/format.ts's, in the event's own time
 // zone: the parts below are read off the string formatWhen writes, so every
 // layout shows (and the agenda groups by) the same day and time the list
-// layout does.
+// layout does. A row's time carries its zone's short name ("7:00 PM CDT");
+// `clock` is the time alone, for rows under a line that names the zone once
+// (sharedZone).
 
 import type { Section } from '@backgold/content'
 import { linkOf, rows, type Link } from '../../../lib/section'
-import { formatWhen, text } from '../../../lib/format'
+import { formatWhen, text, zoneName } from '../../../lib/format'
 import { eventPagePath } from '../../../lib/events'
 
 interface When {
@@ -29,6 +31,8 @@ interface When {
   monthIndex: number
   /** "7:00 PM CDT", or null when the value has no time. */
   time: string | null
+  /** "7:00 PM", the time without its zone's name; null when the value has no time. */
+  clock: string | null
 }
 
 export interface EventRow {
@@ -44,6 +48,8 @@ export interface EventRow {
   type: string | null
   /** The event has stopped taking registrations. */
   closed: boolean
+  /** The event's IANA zone, or null when it has none. */
+  zone: string | null
   /** The event's own page on this site, labelled with its title. */
   link: Link | null
   /**
@@ -76,6 +82,7 @@ function whenOf(value: unknown, timeZone: unknown): When | null {
   const m = full ? WHEN.exec(full) : null
   if (!full || !m) return null
   const [, weekday, month, day, year, time] = m
+  const bare = formatWhen(value, timeZone, false)
   const monthIndex = MONTHS.indexOf(month!)
   if (monthIndex < 0) return null
   return {
@@ -87,6 +94,7 @@ function whenOf(value: unknown, timeZone: unknown): When | null {
     year: Number(year),
     monthIndex,
     time: time ?? null,
+    clock: (bare ? WHEN.exec(bare)?.[5] : undefined) ?? time ?? null,
   }
 }
 
@@ -134,6 +142,7 @@ export function eventsOf(section: Section): EventRow[] {
           place: text(row.location) ?? (row.is_virtual === true ? 'Online' : null),
           type: typeLabel(row.type),
           closed,
+          zone: text(row.timezone)?.trim() || null,
           link: linkOf(title, page),
           action: linkOf(closed ? 'Details' : tickets ? 'Get tickets' : 'RSVP', page),
           calendar: page && dated ? linkOf('Add to calendar', `${page}.ics`) : null,
@@ -144,4 +153,15 @@ export function eventsOf(section: Section): EventRow[] {
       ]
     })
     .slice(0, cap)
+}
+
+/**
+ * The zone a list of events names once under its rows (boards A6 and C5,
+ * "Times are Mountain Time."), so the rows drop it from their times: the
+ * name of the one zone every timed row is in, or null when the rows span
+ * zones or name none Intl knows.
+ */
+export function sharedZone(events: EventRow[]): string | null {
+  const zones = new Set(events.filter((e) => e.when?.time).map((e) => e.zone))
+  return zones.size === 1 ? zoneName([...zones][0]) : null
 }

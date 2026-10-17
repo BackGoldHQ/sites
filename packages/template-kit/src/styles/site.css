@@ -783,6 +783,10 @@ main:focus {
   .layout-split .layout-rail {
     padding: var(--space) var(--gutter) var(--space) 0;
   }
+  /* Where the main column's first band joins the Hero's, the rail starts with it, at the Hero's floor (C5). */
+  .bg-bleed-full.bg-band-plain + .layout-split:has(> .layout-main > .bg-bleed-full.bg-band-plain:first-of-type) > .layout-rail {
+    padding-top: 0;
+  }
 }
 
 /* ── Sections ── */
@@ -801,12 +805,31 @@ main:focus {
   margin: var(--gutter) auto;
   border-radius: 1.5rem;
 }
-/* Two full-width bands of the same ground in a row read as one: no doubled gap between them. */
+/*
+  A contained band on the page's own ground has no box to show: it draws as a
+  full one, its content the column's width (C2's StatCards, C7's Progress).
+*/
+.bg-bleed-contained.bg-band-plain {
+  width: auto;
+  margin: 0;
+  border-radius: 0;
+}
+/*
+  Two full-width bands of the same ground in a row read as one: no doubled gap
+  between them. That holds across a page's opening Hero and the two columns
+  under it (C5): the main column's first band and the rail start at the
+  Hero's floor.
+*/
 .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
 .bg-bleed-full.bg-band-tint + .bg-bleed-full.bg-band-tint,
 .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel,
 .bg-bleed-full.bg-band-wash + .bg-bleed-full.bg-band-wash,
-.bg-bleed-full.bg-band-contrast + .bg-bleed-full.bg-band-contrast {
+.bg-bleed-full.bg-band-contrast + .bg-bleed-full.bg-band-contrast,
+.bg-bleed-full.bg-band-plain + .layout-split > .layout-main > .bg-bleed-full.bg-band-plain:first-of-type,
+.bg-bleed-full.bg-band-tint + .layout-split > .layout-main > .bg-bleed-full.bg-band-tint:first-of-type,
+.bg-bleed-full.bg-band-panel + .layout-split > .layout-main > .bg-bleed-full.bg-band-panel:first-of-type,
+.bg-bleed-full.bg-band-wash + .layout-split > .layout-main > .bg-bleed-full.bg-band-wash:first-of-type,
+.bg-bleed-full.bg-band-contrast + .layout-split > .layout-main > .bg-bleed-full.bg-band-contrast:first-of-type {
   padding-top: 0;
 }
 .bg-section .bg-section-inner > :last-child {
@@ -891,6 +914,14 @@ main:focus {
 .more {
   margin-top: 1.5rem;
   font-weight: 600;
+}
+/* A link set in a line of text (C1's countdown "Find where to vote"): bold, in the band's link colour, underlined. */
+.text-link {
+  color: var(--link);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.25em;
 }
 .badge {
   display: inline-block;
@@ -983,8 +1014,12 @@ main:focus {
   .grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /*
+    At most three tracks, so three cards fill the row; auto-fill keeps a lone
+    card (one post, one person) a card's width rather than the row's.
+  */
   .grid-3 {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(max(min(100%, 15rem), (100% - 2 * clamp(1rem, 2vw, 1.75rem)) / 3), 1fr));
   }
   .stat-list,
   .quotes .grid {
@@ -1021,12 +1056,34 @@ main:focus {
 .hero-image {
   display: block;
   width: 100%;
-  margin-top: 2rem;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: calc(var(--radius) * 2);
 }
+/* A Hero photo's caption (`copy.caption`, C1's "Photo: …"): a small chip at the photo's lower left, in the photo band's inks. Its frame is positioned. */
+.photo-caption {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.625rem;
+  z-index: 1;
+  max-width: calc(100% - 1.5rem);
+  margin: 0;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--band-photo) 70%, transparent);
+  color: var(--band-photo-ink);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+/* The photo's frame: the caption chip is positioned against it. */
+.hero-photo {
+  position: relative;
+  margin-top: 2rem;
+}
 @media (min-width: 48rem) {
+  .hero-split .hero-photo {
+    margin-top: 0;
+  }
   .hero-split .bg-section-inner {
     display: grid;
     grid-template-columns: 1.1fr 1fr;
@@ -1034,7 +1091,6 @@ main:focus {
     align-items: center;
   }
   .hero-split .hero-image {
-    margin-top: 0;
     aspect-ratio: 4 / 3;
   }
 }
@@ -1207,6 +1263,10 @@ main:focus {
   display: block;
   height: 100%;
   background: var(--button);
+}
+.countdown-body {
+  max-width: var(--measure);
+  color: var(--muted);
 }
 .countdown-left {
   font-size: var(--text-lg);

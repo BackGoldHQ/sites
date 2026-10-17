@@ -1,6 +1,8 @@
 ---
-// Countdown, 'tiles' layout (board C1, section 2): the heading and the day
-// at the left, and at the right the time left as three tiles, days, hours
+// Countdown, 'tiles' layout (board C1, section 2): at the left the eyebrow
+// ("Election Day"), the heading, the body line with the section's link after
+// it ("Find where to vote"), each only when the section has it, and the day;
+// at the right the time left as three tiles, days, hours
 // and minutes, counted in the visitor's browser. Pages are cached until the
 // content changes, so the server writes only the deadline: without script
 // the heading and the day read plainly and no tiles are drawn. The tiles
@@ -9,7 +11,7 @@
 // (C-8 as drawn), and a page rendered after it draws nothing.
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
-import { rows } from '@backgold/template-kit/lib/section'
+import { links, rows } from '@backgold/template-kit/lib/section'
 import { formatWhen, text } from '@backgold/template-kit/lib/format'
 
 interface Props {
@@ -18,7 +20,10 @@ interface Props {
 }
 
 const { section } = Astro.props
+const eyebrow = text(section.copy.eyebrow)
 const heading = text(section.copy.heading)
+const body = text(section.copy.body)
+const [link] = links(section)
 const deadline = text(rows(section)[0]?.deadline)
 const when = formatWhen(deadline)
 const end = deadline ? Date.parse(deadline) : NaN
@@ -28,7 +33,13 @@ const ahead = Number.isFinite(end) && end > Date.now()
   <Band section={section} class="countdown-tiles">
     <div class="ct" data-countdown-ends={deadline}>
       <div class="ct-words">
+        {eyebrow && <p class="kicker ct-eyebrow">{eyebrow}</p>}
         {heading && <h2 class="ct-heading">{heading}</h2>}
+        {(body || link) && (
+          <p class="ct-body">
+            {body}{body && link && ' '}{link && <a class="text-link" href={link.href} rel={link.rel}>{link.label}</a>}
+          </p>
+        )}
         <p class="ct-when"><time datetime={deadline}>{when}</time></p>
       </div>
       <dl class="ct-tiles" hidden>
@@ -72,9 +83,17 @@ const ahead = Number.isFinite(end) && end > Date.now()
     gap: 1.25rem;
     align-items: center;
   }
+  .ct-eyebrow {
+    margin: 0 0 0.5rem;
+  }
   .ct-heading {
     margin: 0;
     max-width: 18em;
+  }
+  .ct-body {
+    margin: 0.625rem 0 0;
+    max-width: 40em;
+    color: var(--muted);
   }
   .ct-when {
     margin: 0.75rem 0 0;

@@ -71,8 +71,12 @@ h2 {
   outline-offset: 3px;
 }
 
-/* A contained band (the signers card, the closing call) on the same corner family, a step rounder, edged with its own rule. */
-.bg-bleed-contained {
+/*
+  A contained band (the signers card, the closing call) on the same corner
+  family, a step rounder, edged with its own rule; one on the page's own
+  ground draws as a full band (the kit's), so it has no edge.
+*/
+.bg-bleed-contained:not(.bg-band-plain) {
   border: 1px solid var(--line);
   border-radius: calc(var(--radius-card) + 0.25rem);
 }

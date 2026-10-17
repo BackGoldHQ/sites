@@ -59,6 +59,13 @@ export interface TemplateConfig {
    * Public Sans (sections/modules/ModuleFrame.astro).
    */
   frameFont?: string
+  /**
+   * Where the news list draws its search box: at the end of the filter row,
+   * beside the chips (`filter`, board A4, the default), or beside the list's
+   * head, on its subhead's line (`head`, board C10); on a narrow screen it
+   * wraps to the end of its own line (src/components/entries/ListFrame.astro).
+   */
+  newsSearch?: 'filter' | 'head'
 }
 
 /** Every section type and layout the kit draws. */

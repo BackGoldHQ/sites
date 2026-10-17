@@ -21,6 +21,8 @@
 // held at the widest one's width, so the headline never reflows), and the
 // same corner button pauses them; under reduced motion they never turn.
 //
+// The photo's alt text is `copy.imageAlt`; the caption (`copy.caption`) sits
+// at the frame's lower left, and with no photo or video there is none.
 // Without a video (and without words) this is exactly the cover. The
 // page-opening Hero's headline is the page's <h1> (`level={1}`); any other
 // Hero's is an <h2>. A Hero with its signup form on carries an `embed`:
@@ -30,7 +32,7 @@ import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
 import Cover from './cover.astro'
 import type Default from './index.astro'
-import { links, media } from '../../../lib/section'
+import { heroPhoto, links, media } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default> & {
@@ -42,7 +44,7 @@ const { section, level = 2, words = [] } = Astro.props
 const turning = words.length > 0
 const video = turning ? null : media(section, 'videoUrl')
 // The video's own poster frame first, so nothing jumps when the loop starts.
-const picture = video ? media(section, 'videoPosterUrl', 'imageUrl', 'photoUrl') : media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const picture = video ? heroPhoto(section, 'videoPosterUrl', 'imageUrl', 'photoUrl') : heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const framed = video !== null || picture !== null
 const Heading = level === 1 ? 'h1' : 'h2'
 const kicker = text(section.copy.kicker)
@@ -109,7 +111,6 @@ const what = video ? 'background video' : 'changing words'
       )}
       {section.embed && <Embed embed={section.embed} title="Sign up" />}
     </div>
-    {!framed && caption && <p class="motion-caption">{caption}</p>}
     {moving && (
       <>
         <button type="button" class:list={['motion-toggle', framed && 'motion-toggle-framed']} data-motion-toggle data-what={what} hidden>
@@ -278,15 +279,6 @@ const what = video ? 'background video' : 'changing words'
     color: var(--band-photo-ink);
     font-size: 0.6875rem;
     line-height: 1.4;
-  }
-  /* With no frame the caption has nothing to sit on, so it follows the words. */
-  .motion-words + .motion-caption {
-    position: static;
-    display: inline-block;
-    margin-top: 1.5rem;
-    background: none;
-    padding: 0;
-    color: var(--muted);
   }
 
   /* Pause / play: in the band's top padding, clear of the words on any width. */
