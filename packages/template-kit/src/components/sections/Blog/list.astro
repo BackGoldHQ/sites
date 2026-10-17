@@ -8,8 +8,10 @@
 // nothing. It lays out by its own width, not the screen's: the cover beside
 // the words where the list is 40rem or wider, over them where it is not. In
 // a sidebar (board C11's More from the campaign) each row is the category,
-// the title and the date, with a small square cover after the words; on an
-// entry's page the entry being read is left out (latest.ts).
+// the title and the short date ("Sep 30"), with no author, and a small square
+// cover after the words; on an entry's page the entry being read is left out
+// (latest.ts). Its classes are its own (`blog-`): the news list's rows in
+// entries.css are drawn differently.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
@@ -26,19 +28,20 @@ const stories = entries.map(storyOf)
 {stories.length > 0 && (
   <Band section={section} class="entries blog-list">
     <h2>{heading}</h2>
-    <ul class="post-list" role="list">
+    <ul class="blog-rows" role="list">
       {stories.map((story) => (
-        <li class:list={['post-row', { 'post-row-pictured': story.image }]}>
-          {story.image && <span class="post-frame"><img class="post-cover" src={story.image} alt="" loading="lazy" decoding="async" /></span>}
-          <div class="post-body">
-            {story.category && <p class="post-chip">{story.category}</p>}
-            <h3 class="post-title">{story.href ? <a href={story.href}>{story.title}</a> : story.title}</h3>
-            {story.summary && <p class="post-summary">{story.summary}</p>}
+        <li class:list={['blog-row', { 'blog-row-pictured': story.image }]}>
+          {story.image && <span class="blog-frame"><img class="blog-cover" src={story.image} alt="" loading="lazy" decoding="async" /></span>}
+          <div class="blog-body">
+            {story.category && <p class="blog-chip">{story.category}</p>}
+            <h3 class="blog-title">{story.href ? <a href={story.href}>{story.title}</a> : story.title}</h3>
+            {story.summary && <p class="blog-summary">{story.summary}</p>}
             {(story.byline || story.day) && (
-              <p class="post-byline">
-                {story.byline}
-                {story.byline && story.day && ' · '}
-                {story.day && story.date && <time datetime={story.date}>{story.day}</time>}
+              <p class="blog-meta">
+                {story.byline && <span class="blog-by">{story.byline}{story.day && ' · '}</span>}
+                {story.day && story.date && (
+                  <time datetime={story.date}><span class="blog-day">{story.day}</span><span class="blog-day-short">{story.shortDay}</span></time>
+                )}
               </p>
             )}
           </div>
@@ -50,37 +53,37 @@ const stories = entries.map(storyOf)
 )}
 
 <style>
-  .post-list {
+  .blog-rows {
     container-type: inline-size;
     margin: 1.5rem 0 0;
     padding: 0;
     list-style: none;
   }
-  .post-row {
+  .blog-row {
     display: grid;
     gap: 0.875rem;
     padding: 1.5rem 0;
     border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
   }
-  .post-row:first-child {
+  .blog-row:first-child {
     border-top: 0;
     padding-top: 0;
   }
-  .post-frame {
+  .blog-frame {
     display: block;
     overflow: hidden;
     border-radius: var(--radius);
   }
-  .post-cover {
+  .blog-cover {
     display: block;
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
   }
-  .post-body > * {
+  .blog-body > * {
     margin: 0;
   }
-  .post-chip {
+  .blog-chip {
     display: inline-block;
     padding: 0.125rem 0.625rem;
     border-radius: var(--pill);
@@ -90,69 +93,93 @@ const stories = entries.map(storyOf)
     font-weight: 700;
     letter-spacing: 0.04em;
   }
-  .post-body .post-title {
+  .blog-body .blog-title {
     margin-top: 0.5rem;
     font-size: var(--h3);
     font-weight: 700;
     line-height: 1.2;
   }
-  .post-title a {
+  .blog-title a {
     color: var(--ink);
     text-decoration: none;
   }
-  .post-title a:hover {
+  .blog-title a:hover {
     text-decoration: underline;
   }
-  .post-body .post-summary {
+  .blog-body .blog-summary {
     margin-top: 0.5rem;
     color: var(--muted);
     max-width: var(--measure);
   }
-  .post-body .post-byline {
+  .blog-body .blog-meta {
     margin-top: 0.625rem;
     color: var(--muted);
     font-size: var(--text-sm);
   }
+  .blog-day-short {
+    display: none;
+  }
   @container (min-width: 40rem) {
-    .post-row-pictured {
+    .blog-row-pictured {
       grid-template-columns: minmax(10rem, 13.75rem) minmax(0, 1fr);
       gap: 1.5rem;
     }
   }
-  /* In a sidebar: the words, then a small square cover beside them (C11). */
-  :global(.rail) .post-row {
-    padding: 1rem 0;
+  /* In a sidebar (C11): compact rows of the category, the title and the short date, a small square cover after the words. */
+  :global(.rail) .blog-rows {
+    margin-top: 1rem;
   }
-  :global(.rail) .post-row:first-child {
-    padding-top: 0;
+  :global(.rail) .blog-row {
+    padding: 0.75rem 0;
+    border-top-color: var(--line);
   }
-  :global(.rail) .post-row-pictured {
+  :global(.rail) .blog-row:first-child {
+    padding-top: 0.125rem;
+  }
+  :global(.rail) .blog-row-pictured {
     grid-template-columns: minmax(0, 1fr) 4.5rem;
-    gap: 1rem;
-    align-items: start;
+    gap: 0.875rem;
+    align-items: center;
   }
-  :global(.rail) .post-row-pictured .post-frame {
+  :global(.rail) .blog-row-pictured .blog-frame {
     grid-column: 2;
     grid-row: 1;
+    border-radius: 0.625rem;
   }
-  :global(.rail) .post-row-pictured .post-body {
+  :global(.rail) .blog-row-pictured .blog-body {
     grid-column: 1;
     grid-row: 1;
   }
-  :global(.rail) .post-cover {
+  :global(.rail) .blog-cover {
     aspect-ratio: 1;
   }
-  :global(.rail) .post-body .post-title {
-    font-size: 1.125rem;
+  :global(.rail) .blog-chip {
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
   }
-  :global(.rail) .post-body .post-summary {
+  :global(.rail) .blog-body .blog-title {
+    margin-top: 0.375rem;
+    font-size: 1.1875rem;
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+  :global(.rail) .blog-body .blog-summary,
+  :global(.rail) .blog-by,
+  :global(.rail) .blog-day {
     display: none;
   }
+  :global(.rail) .blog-day-short {
+    display: inline;
+  }
+  :global(.rail) .blog-body .blog-meta {
+    margin-top: 0.25rem;
+    font-size: 0.78125rem;
+  }
   @media (prefers-reduced-motion: no-preference) {
-    .post-cover {
+    .blog-cover {
       transition: transform 0.3s ease;
     }
-    .post-row:hover .post-cover {
+    .blog-row:hover .blog-cover {
       transform: scale(1.02);
     }
   }

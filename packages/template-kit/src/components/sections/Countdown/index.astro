@@ -1,11 +1,13 @@
 ---
-// Countdown: a heading and the time left until the deadline. Pages are
+// Countdown: the eyebrow over the heading, the body line under it with the
+// section's link after it (C1's "Find where to vote"), and the time left
+// until the deadline; each part drawn only when the section has it. Pages are
 // cached until content changes, so the server writes the deadline itself and
 // a few lines of script count the days in the visitor's browser; without
 // script the deadline still reads plainly.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
-import { rows } from '../../../lib/section'
+import { links, rows } from '../../../lib/section'
 import { formatWhen, text } from '../../../lib/format'
 
 interface Props {
@@ -14,13 +16,22 @@ interface Props {
 }
 
 const { section } = Astro.props
+const eyebrow = text(section.copy.eyebrow)
 const heading = text(section.copy.heading)
+const body = text(section.copy.body)
+const [link] = links(section)
 const deadline = text(rows(section)[0]?.deadline)
 const when = formatWhen(deadline)
 ---
 {deadline && when && (
   <Band section={section} class="countdown">
+    {eyebrow && <p class="kicker">{eyebrow}</p>}
     {heading && <h2>{heading}</h2>}
+    {(body || link) && (
+      <p class="countdown-body">
+        {body}{body && link && ' '}{link && <a class="text-link" href={link.href} rel={link.rel}>{link.label}</a>}
+      </p>
+    )}
     <p class="countdown-left" data-countdown={deadline}>Until <time datetime={deadline}>{when}</time></p>
     <script is:inline>
       (function (el) {

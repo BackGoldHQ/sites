@@ -2,10 +2,15 @@
 // Hero, 'portrait' layout (boards C1 and C9, section 1; proposed, C-1): the
 // office line small over the headline (`copy.kicker`, "State Senate ·
 // District 9"), the candidate's name as the headline set large in capitals
-// at the left, the line under it and the buttons, and the portrait at the
+// at the left, on two lines when it is two words (the first name over the
+// last, C1 and C9's "IRIS / DELACORTE"), the line under
+// it and the buttons, and the portrait at the
 // right, standing on the band's floor (no gap under it) over a stripe in the
 // accent. On a phone the portrait follows the words, still on the floor.
-// Without a portrait the words take the full width. The page-opening Hero's
+// The portrait's alt text is `copy.imageAlt`, and its caption
+// (`copy.caption`, C1's "Photo: Iris at the Osgood County fair") a chip at
+// its lower left. Without a portrait the words take the full width, with no
+// caption. The page-opening Hero's
 // headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>. A
 // Hero with its signup form on carries an `embed`: BackGold's own form,
 // framed under the buttons.
@@ -13,7 +18,7 @@ import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
-import { links, media } from '@backgold/template-kit/lib/section'
+import { heroPhoto, links } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -23,7 +28,11 @@ const Heading = level === 1 ? 'h1' : 'h2'
 const office = text(section.copy.kicker)
 const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
-const portrait = media(section, 'photoUrl', 'imageUrl')
+const caption = text(section.copy.caption)
+// A two-word name breaks between its words; any other headline wraps as it falls.
+const words = headline?.trim().split(/\s+/) ?? []
+const lines = words.length === 2 ? words : null
+const portrait = heroPhoto(section, 'photoUrl', 'imageUrl')
 const buttons = links(section)
 ---
 {(headline || subheadline || portrait) && (
@@ -31,7 +40,7 @@ const buttons = links(section)
     <div class:list={['hp', portrait && 'hp-with-portrait']}>
       <div class="hp-words">
         {office && <p class="hp-office">{office}</p>}
-        {headline && <Heading class="hp-name">{headline}</Heading>}
+        {headline && <Heading class="hp-name">{lines ? <><span>{lines[0]}</span> <span>{lines[1]}</span></> : headline}</Heading>}
         {subheadline && <p class="hp-lede">{subheadline}</p>}
         {buttons.length > 0 && (
           <p class="actions">
@@ -41,14 +50,17 @@ const buttons = links(section)
         {section.embed && <Embed embed={section.embed} title="Sign up" />}
       </div>
       {portrait && (
-        <img
-          class="hp-portrait"
-          src={portrait.url}
-          alt={portrait.alt}
-          loading={level === 1 ? 'eager' : 'lazy'}
-          fetchpriority={level === 1 ? 'high' : undefined}
-          decoding="async"
-        />
+        <div class="hp-frame">
+          <img
+            class="hp-portrait"
+            src={portrait.url}
+            alt={portrait.alt}
+            loading={level === 1 ? 'eager' : 'lazy'}
+            fetchpriority={level === 1 ? 'high' : undefined}
+            decoding="async"
+          />
+          {caption && <p class="photo-caption hp-caption">{caption}</p>}
+        </div>
       )}
     </div>
   </Band>
@@ -104,12 +116,16 @@ const buttons = links(section)
   }
   .hp-name {
     margin: 1rem 0 0;
-    font-size: clamp(3.5rem, 1.6rem + 7vw, 8.25rem);
+    /* C9's 58px on a phone, C1's 132px on a wide screen. */
+    font-size: clamp(3.625rem, 1.6rem + 7vw, 8.25rem);
     font-weight: 800;
     line-height: 0.86;
     letter-spacing: -0.01em;
     text-transform: uppercase;
     max-width: none;
+  }
+  .hp-name span {
+    display: block;
   }
   .hp-lede {
     max-width: 30em;
@@ -124,13 +140,21 @@ const buttons = links(section)
     margin-top: 1.5rem;
     max-width: 36rem;
   }
+  .hp-frame {
+    position: relative;
+    min-width: 0;
+    margin-bottom: 0.625rem;
+  }
   .hp-portrait {
     display: block;
     width: 100%;
     aspect-ratio: 4 / 3.4;
     object-fit: cover;
     border-radius: 1.25rem 1.25rem 0 0;
-    margin-bottom: 0.625rem;
+  }
+  /* C1 sets the portrait's caption a little higher off its foot than a photo's. */
+  .hp-caption {
+    bottom: 0.875rem;
   }
   @media (min-width: 48rem) {
     .hp-with-portrait {

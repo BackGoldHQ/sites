@@ -5,10 +5,11 @@
 // 2: legibility is not a taste, there is no overlay option), in the photo
 // band's inks so they read on any photo. The headline's last word is set in
 // the accent, in italic (A1's "Fewer *excuses.*"): the contract carries no
-// mark for it, so the template takes the last word. The photo's caption,
-// when the section carries one (`copy.caption`), sits at the photo's lower
-// left. The first button is the main call, the rest outlines. Without a
-// photo it draws the same words on the section's own band. The page-opening
+// mark for it, so the template takes the last word. The photo's alt text is
+// `copy.imageAlt`, and its caption, when the section carries one
+// (`copy.caption`), sits at the photo's lower left. The first button is the
+// main call, the rest outlines. Without a photo it draws the same words on
+// the section's own band, with no caption. The page-opening
 // Hero's headline is the page's <h1> (`level={1}`); any other Hero's is an
 // <h2>. A Hero with its signup form on carries an `embed`: BackGold's own
 // form, framed under the buttons.
@@ -16,7 +17,7 @@ import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
 import type Default from './index.astro'
-import { links, media } from '../../../lib/section'
+import { heroPhoto, links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -27,7 +28,7 @@ const kicker = text(section.copy.kicker)
 const headline = text(section.copy.headline)?.trim() ?? null
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
-const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const buttons = links(section)
 // "More freedom. Fewer " and "excuses.": the last word apart, for the accent.
 const split = headline ? /^(.*\s)(\S+)$/su.exec(headline) : null
@@ -59,7 +60,6 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
     )}
     {section.embed && <Embed embed={section.embed} title="Sign up" />}
   </div>
-  {!picture && caption && <p class="cover-caption">{caption}</p>}
 </Band>
 
 <style>
@@ -116,15 +116,6 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
     color: var(--band-photo-ink);
     font-size: 0.6875rem;
     line-height: 1.4;
-  }
-  /* With no photo the caption has nothing to sit on, so it follows the words. */
-  :global(.hero-cover:not(.hero-cover-photo)) .cover-caption {
-    position: static;
-    display: inline-block;
-    margin-top: 1.5rem;
-    background: none;
-    padding: 0;
-    color: var(--muted);
   }
 
   .cover-words .kicker {

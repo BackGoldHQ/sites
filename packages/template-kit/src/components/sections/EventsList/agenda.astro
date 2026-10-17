@@ -11,20 +11,25 @@
 // then each event type with an upcoming event, from the Content API's GET
 // /events. They are addresses, /events/<type>, so they work with scripts off;
 // there the rows are that type's upcoming events (src/routes/catch-all.astro
-// reads them) and its tab is marked current. Anywhere else, or when the types
-// cannot be read, no tabs are drawn.
+// reads them) and its tab is marked current. Anywhere else, when fewer than
+// two types have an upcoming event, or when the types cannot be read, no tabs
+// are drawn.
 //
 // Each event opens its own page on this site: `options.actions` 'buttons' adds
 // a button to the row ("Get tickets" when the event sells tickets, "RSVP"
 // otherwise, "Details" once registration has closed), 'link' (or none) makes
-// the title the link. With no events it draws nothing.
+// the title the link; either way the whole row opens it. Under the months, a
+// line names the rows' one zone ("Times are Mountain Time.", their times then
+// leaving it off) and offers every event as one calendar file
+// (CalendarLine). With no events it draws nothing.
 import type { ComponentProps } from 'astro/types'
 import type Default from './index.astro'
 import Band from '../Band.astro'
 import AgendaMonths from './AgendaMonths.astro'
 import LiveCounts from './LiveCounts.astro'
 import TypeTabs from './TypeTabs.astro'
-import { actionsOf, eventsOf } from './events'
+import CalendarLine from './CalendarLine.astro'
+import { actionsOf, eventsOf, sharedZone } from './events'
 import { text } from '../../../lib/format'
 import { tabsFor } from '../../../lib/events'
 
@@ -36,13 +41,15 @@ const invitation = text(section.copy.eventsEmptyCta)
 const buttons = actionsOf(section) === 'buttons'
 const events = eventsOf(section)
 const bg = Astro.locals.backgold
+const zone = sharedZone(events)
 const tabs = events.length > 0 && bg.setup === null ? await tabsFor(bg.client, Astro.request, section, Astro.url.pathname) : null
 ---
 {events.length > 0 && (
   <Band section={section} class="events events-agenda">
     {heading && <h2>{heading}</h2>}
     {tabs && <TypeTabs tabs={tabs} />}
-    <AgendaMonths events={events} buttons={buttons} invitation={invitation} />
+    <AgendaMonths events={events} buttons={buttons} invitation={invitation} zoneless={zone !== null} />
+    <CalendarLine zone={zone} />
     <LiveCounts />
   </Band>
 )}

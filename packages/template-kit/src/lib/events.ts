@@ -105,8 +105,9 @@ function capOf(section: Section): number | undefined {
 /**
  * The tabs an Agenda or Calendar section draws on the events page (`/events` or
  * `/events/<key>`) and the key of the one being shown (null for All); null
- * anywhere else, when no type has an upcoming event, or when the route cannot
- * be read (the section then draws without tabs). On `/events/<key>` it reuses
+ * anywhere else, when fewer than two types have an upcoming event (an "All"
+ * beside the one type would filter nothing), or when the route cannot be read
+ * (the section then draws without tabs). On `/events/<key>` it reuses
  * the read that filtered the rows; on `/events` it asks for one row, since
  * only the types are wanted.
  */
@@ -125,8 +126,11 @@ export async function tabsFor(
     return null
   }
   const tabs = typeTabs(listing)
-  return tabs.length > 0 ? { tabs, active } : null
+  return tabs.length > 1 ? { tabs, active } : null
 }
+
+/** Whether the path is the events page, `/events` or a type's `/events/<key>`. */
+export const onEventsPage = (pathname: string): boolean => pathname.replace(/\/+$/, '') === EVENTS_PATH || eventTypeKeyOf(pathname) !== null
 
 /**
  * `/events/<key>`: the events page with each Agenda and Calendar section's rows read from
@@ -365,6 +369,9 @@ export async function eventPage(client: BackgoldContent, pathname: string): Prom
 /** The address of an event's calendar file on this site: `/events/<slug>.ics`. */
 export const eventCalendarPath = (slug: string): string => `${EVENTS_PATH}/${encodeURIComponent(slug)}.ics`
 
+/** The address of every upcoming event as one calendar file: `/events.ics` (the events page's "Add every event to your calendar"). */
+export const EVENTS_CALENDAR_PATH = `${EVENTS_PATH}.ics`
+
 /** The slug `/events/<slug>.ics` names, or null for any other path. */
 export function calendarSlugOf(pathname: string): string | null {
   const m = /^\/events\/([^/]+)\.ics$/.exec(pathname)
@@ -386,20 +393,19 @@ function icsInstant(value: string | null): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
 }
 
+/** What a calendar entry needs of an event: its page's fields, or a list row's (which has no venue or address). */
+type CalendarEvent = Pick<EventDetail, 'id' | 'title' | 'starts_at' | 'ends_at' | 'location'> & Partial<Pick<EventDetail, 'venue' | 'address'>>
+
 /**
- * The event as a one-event iCalendar file (Add to calendar): its title, start
- * and end (an hour when it has no end), place and its page on this site. Null
- * when the start does not parse.
+ * One event's VEVENT lines: its title, start and end (an hour when it has no
+ * end), place and its page on this site. Null when the start does not parse.
  */
-export function eventCalendar(event: EventDetail, pageUrl: string, host: string): string | null {
+function vevent(event: CalendarEvent, pageUrl: string, host: string): string[] | null {
   const start = icsInstant(event.starts_at)
   if (!start) return null
   const end = icsInstant(event.ends_at) ?? icsInstant(new Date(new Date(event.starts_at).getTime() + 3_600_000).toISOString())
   const place = [event.venue ?? event.location, event.venue ? event.address : null].filter(Boolean).join(', ')
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//BackGold//Party template//EN',
+  return [
     'BEGIN:VEVENT',
     `UID:${icsText(event.id)}@${icsText(host)}`,
     `DTSTAMP:${start}`,
@@ -409,7 +415,62 @@ export function eventCalendar(event: EventDetail, pageUrl: string, host: string)
     ...(place ? [`LOCATION:${icsText(place)}`] : []),
     `URL:${pageUrl}`,
     'END:VEVENT',
+  ]
+}
+
+/** VEVENTs wrapped as an iCalendar file, named `name` in a calendar app when given. */
+function calendarFile(events: string[][], name?: string): string {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//BackGold//Party template//EN',
+    ...(name ? [`X-WR-CALNAME:${icsText(name)}`] : []),
+    ...events.flat(),
     'END:VCALENDAR',
   ]
   return `${lines.join('\r\n')}\r\n`
+}
+
+/**
+ * The event as a one-event iCalendar file (Add to calendar). Null when the
+ * start does not parse.
+ */
+export function eventCalendar(event: EventDetail, pageUrl: string, host: string): string | null {
+  const entry = vevent(event, pageUrl, host)
+  return entry ? calendarFile([entry]) : null
+}
+
+/** How many pages of 50 the all-events file reads at most: 200 events. */
+const CALENDAR_PAGES_MAX = 4
+
+/**
+ * Every upcoming event as one iCalendar file (`/events.ics`), from `GET
+ * /events` (the read the events page's rows come from), soonest first, up to
+ * 200 of them, each entry the one its own page's file carries, linking to
+ * its page on this site; a row with no page or no start that parses is left
+ * out. Null when the answer is not the route's shape. A failed read throws
+ * (BackgoldApiError).
+ */
+export async function eventsCalendar(client: BackgoldContent, siteUrl: string, name: string): Promise<string | null> {
+  const host = new URL(siteUrl).host
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v : null)
+  const entries: string[][] = []
+  let cursor: string | undefined
+  for (let page = 0; page < CALENDAR_PAGES_MAX; page++) {
+    const listing = listingOf(await client.raw<unknown>(EVENTS_PATH, { limit: String(EVENTS_LIMIT_MAX), cursor }))
+    if (!listing) return null
+    for (const row of listing.events) {
+      const path = eventPagePath(row.url)
+      if (!path || typeof row.id !== 'string' || typeof row.title !== 'string' || typeof row.starts_at !== 'string') continue
+      const entry = vevent(
+        { id: row.id, title: row.title, starts_at: row.starts_at, ends_at: str(row.ends_at), location: str(row.location) },
+        new URL(path, siteUrl).toString(),
+        host,
+      )
+      if (entry) entries.push(entry)
+    }
+    if (!listing.next_cursor) break
+    cursor = listing.next_cursor
+  }
+  return calendarFile(entries, name)
 }

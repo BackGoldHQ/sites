@@ -1,24 +1,35 @@
 ---
-// Around every list layout: the list's name as the page's one <h1> (on a
-// term's list, the term, under the list's name; on the whole news list, the
-// list's intro when it has one: the page at the list's address, its sections
-// drawn as a page draws them, so its leading Hero's headline is the <h1>),
-// the filter (All, then each term a listed entry carries, the current one
-// marked), on the news list the search box (board A4, "Search news": a form
-// that sends `?q=` to the news list), the rows the layout draws in the slot
-// (a sentence instead when there is nothing to show), and the pager under
-// them: "Older" on to the next page when there is one, and "Newest" back to
-// the first from any later page. The filter's term lists page the same way at
-// their own addresses. A search's results say how many matched ("2 results
-// for ‘levy’"), or that nothing did, and have no pager; All stays unmarked,
-// since they are not the whole list. A list with nothing in it, or a term
-// with nothing under it yet, is an invitation (board C10): what will show
-// here, a button to the sign-up Above the footer when the page carries one,
-// and, on a term's list, the way back to the whole list.
+// Around every list layout: the list's head, its filter, the rows the layout
+// draws in the slot and the pager under them (board C10).
+//
+// The head is the list's name as the page's one <h1> (on a term's list, the
+// term, under the list's name), or on the whole news list its intro when it
+// has one: the page at the list's address, its opening (its leading Hero,
+// the headline the <h1>) drawn as the head and its other sections after it,
+// as a page draws them.
+//
+// The filter row: All, then each term a listed entry carries, in the
+// organization's order, the current one marked; after them, past a short
+// rule, the link to the featured category's list ("Press releases →",
+// lib/entries.ts listTermsOf) when the organization has that category. On
+// the news list the search box (ListSearch) ends the filter row (board A4),
+// or, for a template whose `newsSearch` is `head`, sits beside the head on
+// its last line (board C10). A term's list pages the same way at its own
+// address.
+//
+// Under the rows the pager: "Older" on to the next page when there is one,
+// and "Newest" back to the first from any later page. A search's results say
+// how many matched ("2 results for ‘levy’"), or that nothing did, and have no
+// pager; All stays unmarked, since they are not the whole list. A list with
+// nothing in it, or a term with nothing under it yet, is an invitation: what
+// will show here, a button to the sign-up Above the footer when the page
+// carries one, and, on a term's list, the way back to the whole list.
 import { areaEntriesOf } from '@backgold/astro/server'
 import PageSections from '../PageSections.astro'
+import ListSearch from './ListSearch.astro'
 import type { ListLayoutProps } from './props'
-import { basePath, listName, termPath } from '../../lib/entries'
+import { basePath, listName, listTermsOf, termPath } from '../../lib/entries'
+import { leadsWithHero } from '../../lib/section'
 import '../../styles/entries.css'
 
 interface Props extends ListLayoutProps {
@@ -36,36 +47,50 @@ const results = (n: number) => (n === 1 ? '1 result' : `${n} results`)
 const signupBelow = areaEntriesOf(areas, 'above_footer').some(
   ({ item, needsWindow }) => !needsWindow && item.sections.some((section) => section.type === 'SignupCapture'),
 )
+const opening = intro && !term ? intro : null
+const openingRest = opening ? opening.sections.length - (leadsWithHero(opening.sections) ? 1 : 0) > 0 : false
+const bg = Astro.locals.backgold
+const searchInHead = template.newsSearch === 'head'
+const { chips, featured } = bg.setup === null ? await listTermsOf(bg.client, base, filter) : { chips: filter?.terms ?? [], featured: null }
 ---
 <div class:list={['listing', className]}>
-  {intro && !term ? (
-    <div class="list-intro"><PageSections template={template} page={intro} siteName={name} /></div>
-  ) : (
-    <header class="page-header list-header">
-      {term && <p class="kicker"><a href={base}>{name}</a> · {term.taxonomy.label}</p>}
-      <h1>{term ? term.term.label : name}</h1>
-    </header>
-  )}
-  {filter && filter.terms.length > 0 && (
-    <nav class="list-filter" aria-label={`Narrow the ${name.toLowerCase()}`}>
-      <ul>
-        <li><a href={base} aria-current={current === null && q === null ? 'page' : undefined}>All</a></li>
-        {filter.terms.map((t) => {
-          const key = `${filter.taxonomy}/${t.slug}`
-          return <li><a href={termPath(base, filter.taxonomy, t.slug)} aria-current={current === key ? 'page' : undefined}>{t.label}</a></li>
-        })}
-      </ul>
-    </nav>
-  )}
-  {search && (
-    <form class="list-search" role="search" method="get" action={search.action}>
-      <label class="visually-hidden" for="list-search-q">Search news</label>
-      <input id="list-search-q" type="search" name="q" value={q ?? undefined} placeholder="Search news" minlength="2" maxlength="80" required />
-      <button class="list-search-go" type="submit">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-        <span class="visually-hidden">Search news</span>
-      </button>
-    </form>
+  <div class="list-head">
+    <div class="list-head-words">
+      {opening ? (
+        <PageSections template={template} page={opening} siteName={name} only="lead" />
+      ) : (
+        <header class="page-header list-header">
+          {term && <p class="kicker"><a href={base}>{name}</a> · {term.taxonomy.label}</p>}
+          <h1>{term ? term.term.label : name}</h1>
+        </header>
+      )}
+    </div>
+    {search && searchInHead && <ListSearch search={search} />}
+  </div>
+  {opening && openingRest && <div class="list-intro"><PageSections template={template} page={opening} siteName={name} only="rest" /></div>}
+  {(chips.length > 0 || featured || (search && !searchInHead)) && (
+    <div class="list-bar">
+      {(chips.length > 0 || featured) && (
+        <nav class="list-filter" aria-label={`Narrow the ${name.toLowerCase()}`}>
+          {chips.length > 0 && filter && (
+            <ul>
+              <li><a href={base} aria-current={current === null && q === null ? 'page' : undefined}>All</a></li>
+              {chips.map((t) => {
+                const key = `${filter.taxonomy}/${t.slug}`
+                return <li><a href={termPath(base, filter.taxonomy, t.slug)} aria-current={current === key ? 'page' : undefined}>{t.label}</a></li>
+              })}
+            </ul>
+          )}
+          {featured && (
+            <a class="list-featured" href={featured.href} aria-current={current === featured.key ? 'page' : undefined}>
+              {featured.label}
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </a>
+          )}
+        </nav>
+      )}
+      {search && !searchInHead && <ListSearch search={search} />}
+    </div>
   )}
   {q !== null && entries.length > 0 && <p class="list-results" role="status">{results(entries.length)} for ‘{q}’</p>}
   {entries.length > 0 ? (

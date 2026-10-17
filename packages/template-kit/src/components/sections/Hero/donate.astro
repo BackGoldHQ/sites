@@ -11,7 +11,10 @@
 // counted. With a photo, the photo fills the band behind both and the words
 // sit on the cover's scrim in the photo band's inks (deep under the words, so
 // they read on any photo); on a phone the photo shows above the words and the
-// card follows them. Without a photo the words and the card sit on the band.
+// card follows them. The photo's alt text is `copy.imageAlt`, and its caption
+// (`copy.caption`) a chip at the band's lower left, at its upper left on a
+// phone where the photo shows. Without a photo the words and the card sit on
+// the band, with no caption.
 // Without a donate link there is nothing to give through: it draws the cover.
 // The page-opening Hero's headline is the page's <h1> (`level={1}`); any
 // other Hero's is an <h2>. A Hero with its signup form on carries an `embed`:
@@ -23,7 +26,7 @@ import DonateCard from '../QuickDonate/DonateCard.astro'
 import { quickDonate } from '../QuickDonate/donate'
 import Cover from './cover.astro'
 import type Default from './index.astro'
-import { links, media } from '../../../lib/section'
+import { heroPhoto, links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -34,7 +37,8 @@ const Heading = level === 1 ? 'h1' : 'h2'
 const kicker = text(section.copy.kicker)
 const headline = text(section.copy.headline)?.trim() ?? null
 const subheadline = text(section.copy.subheadline)
-const picture = media(section, 'imageUrl', 'photoUrl')
+const caption = text(section.copy.caption)
+const picture = heroPhoto(section, 'imageUrl', 'photoUrl')
 const [, second] = links(section)
 // "More freedom. Fewer " and "excuses.": the last word apart, for the accent.
 const split = headline ? /^(.*\s)(\S+)$/su.exec(headline) : null
@@ -53,6 +57,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
           decoding="async"
         />
         <div class="donate-scrim" aria-hidden="true"></div>
+        {caption && <p class="photo-caption donate-caption">{caption}</p>}
       </>
     )}
     <div class:list={['donate-grid', picture && 'donate-grid-photo']}>
@@ -110,6 +115,11 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
     );
   }
 
+  /* On a phone the photo shows at the top of the band, so its caption sits there. */
+  .donate-caption {
+    top: 0.625rem;
+    bottom: auto;
+  }
   .donate-grid {
     display: grid;
     gap: 2rem;
@@ -161,6 +171,10 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
       grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
       gap: clamp(2.5rem, 4.5vw, 4.5rem);
       align-items: center;
+    }
+    .donate-caption {
+      top: auto;
+      bottom: 0.625rem;
     }
     .donate-grid-photo {
       align-items: end;
