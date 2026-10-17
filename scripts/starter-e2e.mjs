@@ -2224,6 +2224,44 @@ async function checkConfigured(origin, fixture, disclaimer) {
   html = await res.text()
   check(res.status === 200 && fixture.count() === before, `a second read of home makes zero Content API requests (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`)
 
+  if (ON_KIT) {
+    // Home draws a Donate frame, so it names the donate query names its frame
+    // copies from the page's address: a request that carries one renders past
+    // home's stored copy, its frame carries them and no other name from the
+    // page's address, and it is never stored.
+    const reads = (res.headers.get('x-backgold-reads-query') ?? '').split(',')
+    check(
+      ['amount', 'frequency', 'fund', 'email', 'ref', 'place', 'utm_source', 'utm_*'].every((name) => reads.includes(name)),
+      `home, which draws a Donate frame, names the donate query names it reads (X-Backgold-Reads-Query: ${reads.join(',')})`,
+    )
+    const keyed = '/?amount=25&frequency=monthly&place=spring-mailer&utm_source=mailer&utm_id=fall&layout=wide&b=2'
+    for (const read of ['first', 'second']) {
+      res = await get(origin, keyed)
+      html = await res.text()
+      const frame = tags(html, 'iframe').find((t) => t.includes('/embed/d/df_general')) ?? ''
+      const q = new URL(decode(/\ssrc="([^"]*)"/.exec(frame)?.[1] ?? 'about:blank')).searchParams
+      check(
+        res.headers.get('x-backgold-cache') === 'MISS' &&
+          /no-store/.test(res.headers.get('cache-control') ?? '') &&
+          q.get('amount') === '25' &&
+          q.get('frequency') === 'monthly' &&
+          q.get('place') === 'spring-mailer' &&
+          q.get('utm_source') === 'mailer' &&
+          q.get('utm_id') === 'fall' &&
+          q.get('layout') === 'form' &&
+          !q.has('b'),
+        `the ${read} read of ${keyed} renders (not home's copy), no-store, its Donate frame carrying the page's donate names and nothing else (${q})`,
+      )
+    }
+    res = await get(origin, '/?utm_source=mailer')
+    html = await res.text()
+    const bare = new URL(decode(/\ssrc="([^"]*)"/.exec(tags(html, 'iframe').find((t) => t.includes('/embed/d/df_general')) ?? '')?.[1] ?? 'about:blank')).searchParams
+    check(res.headers.get('x-backgold-cache') === 'MISS' && bare.get('utm_source') === 'mailer' && !bare.has('amount'), `a mailer's utm_source alone reaches the frame too, and the bare home's stored copy was never overwritten (${bare})`)
+    res = await get(origin, '/')
+    html = await res.text()
+    check(res.headers.get('x-backgold-cache') === 'HIT' && !/embed\/d\/df_general\?[^"]*amount=/.test(html), 'the bare home is still served from its stored copy, its frame with no amount')
+  }
+
   // A list page keys the edge cache by its cursor; any other query, and a
   // cursor the api would not accept, share the bare path's entry.
   await get(origin, olderHref).then((r) => r.text())
@@ -3828,6 +3866,9 @@ async function driveLook() {
 const CANDIDATE = TEMPLATE_NAME === 'candidate'
 const CANDIDATE_DEADLINE = new Date(Date.now() + ((26 * 24 + 9) * 60 + 41) * 60000 + 30000).toISOString()
 
+/** The candidate's membership program as BackGold bakes it: one plan, by the year. */
+const CANDIDATE_MEMBERSHIP = { model: 'single', name: null, monthly_cents: null, annual_cents: 2500, lifetime_cents: null, onetime_cents: null, symbolic: false, benefits: ['Events before anyone else hears', 'A yard sign, if you want one'] }
+
 /** The address a candidate starter page is served at: its own under --serve, else /candidate-<slug>. */
 const candidateSlug = (slug) => (SERVE ? slug || 'home' : `candidate-${slug || 'home'}`)
 
@@ -3845,6 +3886,7 @@ function withCandidate(data, ex) {
     if (s.type === 'Blog') s.data = { source: 'blog', items: [] }
     if (s.type === 'Hero' && (s.variant === 'portrait' || s.variant === 'split')) s.media = { photoUrl: portrait }
     if (s.type === 'Donate') s.embed = donateEmbed
+    if (s.type === 'Membership') s.data = { source: 'membership', items: [CANDIDATE_MEMBERSHIP] }
     if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
     if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
     return s
@@ -3949,7 +3991,19 @@ async function checkCandidateLook(origin, chrome) {
   check(headLink(sectionsOf(html).find((s) => s.type === 'QuoteStrip')?.html ?? '', 'All endorsements'), "Meet the candidate's QuoteStrip · row carries All endorsements in its head (C2)")
   res = await get(origin, at('join'))
   html = await res.text()
-  check(res.status === 200 && /<h1 class="visually-hidden">Join<\/h1>/.test(html) && sectionsOf(html)[0]?.type === 'Cta' && /data-variant="card"/.test(sectionsOf(html)[0].html), "Join opens with Cta · card, the page's title kept as its <h1> for screen readers")
+  const joinSections = sectionsOf(html)
+  const joinLink = /<a\b[^>]*href="([^"]*)"[^>]*>\s*Join the team\s*<\/a>/.exec(joinSections[0]?.html ?? '')?.[1]
+  check(
+    res.status === 200 &&
+      /<h1 class="visually-hidden">Join<\/h1>/.test(html) &&
+      joinSections[0]?.type === 'Membership' &&
+      /data-variant="card"/.test(joinSections[0].html) &&
+      joinSections[0].html.includes('Put your name on the team.') &&
+      joinLink === '/join' &&
+      joinSections[1]?.type === 'Cta' &&
+      /data-variant="card"/.test(joinSections[1].html),
+    `Join opens with Membership · card (its Join the team to ${joinLink}), then Cta · card, the page's title kept as its <h1> for screen readers`,
+  )
   // The kit layouts drawn to the C boards: C1's event rows and counted issue cards, C3's counted sections, C10's lead post.
   html = await (await get(origin, at(''))).text()
   const homeEvents = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''

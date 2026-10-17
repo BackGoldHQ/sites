@@ -4,8 +4,8 @@
 // headline is it; otherwise the page's title (the site's name on the home
 // page) is the <h1> above the sections, shown on screen unless the page
 // opens with a module or a card that leads with words of its own (a donate
-// form's story, a petition's header, a call to action's card), as boards A8,
-// A10 and C8 draw them with no title band above. Every section, the leading
+// form's story, a petition's header, a membership's offer, a call to action's
+// card), as boards A8, A10 and C8 draw them with no title band above. Every section, the leading
 // Hero included, goes through <Section>, which writes the preview marker the
 // BackGold editor scrolls to, through the template's sections map
 // (`Astro.locals.template` carries it to LeadingHero, which <Section> passes
@@ -35,7 +35,7 @@ Astro.locals.template = template
 const [first, ...rest] = page.sections
 const heroLeads = leadsWithHero(page.sections)
 const title = (page.page.is_home ? siteName : text(page.page.title)) ?? siteName
-const quietTitle = first?.type === 'Donate' || first?.type === 'Petition' || (first?.type === 'Cta' && first.variant === 'card')
+const quietTitle = first?.type === 'Donate' || first?.type === 'Petition' || first?.type === 'Membership' || (first?.type === 'Cta' && first.variant === 'card')
 ---
 {only !== 'rest' && (heroLeads && first ? <Section section={first} components={{ Hero: LeadingHero }} /> : (
   quietTitle ? <h1 class="visually-hidden">{title}</h1> : (

@@ -8,7 +8,7 @@ import './locals.js'
 import type { MiddlewareHandler } from 'astro'
 import options from 'virtual:backgold/options'
 import { backgoldFor, type BackgoldContextLike } from './server/context.js'
-import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, toStore, type EdgeCache } from './server/edge-cache.js'
+import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, readsRequestQuery, toStore, type EdgeCache } from './server/edge-cache.js'
 import { namesNoSite, waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
 import { PREVIEW_HEADERS } from './server/preview.js'
 import { redirectFor } from './server/redirects.js'
@@ -109,7 +109,8 @@ async function pipeline(context: MiddlewareContextLike, next: MiddlewareNext, de
   if (method !== 'GET' || uncached || !deps.cache) return finish(await next())
   const key = new Request(cacheKey({ siteId: bg.siteId, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant: bg.variant, url: context.url }))
   const hit = await deps.cache.match(key).catch(() => undefined)
-  if (hit) return finish(fromCache(hit))
+  // A copy whose page reads a query name this request carries is not this request's page.
+  if (hit && !readsRequestQuery(hit, context.url)) return finish(fromCache(hit))
 
   const response = await next()
   // Read before `finish` adds the visitor cookie, which is never stored.
