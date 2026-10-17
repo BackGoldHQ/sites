@@ -1,7 +1,9 @@
 ---
-// Who wrote it, at the end of an entry: each writer's picture (or initials),
-// name, and the bio from their author record, with a link to their page.
-// Editors and photographers stay in the byline only.
+// Who wrote it, at the end of an entry (board C11): for each writer a box on
+// the tint with their picture (or their initials on the brand's disc), their
+// role as a kicker ("Written by", "Interview by"), their name as a heading
+// that links to their page, and the bio from their author record. Editors
+// and photographers stay in the byline only.
 import type { EntryAuthor } from '@backgold/content'
 import { relFor, safeHref, safeSrc } from '@backgold/astro/server'
 import Prose from '../Prose.astro'
@@ -19,6 +21,7 @@ const boxes = people.map((person, i) => {
   const link = safeHref(record?.link_url ?? person.link_url)
   return {
     name: record?.display_name ?? person.display_name,
+    role: person.role,
     href: `/authors/${encodeURIComponent(person.slug)}`,
     avatar: safeSrc(record?.avatar_url ?? person.avatar_url),
     bio: record?.bio ?? null,
@@ -31,8 +34,9 @@ const boxes = people.map((person, i) => {
   <section class="author-boxes" aria-label={boxes.length === 1 ? 'About the author' : 'About the authors'}>
     {boxes.map((box) => (
       <div class="author-box">
-        {box.avatar ? <img class="author-box-avatar" src={box.avatar} alt="" width="64" height="64" loading="lazy" /> : <span class="author-box-avatar" aria-hidden="true">{initials(box.name)}</span>}
+        {box.avatar ? <img class="author-box-avatar" src={box.avatar} alt="" width="56" height="56" loading="lazy" /> : <span class="author-box-avatar" aria-hidden="true">{initials(box.name)}</span>}
         <div>
+          <p class="kicker author-box-role">{box.role}</p>
           <p class="author-box-name"><a href={box.href}>{box.name}</a></p>
           {box.bio ? <Prose value={box.bio} class="author-box-bio" /> : <p class="muted">More from {box.name} is on their page.</p>}
           {box.link && <p class="author-box-link"><a href={box.link} rel={box.rel}>Their website</a></p>}

@@ -1,6 +1,7 @@
 ---
 // The events page's type tabs (board A6), as the Agenda and the Calendar
-// draw them: All, then each event type with an upcoming event, each an
+// draw them, when two or more event types have an upcoming event (lib/events.ts
+// tabsFor): All, then each such type, each an
 // address (/events, /events/<type>) so they work with scripts off; the one
 // being shown is marked current. `query` (the calendar's `?month=`) follows
 // every tab, so a tab keeps the month in view.

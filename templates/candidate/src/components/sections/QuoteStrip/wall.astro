@@ -3,12 +3,15 @@
 // sections 3 to 5; the endorsements wall, C-2): the heading, then a wall of
 // name cards, four across on a wide screen, two from 40rem, one on a phone.
 // Each card is the endorser's mark (their logo from a safe address, else the
-// initials of the name in a disc) beside the name and, muted, the role. A
+// initials of the name in a disc on the brand's photo ground, spruce into
+// gold) beside the name and, muted, the role. A
 // row with words is a quote card: it spans two columns, the quote in curly
 // quotes (left as typed when the operator typed their own) over the name. A
 // row with neither a name nor words is left out. One section is one group
-// (Organizations, Elected officials, Neighbors). Nothing is drawn with no
-// heading and no card.
+// (Organizations, Elected officials, Neighbors), its heading a step smaller
+// than a page section's; the groups follow one another on the same ground as
+// one wall (the kit's same-band rule takes the gap between them). Nothing is
+// drawn with no heading and no card.
 import type { ComponentProps } from 'astro/types'
 import { safeSrc } from '@backgold/astro/server'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
@@ -75,6 +78,9 @@ const cards = rows(section).flatMap((row) => {
 )}
 
 <style>
+  .endorse-wall :global(.section-head h2) {
+    font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.375rem);
+  }
   .ew {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -110,11 +116,11 @@ const cards = rows(section).flatMap((row) => {
   .ew-initials {
     display: grid;
     place-items: center;
-    background: var(--button-2);
-    color: var(--button-2-ink);
+    background: linear-gradient(150deg, var(--bg-brand-primary), var(--bg-brand-accent));
+    color: var(--band-photo-ink);
     font-family: var(--font-display);
     font-size: 0.875rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.02em;
   }
   .ew-words {

@@ -23,6 +23,11 @@
 //   node scripts/starter-e2e.mjs --serve  skip the checks: keep the fixture api
 //                                         and the configured site running until
 //                                         Ctrl-C, to look at it in a browser
+//   node scripts/starter-e2e.mjs --serve --news
+//                                         the same, the organization at /news
+//                                         with its list's intro (newsBaseData);
+//                                         --template candidate serves at /news
+//                                         without it
 //   node scripts/starter-e2e.mjs --lighthouse
 //                                         also score home and an entry page with
 //                                         Lighthouse (performance, accessibility,
@@ -75,6 +80,8 @@ const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(joi
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
 const SERVE = process.argv.includes('--serve')
+// --serve: the organization at /news (newsBaseData), always on the candidate template.
+const SERVE_NEWS = SERVE && (process.argv.includes('--news') || TEMPLATE_NAME === 'candidate')
 const KEEP = SERVE || process.argv.includes('--keep')
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
 const LIGHTHOUSE_VERSION = '13.5.0'
@@ -2976,6 +2983,37 @@ async function checkPartyBoards(origin, fixture) {
     `the agenda's type tabs: All (current), then each type with an upcoming event; no tab for Rallies (${tabs.map((t) => t.label).join(', ')})`,
   )
   check(!cards.includes('agenda-tabs'), 'the Cards section draws no tabs')
+  // The rows open their events (C5): the title is each row's one link, stretched over the row, the button its own link beside it.
+  const rows = [...agenda.matchAll(/<li class="event-row"[^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1])
+  const titleLinks = rows.map((row) => /class="event-title"[^>]*><a class="event-link" href="([^"]*)"[^>]*>([^<]*)<\/a>/.exec(row))
+  check(
+    rows.length === upcomingIds.length &&
+      titleLinks.every((m) => m !== null) &&
+      JSON.stringify(titleLinks.map((m) => m[1])) === JSON.stringify(['/events/candidate-forum', '/events/door-knock', '/events/gotv-dinner', '/events/new-member-night']) &&
+      rows.every((row) => (row.match(/<a\b/g) ?? []).length === 2 && !/<a\b(?:(?!<\/a>).)*<a\b/s.test(row)),
+    `with buttons, each agenda row's title still links to the event's page (the row's one stretched link) beside its button, no link inside another (${titleLinks.map((m) => m?.[1]).join(', ')})`,
+  )
+  // The line under the agenda (A6, C5): the rows' one zone by name, their times without it, and every event as one calendar file.
+  const times = [...agenda.matchAll(/<p class="event-meta"[^>]*>\s*<span[^>]*>([^<]*)<\/span>/g)].map((m) => m[1])
+  check(
+    /<p class="fine events-calendar-line[^"]*"[^>]*>\s*Times are Mountain Time\. <a class="text-link[^"]*" href="\/events\.ics"[^>]*>Add every event to your calendar<\/a>/.test(agenda) &&
+      times.length > 0 &&
+      times.every((t) => /^\d{1,2}:\d{2} [AP]M$/.test(t)),
+    `under the agenda: "Times are Mountain Time." and Add every event to your calendar (/events.ics); the rows' times leave the zone off (${times.join(', ')})`,
+  )
+  check(!cards.includes('events-calendar-line'), 'the Cards section draws no calendar line')
+  const icsRes = await get(origin, '/events.ics')
+  const allIcs = await icsRes.text()
+  const vevents = allIcs.split('BEGIN:VEVENT').length - 1
+  check(
+    icsRes.status === 200 &&
+      /^text\/calendar/.test(icsRes.headers.get('content-type') ?? '') &&
+      /^BEGIN:VCALENDAR\r\n/.test(allIcs) &&
+      /\r\nX-WR-CALNAME:[^\r]+ events\r\n/.test(allIcs) &&
+      vevents === upcomingIds.length &&
+      /DTSTART:20261101T183000Z\r\n[\s\S]*?SUMMARY:Get-out-the-vote dinner\r\n[\s\S]*?URL:[^\r]*\/events\/gotv-dinner\r\nEND:VEVENT/.test(allIcs),
+    `/events.ics is every upcoming event as one calendar file, each linking to its page (got ${icsRes.status}, ${vevents} events)`,
+  )
 
   // Ruling 32: the Calendar, a month at a time.
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -3023,7 +3061,7 @@ async function checkPartyBoards(origin, fixture) {
   check(
     phone !== '' &&
       JSON.stringify(slotIds(phone)) === JSON.stringify(['evt_c1', 'evt_c2', 'evt_c3']) &&
-      [...phone.matchAll(/class="event-title"[^>]*><a href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
+      [...phone.matchAll(/class="event-title"[^>]*><a class="event-link" href="([^"]*)"/g)].map((m) => m[1]).join(' ') === '/events/chapter-supper /events/phone-bank-night /events/month-end-mixer',
     "on a phone the same month is the agenda's rows, each with its live slot and its title linking to /events/<slug>",
   )
   check(
@@ -3119,9 +3157,24 @@ async function checkPartyBoards(origin, fixture) {
   check(/<link rel="canonical" href="[^"]*\/events\/gotv-dinner"/.test(html), '/events/gotv-dinner is its own canonical address')
   check(
     /<a href="\/events\/gotv-dinner\.ics"[^>]*>Add to calendar<\/a>/.test(main) &&
-      /<a href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=39\.5%2C-105\.25"[^>]*>Get directions<\/a>/.test(main) &&
-      /<iframe class="event-map"[^>]*src="https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=[^"]*marker=39\.50000%2C-105\.25000"/.test(main),
-    'the event page offers Add to calendar and Get directions, and frames a map of the venue from its coordinates',
+      /<a href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=39\.5%2C-105\.25"[^>]*>Get directions<\/a>/.test(main),
+    'the event page offers Add to calendar and Get directions',
+  )
+  check(/\d{1,2}:\d{2} [AP]M Mountain Time · <a href="\/events\/gotv-dinner\.ics"/.test(main) && !/\b[MC][DS]T\b/.test(plain(main)), "the event's time names its zone as a reader knows it, Mountain Time, not MDT (C6)")
+  // C6's map: the kit's own, drawn in the browser; with scripts off, the place and a link to it on OpenStreetMap.
+  const mapEl = /<div class="event-map"[^>]*>[\s\S]*?<\/a>\s*<\/div>\s*<\/div>/.exec(main)?.[0] ?? ''
+  check(
+    /<div class="event-map"[^>]*role="region"[^>]*aria-label="Map: Fenwick Union Depot"[^>]*data-event-map[^>]*data-lat="39\.5"[^>]*data-lng="-105\.25"/.test(mapEl) &&
+      /<div class="event-map-fallback"[^>]*data-event-map-fallback[^>]*>[\s\S]*<p[^>]*>Fenwick Union Depot<\/p>\s*<a class="text-link[^"]*" href="https:\/\/www\.openstreetmap\.org\/\?mlat=39\.50000&amp;mlon=-105\.25000#map=17\/39\.50000\/-105\.25000"[^>]*>Open in OpenStreetMap<\/a>/.test(mapEl) &&
+      !/openstreetmap\.org\/export\/embed/.test(html) &&
+      !/<iframe class="event-map/.test(html),
+    "the event page draws the kit's map of the venue, its no-script view the place and Open in OpenStreetMap; no OpenStreetMap frame",
+  )
+  const mapScript = [...html.matchAll(/<script\b[^>]*\bsrc="(\/_astro\/[^"]+)"/g)].map((m) => m[1]).find((src) => /EventMap/.test(src))
+  const mapLoader = mapScript ? await (await get(origin, mapScript)).text() : ''
+  check(
+    mapLoader !== '' && /IntersectionObserver/.test(mapLoader) && /import\(/.test(mapLoader) && mapLoader.length < 4000,
+    `the page loads a small map loader that imports MapLibre only near the screen (${mapScript ?? 'no script'}, ${mapLoader.length} bytes)`,
   )
   res = await get(origin, '/events/gotv-dinner.ics')
   const ics = await res.text()
@@ -3165,6 +3218,7 @@ async function checkPartyBoards(origin, fixture) {
     `/blog draws the "Search news" box (a GET form to /blog with q), and no search was stored under its address (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`,
   )
   check(!/results? for|Nothing matches/.test(plain(html)), 'the bare list shows no search sentence')
+  check(/<div class="list-bar">\s*<nav class="list-filter"[\s\S]*?<\/nav>\s*<form class="list-search"/.test(html), 'the search ends the filter row, beside the chips (A4)')
   res = await get(origin, '/endorsements')
   check(!/class="list-search"/.test(await res.text()), 'a list other than News has no search box')
 
@@ -3885,6 +3939,15 @@ function withCandidate(data, ex) {
     if (s.type === 'EventsList') s.data = { source: 'events', items: s.options.max ? data.events.upcoming.slice(0, s.options.max) : data.events.upcoming }
     if (s.type === 'Blog') s.data = { source: 'blog', items: [] }
     if (s.type === 'Hero' && (s.variant === 'portrait' || s.variant === 'split')) s.media = { photoUrl: portrait }
+    // What an author adds to the starter's home, as board C1 has it: the Countdown's eyebrow, body line and link, the
+    // portrait's caption and alt text; the sidebar's Countdown keeps its heading as the kicker and gains C5's link.
+    if (s.id === 'Countdown-home') {
+      s.copy = { ...s.copy, eyebrow: 'Election Day', body: 'Early voting runs October 19 to 31 at every county clerk’s office.', linkText: 'Find where to vote' }
+      s.links = [{ label: 'Find where to vote', target: { kind: 'external' }, url: 'https://vote.example.gov/polling-places' }]
+    }
+    if (s.id === 'Countdown-campaign-sidebar') s.links = [{ label: 'Find where to vote', target: { kind: 'external' }, url: 'https://vote.example.gov/polling-places' }]
+    if (s.id === 'Hero-home') s.copy = { ...s.copy, caption: 'Photo: the candidate at the county fair', imageAlt: 'The candidate at the county fair' }
+    if (s.id === 'Hero-about') s.copy = { ...s.copy, caption: 'Photo: the candidate at home' }
     if (s.type === 'Donate') s.embed = donateEmbed
     if (s.type === 'Membership') s.data = { source: 'membership', items: [CANDIDATE_MEMBERSHIP] }
     if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
@@ -3895,6 +3958,16 @@ function withCandidate(data, ex) {
     const r = starter.sections.find((x) => x.key === key)
     return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
   }
+  // Endorsements as board C4 groups them: the starter's wall, then two more walls on its ground, each a group under its heading.
+  const wallOf = (id, heading, items) => ({ id, type: 'QuoteStrip', band: 'plain', bleed: 'full', variant: 'wall', copy: { heading }, media: {}, links: [], options: {}, data: { source: 'quotes', items } })
+  const moreWalls = [
+    wallOf('QuoteStrip-elected', 'Elected officials', ['A mayor', 'A county commissioner', 'A city council member', 'A school board chair'].map((attribution) => ({ attribution, role: 'Their office' }))),
+    wallOf('QuoteStrip-neighbors', 'Neighbors', [
+      { quote: 'A neighbor who said something can have it here.', attribution: 'A neighbor', role: 'Their town' },
+      ...['A second neighbor', 'A third neighbor', 'A fourth neighbor', 'A fifth neighbor', 'A sixth neighbor'].map((attribution) => ({ attribution, role: 'Their town' })),
+    ]),
+  ]
+  const withWalls = (sections) => sections.flatMap((s) => (s.type === 'QuoteStrip' && s.variant === 'wall' ? [s, ...moreWalls] : [s]))
   const pages = starter.pages.map((p) => {
     const slug = candidateSlug(p.slug)
     const id = `lp_candidate_${p.slug || 'home'}`
@@ -3902,7 +3975,7 @@ function withCandidate(data, ex) {
       summary: { id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z', takes_donations: true },
       response: {
         page: { ...ex.PageResponse.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: true, meta: { title: null, description: null, image_url: null } },
-        sections: p.sections.map(fill(id)),
+        sections: withWalls(p.sections.map(fill(id))),
         areas: {
           top_banner: [],
           sidebar: p.slug === 'events' ? [reusable('campaign-sidebar', id)] : [],
@@ -3914,10 +3987,26 @@ function withCandidate(data, ex) {
   })
   const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
   const page = data.page
+  // C10 and C11's terms: the posts filed under categories the organization
+  // orders by position, not by label, one post also under the featured Press
+  // releases; and an entry's Sidebar ends with More from the campaign.
+  const categories = {
+    taxonomy: { key: 'category', label: 'Categories', hierarchical: false },
+    terms: ['On the road', 'Schools', 'Endorsements', 'Press releases'].map((label, position) => ({
+      id: `term_c${position}`, slug: label.toLowerCase().replaceAll(' ', '-'), label, parent_id: null, position,
+    })),
+  }
+  const category = (slug) => ({ taxonomy: 'category', slug, label: categories.terms.find((t) => t.slug === slug).label })
+  const filed = { 'levy-explained': [category('schools')], 'open-books': [category('endorsements'), category('press-releases')] }
+  const file = (entry) => (filed[entry.slug] ? { ...entry, terms: [...entry.terms, ...filed[entry.slug]] } : entry)
   const out = {
     ...data,
     pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
     page: (slug, headline) => bySlug.get(slug) ?? page(slug, headline),
+    entries: { ...data.entries, post: data.entries.post.map(file) },
+    entry: { ...data.entry, post: Object.fromEntries(Object.entries(data.entry.post).map(([slug, entry]) => [slug, file(entry)])) },
+    terms: { ...data.terms, category: categories },
+    entryAreas: { ...data.entryAreas, sidebar: [...data.entryAreas.sidebar, reusable('more-from-the-campaign', 'lp_candidate_news')] },
   }
   if (!SERVE) return out
   // --serve: the starter's menus, the reusable sections on the posts, the
@@ -3935,8 +4024,22 @@ function withCandidate(data, ex) {
     shows_on: item.shows_on,
     children: item.children.map(menuItem),
   })
+  // The news list's intro as the seed writes one (C10): its Hero, the name and the subhead, and nothing else.
+  const intro = {
+    page: { ...ex.PageResponse.page, id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, meta: { title: null, description: null, image_url: null } },
+    sections: [
+      {
+        id: 'Hero-news', type: 'Hero', band: 'plain', bleed: 'full', variant: 'statement',
+        copy: { headline: 'News', subheadline: 'Updates from Your campaign, newest first.' },
+        media: {}, links: [], options: {},
+      },
+    ],
+    areas: { top_banner: [], sidebar: [], above_footer: [] },
+    legal: data.legal,
+  }
   return {
     ...out,
+    page: (slug, headline) => (slug === 'news' ? intro : out.page(slug, headline)),
     // The boards' brand (spruce, marigold, chalk) and no saved theme, so the template's own faces draw.
     site: { ...out.site, name: 'Your campaign', brand: { ...out.site.brand, logo_url: null, primary_color: '#123d38', secondary_color: '#f4f2ea', accent_color: '#f2b233' }, theme: null },
     types: out.types.filter((t) => t.url_base !== 'endorsements'),
@@ -3954,7 +4057,7 @@ function withCandidate(data, ex) {
 }
 
 /** The template's own layouts: present in the HTML, then in Chrome at 1440 and 375, light and dark. */
-async function checkCandidateLook(origin, chrome) {
+async function checkCandidateLook(origin, chrome, fixture) {
   log('\nCandidate: Hero · portrait, Countdown · tiles and inline, QuoteStrip · wall, and what template.css adds')
   const at = (slug) => `/${candidateSlug(slug)}`
   let res = await get(origin, at(''))
@@ -3964,15 +4067,35 @@ async function checkCandidateLook(origin, chrome) {
     res.status === 200 && /data-variant="portrait"/.test(hero) && /<h1 class="hp-name[^"]*"[^>]*>The candidate’s name<\/h1>/.test(hero) && /class="hp-office[^"]*"[^>]*>The office · The district</.test(hero) && /<img class="hp-portrait/.test(hero),
     'home opens on Hero · portrait: the office line, the name as the one <h1>, the portrait',
   )
+  check(
+    /<p class="photo-caption hp-caption[^"]*"[^>]*>Photo: the candidate at the county fair<\/p>/.test(hero) && /<img class="hp-portrait[^"]*"[^>]*alt="The candidate at the county fair"/.test(hero),
+    "Hero · portrait draws the photo's caption as a chip and its alt text from the section (C1)",
+  )
   const tiles = sectionsOf(html).find((s) => s.type === 'Countdown')?.html ?? ''
   check(
     /data-variant="tiles"/.test(tiles) && tiles.includes(`data-countdown-ends="${CANDIDATE_DEADLINE}"`) && /<dl class="ct-tiles[^"]*"[^>]*hidden/.test(tiles) && /<time datetime=/.test(tiles),
     'Countdown · tiles writes the deadline and the day, its tiles hidden until the browser counts them',
   )
+  check(
+    /<p class="kicker ct-eyebrow[^"]*"[^>]*>Election Day<\/p>\s*<h2 class="ct-heading[^"]*"[^>]*>Election Day\. Make your plan to vote\.<\/h2>/.test(tiles) &&
+      /<p class="ct-body[^"]*"[^>]*>\s*Early voting runs October 19 to 31 at every county clerk’s office\. <a class="text-link[^"]*" href="https:\/\/vote\.example\.gov\/polling-places"[^>]*>Find where to vote<\/a>/.test(tiles),
+    'Countdown · tiles draws the eyebrow over the heading and the body line with its link after it (C1)',
+  )
+  html = await (await get(origin, at('about'))).text()
+  const split = sectionsOf(html).find((s) => s.type === 'Hero')?.html ?? ''
+  // Astro writes an empty alt as a bare `alt`; the photo's own media alt is not the section's alt text.
+  check(
+    /<p class="photo-caption[^"]*"[^>]*>Photo: the candidate at home<\/p>/.test(split) && /<img class="split-image[^"]*"[^>]*\salt(?:="")?[\s>]/.test(split) && !/<img class="split-image[^>]*door-knock/.test(split),
+    "Hero · split draws the photo's caption, and an empty alt where the section has no alt text",
+  )
   res = await get(origin, at('events'))
   html = await res.text()
   const rail = html.slice(html.indexOf('data-bg-area="sidebar"'))
   check(res.status === 200 && /data-variant="inline"/.test(rail) && rail.includes('class="ci-left') && rail.includes('Two hours this Saturday?'), "Events' Sidebar carries Campaign sidebar: Countdown · inline, then the call to action")
+  check(
+    /<p class="kicker ci-heading[^"]*"[^>]*>Election Day<\/p>/.test(rail) && !rail.includes('class="ci-title') && /<p class="ci-body[^"]*"[^>]*>\s*<a class="text-link[^"]*"[^>]*>Find where to vote<\/a>/.test(rail),
+    'Countdown · inline with no eyebrow sets its heading as the kicker, and draws its link under the day (C5)',
+  )
   res = await get(origin, at('endorsements'))
   html = await res.text()
   const wall = sectionsOf(html).find((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))?.html ?? ''
@@ -4019,6 +4142,81 @@ async function checkCandidateLook(origin, chrome) {
   check(/<a href="#platform-[^"]+"[^>]*>01 · /.test(longread) && /<span class="longread-num"[^>]*>01<\/span>/.test(longread), 'the platform counts its sections in the jump list and the headings, 01 up, with no numbers typed (C3)')
   html = await (await get(origin, '/blog')).text()
   check(/<article class="post-lead"/.test(html) && (html.match(/<li class="post-row"/g) ?? []).length === 1, 'the news list leads with its newest post and lists the rest as rows (C10)')
+  // The comp walk's news and post fixes (C10, C11).
+  const filterRow = /<nav class="list-filter"[^>]*>([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? ''
+  const chipLabels = [...filterRow.matchAll(/<li><a href="[^"]*"[^>]*>([^<]*)<\/a><\/li>/g)].map((m) => m[1])
+  check(
+    JSON.stringify(chipLabels) === JSON.stringify(['All', 'Schools', 'Endorsements']),
+    `the filter's chips follow the categories' positions, not their labels, and leave the featured category out (${chipLabels.join(', ')})`,
+  )
+  check(
+    /<\/ul>\s*<a class="list-featured" href="\/blog\/category\/press-releases"[^>]*>\s*Press releases\s*<svg/.test(filterRow),
+    'the filter row ends with the link to the Press releases category (C10)',
+  )
+  const head = /<div class="list-head">([\s\S]*?)<nav class="list-filter"/.exec(html)?.[1] ?? ''
+  check(/<h1>Blog<\/h1>/.test(head) && /<form class="list-search"/.test(head), "with no intro the list's head is its name, the one <h1>, with the search beside it")
+  res = await get(origin, '/blog/category/press-releases')
+  html = await res.text()
+  check(res.status === 200 && /<a class="list-featured"[^>]*aria-current="page"/.test(html) && html.includes('Open books, line by line'), "on the Press releases list its link is marked as the current page")
+  res = await get(origin, '/blog/levy-explained')
+  html = await res.text()
+  check(
+    /<nav class="crumbs" aria-label="Breadcrumb">\s*<a href="\/blog">Blog<\/a><span class="crumbs-sep" aria-hidden="true">›<\/span><span>Schools<\/span><span class="visually-hidden" aria-current="page">The levy, explained<\/span>\s*<\/nav>/.test(html),
+    "the post's breadcrumb is its list as a link, then its category, the post named as the current page (C11)",
+  )
+  check(
+    /<ul class="entry-terms" role="list">\s*<li><a class="chip chip-wash" href="\/blog\/category\/schools">Schools<\/a><\/li><li><a class="chip" href="\/blog\/tag\/taxes">Taxes<\/a><\/li>\s*<\/ul>/.test(html) && !html.includes('class="kicker entry-terms'),
+    "the post's terms are chips over its title, the category on the wash first, then the tag (C11)",
+  )
+  const byline = /<div class="byline">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? ''
+  check(!plain(byline).includes('Written by') && /<a href="\/authors\/dana-k">Dana K\.<\/a>/.test(byline), 'the byline names the writer without "Written by" (C11)')
+  const authorBox = /<div class="author-box">([\s\S]*?)<\/section>/.exec(html)?.[1] ?? ''
+  check(
+    /<span class="author-box-avatar" aria-hidden="true">DK<\/span>/.test(authorBox) &&
+      /<p class="kicker author-box-role">Written by<\/p>\s*<p class="author-box-name"><a href="\/authors\/dana-k">Dana K\.<\/a><\/p>/.test(authorBox) &&
+      plain(authorBox).includes('Treasurer.'),
+    'the author box: the initials disc, "Written by" as its kicker, the name as its heading, the bio (C11)',
+  )
+  const more = html.slice(html.indexOf('More from the campaign'))
+  check(
+    /class="blog-row[^"]*"/.test(more) && /<span class="blog-day-short"[^>]*>Sep 20<\/span>/.test(more) && !/class="post-(?:row|byline)/.test(more),
+    "the Sidebar's More from the campaign draws its own rows, each with the short date (C11)",
+  )
+
+  // The C-board fix wave: endorsement groups, the donate story's ground and kicker, the events list's rows and line, the type tabs.
+  html = await (await get(origin, at('endorsements'))).text()
+  const walls = sectionsOf(html).filter((s) => s.type === 'QuoteStrip' && /data-variant="wall"/.test(s.html))
+  check(
+    walls.length === 3 && walls.map((w) => plain(/<h2\b[^>]*>([\s\S]*?)<\/h2>/.exec(w.html)?.[1] ?? '')).join(' | ') === 'Who stands with the candidate | Elected officials | Neighbors',
+    'Endorsements draws each group as its own wall under its heading (C4)',
+  )
+  html = await (await get(origin, at('donate'))).text()
+  const story = sectionsOf(html).find((s) => s.type === 'Donate')?.html ?? ''
+  check(
+    /data-band="tint"/.test(story) && /data-variant="story"/.test(story) && !/<p class="kicker/.test(story) && /<h2\b/.test(story),
+    "Donate · story on the panel band sits on the tint, its form the raised card, with no kicker over the story's headline (C7)",
+  )
+  html = await (await get(origin, at('events'))).text()
+  const agendaHtml = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
+  check(
+    /Times are Mountain Time\. <a class="text-link[^"]*" href="\/events\.ics"[^>]*>Add every event to your calendar<\/a>/.test(agendaHtml) &&
+      (agendaHtml.match(/<a class="event-link" href="\/events\/[^"]+"/g) ?? []).length === fixture.data.events.upcoming.length,
+    'the events list ends on "Times are Mountain Time." and Add every event to your calendar, and every row links to its event (C5)',
+  )
+  // One event type: no tabs ("All | Event" filters nothing).
+  const types = fixture.data.events.types
+  fixture.data.events.types = [{ key: 'blank', label: 'Event', upcoming: fixture.data.events.upcoming.length }]
+  let version = fixture.bump(fixture.state.headline)
+  let hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  res = await get(origin, '/events')
+  html = await res.text()
+  const oneType = sectionsOf(html).find((s) => s.type === 'EventsList' && /class="agenda"/.test(s.html))?.html ?? ''
+  check(hook.status === 204 && res.status === 200 && oneType !== '' && !oneType.includes('agenda-tabs'), `with one event type the agenda draws no type tabs (got ${res.status})`)
+  fixture.data.events.types = types
+  version = fixture.bump(fixture.state.headline)
+  hook = await signedWebhook(origin, version, WEBHOOK_SECRET)
+  html = await (await get(origin, '/events')).text()
+  check(hook.status === 204 && (sectionsOf(html).find((s) => /class="agenda"/.test(s.html))?.html ?? '').includes('agenda-tabs'), 'with more than one type the tabs are back')
 
   const css = (
     await Promise.all([...html.matchAll(/<link rel="stylesheet" href="(\/_astro\/[^"]+\.css)"/g)].map((m) => get(origin, m[1]).then((r) => r.text())))
@@ -4084,6 +4282,56 @@ async function checkCandidateLook(origin, chrome) {
           return { overflow: document.documentElement.scrollWidth - window.innerWidth, fill: b ? getComputedStyle(b).backgroundColor : null }
         })()`)
         check(donate.overflow <= 0 && donate.fill === 'rgba(0, 0, 0, 0)', `${where}: on Donate the header button is an outline, the form's Donate the one gold affordance (${donate.fill})`)
+        await browser.open(`${origin}/blog`, scheme)
+        const news = await browser.evaluate(`(() => {
+          const h1 = document.querySelector('.list-head h1')
+          const words = document.querySelector('.list-head-words')
+          const search = document.querySelector('.list-head .list-search')
+          const filter = document.querySelector('.list-bar')
+          if (!h1 || !words || !search || !filter) return null
+          const w = words.getBoundingClientRect()
+          const q = search.getBoundingClientRect()
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            size: parseFloat(getComputedStyle(h1).fontSize),
+            caps: getComputedStyle(h1).textTransform,
+            beside: q.left >= w.right - 1 && Math.abs(q.bottom - w.bottom) <= 2,
+            under: q.top >= w.bottom - 1,
+            searchWidth: Math.round(q.width),
+            rule: getComputedStyle(filter).borderBottomWidth + ' ' + getComputedStyle(filter).borderBottomStyle,
+          }
+        })()`)
+        check(
+          news && news.overflow <= 0 && news.caps === 'uppercase' && Math.abs(news.size - (width >= 1440 ? 104 : 64)) <= 1 && (width >= 768 ? news.beside && news.searchWidth <= 270 : news.under) && news.rule === '2px solid',
+          `${where}: the news list's name in capitals at C10's size, the search a pill ${width >= 768 ? 'beside it' : 'under it'}, a line under the filter (${JSON.stringify(news)})`,
+        )
+        await browser.open(`${origin}/blog/levy-explained`, scheme)
+        const post = await browser.evaluate(`(() => {
+          const box = document.querySelector('.author-box')
+          const disc = box?.querySelector('.author-box-avatar')
+          const meta = document.querySelector('.rail .blog-meta')
+          const probe = document.createElement('i')
+          probe.style.background = 'var(--band-tint)'
+          document.body.append(probe)
+          const tint = getComputedStyle(probe).backgroundColor
+          probe.remove()
+          const title = document.querySelector('.entry-header h1')
+          const entry = document.querySelector('.layout-main .entry')
+          const main = document.querySelector('.layout-main')
+          return {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            title: title ? Math.round(parseFloat(getComputedStyle(title).fontSize)) : null,
+            start: entry && main ? Math.round(entry.getBoundingClientRect().left - main.getBoundingClientRect().left) : null,
+            tinted: box ? getComputedStyle(box).backgroundColor === tint : false,
+            disc: disc ? Math.round(disc.getBoundingClientRect().width) + ' ' + getComputedStyle(disc).backgroundImage.startsWith('linear-gradient') : null,
+            meta: meta ? meta.innerText.trim() : null,
+            metaLines: meta ? Math.round(meta.getBoundingClientRect().height / parseFloat(getComputedStyle(meta).lineHeight)) : null,
+          }
+        })()`)
+        check(
+          post.overflow <= 0 && post.title === (width >= 1440 ? 60 : 38) && post.start === 0 && post.tinted && post.disc === '56 true' && post.meta === 'Sep 20' && post.metaLines === 1,
+          `${where}: the post's title at C11's size at the start of the main column, the author box on the tint with the large disc, and More from the campaign's rows read "Sep 20" on one line (${JSON.stringify(post)})`,
+        )
         // The comp walk's fixes, measured.
         await browser.open(`${origin}${at('')}`, scheme)
         const stripe = await browser.evaluate(`(() => {
@@ -4106,6 +4354,66 @@ async function checkCandidateLook(origin, chrome) {
           return a && b ? Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom) : null
         })()`)
         check(railGap !== null && railGap >= 16, `${where}: the Campaign sidebar's Countdown and Cta stand apart (${railGap}px)`)
+        // The C-board fix wave, measured.
+        await browser.open(`${origin}${at('')}`, scheme)
+        const name = await browser.evaluate(`(() => { const n = document.querySelector('.hp-name'); return n ? getComputedStyle(n).fontSize : null })()`)
+        if (width < 768) check(name === '58px', `${where}: the portrait's name is set at C9's 58px on a phone (${name})`)
+        const issues = await browser.evaluate(`(() => {
+          const list = document.querySelector('.issue-cards')
+          const cards = list ? [...list.children] : []
+          if (!list || cards.length !== 3) return null
+          return Math.round(list.getBoundingClientRect().right - cards[2].getBoundingClientRect().right)
+        })()`)
+        check(issues !== null && issues <= 1, `${where}: home's three issue cards fill their row, no empty track at the right (${issues}px left over)`)
+        await browser.open(`${origin}${at('events')}`, scheme)
+        const rows = await browser.evaluate(`(() => {
+          const row = document.querySelector('.event-row')
+          const day = row?.querySelector('.event-day')
+          const button = row?.querySelector('.event-action .button')
+          if (!row || !day || !button) return null
+          const at = (el) => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('a') }
+          const list = document.querySelector('.layout-main > .bg-section')
+          const rail = document.querySelector('.layout-rail')
+          return {
+            day: at(day)?.className ?? null,
+            button: at(button)?.className ?? null,
+            buttonShare: button.getBoundingClientRect().width / row.getBoundingClientRect().width,
+            listTop: list ? getComputedStyle(list).paddingTop : null,
+            railTop: rail ? getComputedStyle(rail).paddingTop : null,
+          }
+        })()`)
+        check(rows !== null && rows.day === 'event-link' && /\bbutton\b/.test(rows.button ?? ''), `${where}: a press anywhere on an event row opens the event, the button its own link above it (${JSON.stringify(rows)})`)
+        check(width >= 640 ? rows.buttonShare < 0.3 : rows.buttonShare > 0.8, `${where}: the row's button is ${width >= 640 ? 'at the right' : 'the row\'s full width (C9)'} (${rows.buttonShare.toFixed(2)} of the row)`)
+        check(rows.listTop === '0px' && (width < 768 || rows.railTop === '0px'), `${where}: under the Hero on its own ground the list ${width >= 768 ? 'and the rail start' : 'starts'} at the Hero's floor, no doubled gap (${rows.listTop}, ${rows.railTop})`)
+        await browser.open(`${origin}/events/gotv-dinner`, scheme)
+        const map = await browser.evaluate(`(() => {
+          const map = document.querySelector('.event-map')
+          const column = document.querySelector('.event-words')
+          const fallback = document.querySelector('[data-event-map-fallback]')
+          if (!map || !column || !fallback) return null
+          return { share: map.getBoundingClientRect().width / column.getBoundingClientRect().width, fallback: !fallback.hidden && fallback.getBoundingClientRect().height > 0, overflow: document.documentElement.scrollWidth - window.innerWidth }
+        })()`)
+        check(map !== null && Math.abs(map.share - 1) < 0.01 && map.fallback && map.overflow <= 0, `${where}: the event's map is the main column's width (C6), and with no tiles to draw it shows the place and its OpenStreetMap link (${JSON.stringify(map)})`)
+        await browser.open(`${origin}${at('endorsements')}`, scheme)
+        const groups = await browser.evaluate(`(() => {
+          const walls = [...document.querySelectorAll('[data-type="QuoteStrip"][data-variant="wall"]')]
+          const width = (w) => w.querySelector('.ew-card:not(.ew-said)')?.getBoundingClientRect().width ?? null
+          const disc = document.querySelector('.ew-initials')
+          return { tops: walls.slice(1).map((w) => getComputedStyle(w).paddingTop), widths: walls.map((w) => Math.round(width(w))), disc: disc ? getComputedStyle(disc).backgroundImage : null }
+        })()`)
+        check(
+          groups.tops.length === 2 && groups.tops.every((t) => t === '0px') && new Set(groups.widths).size === 1 && /linear-gradient/.test(groups.disc ?? ''),
+          `${where}: the groups follow on one ground with no doubled gap, their cards one width, the initials on the brand's spruce-to-gold ground (${JSON.stringify(groups)})`,
+        )
+        await browser.open(`${origin}${at('about')}`, scheme)
+        const stats = await browser.evaluate(`(() => {
+          const band = document.querySelector('[data-type="StatCards"][data-bleed="contained"]')
+          const list = band?.querySelector('.stat-list')
+          const hero = document.querySelector('[data-type="Hero"] .bg-section-inner')
+          if (!band || !list || !hero) return null
+          return { list: Math.round(list.getBoundingClientRect().width), column: Math.round(hero.getBoundingClientRect().width), margin: getComputedStyle(band).marginTop }
+        })()`)
+        check(stats !== null && Math.abs(stats.list - stats.column) <= 1 && stats.margin === '0px', `${where}: a contained StatCards on the page's own ground is the column's width, no extra margin or inset (C2) (${JSON.stringify(stats)})`)
         await browser.open(`${origin}${at('join')}`, scheme)
         const join = await browser.evaluate(`(() => {
           const card = document.querySelector('.layout-main [data-type="Cta"][data-variant="card"] .cta-card-box')
@@ -4126,6 +4434,47 @@ async function checkCandidateLook(origin, chrome) {
           `${where}: Join's Cta · card is one centred card, its button centred, with no title band over it (${JSON.stringify(join)})`,
         )
       }
+    }
+  } finally {
+    await browser.close()
+  }
+}
+/** At /news, with the intro page's Hero as the list's head (C10): its headline at the list's title size, the search beside its subhead. */
+async function checkCandidateNewsIntro(origin, chrome) {
+  log('\nCandidate: the news list under its intro (C10)')
+  const res = await get(origin, '/news')
+  const html = await res.text()
+  const head = /<div class="list-head">([\s\S]*?)<nav class="list-filter"/.exec(html)?.[1] ?? ''
+  check(
+    res.status === 200 && /<h1 class="statement-headline[^"]*"[^>]*>From the party<\/h1>/.test(head) && head.includes('Announcements and the occasional argument.') && /<form class="list-search"[^>]*action="\/news"/.test(head),
+    "the intro's Hero is the list's head, its headline the <h1> and its subhead under it, with the search",
+  )
+  check(head.indexOf('list-search') > head.indexOf('Announcements') && head.indexOf('Hear it from us first') > head.indexOf('list-search'), "the intro's other sections follow the head, before the filter")
+  const browser = await headlessChrome(chrome)
+  try {
+    for (const width of [1440, 375]) {
+      await browser.width(width)
+      await browser.open(`${origin}/news`, 'light')
+      const intro = await browser.evaluate(`(() => {
+        const h1 = document.querySelector('.list-head h1')
+        const lede = document.querySelector('.list-head .statement-lede')
+        const search = document.querySelector('.list-head .list-search')
+        if (!h1 || !lede || !search) return null
+        const l = lede.getBoundingClientRect()
+        const q = search.getBoundingClientRect()
+        return {
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          size: parseFloat(getComputedStyle(h1).fontSize),
+          caps: getComputedStyle(h1).textTransform,
+          gap: Math.round(l.top - h1.getBoundingClientRect().bottom),
+          beside: q.left >= l.right - 1 && Math.abs(q.bottom - l.bottom) <= 4,
+          under: q.top >= l.bottom - 1,
+        }
+      })()`)
+      check(
+        intro && intro.overflow <= 0 && intro.caps === 'uppercase' && Math.abs(intro.size - (width >= 1440 ? 104 : 64)) <= 1 && intro.gap >= 12 && intro.gap <= 20 && (width >= 768 ? intro.beside : intro.under),
+        `${width}: the intro's headline at the list's title size, the subhead under it, the search ${width >= 768 ? 'beside the subhead' : 'under it'} (${JSON.stringify(intro)})`,
+      )
     }
   } finally {
     await browser.close()
@@ -4159,7 +4508,8 @@ async function main() {
   const disclaimer = examples.SiteResponse.legal.disclaimer
   const kitchen = await kitchenSink()
   checkSectionsMap(kitchen.blocks, kitchen.areaBlocks, kitchen.templateSections)
-  const fixture = await startFixture(examples, kitchen.sections)
+  // --serve --news (and --serve --template candidate, with the intro the seed writes, C10): the organization at /news.
+  const fixture = await startFixture(examples, kitchen.sections, SERVE_NEWS ? 'news' : 'blog')
   log(`Fixture Content API: ${fixture.origin}`)
   // ── petition-drive (begin) ──
   // --serve: home is the drive's starter page, under its menus; a JSON brand
@@ -4199,7 +4549,7 @@ async function main() {
     // ── petition-drive (begin) ──
     if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
     // ── petition-drive (end) ──
-    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome)
+    if (CANDIDATE) await checkCandidateLook(configured.origin, chrome, fixture)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)
@@ -4215,6 +4565,7 @@ async function main() {
   })
   try {
     await checkNewsBase(atNews.origin, newsFixture)
+    if (CANDIDATE) await checkCandidateNewsIntro(atNews.origin, chrome)
   } finally {
     await killTree(atNews.child)
   }

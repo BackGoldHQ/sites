@@ -5,9 +5,10 @@
 // on a phone). Without a picture the card sits centred on the band with no
 // overlap. The card holds the kicker, the headline, the line under it and
 // the buttons (the first is the main call, the rest outlines). The
-// picture's caption, when the section carries one (`copy.caption`), sits at
-// the picture's lower left beside the card on a wide screen and at its
-// upper left where the card covers that corner. The page-opening Hero's
+// picture's alt text is `copy.imageAlt`, and its caption, when the section
+// carries one (`copy.caption`), sits at the picture's lower left beside the
+// card on a wide screen and at its upper left where the card covers that
+// corner; with no picture there is no caption. The page-opening Hero's
 // headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>.
 // A Hero with its signup form on carries an `embed`: BackGold's own form,
 // framed under the buttons.
@@ -15,7 +16,7 @@ import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '../Band.astro'
 import type Default from './index.astro'
-import { links, media } from '../../../lib/section'
+import { heroPhoto, links } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -26,7 +27,7 @@ const kicker = text(section.copy.kicker)
 const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
-const picture = media(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const buttons = links(section)
 ---
 <Band section={section} class:list={['hero-overlap', picture && 'hero-overlap-photo']}>
@@ -54,7 +55,6 @@ const buttons = links(section)
     )}
     {section.embed && <Embed embed={section.embed} title="Sign up" />}
   </div>
-  {!picture && caption && <p class="overlap-caption">{caption}</p>}
 </Band>
 
 <style>
@@ -90,12 +90,6 @@ const buttons = links(section)
     border-radius: 0.25rem;
     background: color-mix(in srgb, var(--band-photo) 70%, transparent);
     color: var(--band-photo-ink);
-  }
-  /* With no picture the caption has nothing to sit on, so it follows the card. */
-  .overlap-panel + .overlap-caption {
-    max-width: 40rem;
-    margin: 1rem auto 0;
-    color: var(--muted);
   }
 
   .overlap-panel {
