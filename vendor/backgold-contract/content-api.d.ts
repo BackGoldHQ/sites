@@ -266,10 +266,9 @@ interface MenuItem {
     kind: SiteNavItemType;
     target: MenuTarget;
     /**
-     * Resolved address; null for a group without a page of its own. A `donate`
-     * link is always the organization's BackGold donate page; `events` and
-     * `store` are the organization's BackGold pages on a site built elsewhere
-     * and the site's own `/events` and `/store` on a hosted one.
+     * Resolved address; null for a group without a page of its own. A
+     * donate/events/store link is the site's own page of that kind when it holds
+     * one, else the home site's, else the organization's door.
      */
     url: string | null;
     external: boolean;
@@ -408,9 +407,12 @@ declare const SITE_CHROME_LAYOUTS: {
 type SiteHeaderLayout = (typeof SITE_CHROME_LAYOUTS.header)[number];
 type SiteFooterLayout = (typeof SITE_CHROME_LAYOUTS.footer)[number];
 /**
- * Where a section's link points. 'surface' is an org-host surface BackGold
- * serves itself (donate, join, store, events, …): its `url` is on the org's
- * platform host, never the partner's, and `path` is the path as authored.
+ * Where a section's link points. 'surface' is a surface BackGold serves itself
+ * (donate, join, store, events, …), and `path` is the path as authored. A bare
+ * surface path resolves per site (ProjectDocumentContext.surfaceUrls): the
+ * site's own page of that kind when it holds one, else the home site's, else
+ * the organization's door; `/join` is always the membership checkout. A deeper
+ * path (`/donate/give`, `/events/<slug>`) is on the org's platform host.
  */
 interface SectionLinkTarget {
     kind: 'page' | 'section' | 'external' | 'surface';
@@ -763,6 +765,14 @@ interface ProjectDocumentContext {
      * and then the site's own origin stands in.
      */
     orgHostUrl: string | null;
+    /**
+     * The resolved address of each BackGold surface for THIS site, which a bare
+     * surface link (`/donate`, `/events`, `/join`, …) takes: the site's own page
+     * of that kind when it holds one, else the home site's, else the
+     * organization's door; `/join` is always the membership checkout. A surface
+     * with no entry goes to `orgHostUrl` as a deeper surface path does.
+     */
+    surfaceUrls?: Partial<Record<BackgoldSurfacePath, string>>;
     /** The org's slug, which the org-keyed embeds are addressed by. */
     orgSlug: string;
     embedUrls: ContentApiEmbedUrls;

@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-M63RVOZK.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-H26EJR32.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -1385,12 +1385,17 @@ function linkOf(label, href, ctx) {
   const slug = path.split(/[?#]/)[0].replace(/^\/+|\/+$/g, "");
   const first = slug.split("/")[0];
   if (BACKGOLD_SURFACE_PATHS.includes(first)) {
+    const surface = first;
+    const target = { kind: "surface", surface, path, ...written };
+    const resolved = slug === first ? ctx.surfaceUrls?.[surface] : void 0;
+    if (resolved) {
+      const at = path.search(/[?#]/);
+      const tail = at < 0 ? "" : path.slice(at);
+      const url = tail.startsWith("?") && resolved.includes("?") ? `${resolved}&${tail.slice(1)}` : `${resolved}${tail}`;
+      return { label, target, url };
+    }
     const host = (ctx.orgHostUrl ?? ctx.siteUrl).replace(/\/+$/, "");
-    return {
-      label,
-      target: { kind: "surface", surface: first, path, ...written },
-      url: `${host}${path}`
-    };
+    return { label, target, url: `${host}${path}` };
   }
   return { label, target: { kind: "page", slug, ...written }, url: path };
 }
