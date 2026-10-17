@@ -93,6 +93,11 @@
     "TeamGrid": [
       "grid"
     ],
+    "Membership": [
+      "card",
+      "tiers",
+      "compare"
+    ],
     "Donate": [
       "form",
       "story"
@@ -817,6 +822,32 @@
         "slug": "join",
         "title": "Join",
         "sections": [
+          {
+            "id": "Membership-join",
+            "type": "Membership",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "kicker": "Join the team",
+              "heading": "Put your name on the team.",
+              "body": "This campaign runs on neighbors: the people who knock doors, host coffees and talk to the folks next door. Joining puts you on that list, and it is how the campaign knows who to call when it needs hands.",
+              "joinLabel": "Join the team",
+              "benefitsHeading": "What members get",
+              "note": "Joining takes a minute on the next page."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Join the team",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          },
           {
             "id": "Cta-join",
             "type": "Cta",

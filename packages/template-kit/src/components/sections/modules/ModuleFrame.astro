@@ -21,6 +21,10 @@
 // Advocacy has no frame, only a container its script fills: it is placed as
 // BackGold sends it.
 //
+// A Donate frame also carries the page address's donate names (an ask
+// amount, a donate place, `utm_*`, lib/donate-frame.ts) that its address from
+// BackGold does not already name.
+//
 // A section BackGold sends with no embed has nothing to frame (no donation
 // form for the organization, no petition picked, an event no longer public):
 // it draws one line saying the module is not available, where the module
@@ -29,6 +33,7 @@
 import type { SectionEmbed } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import { SECTION_BANDS, appearanceOf, moduleLook, type SectionBand } from '../../../lib/brand'
+import { isDonateFrame, withDonateQuery } from '../../../lib/donate-frame'
 
 interface Props {
   /** The section's (or the event page's) embed, as BackGold sends it. */
@@ -57,7 +62,7 @@ const frameFont = Astro.locals.template?.frameFont
 const font = frameFont && FRAME_FONTS.includes(frameFont) ? frameFont : 'public-sans'
 const band: SectionBand = card ? 'panel' : SECTION_BANDS.includes(sectionBand as SectionBand) ? (sectionBand as SectionBand) : 'plain'
 
-/** The module's address with the look query, or as sent when it is not one we can read. */
+/** The module's address with the look query (and a Donate frame's donate names), or as sent when it is not one we can read. */
 function framed(iframe: string | null): string | null {
   if (!iframe) return iframe
   let url: URL
@@ -66,6 +71,7 @@ function framed(iframe: string | null): string | null {
   } catch {
     return iframe
   }
+  if (isDonateFrame(type)) withDonateQuery(url, Astro.url.searchParams)
   url.searchParams.set('layout', layout)
   for (const [key, value] of Object.entries(moduleLook(brand, band, appearance))) url.searchParams.set(key, value)
   url.searchParams.set('radius', '12')
