@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-NQP7MJJF.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-H26EJR32.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -287,10 +287,12 @@ var CONTENT_API_BLOCKS = {
   // `monthly`, read as QuickDonate reads them, its donate link the first link)
   // and the `words` rows (each a `title`, the rotating headline's last word in
   // turn) are a template's donate and rotating layouts' (sections batch 3,
-  // added 2026-10-14). The hosted block draws neither.
+  // added 2026-10-14). The hosted block draws neither. `caption` is the line
+  // under the in-layout photo and `imageAlt` that photo's alt text (photoUrl's,
+  // else imageUrl's); the hosted block draws both under and on its photo.
   Hero: {
     role: "presentational",
-    copy: ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note"],
+    copy: ["kicker", "headline", "subheadline", "ctaText", "secondaryText", "monthlyLabel", "note", "caption", "imageAlt"],
     media: ["imageUrl", "photoUrl", "videoUrl", "videoPosterUrl"],
     links: [
       { label: "ctaText", href: "donateHref" },
@@ -857,7 +859,8 @@ var CONTENT_API_BLOCKS = {
   },
   Countdown: {
     role: "data",
-    copy: HEADING_ONLY,
+    copy: ["eyebrow", "heading", "body", "linkText"],
+    links: [{ label: "linkText", href: "linkHref" }],
     variant: "layout",
     options: ["source", "anchorId"],
     data: {
@@ -1382,12 +1385,17 @@ function linkOf(label, href, ctx) {
   const slug = path.split(/[?#]/)[0].replace(/^\/+|\/+$/g, "");
   const first = slug.split("/")[0];
   if (BACKGOLD_SURFACE_PATHS.includes(first)) {
+    const surface = first;
+    const target = { kind: "surface", surface, path, ...written };
+    const resolved = slug === first ? ctx.surfaceUrls?.[surface] : void 0;
+    if (resolved) {
+      const at = path.search(/[?#]/);
+      const tail = at < 0 ? "" : path.slice(at);
+      const url = tail.startsWith("?") && resolved.includes("?") ? `${resolved}&${tail.slice(1)}` : `${resolved}${tail}`;
+      return { label, target, url };
+    }
     const host = (ctx.orgHostUrl ?? ctx.siteUrl).replace(/\/+$/, "");
-    return {
-      label,
-      target: { kind: "surface", surface: first, path, ...written },
-      url: `${host}${path}`
-    };
+    return { label, target, url: `${host}${path}` };
   }
   return { label, target: { kind: "page", slug, ...written }, url: path };
 }
