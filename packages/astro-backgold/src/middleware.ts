@@ -1,8 +1,10 @@
 // The request pipeline, in order: a dispatched request that names no site
 // answers 404, then (a) setup check, (b) the `bg_vid` visitor
-// cookie, (c) the site's redirects, (d) the edge cache. Registered by the
-// integration; `@backgold/astro/middleware` exports `onRequest` for a site
-// that composes its own middleware with `sequence()`.
+// cookie, (c) the signed-in visitor (`bg_visitor`), (d) the site's
+// redirects, (e) the edge cache, which a signed-in visitor's request never
+// reads or writes. Registered by the integration; `@backgold/astro/middleware`
+// exports `onRequest` for a site that composes its own middleware with
+// `sequence()`.
 
 import './locals.js'
 import type { MiddlewareHandler } from 'astro'
@@ -14,17 +16,19 @@ import { PREVIEW_HEADERS } from './server/preview.js'
 import { redirectFor } from './server/redirects.js'
 import { errorResponse, noSite } from './server/respond.js'
 import { SETUP_PATH } from './server/setup.js'
+import { isVisitorRoute, resolveVisitor, type VisitorCookies } from './server/sign-in.js'
 import { apiUnavailable, isApiTimeout } from './server/timeout.js'
-import { VISITOR_COOKIE, VISITOR_COOKIE_OPTIONS, mintVisitorId } from './server/visitor.js'
+import { VISITOR_COOKIE, VISITOR_COOKIE_OPTIONS, mintVisitorId, readVisitorToken } from './server/visitor.js'
 
 /** The parts of Astro's middleware context the pipeline uses. */
 export interface MiddlewareContextLike extends BackgoldContextLike {
   request: Request
-  cookies: BackgoldContextLike['cookies'] & {
-    set(key: string, value: string, options?: typeof VISITOR_COOKIE_OPTIONS): void
-    /** The Set-Cookie values set so far by any middleware or the page (`AstroCookies.headers()`). */
-    headers(): Iterable<string>
-  }
+  cookies: BackgoldContextLike['cookies'] &
+    VisitorCookies & {
+      set(key: string, value: string, options?: typeof VISITOR_COOKIE_OPTIONS): void
+      /** The Set-Cookie values set so far by any middleware or the page (`AstroCookies.headers()`). */
+      headers(): Iterable<string>
+    }
 }
 
 export type MiddlewareNext = (rewrite?: string) => Promise<Response>
@@ -97,16 +101,25 @@ async function pipeline(context: MiddlewareContextLike, next: MiddlewareNext, de
   }
 
   const reads = method === 'GET' || method === 'HEAD'
-  const uncached = isUncachedPath(pathname, SETUP_PATH)
+  const visitorRoute = isVisitorRoute(pathname)
+  const uncached = isUncachedPath(pathname, SETUP_PATH) || visitorRoute
 
-  // (c) Redirects and 410s, before anything renders.
+  // (c) The signed-in visitor: who the token is, once, for the render. Their
+  // pages are theirs alone, so whatever answers them is private.
+  const signedIn = readVisitorToken(context.cookies).present
+  if (signedIn && reads && !machineRoute && !visitorRoute) await resolveVisitor(bg, context.cookies, context.url)
+  const own = signedIn
+    ? (response: Response): Response => finish(withHeaders(response, { 'Cache-Control': 'private, no-store' }))
+    : finish
+
+  // (d) Redirects and 410s, before anything renders.
   if (reads && !uncached) {
     const redirect = redirectFor((await bg.client.redirects()).redirects, pathname)
-    if (redirect) return finish(redirect)
+    if (redirect) return own(redirect)
   }
 
-  // (d) The edge cache.
-  if (method !== 'GET' || uncached || !deps.cache) return finish(await next())
+  // (e) The edge cache.
+  if (method !== 'GET' || uncached || signedIn || !deps.cache) return own(await next())
   const key = new Request(cacheKey({ siteId: bg.siteId, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant: bg.variant, url: context.url }))
   const hit = await deps.cache.match(key).catch(() => undefined)
   // A copy whose page reads a query name this request carries is not this request's page.

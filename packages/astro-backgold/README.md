@@ -133,6 +133,7 @@ names as allowed; a name must be letters, digits, `.`, `_` or `-`.
 | `POST /api/backgold/webhook` | Verifies `X-BackGold-Signature` over the raw body (5-minute window), then trusts the event's `content_version`; versions only move forward, so out-of-order deliveries are harmless. The Worker isolate that receives it moves to the new version at once and writes it to `BACKGOLD_CACHE`; every other running isolate keeps its version until its own re-check, at most 60 seconds later. `204`. An event for another of the organization's sites, or a signed event that is not a content event, is acknowledged and ignored. No secret: `503 WEBHOOK_NOT_CONFIGURED`. Bad or expired signature: `401 BAD_SIGNATURE`. Rejections are logged with the `X-BackGold-Delivery` id. |
 | `POST /api/backgold/revalidate` | `Authorization: Bearer <BACKGOLD_WEBHOOK_SECRET>`, compared in constant time. Forgets the content version so the isolate's next request re-reads it from BackGold (other isolates re-check within 60 seconds). `204`; `401 UNAUTHORIZED`; no secret: `503 WEBHOOK_NOT_CONFIGURED`. |
 | `GET /sitemap.xml`, `/robots.txt`, `/llms.txt`, `/llms-full.txt`, `/feed.xml` | Generated from the site's content, cached like pages. |
+| `GET /_backgold/sign-in`, `GET /_backgold/visitor`, `GET /_backgold/sign-out`, `POST /_backgold/progress` | A visitor signing in on the site, and a lesson saving their place: see [Signed-in visitors](#signed-in-visitors). First-party sites only (`404` with a site key). Never cached. |
 
 ```bash
 curl -X POST https://<your site>/api/backgold/revalidate \
@@ -179,11 +180,12 @@ const draft = result.preview
 Middleware runs first on every request (`@backgold/astro/middleware` exports
 `onRequest` for a site composing its own with `sequence()`; it reads the build
 id from the integration, so `backgold()` stays in the config): the setup check,
-the `bg_vid` cookie, the site's redirects (301/302/307/308, and 410 for a
+the `bg_vid` cookie, the signed-in visitor (the `bg_visitor` cookie), the
+site's redirects (301/302/307/308, and 410 for a
 rule with no destination; a rule whose destination is neither an http(s) URL
 nor a path on the site is ignored), then the edge cache. `Astro.locals.backgold` holds
-`{ client, siteId, site, legal, version, siteUrl, variant, visitorId, analytics?,
-firstParty, setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
+`{ client, siteId, site, legal, version, siteUrl, variant, visitorId, visitor,
+visitorReads, analytics?, firstParty, setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
 `siteId` is the site the request renders: `BACKGOLD_SITE_ID`, the dispatched
 request's `X-BackGold-Site`, or with a site key the `/site` answer's
 `site.id`; null while the setup page shows.
@@ -360,8 +362,9 @@ served to a request that carries one of those names with a value; that
 request renders, and the page sets `Cache-Control: no-store` on that render so
 it never takes the bare path's entry.
 
-Never stored: `/preview` (your page), `/api/backgold/*`, the setup page,
-anything but a 200, a render that sets a cookie, and one whose
+Never stored: `/preview` (your page), `/api/backgold/*`, `/_backgold/*`,
+the setup page, any request that carries the `bg_visitor` cookie (it is
+never answered from the cache either), anything but a 200, a render that sets a cookie, and one whose
 `Cache-Control` says `no-store`, `no-cache` or `private`. The render's own
 `Cache-Control` (what the page set for browsers) comes back on a hit; the edge copy lives up to a week. Responses carry
 `X-Backgold-Cache: HIT` or `MISS`.
@@ -381,6 +384,44 @@ site's own read, a redirect check, a page's or a route's reads) answers `504`
 with a short "try again in a moment" page, `Cache-Control: no-store` and
 `Retry-After: 30`, naming nothing internal; it is never stored. A read that
 times out after a page has started streaming ends that page early.
+
+## Signed-in visitors
+
+A visitor can sign in on a first-party site with their email, through
+BackGold's giving portal, to open what the organization keeps for people it
+knows (lessons and entries whose access is `signed_in`, `members` or a tag).
+The portal runs the sign-in; the site's own host keeps the result, so a
+custom domain works.
+
+| Route | |
+| --- | --- |
+| `GET /_backgold/sign-in?return=<path>&title=<text>` | `302` to the portal's door for this site (`giving.backgold.com`, or `giving.backgold.dev` for an api on `backgold.dev` or a local host), carrying the site's id, the path to come back to and, when given, the page's title as plain text. |
+| `GET /_backgold/visitor?code=<code>&return=<path>` | The portal's return leg. Redeems its one-minute code with the api (`exchangeVisitor`), keeps the token in the `bg_visitor` cookie (`HttpOnly`, `Secure` but on plain http localhost, `SameSite=Lax`, `Path=/`, thirty days), and `302`s to the path with `#signed-in`. A used or expired code: a plain `400` page, "That sign-in link has expired. Sign in again.", linking back to the door. |
+| `GET /_backgold/sign-out?return=<path>` | Ends the token at the api (best effort), clears the cookie, `302` to the path. |
+| `POST /_backgold/progress` | JSON `{ course, lesson, completed?, position_seconds? }` from the lesson page: `Sec-Fetch-Site: same-origin`, or without it an `Origin` equal to the site's, else `403 CROSS_ORIGIN`. Forwarded with the visitor's token; the api's JSON comes back. `401 VISITOR_REQUIRED` without the cookie, `400 BAD_PROGRESS` for a body it cannot forward. |
+
+`return` is a path on the site (one leading `/`, no control character,
+space, backslash or `..` segment); anything else returns to `/`.
+`signInHref(path)` and `signOutHref(path)` from `@backgold/astro/server`
+build the two links.
+
+On every other request that carries `bg_visitor` the middleware reads who it
+is, once, with `GET /visitor` (the token goes as the `X-BackGold-Visitor`
+header; the cookie itself never leaves the Worker), and puts the answer on
+`locals.backgold.visitor` (`{ first_name, email, member }`, else null). A
+token the api no longer takes clears the cookie; a renewed one rewrites it.
+`locals.backgold.visitorReads` is what to pass to a read made for that
+person, so their locks open and their progress shows:
+
+```ts
+const { client, visitorReads } = Astro.locals.backgold
+const course = await client.course(slug, visitorReads) // undefined when signed out: the cached, anonymous read
+const resolved = await resolveRoute(client, Astro.url, visitorReads)
+```
+
+Such a request is never answered from or stored in the edge cache, and every
+response to it carries `Cache-Control: private, no-store`. Nothing about a
+visitor is ever written into a page anyone else is served.
 
 ## A/B testing hooks
 
@@ -413,6 +454,7 @@ takes the request's URL (or a pathname, with or without its query): the
 | `/<blog base>/<slug>`, `/<url_base>/<slug>` | `entry`: the entry and its `areas` |
 | `/authors/<slug>` | `author`; `entries` is empty (the Content API lists entries by type and term only); no `areas` |
 | `/<blog base>/<taxonomy>/<slug>`, `/<url_base>/<taxonomy>/<slug>` | `term`: its entries, `cursor`, `next_cursor`, the list's `areas` and its `base` |
+| `/<courses base>/<course>/<lesson>` (the course type's `url_base`) | `lesson`: `courseSlug`, `lessonSlug`, the api's `lesson` answer (the teaser when it is locked for the reader) and its `areas`; a slug pair the course does not have falls through to a term |
 | `/<blog base>/feed.xml`, `/<url_base>/feed.xml` | `feed` |
 | anything else, or a malformed path | `not_found` |
 

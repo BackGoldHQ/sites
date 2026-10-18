@@ -117,6 +117,8 @@ export function fakeCache(): EdgeCache & { stored: Map<string, { status: number;
 export interface FakeContext extends MiddlewareContextLike {
   /** Cookies set on the response, in order. */
   setCookies: Array<{ name: string; value: string; options: unknown }>
+  /** Cookies cleared on the response, in order. */
+  deletedCookies: Array<{ name: string; options: unknown }>
 }
 
 export function fakeContext(
@@ -125,18 +127,23 @@ export function fakeContext(
 ): FakeContext {
   const url = new URL(path, opts.origin ?? 'https://pinevalleyliberty.org')
   const setCookies: FakeContext['setCookies'] = []
+  const deletedCookies: FakeContext['deletedCookies'] = []
   const incoming = opts.cookies ?? {}
   return {
     url,
     request: new Request(url, { method: opts.method ?? 'GET', headers: opts.headers ?? {} }),
     locals: {},
     setCookies,
+    deletedCookies,
     cookies: {
       get: (name) => (name in incoming ? { value: incoming[name]! } : undefined),
       set: (name, value, options) => {
         setCookies.push({ name, value, options })
       },
-      headers: () => setCookies.map((c) => `${c.name}=${c.value}`),
+      delete: (name, options) => {
+        deletedCookies.push({ name, options })
+      },
+      headers: () => [...setCookies.map((c) => `${c.name}=${c.value}`), ...deletedCookies.map((c) => `${c.name}=; Max-Age=0`)],
     },
   }
 }
