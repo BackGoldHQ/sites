@@ -13,3 +13,12 @@ export type { CacheApiStoreOptions, CacheLike, KvStoreOptions, MemoryCacheOption
 export { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 export { parseContentEvent, verifyBackgoldWebhook } from './webhook.js'
 export { previewFromRequest } from './preview.js'
+export {
+  VISITOR_COOKIE,
+  VISITOR_HEADER,
+  VISITOR_PROGRESS_PATH,
+  VISITOR_RENEW_HEADER,
+  VISITOR_RETURN_PATH,
+  VISITOR_SIGN_IN_PATH,
+  VISITOR_SIGN_OUT_PATH,
+} from '@backgold/contract/content-api'

@@ -412,6 +412,52 @@ secret key: with a publishable key the client throws `BackgoldApiError` 403
 [Create a client](#create-a-client)) reads drafts and previews without a secret
 key.
 
+## Visitors and courses
+
+A site can let its visitors sign in (with their email, through BackGold's
+giving portal) to open lessons and entries the organization keeps for people
+it knows: `signed_in`, `members` or a tag (`entry.access`). A locked entry
+comes back as its teaser: `locked: true`, `lock` saying why (the door to
+draw), the body empty and no `media_url`.
+
+The api mints the visitor a **token** at sign-in. Keep it server side (a
+BackGold template keeps it in an `HttpOnly` cookie on the site's own host)
+and pass it to the reads you make for that person:
+
+```ts
+const course = await bg.course('foundations', {
+  visitor: token,
+  onVisitorRenew: (fresh) => saveToken(fresh), // the api renews a token whose hour has passed
+})
+```
+
+A call with `visitor` (per call, or on the client with `createClient({ …,
+visitor })` for a client that reads for one person only) sends
+`X-BackGold-Visitor`, is answered for that person with `Cache-Control:
+private, no-store`, and **never reads or writes the store**, so one
+visitor's answer can never reach another. When the answer carries
+`X-BackGold-Visitor-Renew`, the fresh token goes to `onVisitorRenew` (the
+call's own, else the client's); write it where the old one was kept. Visitor
+calls are server-side calls: the api's CORS does not let a browser send the
+header.
+
+| Method | |
+| --- | --- |
+| `courses({ cursor?, limit?, visitor? })` | `GET /courses`: the published courses, each with its lesson count and running time, and with a visitor their `progress`; null when the site has no course type |
+| `course(slug, { visitor? })` | `GET /courses/:slug`: the course and its lessons in order (each `locked` or not, `completed` and `position_seconds` for the visitor) |
+| `lesson(courseSlug, lessonSlug, { visitor? })` | `GET /courses/:course/:lesson`: the lesson read through its course, the course, and the lessons either side |
+| `visitor(token)` | `GET /visitor`: `{ visitor: { first_name, email, member } }`, or `{ visitor: null }` for a token the api no longer takes |
+| `lessonProgress(courseSlug, lessonSlug, { completed?, position_seconds? }, token)` | `POST …/progress`: saves the visitor's place or that they finished |
+| `exchangeVisitor(code)` | `POST /visitor/exchange`: the portal's one-minute hand-off code for the token. First-party clients only; any other throws `403 FIRST_PARTY_REQUIRED` without a request |
+| `signOutVisitor(token)` | `DELETE /visitor`: ends the token at the api |
+
+`entries`, `entry`, `page` and `raw` take `visitor` too. A token is refused
+with a `TypeError`, before any request and without repeating it, unless it is
+1–4096 printable characters with no space. The names a site needs are
+exported: `VISITOR_COOKIE` (`bg_visitor`), `VISITOR_HEADER`,
+`VISITOR_RENEW_HEADER` and the site paths `VISITOR_SIGN_IN_PATH`,
+`VISITOR_RETURN_PATH`, `VISITOR_SIGN_OUT_PATH`, `VISITOR_PROGRESS_PATH`.
+
 ## Typed fields
 
 The seven built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
@@ -446,10 +492,13 @@ declare module '@backgold/content' {
 
 ## What the client never does
 
-- It never writes to BackGold. Every request is a `GET`.
+- It never writes to BackGold but for a visitor: a lesson's progress, the
+  sign-in code exchange and the sign-out. Every other request is a `GET`.
 - It never sends your key anywhere but `apiOrigin`, and it does not follow
   redirects.
-- It never stores a preview or draft read, and never reads one from the store.
+- It never stores a preview or draft read, or a read for a visitor, and never
+  reads one from the store.
 - It never sends a header other than `Authorization`, `Accept` and
   `If-None-Match` (a first-party client sends `X-BackGold-Site` in place of
-  `Authorization`).
+  `Authorization`), but for `X-BackGold-Visitor` on a visitor's call and
+  `Content-Type` on the two calls that send a body.
