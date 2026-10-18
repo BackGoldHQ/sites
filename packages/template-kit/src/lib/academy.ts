@@ -4,7 +4,7 @@
 // phrases, who can watch, and the doors' links. Every number comes from the
 // Content API; none is typed by the organization.
 
-import type { ContentAccessLevel, CourseProgress, EntryLock } from '@backgold/contract/content-api'
+import type { ContentAccessLevel, CourseProgress, EntryLock, LessonResponse } from '@backgold/contract/content-api'
 
 /** The built-in content type the courses are. */
 export const COURSE_TYPE_KEY = 'course'
@@ -12,6 +12,17 @@ export const COURSE_TYPE_KEY = 'course'
 /** The site's Join page (the members door's "See how to join") and its Contact page (the tag door's). */
 export const JOIN_PATH = '/join'
 export const CONTACT_PATH = '/contact'
+
+/**
+ * What the portal's sign-in door names for a lesson: "Lesson 3: Read a
+ * budget, in Foundations" (its place in the course by position, 1 when it is
+ * not in the course's list).
+ */
+export function lessonSignInTitle(answer: LessonResponse): string {
+  const lessons = [...answer.course.lessons].sort((a, b) => a.position - b.position)
+  const n = lessons.findIndex((l) => l.slug === answer.lesson.slug) + 1 || 1
+  return `Lesson ${n}: ${answer.lesson.title}, in ${answer.course.title}`
+}
 
 /** The Content API's access levels (CONTENT_ACCESS_LEVELS in the platform's constants). */
 const ACCESS_LEVELS: readonly ContentAccessLevel[] = ['public', 'signed_in', 'members', 'tag']

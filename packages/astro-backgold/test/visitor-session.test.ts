@@ -9,7 +9,7 @@ import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor, type BackgoldLocals } from '../src/server/context.js'
 import type { BackgoldEnv } from '../src/server/env.js'
 import { resolveRoute } from '../src/server/resolve.js'
-import { handleProgress, handleSignIn, handleSignOut, handleVisitorReturn, portalOrigin, safeReturnPath, type VisitorRouteDeps } from '../src/server/sign-in.js'
+import { handleProgress, handleSignIn, handleSignOut, handleVisitorReturn, portalOrigin, safeReturnPath, signInHref, type VisitorRouteDeps } from '../src/server/sign-in.js'
 import { API_ORIGIN, PK, SITE_ID, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
 
 const TOKEN = 'visitor.eyJhaWQiOiJkYV8xIn0.c2ln'
@@ -194,6 +194,27 @@ describe('/_backgold/sign-in', () => {
     expect(to.origin).toBe('https://giving.backgold.com')
     expect(to.pathname).toBe('/site-signin')
     expect(Object.fromEntries(to.searchParams)).toEqual({ site: SITE_ID, return: '/courses/foundations/one?at=2', title: 'Lesson 5: Decideb' })
+  })
+
+  it('forwards the newsletter tick as newsletter=1, and only that value', async () => {
+    const ticked = await routeDeps('/_backgold/sign-in?return=%2Fcourses%2Ffoundations%2Fone&newsletter=1')
+    const to = new URL(handleSignIn(new Request(ticked.url), ticked.deps).headers.get('Location')!)
+    expect(Object.fromEntries(to.searchParams)).toEqual({ site: SITE_ID, return: '/courses/foundations/one', newsletter: '1' })
+    for (const raw of ['true', 'on', '0', '', '1 ', '11']) {
+      const { deps, url } = await routeDeps(`/_backgold/sign-in?return=%2F&newsletter=${encodeURIComponent(raw)}`)
+      const other = new URL(handleSignIn(new Request(url), deps).headers.get('Location')!)
+      expect(other.searchParams.has('newsletter'), raw).toBe(false)
+    }
+  })
+
+  it('builds a Sign in link that carries the title as plain text when there is one', () => {
+    expect(signInHref('/courses/foundations/one', 'Lesson 3: Read <b>a</b> budget, in Foundations')).toBe(
+      '/_backgold/sign-in?return=%2Fcourses%2Ffoundations%2Fone&title=Lesson+3%3A+Read+ba%2Fb+budget%2C+in+Foundations',
+    )
+    expect(signInHref('/courses/foundations', 'Foundations')).toBe('/_backgold/sign-in?return=%2Fcourses%2Ffoundations&title=Foundations')
+    expect(signInHref('/about')).toBe('/_backgold/sign-in?return=%2Fabout')
+    expect(signInHref('/about', '  ')).toBe('/_backgold/sign-in?return=%2Fabout')
+    expect(signInHref('/about', 'x'.repeat(300))).toBe(`/_backgold/sign-in?return=%2Fabout&title=${'x'.repeat(200)}`)
   })
 
   it('returns to / for anything but a path on this site', async () => {

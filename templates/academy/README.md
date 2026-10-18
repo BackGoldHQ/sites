@@ -18,8 +18,8 @@ site in template mode and writes the starter from `template.json` into it:
   About the Academy), then Classroom · Grid under "The classroom".
 - **About**, **Join** (one Cta · Card to the membership page) and
   **Contact** (the message form and where to find you).
-- **Menus**: the header has Courses, About and Join (Join is the header
-  button); the footer has an Academy column (Courses, About, Join) and the
+- **Menus**: the header has Courses, About and Join as plain menu items, and
+  no header button; the footer has an Academy column (Courses, About, Join) and the
   organization's (Home, Newsletter, Contact).
 - **The Academy letter**: an email sign-up band above the footer on every
   page. A locked lesson's sign-in door offers it by its kicker.
@@ -52,7 +52,9 @@ The header offers **Sign in** (`visitorSignIn: true` in `src/template.ts`).
 `@backgold/astro` adds four routes on the site's own host:
 
 - `/_backgold/sign-in?return=<path>` sends the visitor to the giving portal's
-  door for this site;
+  door for this site, naming the lesson or course they came from (`title`)
+  and, from a lesson's door, the newsletter box when it is ticked
+  (`newsletter=1`);
 - `/_backgold/visitor?code=…` is the portal's way back: it redeems the code
   and keeps the visitor's token in the HttpOnly `bg_visitor` cookie;
 - `/_backgold/sign-out` ends it;

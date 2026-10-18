@@ -395,15 +395,17 @@ custom domain works.
 
 | Route | |
 | --- | --- |
-| `GET /_backgold/sign-in?return=<path>&title=<text>` | `302` to the portal's door for this site (`giving.backgold.com`, or `giving.backgold.dev` for an api on `backgold.dev` or a local host), carrying the site's id, the path to come back to and, when given, the page's title as plain text. |
+| `GET /_backgold/sign-in?return=<path>&title=<text>&newsletter=1` | `302` to the portal's door for this site (`giving.backgold.com`, or `giving.backgold.dev` for an api on `backgold.dev` or a local host), carrying the site's id, the path to come back to, when given the page's title as plain text (at most 200 characters), and `newsletter=1` when the request carries exactly that (the lesson door's newsletter box, ticked). |
 | `GET /_backgold/visitor?code=<code>&return=<path>` | The portal's return leg. Redeems its one-minute code with the api (`exchangeVisitor`), keeps the token in the `bg_visitor` cookie (`HttpOnly`, `Secure` but on plain http localhost, `SameSite=Lax`, `Path=/`, thirty days), and `302`s to the path with `#signed-in`. A used or expired code: a plain `400` page, "That sign-in link has expired. Sign in again.", linking back to the door. |
 | `GET /_backgold/sign-out?return=<path>` | Ends the token at the api (best effort), clears the cookie, `302` to the path. |
 | `POST /_backgold/progress` | JSON `{ course, lesson, completed?, position_seconds? }` from the lesson page: `Sec-Fetch-Site: same-origin`, or without it an `Origin` equal to the site's, else `403 CROSS_ORIGIN`. Forwarded with the visitor's token; the api's JSON comes back. `401 VISITOR_REQUIRED` without the cookie, `400 BAD_PROGRESS` for a body it cannot forward. The page without its script posts the same fields as a form (`application/x-www-form-urlencoded`, `completed` as `true` or `false`, `position_seconds` as digits) with a `return` path, under the same origin check: saved, it answers `303` to that path (`/` for one off the site); without the cookie, `303` to `/_backgold/sign-in?return=<that path>`. |
 
 `return` is a path on the site (one leading `/`, no control character,
 space, backslash or `..` segment); anything else returns to `/`.
-`signInHref(path)` and `signOutHref(path)` from `@backgold/astro/server`
-build the two links.
+`signInHref(path, title?)` and `signOutHref(path)` from
+`@backgold/astro/server` build the two links; `title` is what the portal's
+door names (a lesson, "Lesson 3: Read a budget, in Foundations", or a
+course's title).
 
 On every other request that carries `bg_visitor` the middleware reads who it
 is, once, with `GET /visitor` (the token goes as the `X-BackGold-Visitor`

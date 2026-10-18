@@ -21,8 +21,10 @@
 //                    sheet opens. The account links (VisitorAccount, board
 //                    D1) sit before the switch: a signed-in visitor's first
 //                    name and Sign out (in the sheet on a phone), else Sign
-//                    in when the template offers it (`visitorSignIn`); only
-//                    on a first-party site, where the sign-in routes answer.
+//                    in when the template offers it (`visitorSignIn`), naming
+//                    the page's lesson or course to the portal's door
+//                    (`signInTitle`); only on a first-party site, where the
+//                    sign-in routes answer.
 //                    After a sign-in, the notice "You are signed in as …"
 //                    under the header (SignedInNotice, board D4).
 //   the page         <main>; each page renders its own single <h1>.
@@ -107,6 +109,8 @@ interface Props {
   jsonLd?: object[]
   page?: MenuPage | null
   areas?: Areas | null
+  /** What the portal's sign-in door names for this page (a lesson's "Lesson 3: Read a budget, in Foundations", a course's title); none elsewhere. */
+  signInTitle?: string | null
 }
 
 /** The areas this layout (and the routes, for the Sidebar) place by name. */
@@ -116,7 +120,7 @@ const bg = Astro.locals.backgold
 if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
 
 const { site, legal, client } = bg
-const { template, page, areas = null, ...head } = Astro.props
+const { template, page, areas = null, signInTitle = null, ...head } = Astro.props
 const { sections } = template
 const [primary, footer, utility] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility')])
 const pathname = Astro.url.pathname
@@ -227,7 +231,7 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
             </details>
           </>
         )}
-        {account && <VisitorAccount visitor={visitor} mode="bar" />}
+        {account && <VisitorAccount visitor={visitor} mode="bar" signInTitle={signInTitle} />}
         {appearance === 'auto' && <ModeToggle />}
         <MenuButton items={headerItems} page={page} class="button button-small header-button" />
       </div>

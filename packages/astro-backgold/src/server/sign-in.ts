@@ -1,7 +1,7 @@
 // A visitor signing in on the site (0547). The giving portal runs the sign-in
 // itself; the site's own host holds the result, so a custom domain works:
 //
-//   GET  /_backgold/sign-in?return=<path>&title=<text>
+//   GET  /_backgold/sign-in?return=<path>&title=<text>[&newsletter=1]
 //        → 302 to the portal's door for this site.
 //   GET  /_backgold/visitor?code=<code>&return=<path>
 //        The portal's return leg: redeems its one-minute code with the api
@@ -92,9 +92,16 @@ function titleText(raw: string | null): string | null {
   return line === '' ? null : line.slice(0, 200)
 }
 
-/** `/_backgold/sign-in?return=<path>`: what a Sign in link points at. */
-export function signInHref(returnPath: string): string {
-  return `${VISITOR_SIGN_IN_PATH}?${new URLSearchParams({ return: safeReturnPath(returnPath) })}`
+/**
+ * `/_backgold/sign-in?return=<path>&title=<text>`: what a Sign in link points
+ * at. `title` (the lesson or course the portal's door names) rides along as
+ * plain text when there is one.
+ */
+export function signInHref(returnPath: string, title?: string | null): string {
+  const params = new URLSearchParams({ return: safeReturnPath(returnPath) })
+  const text = titleText(title ?? null)
+  if (text !== null) params.set('title', text)
+  return `${VISITOR_SIGN_IN_PATH}?${params}`
 }
 
 /** `/_backgold/sign-out?return=<path>`: what a Sign out link points at. */
@@ -168,7 +175,11 @@ function firstPartyOf(bg: BackgoldLocals): (BackgoldReady & { client: BackgoldCo
   return bg.setup === null && bg.firstParty ? bg : null
 }
 
-/** `GET /_backgold/sign-in`: to the portal's door for this site, carrying the path to come back to and the page's title. */
+/**
+ * `GET /_backgold/sign-in`: to the portal's door for this site, carrying the
+ * path to come back to, the page's title, and `newsletter=1` when the
+ * visitor ticked the lesson door's newsletter box.
+ */
 export function handleSignIn(request: Request, deps: VisitorRouteDeps): Response {
   const bg = firstPartyOf(deps.bg)
   if (!bg) return notFound()
@@ -176,6 +187,7 @@ export function handleSignIn(request: Request, deps: VisitorRouteDeps): Response
   const params = new URLSearchParams({ site: bg.siteId, return: safeReturnPath(url.searchParams.get('return')) })
   const title = titleText(url.searchParams.get('title'))
   if (title !== null) params.set('title', title)
+  if (url.searchParams.get('newsletter') === '1') params.set('newsletter', '1')
   return redirect(`${portalOrigin(deps.apiOrigin)}/site-signin?${params}`)
 }
 

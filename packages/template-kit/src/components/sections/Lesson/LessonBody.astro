@@ -67,7 +67,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
         </div>
       )}
       {view.locked && (
-        <div class="ls-frame ls-teaser">
+        <div class="ls-frame ls-teaser on-photo">
           {view.cover && <img src={view.cover} alt="" decoding="async" />}
           <div class="ls-veil">
             <span class="ls-ring"><Icon name="lock" /></span>
@@ -119,14 +119,20 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
         <nav class="ls-pn" aria-label="Other lessons in this course">
           {view.previous && view.previous.href && (
             <a class="ls-pn-card" href={view.previous.href} rel="prev">
-              <span class="ls-pn-dir">Previous</span>
-              <span class="ls-pn-name">{lessonTitle(view.previous.n, view.previous.name)}</span>
+              <span class="ls-pn-arrow" aria-hidden="true">←</span>
+              <span class="ls-pn-text">
+                <span class="ls-pn-dir">Previous</span>
+                <span class="ls-pn-name">{lessonTitle(view.previous.n, view.previous.name)}</span>
+              </span>
             </a>
           )}
           {view.next && view.next.href && (
             <a class="ls-pn-card ls-pn-next" href={view.next.href} rel="next">
-              <span class="ls-pn-dir">Next</span>
-              <span class="ls-pn-name">{lessonTitle(view.next.n, view.next.name)}</span>
+              <span class="ls-pn-text">
+                <span class="ls-pn-dir">Next</span>
+                <span class="ls-pn-name">{lessonTitle(view.next.n, view.next.name)}</span>
+              </span>
+              <span class="ls-pn-arrow" aria-hidden="true">→</span>
             </a>
           )}
         </nav>
@@ -239,6 +245,10 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     object-fit: contain;
     background: #000;
   }
+  /* The photo band's pair, the same in both themes: its ink reads at AA on its ground, and on its scrim over the cover. */
+  .ls-teaser {
+    background: var(--band-photo);
+  }
   .ls-teaser img {
     filter: saturate(0.6) brightness(0.55);
   }
@@ -250,8 +260,8 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     justify-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    background: color-mix(in srgb, #000 35%, transparent);
-    color: #fff;
+    background: color-mix(in srgb, var(--band-photo) 60%, transparent);
+    color: var(--ink);
     text-align: center;
   }
   .ls-veil p {
@@ -264,7 +274,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     place-items: center;
     width: 3.5rem;
     height: 3.5rem;
-    border: 2px solid #fff;
+    border: 2px solid currentColor;
     border-radius: 50%;
     font-size: 1.5rem;
   }
@@ -299,9 +309,8 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     line-height: 1.12;
   }
   .ls-resume {
-    color: var(--ink);
+    color: var(--muted);
     font-size: var(--text-sm);
-    font-weight: 600;
   }
   .ls-complete form {
     display: flex;
@@ -357,8 +366,9 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     gap: 0.75rem;
   }
   .ls-pn-card {
-    display: grid;
-    gap: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
     padding: 0.875rem 1.125rem;
     border: 1.5px solid var(--line-strong);
     border-radius: var(--radius);
@@ -374,6 +384,22 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
   .ls-pn-card:focus-visible {
     outline: 3px solid var(--link);
     outline-offset: 3px;
+  }
+  .ls-pn-text {
+    display: grid;
+    flex: 1;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .ls-pn-arrow {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .ls-pn-card:hover .ls-pn-arrow {
+    color: var(--ink);
   }
   .ls-pn-dir {
     color: var(--muted);

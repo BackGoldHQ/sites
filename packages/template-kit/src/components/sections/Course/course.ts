@@ -132,7 +132,7 @@ export function courseView(course: CourseDetail, visitor: Visitor | null, path: 
     next: nextRow ? { row: nextRow, verb: progress && progress.completed > 0 ? 'Continue' : 'Start' } : null,
     whoCanWatch: whoCanWatch(course.access, orgName, course.lock?.tag_label ?? null),
     exceptions: rows.filter((r) => r.access !== course.access).map((r) => ({ n: r.n, who: whoCanWatch(r.access, orgName, r.lock?.tag_label ?? null) })),
-    signIn: signInHref(path),
+    signIn: signInHref(path, course.title),
     signOut: signOutHref(path),
   }
 }

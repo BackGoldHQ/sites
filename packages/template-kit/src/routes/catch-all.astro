@@ -77,6 +77,7 @@ import { EVENTS_CALENDAR_PATH, MONTH_PARAM, calendarSlugOf, drawsCalendar, event
 import { entryCard, leadsWithHero } from '../lib/section'
 import { DONATE_READS_QUERY, carriesDonateQuery, drawsDonateFrame } from '../lib/donate-frame'
 import { markReading } from '../lib/reading'
+import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
 import template from 'virtual:backgold-template'
 
 const { sections } = template
@@ -233,10 +234,17 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
 const ListLayout = list?.Layout ?? null
 const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(template, resolved.entry.type) : null
 const LessonLayout = resolved.kind === 'lesson' ? lessonLayoutFor(template) : null
+/** What the header's Sign in names to the portal's door: a lesson, or a course's title on the course's page. */
+const signInTitle =
+  resolved.kind === 'lesson'
+    ? lessonSignInTitle(resolved.lesson)
+    : resolved.kind === 'entry' && resolved.type.key === COURSE_TYPE_KEY
+      ? resolved.entry.title
+      : null
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
-<Site {...head} template={template} page={menuPage} areas={areas}>
+<Site {...head} template={template} page={menuPage} areas={areas} signInTitle={signInTitle}>
   {resolved.kind === 'author' && (
     <div class="listing">
       <header class="page-header author">

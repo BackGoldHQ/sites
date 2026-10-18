@@ -2,7 +2,8 @@
 // The header's account links (board D1): signed in, the visitor's first name
 // (else the part of their email before the @) and Sign out; signed out, Sign
 // in. Both are quiet links beside the light and dark switch, each taking the
-// visitor back to this page. On a phone with a menu sheet the name stays in
+// visitor back to this page; Sign in names the page's lesson or course to the
+// portal's door when the page has one (`signInTitle`). On a phone with a menu sheet the name stays in
 // the bar and Sign out moves into the sheet (`mode="sheet"` draws it there).
 // Signed in or not, it is drawn only on a page answered to one person or to
 // everyone alike: a visitor's page is private (the middleware), and the
@@ -13,9 +14,11 @@ import type { Visitor } from '@backgold/content'
 interface Props {
   visitor: Visitor | null
   mode: 'bar' | 'sheet'
+  /** What Sign in names to the portal's door: the page's lesson or course; none elsewhere. */
+  signInTitle?: string | null
 }
 
-const { visitor, mode } = Astro.props
+const { visitor, mode, signInTitle = null } = Astro.props
 const here = `${Astro.url.pathname}${Astro.url.search}`
 const name = visitor ? (visitor.first_name?.trim() || visitor.email.split('@')[0] || visitor.email) : null
 ---
@@ -27,7 +30,7 @@ const name = visitor ? (visitor.first_name?.trim() || visitor.email.split('@')[0
         <a class="header-account-link header-account-out" href={signOutHref(here)}>Sign out</a>
       </>
     ) : (
-      <a class="header-account-link" href={signInHref(here)}>Sign in</a>
+      <a class="header-account-link" href={signInHref(here, signInTitle)}>Sign in</a>
     )}
   </div>
 ) : (

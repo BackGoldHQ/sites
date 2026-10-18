@@ -18,7 +18,7 @@
 import type { Section } from '@backgold/content'
 import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '@backgold/contract/content-api'
 import { renderMarkdown, safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
-import { countAndLength, inSentence, lockWordOf } from '../../../lib/academy'
+import { countAndLength, inSentence, lessonSignInTitle, lockWordOf } from '../../../lib/academy'
 import { listOf, text } from '../../../lib/format'
 import { academyReads } from '../../../lib/visitor'
 import { pinnedCourseOf, routeOf, type AcademyContext } from '../Course/course'
@@ -32,12 +32,12 @@ export interface RailRow {
   now: boolean
   done: boolean
   locked: boolean
-  /** The row's word: Done, Now, Members, Free, Sign in; null where the length stands alone. */
+  /** The row's word: Done, Now, Members, a tag's name, Free, Sign in; null where the length stands alone. */
   word: string | null
 }
 
 export type Door =
-  | { kind: 'sign-in'; returnPath: string; newsletter: string }
+  | { kind: 'sign-in'; returnPath: string; title: string; newsletter: string }
   | { kind: 'join'; n: number; orgName: string | null; name: string | null; signOut: string; signIn: string }
   | { kind: 'tag'; tag: string | null; orgName: string | null }
 
@@ -97,17 +97,26 @@ function newsletterOf(areas: Areas | null | undefined): string {
   return 'the newsletter'
 }
 
-function doorOf(lock: EntryLock, n: number, visitor: Visitor | null, path: string, areas: Areas | null | undefined, orgName: string | null): Door {
+/** The lock's door; `title` is what the portal's sign-in door names ("Lesson 3: Read a budget, in Foundations"). */
+function doorOf(lock: EntryLock, n: number, visitor: Visitor | null, path: string, title: string, areas: Areas | null | undefined, orgName: string | null): Door {
   if (lock.reason === 'members') {
-    return { kind: 'join', n, orgName, name: visitor ? (visitor.first_name ?? visitor.email) : null, signOut: signOutHref(signInHref(path)), signIn: signInHref(path) }
+    const signIn = signInHref(path, title)
+    return { kind: 'join', n, orgName, name: visitor ? (visitor.first_name ?? visitor.email) : null, signOut: signOutHref(signIn), signIn }
   }
   if (lock.reason === 'tag') return { kind: 'tag', tag: lock.tag_label, orgName }
-  return { kind: 'sign-in', returnPath: path, newsletter: newsletterOf(areas) }
+  return { kind: 'sign-in', returnPath: path, title, newsletter: newsletterOf(areas) }
+}
+
+/** A locked row's word: Sign in, the tag's name ("Fall Cohort"), else Members. */
+function railLockWordOf(lock: EntryLock | null): string {
+  if (lock?.reason === 'signed_in') return 'Sign in'
+  if (lock?.reason === 'tag') return lock.tag_label?.trim() || 'By invitation'
+  return 'Members'
 }
 
 function railWordOf(lesson: CourseLesson, now: boolean, signedIn: boolean): string | null {
   if (lesson.locked) {
-    const word = lesson.lock?.reason === 'signed_in' ? 'Sign in' : 'Members'
+    const word = railLockWordOf(lesson.lock)
     return now ? `Now · ${word}` : word
   }
   if (now) return 'Now'
@@ -149,7 +158,7 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
     cover,
     locked,
     lockWord: locked && lock ? lockWordOf(lock) : null,
-    door: locked && lock ? doorOf(lock, n, visitor, path, answer.areas, orgName) : null,
+    door: locked && lock ? doorOf(lock, n, visitor, path, lessonSignInTitle(answer), answer.areas, orgName) : null,
     visitor,
     completed,
     resumeAt: position !== null && position > 0 ? position : null,

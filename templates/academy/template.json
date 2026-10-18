@@ -326,7 +326,7 @@
           "shows_on": {
             "rule": "every_page"
           },
-          "header_button": true,
+          "header_button": false,
           "children": []
         }
       ],

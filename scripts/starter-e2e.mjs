@@ -4854,8 +4854,10 @@ async function checkAcademy(origin, fixture) {
   check(/<p class="kicker">The classroom<\/p>/.test(classroom), 'under the starter’s kicker, The classroom')
   check(/class="header-account-link" href="\/_backgold\/sign-in\?return=%2F"[^>]*>Sign in</.test(html), 'the header offers Sign in, back to this page (visitorSignIn)')
   check(!/data-bg-donate/.test(html) && !/>Donate</.test(html), 'and no Donate anywhere on home: the template adds no donate call')
-  const button = /<a\b[^>]*\bheader-button\b[^>]*>[\s\S]*?<\/a>/.exec(html)?.[0] ?? ''
-  check(/href="\/join"/.test(button) && plain(button) === 'Join', `Join is the header button (${plain(button)})`)
+  const headerMenu = /<nav class="header-bar-menu" aria-label="Header menu">[\s\S]*?<\/nav>/.exec(html)?.[0] ?? ''
+  const menuWords = [...headerMenu.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)].map((m) => plain(m[1]))
+  check(menuWords.join(' · ') === 'Courses · About · Join' && /href="\/join"/.test(headerMenu), `the header menu is Courses · About · Join (${menuWords.join(' · ')})`)
+  check(!/\bheader-button\b/.test(html), 'and the header has no button: Join is a menu item (board D1)')
   const footer = /<footer[\s\S]*?<\/footer>/.exec(html)?.[0] ?? ''
   check(['Academy', 'The organization', 'Courses', 'Newsletter', 'Contact'].every((w) => footer.includes(w)), 'the footer lists the Academy’s links and the organization’s')
 
@@ -4867,6 +4869,8 @@ async function checkAcademy(origin, fixture) {
   html = await res.text()
   const rows = (html.match(/class="cs-row /g) ?? []).length
   check(res.status === 200 && rows === 3 && /<h1 class="cs-title[^"]*"[^>]*>Reading the Budget<\/h1>/.test(html) && html.includes('Where the money goes') && html.includes('The levy line') && html.includes('Asking at the hearing'), `a course's page is its syllabus, every lesson in order (${rows} rows)`)
+  const courseSignIn = `/_backgold/sign-in?${new URLSearchParams({ return: courseAt, title: 'Reading the Budget' })}`.replace(/&/g, '&amp;')
+  check(html.includes(`href="${courseSignIn}"`), "the course's sign-in names the course to the portal")
 
   res = await get(origin, lessonAt('where-the-money-goes'))
   html = await res.text()
@@ -4876,6 +4880,16 @@ async function checkAcademy(origin, fixture) {
   res = await get(origin, lessonAt('the-levy-line'))
   html = await res.text()
   check(res.status === 200 && !/<video\b/.test(html) && html.includes('Sign in with your email to watch') && /<form class="ls-door-form" method="get" action="\/_backgold\/sign-in"/.test(html), 'a lesson for anyone signed in draws its teaser and the sign-in door')
+  const levyTitle = 'Lesson 2: The levy line, in Reading the Budget'
+  check(html.includes(`name="title" value="${levyTitle}"`), 'the door names the lesson to the portal: "Lesson 2: The levy line, in Reading the Budget"')
+  const levySignIn = `/_backgold/sign-in?${new URLSearchParams({ return: lessonAt('the-levy-line'), title: levyTitle })}`.replace(/&/g, '&amp;')
+  check(html.includes(`class="header-account-link" href="${levySignIn}"`), "and so does the header's Sign in on the lesson's page")
+  res = await get(origin, `/_backgold/sign-in?${new URLSearchParams({ return: lessonAt('the-levy-line'), title: levyTitle, newsletter: '1' })}`)
+  const door = new URL(res.headers.get('location') ?? '', 'https://portal.invalid')
+  check(
+    res.status === 302 && door.pathname === '/site-signin' && door.searchParams.get('title') === levyTitle && door.searchParams.get('newsletter') === '1',
+    `the sign-in route carries the title and the newsletter tick to the portal's door (${res.status}, ${door.search})`,
+  )
   res = await get(origin, lessonAt('asking-at-the-hearing'))
   html = await res.text()
   check(html.includes('Join to watch') && html.includes(`Lesson 3 is for members of ${ACADEMY_ORG}.`) && /href="\/join"/.test(html), 'a members lesson draws the Join door, naming the organization')
@@ -4958,8 +4972,22 @@ async function checkAcademyLook(origin, chrome) {
         check(list >= 2, `${where}: /courses draws both courses (${list})`)
         const syllabus = await look(courseAt, 'course-signed-out', `() => ({ rows: document.querySelectorAll('.cs-row').length, h1: document.querySelector('h1')?.textContent.trim() })`)
         check(syllabus.rows === 3 && syllabus.h1 === 'Reading the Budget', `${where}: the course's syllabus lists its three lessons (${JSON.stringify(syllabus)})`)
-        const door = await look(lessonAt('the-levy-line'), 'lesson-door-sign-in', `() => ({ door: !!document.querySelector('.ls-door .ls-door-form'), video: !!document.querySelector('video') })`)
+        const door = await look(lessonAt('the-levy-line'), 'lesson-door-sign-in', `() => {
+          // A computed colour as sRGB bytes, through a canvas (color-mix answers in color(srgb …)).
+          const rgb = (css) => {
+            const c = document.createElement('canvas').getContext('2d')
+            c.fillStyle = css
+            c.fillRect(0, 0, 1, 1)
+            return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3)
+          }
+          const lum = (bytes) => bytes.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
+          const words = document.querySelector('.ls-teaser .ls-veil p')
+          const ground = document.querySelector('.ls-teaser')
+          const [a, b] = [lum(rgb(getComputedStyle(words).color)), lum(rgb(getComputedStyle(ground).backgroundColor))]
+          return { door: !!document.querySelector('.ls-door .ls-door-form'), video: !!document.querySelector('video'), teaser: Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 100) / 100 }
+        }`)
         check(door.door && !door.video, `${where}: the locked lesson draws its sign-in door, no player (${JSON.stringify(door)})`)
+        check(door.teaser >= 4.5, `${where}: the teaser's words read at AA on its ground (${door.teaser}:1)`)
 
         // Signed in through the portal's return leg, as a browser follows it.
         await browser.open(`${origin}/_backgold/visitor?code=${ACADEMY_CODE}&return=%2F`, scheme)

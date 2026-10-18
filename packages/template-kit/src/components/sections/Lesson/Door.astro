@@ -2,7 +2,8 @@
 // A locked lesson's door (board D3, "The door, three states"), under the
 // teaser and the lesson's head. The lock's reason picks it (lesson.ts):
 //   sign-in  "Sign in with your email to watch": a real form to the site's
-//            sign-in door, coming back here, with the newsletter box
+//            sign-in door, coming back here and naming the lesson
+//            ("Lesson 3: Read a budget, in Foundations"), with the newsletter box
 //            unticked; ticked, it rides along as `newsletter=1`.
 //   join     "Join to watch": See how to join (the site's Join page, which
 //            says what joining costs), and for a member under another email
@@ -33,6 +34,7 @@ const tagName = door.kind === 'tag' ? door.tag : null
       <p>This lesson is free. Sign in with your email and we bring you straight back here.</p>
       <form class="ls-door-form" method="get" action={VISITOR_SIGN_IN_PATH}>
         <input type="hidden" name="return" value={door.returnPath} />
+        <input type="hidden" name="title" value={door.title} />
         <button class="button" type="submit">Sign in with your email</button>
         <label class="ls-check">
           <input type="checkbox" name="newsletter" value="1" />
