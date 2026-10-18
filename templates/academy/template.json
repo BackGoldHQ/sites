@@ -5,9 +5,9 @@
   "version": 1,
   "variants": {
     "Hero": [
+      "centered",
       "cover",
       "split",
-      "centered",
       "statement"
     ],
     "Classroom": [
@@ -41,8 +41,8 @@
       "wall"
     ],
     "SignupCapture": [
-      "band",
       "card",
+      "band",
       "inline"
     ],
     "FormBlock": [
