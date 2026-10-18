@@ -20,7 +20,7 @@ declare const BYLINE_ROLE_LABELS: readonly ["Written by", "Edited by", "Photos b
 type BylineRoleLabel = (typeof BYLINE_ROLE_LABELS)[number];
 declare const CONTENT_TYPE_ICONS: readonly ["doc", "star", "mega", "flag", "users", "cal", "mic", "video", "shield", "tag"];
 type ContentTypeIcon = (typeof CONTENT_TYPE_ICONS)[number];
-declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", "plank", "team_member", "open_role", "newsletter"];
+declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", "plank", "team_member", "open_role", "newsletter", "course"];
 type BuiltInContentTypeKey = (typeof BUILT_IN_CONTENT_TYPE_KEYS)[number];
 declare const BUILT_IN_TAXONOMY_KEYS: readonly ["category", "tag"];
 type BuiltInTaxonomyKey = (typeof BUILT_IN_TAXONOMY_KEYS)[number];

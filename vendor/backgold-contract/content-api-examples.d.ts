@@ -1,5 +1,5 @@
-import { Areas, AreasResponse, AuthorResponse, AuthorsResponse, EntriesResponse, EntryResponse, EventResponse, EventsResponse, EventsLiveResponse, MenuResponse, PageResponse, PagesResponse, RedirectsResponse, SectionsResponse, SiteResponse, SitemapResponse, TermsResponse, TypesResponse } from './content-api.js';
-import './constants-B1v7Vsef.js';
+import { Areas, AreasResponse, AuthorResponse, AuthorsResponse, CourseResponse, CoursesResponse, EntriesResponse, EntryResponse, EventResponse, EventsResponse, EventsLiveResponse, LessonResponse, LessonProgressResponse, MenuResponse, PageResponse, PagesResponse, RedirectsResponse, SectionsResponse, SiteResponse, SitemapResponse, TermsResponse, TypesResponse, VisitorResponse, VisitorExchangeResponse } from './content-api.js';
+import './constants-BgQMMyNq.js';
 
 /**
  * One example of every headless Content API response, in the contract's own
@@ -41,7 +41,13 @@ declare const sitemapExample: SitemapResponse;
 declare const eventsExample: EventsResponse;
 declare const eventExample: EventResponse;
 declare const eventsLiveExample: EventsLiveResponse;
+declare const coursesExample: CoursesResponse;
+declare const courseExample: CourseResponse;
+declare const lessonExample: LessonResponse;
+declare const lessonProgressExample: LessonProgressResponse;
+declare const visitorExample: VisitorResponse;
+declare const visitorExchangeExample: VisitorExchangeResponse;
 /** Each response's example, by its OpenAPI schema name (the api's openapi-content.test.ts holds each against its schema). */
 declare const CONTENT_API_EXAMPLES: Record<string, unknown>;
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, siteExample, sitemapExample, termsExample, typesExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };

@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as SiteMode, h as SiteApiKeyKind } from './constants-B1v7Vsef.js';
-export { i as ContentWebhookEvent, j as SITE_KEY_PREFIXES, k as SitePageModuleKind } from './constants-B1v7Vsef.js';
+import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as SiteMode, h as SiteApiKeyKind } from './constants-BgQMMyNq.js';
+export { i as ContentWebhookEvent, j as SITE_KEY_PREFIXES, k as SitePageModuleKind } from './constants-BgQMMyNq.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -81,6 +81,8 @@ interface SiteResponse {
     areas: SiteArea[];
     legal: ContentApiLegal;
     version: number;
+    /** The organization's name, for the words a site draws around a members or tag rule ("Members of <org>"). */
+    org_name: string;
 }
 /** One link on the footer's bottom row (privacy, terms, bylaws). */
 interface SiteChromeLink {
@@ -561,19 +563,23 @@ interface Entry {
     /** Preview only: the entry's state ('draft' or 'published'). */
     status?: string;
     /**
-     * Who may open the entry (0547): its own rule, or the one it follows (a
-     * lesson follows its course; anything else follows to public). Optional
-     * until the api fills it for every entry.
+     * Who may open the entry (0547): its own rule, or the one it follows. Read
+     * through a course, a lesson with no rule of its own follows the course;
+     * read anywhere else, an entry with no rule of its own that sits in
+     * published courses opens for a reader who qualifies for one of them (and
+     * reports the rule that opened it, else the strictest), and any other is
+     * public.
      */
-    access?: ContentAccessLevel;
+    access: ContentAccessLevel;
     /**
-     * True when this reader may not open the entry: the body and the media are
-     * withheld and `lock` says why. A public entry is never locked.
+     * True when this reader may not open the entry: the media (and on a detail
+     * the body and fields) are withheld and `lock` says why. A public entry is
+     * never locked, and neither is a preview.
      */
-    locked?: boolean;
-    lock?: EntryLock | null;
+    locked: boolean;
+    lock: EntryLock | null;
     /** A video's running time in seconds, when the upload or the author said. */
-    duration_seconds?: number | null;
+    duration_seconds: number | null;
 }
 interface EntryDetail extends Entry {
     /** Empty markdown when the entry is locked for this reader. */
@@ -682,6 +688,8 @@ interface CourseLesson {
     lock: EntryLock | null;
     /** This visitor finished it; false without a visitor. */
     completed: boolean;
+    /** When this visitor finished it; null when they have not, or without a visitor. */
+    completed_at: string | null;
     /** Where this visitor stopped, in seconds; null without a visitor or a saved place. */
     position_seconds: number | null;
 }

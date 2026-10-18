@@ -1,8 +1,8 @@
-import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-WKAK7POJ.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-7BN2BO47.js';
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-7O55M5TG.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-4EQOEUE5.js';
 import { z } from 'zod';
 
-var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive"];
+var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive", "academy"];
 var name = z.string().trim().min(1).max(120);
 var layoutName = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/);
 var slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$|^$/, "a page slug (lower case, words joined by -; empty for home)");
