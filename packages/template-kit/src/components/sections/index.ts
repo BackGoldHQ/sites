@@ -16,9 +16,10 @@
 // `<Type>/index.astro`, which gets the layout as its `variant` prop.
 //
 // BackGold's money and consent modules (Donate, FormBlock, PollBlock,
-// Petition, Store, Event, Calendar, SignupCapture, Advocacy) are listed for
-// their frame only: each draws its section's heading and its card around
-// BackGold's own frame (modules/ModuleFrame.astro),
+// Petition, Store, Event, Calendar, SignupCapture, Advocacy, and the
+// ready-made PartnerBlock) are listed for their frame only: each draws its
+// section's heading and its card around BackGold's own frame
+// (modules/ModuleFrame.astro),
 // which it asks to wear the site in the chosen layout. The fields, limits,
 // receipts and consent stay inside BackGold's frame; never draw them here.
 // SocialFrame has no frame a site can place and stays unlisted.
@@ -128,6 +129,8 @@ import DonateStory from './Donate/story.astro'
 import FormBlock from './FormBlock/index.astro'
 import FormBlockWide from './FormBlock/wide.astro'
 import PollBlock from './PollBlock/index.astro'
+import PartnerBlock from './PartnerBlock/index.astro'
+import PartnerBlockButton from './PartnerBlock/button.astro'
 import SignupCapture from './SignupCapture/index.astro'
 import SignupCaptureBand from './SignupCapture/band.astro'
 import SignupCaptureInline from './SignupCapture/inline.astro'
@@ -291,6 +294,8 @@ export const sections = {
   FormBlock,
   'FormBlock:wide': FormBlockWide,
   PollBlock,
+  PartnerBlock,
+  'PartnerBlock:button': PartnerBlockButton,
   SignupCapture,
   'SignupCapture:band': SignupCaptureBand,
   'SignupCapture:inline': SignupCaptureInline,

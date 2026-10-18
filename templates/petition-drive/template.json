@@ -29,6 +29,7 @@
     "Donate": ["form", "story"],
     "Petition": ["none", "image", "map", "coverage"],
     "FormBlock": ["card", "wide"],
+    "PartnerBlock": ["spotlight", "button"],
     "SignupCapture": ["card", "band", "inline"],
     "Store": ["grid", "featured"],
     "Event": ["detail", "card"],
