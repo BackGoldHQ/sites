@@ -1,8 +1,7 @@
 // What every entry layout and every list layout is given, by
 // src/routes/catch-all.astro and src/routes/preview.astro.
 
-import type { Areas, ContentTypeSummary, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
-import type { LessonResponse } from '@backgold/contract/content-api'
+import type { Areas, ContentTypeSummary, Entry, EntryDetail, LessonResponse, PageResponse, TermsResponse } from '@backgold/content'
 import type { Pager, ResolvedType } from '@backgold/astro/server'
 import type { ListFilter } from '../../lib/entries'
 import type { TemplateConfig } from '../../template'
@@ -50,7 +49,13 @@ export interface ListSearch {
   q: string | null
 }
 
-/** What the lesson layout is given: the lesson at `/<courses base>/<course>/<lesson>`, read for this visitor. */
-export interface LessonLayoutProps {
+/**
+ * What the lesson layout is given (src/routes/catch-all.astro): an entry
+ * layout's props, the lesson's video entry as `entry` with no `type` and the
+ * lesson's areas, and the api's whole answer for this visitor at
+ * `/<courses base>/<course>/<lesson>` (the course, the lessons either side).
+ */
+export interface LessonLayoutProps extends EntryLayoutProps {
+  type: undefined
   lesson: LessonResponse
 }

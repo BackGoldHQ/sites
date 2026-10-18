@@ -11,14 +11,12 @@
 
 import type { Section } from '@backgold/content'
 import type { ContentAccessLevel, CourseDetail, CourseLesson, CourseProgress, EntryLock, Visitor } from '@backgold/contract/content-api'
-import { safeHref, safeSrc } from '@backgold/astro/server'
-import type { AstroCookies } from 'astro'
-import { COURSE_TYPE_KEY, lockWordOf, orgNameOf, whoCanWatch } from '../../../lib/academy'
-import { SLUG, academyReads, signInHref, signOutHref, type AcademyReads } from '../../../lib/visitor'
+import { safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
+import { COURSE_TYPE_KEY, finishedOn, lockWordOf, orgNameOf, whoCanWatch } from '../../../lib/academy'
+import { SLUG, academyReads, type AcademyReads } from '../../../lib/visitor'
 
 export interface AcademyContext {
   locals: App.Locals
-  cookies: AstroCookies
   url: URL
 }
 
@@ -72,6 +70,8 @@ export interface CourseView {
   /** The visitor's place; null signed out. */
   progress: CourseProgress | null
   rows: SyllabusRow[]
+  /** The lesson this visitor finished last and when ("Lesson 4 finished on Tuesday"); null signed out or before any `completed_at`. */
+  lastFinished: { n: number; on: string } | null
   /** The lesson the head's button opens ("Continue · Lesson 5", "Start · Lesson 1"); null when there is none to open. */
   next: { row: SyllabusRow; verb: 'Continue' | 'Start' } | null
   /** "Anyone signed in with their email". */
@@ -97,6 +97,24 @@ function rowOf(lesson: CourseLesson, n: number, progress: CourseProgress | null)
   }
 }
 
+/**
+ * The newest `completed_at` among the visitor's finished lessons. The field
+ * is read where the api's answer carries it: a contract without it on
+ * CourseLesson leaves the line out.
+ */
+function lastFinishedOf(lessons: CourseLesson[], visitor: Visitor | null): { n: number; on: string } | null {
+  if (!visitor) return null
+  let best: { n: number; at: number } | null = null
+  for (const [i, lesson] of lessons.entries()) {
+    const raw = (lesson as CourseLesson & { completed_at?: string | null }).completed_at
+    const at = lesson.completed && typeof raw === 'string' ? Date.parse(raw) : NaN
+    if (!Number.isNaN(at) && (best === null || at > best.at)) best = { n: i + 1, at }
+  }
+  if (best === null) return null
+  const on = finishedOn(new Date(best.at).toISOString())
+  return on ? { n: best.n, on } : null
+}
+
 /** The course as the layouts draw it, for this visitor (null signed out) and this page's address. */
 export function courseView(course: CourseDetail, visitor: Visitor | null, path: string): CourseView {
   const lessons = [...course.lessons].sort((a, b) => a.position - b.position)
@@ -116,6 +134,7 @@ export function courseView(course: CourseDetail, visitor: Visitor | null, path: 
     visitor,
     progress,
     rows,
+    lastFinished: lastFinishedOf(lessons, progress ? visitor : null),
     next: nextRow ? { row: nextRow, verb: progress && progress.completed > 0 ? 'Continue' : 'Start' } : null,
     whoCanWatch: whoCanWatch(course.access, orgName, course.lock?.tag_label ?? null),
     exceptions: rows.filter((r) => r.access !== course.access).map((r) => ({ n: r.n, who: whoCanWatch(r.access, orgName, r.lock?.tag_label ?? null) })),

@@ -1,7 +1,8 @@
 ---
 // A course's head (board D2): "Course · 12 lessons · 1 h 1 min" as the
 // kicker, the title, the summary, and for a visitor the course's bar with
-// "4 of 12 · 38 min left"; then the one accent button, "Continue · Lesson 5"
+// "4 of 12 · 38 min left" and "Lesson 4 finished on Tuesday" (the newest
+// lesson the visitor finished, when the api says when); then the one accent button, "Continue · Lesson 5"
 // with the lesson's title and length under it ("Start · Lesson 1" before the
 // first lesson is finished, nothing once the course is finished, which says
 // Finished instead). Signed out, the line under it says why to sign in. The
@@ -38,6 +39,7 @@ const nextLength = view.next ? clockOf(view.next.row.seconds) : null
           {left && !finished && <> · {left}</>}
           {finished && <span class="cs-finished"> · <Icon name="check" /> Finished</span>}
         </p>
+        {view.lastFinished && <p class="fine cs-last">Lesson {view.lastFinished.n} finished {view.lastFinished.on}</p>}
       </div>
     )}
     {view.next && !finished && (

@@ -17,10 +17,10 @@
 
 import type { Section } from '@backgold/content'
 import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '@backgold/contract/content-api'
-import { renderMarkdown, safeHref, safeSrc } from '@backgold/astro/server'
+import { renderMarkdown, safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
 import { countAndLength, inSentence, lockWordOf, orgNameOf } from '../../../lib/academy'
 import { listOf, text } from '../../../lib/format'
-import { academyReads, signInHref, signOutHref } from '../../../lib/visitor'
+import { academyReads } from '../../../lib/visitor'
 import { pinnedCourseOf, routeOf, type AcademyContext } from '../Course/course'
 
 export interface RailRow {

@@ -11,7 +11,11 @@
 //        Ends the token at the api (best effort), clears the cookie, → 302.
 //   POST /_backgold/progress {course, lesson, completed?, position_seconds?}
 //        From the lesson page, same origin only: forwards to the api with the
-//        visitor's token and answers the api's JSON.
+//        visitor's token. A JSON post (the page's script) is answered with
+//        the api's JSON; a form post (`application/x-www-form-urlencoded`,
+//        the page without its script) carries the same fields as strings
+//        and a `return` path, and is answered 303 to that path once saved
+//        (to the sign-in door, coming back there, when no one is signed in).
 //
 // Every answer here is `no-store`, and the routes answer 404 on a site that
 // does not read first-party (a site key cannot redeem the portal's code).
@@ -227,8 +231,14 @@ function sameOrigin(request: Request): boolean {
 const MAX_PROGRESS_BYTES = 2048
 const SLUG = /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}$/
 
-/** `{course, lesson, completed?, position_seconds?}`, checked; null for anything else, or when neither field to save is there. */
-function progressOf(raw: string): { course: string; lesson: string; body: LessonProgressRequest } | null {
+interface ProgressPost {
+  course: string
+  lesson: string
+  body: LessonProgressRequest
+}
+
+/** A JSON body's `{course, lesson, completed?, position_seconds?}`, checked; null for anything else. */
+function progressOfJson(raw: string): ProgressPost | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
@@ -236,7 +246,27 @@ function progressOf(raw: string): { course: string; lesson: string; body: Lesson
     return null
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
-  const { course, lesson, completed, position_seconds } = parsed as Record<string, unknown>
+  return progressOfFields(parsed as Record<string, unknown>)
+}
+
+/**
+ * A form body's fields as their JSON values: `completed` `true` or `false`,
+ * `position_seconds` a number of seconds; anything else is passed on as the
+ * string it is, which the check then refuses.
+ */
+function progressOfForm(raw: string): { progress: ProgressPost | null; returnPath: string } {
+  const form = new URLSearchParams(raw)
+  const fields: Record<string, unknown> = { course: form.get('course') ?? undefined, lesson: form.get('lesson') ?? undefined }
+  const completed = form.get('completed')
+  if (completed !== null) fields.completed = completed === 'true' ? true : completed === 'false' ? false : completed
+  const position = form.get('position_seconds')
+  if (position !== null) fields.position_seconds = /^\d+(\.\d+)?$/.test(position) ? Number(position) : position
+  return { progress: progressOfFields(fields), returnPath: safeReturnPath(form.get('return')) }
+}
+
+/** `{course, lesson, completed?, position_seconds?}`, checked; null for anything else, or when neither field to save is there. */
+function progressOfFields(fields: Record<string, unknown>): ProgressPost | null {
+  const { course, lesson, completed, position_seconds } = fields
   if (typeof course !== 'string' || !SLUG.test(course) || typeof lesson !== 'string' || !SLUG.test(lesson)) return null
   const body: LessonProgressRequest = {}
   if (completed !== undefined) {
@@ -251,15 +281,29 @@ function progressOf(raw: string): { course: string; lesson: string; body: Lesson
   return { course, lesson, body }
 }
 
+/** A form post (the lesson page without its script), not the script's JSON. */
+function isFormPost(request: Request): boolean {
+  const type = request.headers.get('Content-Type') ?? ''
+  return /^application\/x-www-form-urlencoded\s*(;|$)/i.test(type)
+}
+
+const seeOther = (location: string) => new Response(null, { status: 303, headers: { Location: location, 'Cache-Control': 'no-store' } })
+
 /** `POST /_backgold/progress`: the lesson page saving the visitor's place, through the api. */
 export async function handleProgress(request: Request, deps: VisitorRouteDeps): Promise<Response> {
   const bg = firstPartyOf(deps.bg)
   if (!bg) return notFound()
   if (!sameOrigin(request)) return errorResponse(403, 'CROSS_ORIGIN', 'Progress is saved from the site’s own pages only.')
-  const { token } = readVisitorToken(deps.cookies)
-  if (token === null) return errorResponse(401, 'VISITOR_REQUIRED', 'Sign in to save your place.')
+  const form = isFormPost(request)
   const raw = await request.text()
-  const progress = raw.length <= MAX_PROGRESS_BYTES ? progressOf(raw) : null
+  const fitting = raw.length <= MAX_PROGRESS_BYTES
+  const parsed = form ? (fitting ? progressOfForm(raw) : { progress: null, returnPath: '/' }) : { progress: fitting ? progressOfJson(raw) : null, returnPath: null }
+  const { token } = readVisitorToken(deps.cookies)
+  if (token === null) {
+    if (parsed.returnPath !== null) return seeOther(signInHref(parsed.returnPath))
+    return errorResponse(401, 'VISITOR_REQUIRED', 'Sign in to save your place.')
+  }
+  const progress = parsed.progress
   if (!progress) {
     return errorResponse(400, 'BAD_PROGRESS', 'Send {course, lesson} with completed (true or false) or position_seconds (seconds, 0 or more).')
   }
@@ -268,6 +312,7 @@ export async function handleProgress(request: Request, deps: VisitorRouteDeps): 
     const answer = await bg.client.lessonProgress(progress.course, progress.lesson, progress.body, token, {
       onVisitorRenew: (fresh) => deps.cookies.set(VISITOR_TOKEN_COOKIE, fresh, visitorTokenCookieOptions(url)),
     })
+    if (parsed.returnPath !== null) return seeOther(parsed.returnPath)
     return Response.json(answer, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     if (error instanceof BackgoldApiError) return errorResponse(error.status, error.code, error.message)

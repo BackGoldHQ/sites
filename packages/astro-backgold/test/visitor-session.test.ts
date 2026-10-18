@@ -320,6 +320,58 @@ describe('/_backgold/progress', () => {
   })
 })
 
+describe('/_backgold/progress as a form post', () => {
+  const form = (url: URL, fields: Record<string, string>, headers: Record<string, string> = { 'Sec-Fetch-Site': 'same-origin' }) =>
+    new Request(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...headers }, body: new URLSearchParams(fields).toString() })
+  const fields = { course: 'foundations', lesson: 'one', completed: 'true', return: '/courses/foundations/one' }
+
+  it('forwards the fields as their JSON values and answers 303 to the return path', async () => {
+    const { deps, url } = await routeDeps('/_backgold/progress', { cookies: { bg_visitor: TOKEN } })
+    const res = await handleProgress(form(url, { ...fields, position_seconds: '12' }), deps)
+    expect(res.status).toBe(303)
+    expect(res.headers.get('Location')).toBe('/courses/foundations/one')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    const sent = api.writes.find((w) => w.path.endsWith('/progress'))!
+    expect(sent.headers.get('X-BackGold-Visitor')).toBe(TOKEN)
+    expect(JSON.parse(sent.body!)).toEqual({ completed: true, position_seconds: 12 })
+  })
+
+  it('sends a return path off the site to /', async () => {
+    const { deps, url } = await routeDeps('/_backgold/progress', { cookies: { bg_visitor: TOKEN } })
+    for (const back of ['//evil.example', 'https://evil.example/x', '/a/%2E%2E/b']) {
+      const res = await handleProgress(form(url, { ...fields, return: back }), deps)
+      expect(res.headers.get('Location'), back).toBe('/')
+    }
+  })
+
+  it('refuses a form from another site as the JSON path does', async () => {
+    const { deps, url } = await routeDeps('/_backgold/progress', { cookies: { bg_visitor: TOKEN } })
+    for (const headers of [{ 'Sec-Fetch-Site': 'cross-site' }, { Origin: 'https://evil.example' }, {}] as Array<Record<string, string>>) {
+      const res = await handleProgress(form(url, fields, headers), deps)
+      expect(res.status, JSON.stringify(headers)).toBe(403)
+    }
+    expect(api.writes.filter((w) => w.path.endsWith('/progress'))).toEqual([])
+  })
+
+  it('sends a visitor with no cookie to the sign-in door, coming back to the lesson, and saves nothing', async () => {
+    const { deps, url } = await routeDeps('/_backgold/progress')
+    const res = await handleProgress(form(url, fields), deps)
+    expect(res.status).toBe(303)
+    expect(res.headers.get('Location')).toBe('/_backgold/sign-in?return=%2Fcourses%2Ffoundations%2Fone')
+    expect(api.writes).toEqual([])
+  })
+
+  it('answers 400 for fields it cannot forward', async () => {
+    const { deps, url } = await routeDeps('/_backgold/progress', { cookies: { bg_visitor: TOKEN } })
+    for (const bad of [{ course: 'foundations', lesson: 'one' }, { ...fields, completed: 'yes' }, { ...fields, completed: undefined, position_seconds: '-1' }, { ...fields, course: '../x' }]) {
+      const clean = Object.fromEntries(Object.entries(bad).filter(([, v]) => v !== undefined)) as Record<string, string>
+      const res = await handleProgress(form(url, clean), deps)
+      expect(res.status, JSON.stringify(clean)).toBe(400)
+    }
+    expect(api.writes.filter((w) => w.path.endsWith('/progress'))).toEqual([])
+  })
+})
+
 describe('safeReturnPath', () => {
   it('keeps a path and its query, drops the fragment, and refuses everything else', () => {
     expect(safeReturnPath('/courses/foundations?at=2#notes')).toBe('/courses/foundations?at=2')

@@ -10,8 +10,9 @@
 // template's `entries`, and change the name in its template.json.
 //
 // A lesson (`/<courses base>/<course>/<lesson>`) is not an entry of a type
-// of its own: it is drawn by `course:lesson`, the Lesson section's Player
-// layout (lessonLayoutFor).
+// of its own: it is drawn by the template's `course:lesson` (the kit's is
+// the Lesson section's Player layout), given LessonLayoutProps
+// (lessonLayoutFor).
 
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
 import type { TemplateConfig } from '../../template'
@@ -55,6 +56,6 @@ export const entryLayoutFor = (template: TemplateConfig, key: string) => pick(te
 /** The template's list layout for a list of type `key` (`post` for the built-in types' shared list). */
 export const listLayoutFor = (template: TemplateConfig, key: string) => pick(template, key, 'list', PostList)
 
-/** The template's lesson layout: its own `course:lesson` when it has one, else the kit's. */
+/** The template's lesson layout: the `course:lesson` its entries register, else the kit's. */
 export const lessonLayoutFor = (template: TemplateConfig): AstroComponentFactory =>
   Object.hasOwn(template.entries, 'course:lesson') ? template.entries['course:lesson']! : CourseLesson

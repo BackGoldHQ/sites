@@ -46,9 +46,9 @@
 //
 // A lesson, `/<courses base>/<course>/<lesson>`, is the video read through
 // its course (resolveRoute's `lesson`): drawn by the template's `course:lesson`
-// entry layout when it registers one, else by its video entry layout, given
-// the lesson as `entry` and the api's whole answer (the course, the lessons
-// either side) as `lesson`. The course's list and its own page are the
+// entry layout (lessonLayoutFor; the kit's Lesson player when the template
+// registers none), given the lesson as `entry` and the api's whole answer
+// (the course, the lessons either side) as `lesson`. The course's list and its own page are the
 // course type's list and entry layouts. Every read here is made for the
 // signed-in visitor when there is one (`locals.backgold.visitorReads`), so
 // their locks open; their pages are never cached (the middleware).
@@ -70,7 +70,7 @@ import EntryCard from '../components/EntryCard.astro'
 import EventPage from '../components/EventPage.astro'
 import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
-import { entryLayoutFor, listLayoutFor } from '../components/entries'
+import { entryLayoutFor, lessonLayoutFor, listLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { EVENTS_CALENDAR_PATH, MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, eventsCalendar, typedEventsPage } from '../lib/events'
@@ -232,7 +232,7 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
 }
 const ListLayout = list?.Layout ?? null
 const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(template, resolved.entry.type) : null
-const LessonLayout = resolved.kind === 'lesson' ? (template.entries['course:lesson'] ?? entryLayoutFor(template, resolved.lesson.lesson.type)) : null
+const LessonLayout = resolved.kind === 'lesson' ? lessonLayoutFor(template) : null
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---

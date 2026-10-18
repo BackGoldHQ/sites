@@ -117,3 +117,25 @@ export function inSentence(name: string): string {
   const trimmed = name.trim()
   return /^the\s/i.test(trimmed) ? `the ${trimmed.slice(4)}` : `the ${trimmed}`
 }
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * When a lesson was finished, as D2's course head says it after "Lesson 4
+ * finished": "today", "yesterday", "on Tuesday" within the week, else "on
+ * October 3" (and the year when it is not this one). Days are UTC days: the
+ * site has no zone of its own. Null for a time that does not parse.
+ */
+export function finishedOn(iso: string, now: Date = new Date()): string | null {
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return null
+  const day = (d: Date) => Math.floor(d.getTime() / DAY_MS)
+  const ago = day(now) - day(at)
+  if (ago <= 0) return 'today'
+  if (ago === 1) return 'yesterday'
+  if (ago < 7) return `on ${WEEKDAYS[at.getUTCDay()]}`
+  const date = `${MONTHS[at.getUTCMonth()]} ${at.getUTCDate()}`
+  return at.getUTCFullYear() === now.getUTCFullYear() ? `on ${date}` : `on ${date}, ${at.getUTCFullYear()}`
+}

@@ -10,12 +10,11 @@
 
 import type { Section } from '@backgold/content'
 import type { ContentAccessLevel, CourseProgress, CourseSummary, EntryLock, Visitor } from '@backgold/contract/content-api'
-import { safeHref, safeSrc } from '@backgold/astro/server'
-import type { AstroCookies } from 'astro'
+import { safeHref, safeSrc, signInHref } from '@backgold/astro/server'
 import { rows } from '../../../lib/section'
 import { text } from '../../../lib/format'
 import { isAccess, stateOf } from '../../../lib/academy'
-import { academyReads, signInHref } from '../../../lib/visitor'
+import { academyReads } from '../../../lib/visitor'
 
 /**
  * One row of a Classroom section's data as the bake sends it: flat, like a
@@ -105,7 +104,7 @@ function cardOfSummary(course: CourseSummary): CourseCard {
  */
 export async function classroomOf(
   section: Section,
-  astro: { locals: App.Locals; cookies: AstroCookies; url: URL },
+  astro: { locals: App.Locals; url: URL },
   from: 'rows' | 'read' = 'rows',
 ): Promise<Classroom> {
   const reads = academyReads(astro)
