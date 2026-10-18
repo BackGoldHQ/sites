@@ -1,0 +1,94 @@
+// The Worker that serves the site. The Deploy to Cloudflare button asks for
+// each `vars` value and creates the KV namespace below. Keep the `vars` here
+// filled in: every deploy applies them, replacing what the dashboard holds.
+// The secrets (BACKGOLD_SECRET_KEY, BACKGOLD_WEBHOOK_SECRET; the README's
+// Settings table has them all) are added after the first deploy, with
+// `npx wrangler secret put <NAME>` or in the dashboard (Worker → Settings →
+// Variables and Secrets). A deploy never removes a secret. There is no
+// .dev.vars.example on purpose: the Deploy button would demand a value for
+// every name in it before the Worker exists.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "backgold-academy",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "vars": {
+    "BACKGOLD_SITE_KEY": "",
+    "SITE_URL": "",
+    "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
+  },
+  // No id: Cloudflare creates the namespace on the first deploy.
+  "kv_namespaces": [{ "binding": "BACKGOLD_CACHE" }],
+  "observability": {
+    "enabled": true
+  },
+  // BackGold's own deploys of this template: the Worker `template-academy` in
+  // a Workers for Platforms dispatch namespace, `sites-staging` (the
+  // `deploy-academy-staging` job in this repository's .gitlab-ci.yml, which
+  // runs by itself on a push to main that changed the template, a package,
+  // vendor/, the lockfile or the CI file) and `sites-production` (the manual
+  // `deploy-academy-production` job there, run from the `deploy-production` button), each uploaded with
+  // `wrangler deploy --dispatch-namespace <namespace>`. Nothing above changes
+  // for the Deploy button; a copy of this template can delete this block. An
+  // env inherits main, compatibility, assets and observability from above,
+  // and none of vars, services or kv_namespaces. The two envs differ only in
+  // the api they bind and read, and the cache's KV namespace.
+  "env": {
+    "staging": {
+      // The staging api Worker (givegold-api-staging) answers every
+      // *.backgold.dev host. For a site on this template it hands the request
+      // to the namespace's Worker `template-<template key>`, this one (the key
+      // is `academy`, from template.json), with the site's id in the
+      // X-BackGold-Site header, so one deploy serves every site on the
+      // template. A Worker in a dispatch namespace has no routes, Custom
+      // Domain or workers.dev address: the api's dispatch is its only way in.
+      "name": "template-academy",
+      // First-party reads: the Content API through a service binding to the
+      // staging api's `FirstParty` entrypoint, with no site key. The site is
+      // the one X-BackGold-Site names and links use the request's own origin,
+      // so neither BACKGOLD_SITE_KEY nor SITE_URL is set (wrangler's warning
+      // that both are missing here is expected).
+      "services": [{ "binding": "BACKGOLD_API", "service": "givegold-api-staging", "entrypoint": "FirstParty" }],
+      "vars": {
+        // The origin the client writes its Content API URLs on; the binding
+        // carries them.
+        "BACKGOLD_API_ORIGIN": "https://api.backgold.dev"
+      },
+      // The job replaces the id below with the ACADEMY_STAGING_KV_ID CI
+      // variable before it builds (wrangler reads no environment variable
+      // here), and refuses to deploy when that variable is unset or is not a
+      // namespace id. The namespace is created once, by hand:
+      // `npx wrangler kv namespace create backgold-academy-staging-cache`.
+      "kv_namespaces": [{ "binding": "BACKGOLD_CACHE", "id": "__ACADEMY_STAGING_KV_ID__" }]
+    },
+    "production": {
+      // The production api Worker (backgold-api) answers every *.backgold.com
+      // host and each verified tenant custom domain, and dispatches a site on
+      // this template to the Worker `template-academy` in the namespace
+      // `sites-production`, as the staging api does for `sites-staging`.
+      "name": "template-academy",
+      // First-party reads through a service binding to the production api's
+      // `FirstParty` entrypoint, with no site key, as in staging. The site is
+      // the one X-BackGold-Site names and links use the request's own origin,
+      // so neither BACKGOLD_SITE_KEY nor SITE_URL is set (wrangler's warning
+      // that both are missing here is expected).
+      "services": [{ "binding": "BACKGOLD_API", "service": "backgold-api", "entrypoint": "FirstParty" }],
+      "vars": {
+        // The origin the client writes its Content API URLs on; the binding
+        // carries them.
+        "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
+      },
+      // The `deploy-academy-production` job replaces the id below with the
+      // ACADEMY_PRODUCTION_KV_ID CI variable before it builds, and refuses to
+      // deploy when that variable is unset or is not a namespace id. The
+      // namespace is created once, by hand, and is not staging's:
+      // `npx wrangler kv namespace create backgold-academy-production-cache`.
+      "kv_namespaces": [{ "binding": "BACKGOLD_CACHE", "id": "__ACADEMY_PRODUCTION_KV_ID__" }]
+    }
+  }
+}

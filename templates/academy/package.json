@@ -1,0 +1,48 @@
+{
+  "name": "backgold-template-academy",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "BackGold's academy template: an Astro site on Cloudflare Workers that draws an organization's classroom of video courses, some behind a sign-in, through the Content API.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro build && wrangler dev",
+    "deploy": "astro build && wrangler deploy",
+    "types": "backgold-content types --out src/backgold.d.ts",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.3.3",
+    "@backgold/astro": "workspace:^",
+    "@backgold/content": "workspace:^",
+    "@backgold/contract": "workspace:*",
+    "@backgold/template-kit": "workspace:^",
+    "astro": "^7.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.149.0"
+  },
+  "engines": {
+    "node": ">= 22.12"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BACKGOLD_SITE_KEY": {
+        "description": "The site's **publishable key** (`bg_site_pk_…`). In BackGold, open **Sites → your site → Developer**; step 1 shows it. Safe to show: it only reads what the public site already shows."
+      },
+      "SITE_URL": {
+        "description": "The address this site will live at, for example `https://www.example.org`. Used for canonical links, the sitemap and feeds. If the domain is not connected yet, enter the address you plan to use; you can change it later in `wrangler.jsonc`."
+      },
+      "BACKGOLD_API_ORIGIN": {
+        "description": "Where BackGold's Content API lives. Keep `https://api.backgold.com` unless BackGold tells you otherwise."
+      },
+      "BACKGOLD_CACHE": {
+        "description": "A KV namespace the site keeps its BackGold reads, content version and map geometry in. Cloudflare creates it for you."
+      }
+    }
+  }
+}

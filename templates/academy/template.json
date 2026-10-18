@@ -1,0 +1,459 @@
+{
+  "key": "academy",
+  "name": "Academy",
+  "audience": "learners",
+  "version": 1,
+  "variants": {
+    "Hero": [
+      "cover",
+      "split",
+      "centered",
+      "statement"
+    ],
+    "Classroom": [
+      "grid",
+      "list"
+    ],
+    "Course": [
+      "syllabus",
+      "outline"
+    ],
+    "Lesson": [
+      "player",
+      "reading"
+    ],
+    "About": [
+      "right",
+      "left",
+      "letter",
+      "portrait"
+    ],
+    "Cta": [
+      "card",
+      "banner",
+      "strip",
+      "photo"
+    ],
+    "QuoteStrip": [
+      "row",
+      "single",
+      "carousel",
+      "wall"
+    ],
+    "SignupCapture": [
+      "band",
+      "card",
+      "inline"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "Map": [
+      "directory",
+      "map",
+      "bar"
+    ]
+  },
+  "areas": {
+    "top_banner": "Above the header",
+    "sidebar": "Beside the page, under it on a phone",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": {
+      "entry": "article",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
+      "list": "list"
+    },
+    "video": {
+      "entry": "watch",
+      "list": "grid"
+    },
+    "newsletter": {
+      "entry": "issue",
+      "list": "list"
+    },
+    "course": {
+      "entry": "syllabus",
+      "list": "classroom"
+    }
+  },
+  "chrome": {
+    "header": [
+      "bar",
+      "centered"
+    ],
+    "footer": [
+      "giving",
+      "columns",
+      "closing",
+      "compact"
+    ],
+    "takeoverBanner": true,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [
+      {
+        "slug": "",
+        "title": "Home",
+        "sections": [
+          {
+            "id": "Hero-home",
+            "type": "Hero",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "cover",
+            "copy": {
+              "kicker": "Your Academy",
+              "headline": "Learn to lead where you live.",
+              "subheadline": "Short video lessons from your organization on running meetings, building a team and asking for support. Most courses are free with your email.",
+              "ctaText": "See the courses"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "See the courses",
+                "target": {
+                  "kind": "external",
+                  "url": "/courses"
+                },
+                "url": "/courses"
+              },
+              {
+                "label": "About the Academy",
+                "target": {
+                  "kind": "page",
+                  "slug": "about"
+                },
+                "url": "/about"
+              }
+            ]
+          },
+          {
+            "id": "Classroom-home",
+            "type": "Classroom",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "grid",
+            "copy": {
+              "kicker": "The classroom",
+              "heading": "Every course, at your own pace"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "about",
+        "title": "About",
+        "sections": [
+          {
+            "id": "Hero-about",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "An academy for people who want to lead where they live.",
+              "subheadline": "Short courses on the work of a local organization: meetings, volunteers, money and speaking up. Watch at your own pace; the Academy keeps your place."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "About-about",
+            "type": "About",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "letter",
+            "copy": {
+              "heading": "Why we teach",
+              "body": "Most of what it takes to run a good meeting, keep a team together or ask for support is learned on the job, from someone who did it before you. These courses are that someone, in short lessons you can watch on a lunch break.\n\nSign in with your email and the Academy remembers where you stopped in every course. Some courses are for members; the rest are free with your email."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "QuoteStrip-about",
+            "type": "QuoteStrip",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "single",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Cta-about",
+            "type": "Cta",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "banner",
+            "copy": {
+              "heading": "Start with the first lesson.",
+              "body": "Pick a course and press play. Lesson 1 is usually free."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "See the courses",
+                "target": {
+                  "kind": "external",
+                  "url": "/courses"
+                },
+                "url": "/courses"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "join",
+        "title": "Join",
+        "sections": [
+          {
+            "id": "Cta-join",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "eyebrow": "Membership",
+              "heading": "Members watch every course.",
+              "body": "Some courses are for members of the organization. Membership also brings a vote in how it is run. Pick a membership on the next page.",
+              "donateButtonText": "Become a member"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Become a member",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "contact",
+        "title": "Contact",
+        "sections": [
+          {
+            "id": "Hero-contact",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "Talk to a person.",
+              "subheadline": "Questions about a course, signing in, or teaching a lesson of your own. Someone at the Academy reads every message."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-contact",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Send us a message"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "About-contact",
+            "type": "About",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "left",
+            "copy": {
+              "heading": "Where to find us",
+              "body": "Your office's street address goes here, with the days someone is in.\n\nAdd your mailing address, your phone number and its hours, and an email address for questions about the courses."
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "primary": [
+        {
+          "label": "Courses",
+          "kind": "content_list",
+          "target": {
+            "type_key": "course"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "About",
+          "kind": "page",
+          "target": {
+            "slug": "about"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Join",
+          "kind": "page",
+          "target": {
+            "slug": "join"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": true,
+          "children": []
+        }
+      ],
+      "footer": [
+        {
+          "label": "Academy",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Courses",
+              "kind": "content_list",
+              "target": {
+                "type_key": "course"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "About",
+              "kind": "page",
+              "target": {
+                "slug": "about"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Join",
+              "kind": "page",
+              "target": {
+                "slug": "join"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "The organization",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Home",
+              "kind": "page",
+              "target": {
+                "slug": ""
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Newsletter",
+              "kind": "content_list",
+              "target": {
+                "type_key": "newsletter"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Contact",
+              "kind": "page",
+              "target": {
+                "slug": "contact"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    "sections": [
+      {
+        "key": "the-academy-letter",
+        "label": "The Academy letter",
+        "kind": "pre_footer",
+        "document": [
+          {
+            "id": "SignupCapture-letter",
+            "type": "SignupCapture",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "band",
+            "copy": {
+              "kicker": "The Academy letter",
+              "heading": "One email a month: new lessons, and where to show up."
+            },
+            "media": {},
+            "links": []
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "above_footer",
+            "shows_on": "every_page"
+          }
+        ]
+      }
+    ]
+  }
+}
