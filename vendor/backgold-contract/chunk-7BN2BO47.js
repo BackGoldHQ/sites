@@ -81,6 +81,7 @@ var BACKGOLD_SURFACE_PATHS = [
   "form",
   "poll",
   "frame",
+  "run",
   "privacy",
   "sms-terms"
 ];

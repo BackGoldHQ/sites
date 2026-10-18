@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, C as ContentFieldKind, a as BylineRoleLabel, S as SiteNavItemType, b as SiteNavShowsOn, c as SiteMenuKey, d as SiteSectionKind, e as SiteSectionRole, f as SiteMode, g as SiteApiKeyKind } from './constants-BcK31coy.js';
-export { h as ContentWebhookEvent, i as SITE_KEY_PREFIXES, j as SitePageModuleKind } from './constants-BcK31coy.js';
+import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as SiteMode, h as SiteApiKeyKind } from './constants-B1v7Vsef.js';
+export { i as ContentWebhookEvent, j as SITE_KEY_PREFIXES, k as SitePageModuleKind } from './constants-B1v7Vsef.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -398,7 +398,8 @@ type SectionLayout<T extends SectionLayoutType> = (typeof SECTION_LAYOUTS)[T][nu
  * as `/site`'s `chrome`; a template draws the ones its manifest lists and its
  * own default for the rest, BackGold's hosted renderer draws `bar` and the
  * three footers it has (`giving` is template-drawn: the columns with a donate
- * strip and the sign-up over the legal line).
+ * strip across the top). The Above-the-footer area always draws above the
+ * footer, as board A1 draws it; no footer layout takes it in.
  */
 declare const SITE_CHROME_LAYOUTS: {
     readonly header: readonly ["bar", "centered"];
@@ -556,12 +557,36 @@ interface Entry {
     authors: EntryAuthor[];
     /** Preview only: the entry's state ('draft' or 'published'). */
     status?: string;
+    /**
+     * Who may open the entry (0547): its own rule, or the one it follows (a
+     * lesson follows its course; anything else follows to public). Optional
+     * until the api fills it for every entry.
+     */
+    access?: ContentAccessLevel;
+    /**
+     * True when this reader may not open the entry: the body and the media are
+     * withheld and `lock` says why. A public entry is never locked.
+     */
+    locked?: boolean;
+    lock?: EntryLock | null;
+    /** A video's running time in seconds, when the upload or the author said. */
+    duration_seconds?: number | null;
 }
 interface EntryDetail extends Entry {
+    /** Empty markdown when the entry is locked for this reader. */
     body: {
         markdown: string;
     };
+    /** `{}` when the entry is locked for this reader. */
     fields: Record<string, unknown>;
+}
+/** Why an entry is locked for this reader: the door the site draws. */
+interface EntryLock {
+    reason: Exclude<ContentAccessLevel, 'public'>;
+    /** The tag's name when the reason is `tag`, else null. */
+    tag_label: string | null;
+    /** The org's name, for "Join <org> to watch" and "members of <org>". */
+    org_name: string;
 }
 interface EntriesResponse {
     entries: Entry[];
@@ -572,6 +597,127 @@ interface EntriesResponse {
 interface EntryResponse {
     entry: EntryDetail;
     areas: Areas;
+}
+declare const VISITOR_COOKIE = "bg_visitor";
+declare const VISITOR_HEADER = "X-BackGold-Visitor";
+declare const VISITOR_RENEW_HEADER = "X-BackGold-Visitor-Renew";
+declare const VISITOR_TOKEN_TTL_SECONDS: number;
+declare const VISITOR_RENEW_WINDOW_SECONDS: number;
+/** The path on the site's own host that redeems the portal's hand-off code. */
+declare const VISITOR_RETURN_PATH = "/_backgold/visitor";
+/** The path on the site's own host that signs the visitor out of the site. */
+declare const VISITOR_SIGN_OUT_PATH = "/_backgold/sign-out";
+/** The path on the site's own host that sends the visitor to the portal's door. */
+declare const VISITOR_SIGN_IN_PATH = "/_backgold/sign-in";
+/** The path on the site's own host the lesson page posts progress to. */
+declare const VISITOR_PROGRESS_PATH = "/_backgold/progress";
+interface Visitor {
+    first_name: string | null;
+    email: string;
+    /** An active membership of the site's org. */
+    member: boolean;
+}
+/** GET /visitor: who the token is; `visitor: null` without a valid token. */
+interface VisitorResponse {
+    visitor: Visitor | null;
+}
+/** POST /visitor/exchange { code } (first-party only): the hand-off code the portal minted for this site. */
+interface VisitorExchangeRequest {
+    code: string;
+}
+interface VisitorExchangeResponse {
+    token: string;
+    expires_at: string;
+    visitor: Visitor;
+}
+/** This visitor's place in a course; null for a reader with no visitor. */
+interface CourseProgress {
+    /** Lessons this visitor finished. */
+    completed: number;
+    /** Lessons in the course. */
+    total: number;
+    /** Lessons this visitor can open (a members lesson counts for members only). "Finished" means completed === openable. */
+    openable: number;
+    /** Seconds left in the openable lessons not yet finished; null when no lesson carries a length. */
+    seconds_left: number | null;
+    /** The next unfinished lesson this visitor can open, or null. */
+    next_lesson_slug: string | null;
+}
+interface CourseSummary {
+    id: string;
+    slug: string;
+    title: string;
+    summary: string | null;
+    url: string;
+    hero: {
+        url: string;
+    } | null;
+    publish_at: string | null;
+    updated_at: string;
+    access: ContentAccessLevel;
+    locked: boolean;
+    lock: EntryLock | null;
+    lesson_count: number;
+    /** The lessons' lengths added up; null when none carries one. */
+    total_seconds: number | null;
+    progress: CourseProgress | null;
+}
+interface CourseLesson {
+    id: string;
+    slug: string;
+    title: string;
+    summary: string | null;
+    /** The lesson's address under its course: /<courses base>/<course>/<lesson>. */
+    url: string;
+    hero: {
+        url: string;
+    } | null;
+    duration_seconds: number | null;
+    position: number;
+    access: ContentAccessLevel;
+    locked: boolean;
+    lock: EntryLock | null;
+    /** This visitor finished it; false without a visitor. */
+    completed: boolean;
+    /** Where this visitor stopped, in seconds; null without a visitor or a saved place. */
+    position_seconds: number | null;
+}
+interface CourseDetail extends CourseSummary {
+    body: {
+        markdown: string;
+    };
+    lessons: CourseLesson[];
+}
+interface CoursesResponse {
+    courses: CourseSummary[];
+    next_cursor: string | null;
+    areas: Areas;
+}
+interface CourseResponse {
+    course: CourseDetail;
+    areas: Areas;
+}
+/** GET /courses/:slug/:lesson: the lesson as this reader may see it, in its course. */
+interface LessonResponse {
+    /** The video entry: the teaser when locked (empty body, no media_url, `lock` set), else whole. */
+    lesson: EntryDetail;
+    course: CourseDetail;
+    previous: Pick<CourseLesson, 'slug' | 'title' | 'url'> | null;
+    next: Pick<CourseLesson, 'slug' | 'title' | 'url'> | null;
+    areas: Areas;
+}
+/** POST /courses/:slug/:lesson/progress with a visitor: the upsert. Either field alone is fine. */
+interface LessonProgressRequest {
+    completed?: boolean;
+    position_seconds?: number;
+}
+interface LessonProgressResponse {
+    progress: {
+        completed: boolean;
+        completed_at: string | null;
+        position_seconds: number | null;
+    };
+    course: CourseProgress;
 }
 /**
  * One upcoming event as an EventsList section's data row carries it (the
@@ -737,6 +883,10 @@ interface ContentApiEmbedUrls {
      *  and explore, with the block's legend, count badge and stat tiles (api
      *  routes/form-embed.ts movementMapEmbed). */
     movementMapBlock(pageId: string, blockId: string): string;
+    /** A page's MovementTicker block framed: the live feed of the people
+     *  signing, giving and RSVPing, with its count and stat tiles (api
+     *  routes/form-embed.ts movementTickerEmbed). */
+    movementTickerBlock(pageId: string, blockId: string): string;
     event(orgSlug: string, slug: string): string;
     events(orgSlug: string): string;
     calendar(orgSlug: string): string;
@@ -937,8 +1087,9 @@ declare function signupEmbed(p: Props, ctx: ProjectDocumentContext): SectionEmbe
  * — its capture form, which a partner gets only as the framed embed), Progress (campaignId,
  * fundDesignationId), Leaderboard and SocialFeed (campaignId), TeamGrid
  * (campaignId, pageId — its interest form), MovementTicker (orgSlug,
- * petitionSlug, eventSlug), Blog and Collection (orgSlug, siteId), MovementMap
- * (datasetPath, the same-origin dataset proxy).
+ * petitionSlug, eventSlug, pageId — its frame's address), Blog and
+ * Collection (orgSlug, siteId), MovementMap (datasetPath, the same-origin
+ * dataset proxy).
  *                    A TakeoverBanner reaches the API only inside an area
  *                    item's sections (CONTENT_API_AREA_BLOCKS).
  */
@@ -1615,7 +1766,8 @@ declare const CONTENT_API_BLOCKS: {
         readonly role: "data";
         readonly copy: readonly ["heading"];
         readonly options: readonly ["kinds", "showTotal", "anchorId"];
-        readonly hosted: readonly ["orgSlug", "petitionSlug", "eventSlug"];
+        readonly hosted: readonly ["orgSlug", "petitionSlug", "eventSlug", "pageId"];
+        readonly embed: (p: Props, ctx: ProjectDocumentContext) => SectionEmbed | null;
         readonly data: {
             readonly source: "movement";
             readonly lists: readonly [{
@@ -2101,4 +2253,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

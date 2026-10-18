@@ -14,6 +14,8 @@ declare const CONTENT_FIELD_KINDS: readonly ["short_text", "long_text", "rich_te
 type ContentFieldKind = (typeof CONTENT_FIELD_KINDS)[number];
 declare const CONTENT_REFERENCE_TARGETS: readonly ["event", "campaign", "candidate", "petition", "form", "fund", "seat"];
 type ContentReferenceTarget = (typeof CONTENT_REFERENCE_TARGETS)[number];
+declare const CONTENT_ACCESS_LEVELS: readonly ["public", "signed_in", "members", "tag"];
+type ContentAccessLevel = (typeof CONTENT_ACCESS_LEVELS)[number];
 declare const BYLINE_ROLE_LABELS: readonly ["Written by", "Edited by", "Photos by", "Interview by"];
 type BylineRoleLabel = (typeof BYLINE_ROLE_LABELS)[number];
 declare const CONTENT_TYPE_ICONS: readonly ["doc", "star", "mega", "flag", "users", "cal", "mic", "video", "shield", "tag"];
@@ -32,7 +34,7 @@ declare const SITE_KEY_PREFIXES: {
 };
 declare const CONTENT_WEBHOOK_EVENTS: readonly ["site.published", "content.published", "content.unpublished", "menu.updated", "redirects.updated"];
 type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
-declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "privacy", "sms-terms"];
+declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "run", "privacy", "sms-terms"];
 type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
 
-export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type SiteNavItemType as S, type BylineRoleLabel as a, type SiteNavShowsOn as b, type SiteMenuKey as c, type SiteSectionKind as d, type SiteSectionRole as e, type SiteMode as f, type SiteApiKeyKind as g, type ContentWebhookEvent as h, SITE_KEY_PREFIXES as i, type SitePageModuleKind as j, type BuiltInContentTypeKey as k, type ContentTypeIcon as l, type BuiltInTaxonomyKey as m, type ContentReferenceTarget as n };
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type SiteSectionKind as e, type SiteSectionRole as f, type SiteMode as g, type SiteApiKeyKind as h, type ContentWebhookEvent as i, SITE_KEY_PREFIXES as j, type SitePageModuleKind as k, type BuiltInContentTypeKey as l, type ContentTypeIcon as m, type BuiltInTaxonomyKey as n, type ContentReferenceTarget as o };

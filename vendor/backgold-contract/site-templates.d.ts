@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S as SiteNavItemType } from './constants-BcK31coy.js';
+import { S as SiteNavItemType } from './constants-B1v7Vsef.js';
 
 /**
  * A site template's manifest: the `template.json` at the root of each
@@ -269,8 +269,8 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                         petition: "petition";
                         form: "form";
                         poll: "poll";
-                        signup: "signup";
                         event: "event";
+                        signup: "signup";
                         donation_form: "donation_form";
                         advocacy: "advocacy";
                     }>;
@@ -280,5 +280,25 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 type SiteTemplateManifest = z.infer<typeof siteTemplateManifestSchema>;
+/**
+ * One section a template switch draws differently
+ * (GET /api/orgs/domains/:id/template/switch, PUT /api/orgs/domains/:id/template):
+ * a section of a live page whose layout (`layout`, its `variant`) the new
+ * template does not draw. It takes `fallback`, the new template's default
+ * layout for the type, until the author picks one. A section whose type the
+ * new template does not draw at all has `fallback: null` and `undrawn: true`.
+ * `section_label` is the section's heading, else its type.
+ */
+interface LostLayout {
+    page_id: string;
+    page_name: string;
+    page_slug: string;
+    section_id: string;
+    section_type: string;
+    section_label: string;
+    layout: string;
+    fallback: string | null;
+    undrawn?: true;
+}
 
-export { SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, siteTemplateManifestSchema };
+export { type LostLayout, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, siteTemplateManifestSchema };

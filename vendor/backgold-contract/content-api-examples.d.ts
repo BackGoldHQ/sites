@@ -1,5 +1,5 @@
 import { Areas, AreasResponse, AuthorResponse, AuthorsResponse, EntriesResponse, EntryResponse, EventResponse, EventsResponse, EventsLiveResponse, MenuResponse, PageResponse, PagesResponse, RedirectsResponse, SectionsResponse, SiteResponse, SitemapResponse, TermsResponse, TypesResponse } from './content-api.js';
-import './constants-BcK31coy.js';
+import './constants-B1v7Vsef.js';
 
 /**
  * One example of every headless Content API response, in the contract's own

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { k as BuiltInContentTypeKey, l as ContentTypeIcon, m as BuiltInTaxonomyKey, C as ContentFieldKind, n as ContentReferenceTarget } from './constants-BcK31coy.js';
+import { l as BuiltInContentTypeKey, m as ContentTypeIcon, n as BuiltInTaxonomyKey, C as ContentFieldKind, o as ContentReferenceTarget } from './constants-B1v7Vsef.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
