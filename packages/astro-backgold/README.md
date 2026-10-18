@@ -184,8 +184,8 @@ the `bg_vid` cookie, the signed-in visitor (the `bg_visitor` cookie), the
 site's redirects (301/302/307/308, and 410 for a
 rule with no destination; a rule whose destination is neither an http(s) URL
 nor a path on the site is ignored), then the edge cache. `Astro.locals.backgold` holds
-`{ client, siteId, site, legal, version, siteUrl, variant, visitorId, visitor,
-visitorReads, analytics?, firstParty, setup }`; `analytics` is the `/site` answer's analytics block, when it has one.
+`{ client, siteId, site, orgName, legal, version, siteUrl, variant, visitorId, visitor,
+visitorReads, analytics?, firstParty, setup }`; `orgName` is the `/site` answer's `org_name`, and `analytics` its analytics block, when it has one.
 `siteId` is the site the request renders: `BACKGOLD_SITE_ID`, the dispatched
 request's `X-BackGold-Site`, or with a site key the `/site` answer's
 `site.id`; null while the setup page shows.
