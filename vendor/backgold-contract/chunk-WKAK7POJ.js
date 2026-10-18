@@ -109,6 +109,11 @@ var SECTION_LAYOUTS = {
   Membership: ["card", "tiers", "compare"],
   // The services sections (2026-10-14): the org's meeting types.
   Booking: ["cards", "list"],
+  // The academy (2026-10-18): drawn by templates only, like the services
+  // sections. The classroom's courses, one course's syllabus, and a lesson.
+  Classroom: ["grid", "list"],
+  Course: ["syllabus", "outline"],
+  Lesson: ["player", "reading"],
   Donate: ["form", "story"],
   SignupCapture: ["card", "band", "inline"],
   FormBlock: ["card", "wide"],
@@ -137,7 +142,10 @@ var TEMPLATE_SECTION_TYPES = [
   "Pathways",
   "Portfolio",
   "MediaKit",
-  "Booking"
+  "Booking",
+  "Classroom",
+  "Course",
+  "Lesson"
 ];
 var SITE_CHROME_LAYOUTS = {
   header: ["bar", "centered"],
@@ -1210,6 +1218,52 @@ var CONTENT_API_BLOCKS = {
       ]
     }
   },
+  // The academy (2026-10-18). Classroom lists the org's published courses
+  // (GET /courses' public fields): rows are shared and cached, so they never
+  // carry a visitor's progress; a template overlays that from its own
+  // visitor-scoped read. Course and Lesson draw the course and the lesson the
+  // page's route names (GET /courses/:slug, GET /courses/:slug/:lesson), so
+  // they bake no rows; `courseSlug` pins a course for a page that is not a
+  // course route.
+  Classroom: {
+    role: "data",
+    copy: ["heading", "kicker"],
+    links: [],
+    variant: "layout",
+    options: ["limit", "anchorId"],
+    hosted: ["orgSlug", "siteId"],
+    data: {
+      source: "courses",
+      lists: [
+        {
+          prop: "courses",
+          fields: {
+            slug: "slug",
+            title: "title",
+            summary: "summary",
+            url: "url",
+            hero_url: "hero_url",
+            lesson_count: { prop: "lesson_count", as: "number" },
+            total_seconds: { prop: "total_seconds", as: "number" },
+            access: "access",
+            locked: { prop: "locked", as: "flag" }
+          }
+        }
+      ]
+    }
+  },
+  Course: {
+    role: "data",
+    copy: [],
+    variant: "layout",
+    options: ["courseSlug", "anchorId"]
+  },
+  Lesson: {
+    role: "data",
+    copy: [],
+    variant: "layout",
+    options: ["courseSlug", "anchorId"]
+  },
   // ── compliance ──
   // Each BackGold module's `layout` is how the frame around it is arranged
   // (CONTRACT §2): the module's fields, limits and consent never change with it.
@@ -1354,6 +1408,9 @@ var BLOCK_BAND_INTRINSICS = {
   Portfolio: { role: "plain", bleed: "full" },
   MediaKit: { role: "plain", bleed: "full" },
   Booking: { role: "plain", bleed: "full" },
+  Classroom: { role: "plain", bleed: "full" },
+  Course: { role: "plain", bleed: "full" },
+  Lesson: { role: "plain", bleed: "full" },
   Issues: { role: "panel", bleed: "full" },
   Donate: { role: "panel", bleed: "full" },
   Leaderboard: { role: "panel", bleed: "full" },

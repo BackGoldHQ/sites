@@ -276,6 +276,30 @@ function filesUnder(dir) {
 // ── The kitchen sink: one block of every type, through the api's own projection ──
 
 /** The kitchen sink's membership program's benefits, on every one of its rows. */
+/**
+ * The fixture's one course as GET /courses/:slug answers a reader with no
+ * visitor: its first lesson free, the second for anyone signed in, the third
+ * for members. The kitchen sink's Course and Lesson sections pin it.
+ */
+const ACADEMY_COURSE = (() => {
+  const lesson = (position, slug, title, duration_seconds, access, lock) => ({
+    id: `les_${slug}`, slug, title, summary: null, url: `/courses/reading-the-budget/${slug}`, hero: null, duration_seconds, position,
+    access, locked: lock !== null, lock, completed: false, position_seconds: null,
+  })
+  const org_name = 'Pine Valley for Liberty'
+  return {
+    id: 'crs_budget', slug: 'reading-the-budget', title: 'Reading the Budget', summary: 'Three short lessons on the county budget, line by line.',
+    url: '/courses/reading-the-budget', hero: null, publish_at: '2026-09-01T12:00:00.000Z', updated_at: '2026-09-02T12:00:00.000Z',
+    access: 'signed_in', locked: true, lock: { reason: 'signed_in', tag_label: null, org_name }, lesson_count: 3, total_seconds: 1140, progress: null,
+    body: { markdown: '' },
+    lessons: [
+      lesson(1, 'where-the-money-goes', 'Where the money goes', 300, 'public', null),
+      lesson(2, 'the-levy-line', 'The levy line', 420, 'signed_in', { reason: 'signed_in', tag_label: null, org_name }),
+      lesson(3, 'asking-at-the-hearing', 'Asking at the hearing', 420, 'members', { reason: 'members', tag_label: null, org_name }),
+    ],
+  }
+})()
+
 const MEMBER_BENEFITS = ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts']
 
 /**
@@ -784,6 +808,20 @@ function kitchenSinkDocument() {
           { name: 'Check-in', slug: 'check-in', description: null, duration_minutes: 30, location_kind: 'phone', price_cents: null, url: 'https://app.backgold.com/book/pine-valley/check-in' },
         ],
       }),
+      // The academy (sections batch 4): the classroom baked from the org's
+      // courses; the course and the lesson pinned to the fixture's course,
+      // which the sections read from GET /courses (ACADEMY_COURSE).
+      block('Classroom', {
+        kicker: 'The classroom',
+        heading: 'Two courses, at your own pace',
+        layout: 'grid',
+        courses: [
+          { slug: 'reading-the-budget', title: 'Reading the Budget', summary: 'Three short lessons on the county budget, line by line.', url: '/courses/reading-the-budget', hero_url: asset('budget-cover.webp'), lesson_count: 3, total_seconds: 1140, access: 'signed_in', locked: true },
+          { slug: 'chapter-officers', title: 'Chapter Officers', summary: 'How a chapter elects officers and plans its year.', url: '/courses/chapter-officers', hero_url: null, lesson_count: 5, total_seconds: null, access: 'members', locked: true },
+        ],
+      }),
+      block('Course', { courseSlug: ACADEMY_COURSE.slug, layout: 'syllabus' }),
+      block('Lesson', { courseSlug: ACADEMY_COURSE.slug, layout: 'player' }),
       // Compliance: each frames what BackGold serves, or carries only its heading.
       block('Donate', { heading: 'Chip in', presetAmounts: '10,25,50', donationFormId: 'df_general' }),
       block('FormBlock', { heading: 'Get updates', subtext: 'One email a week.', buttonText: 'Sign up', pageId: 'lp_ks', fields: [{ label: 'Email', type: 'email', required: true }] }),
@@ -1817,6 +1855,31 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
         body = { entries: shown, next_cursor: matching.length > limit ? Buffer.from(key(last)).toString('base64url') : null }
         break
       }
+      case 'courses': {
+        // GET /courses/:slug and /courses/:slug/:lesson, as a reader with no visitor reads them.
+        const course = ACADEMY_COURSE
+        if (parts[1] !== course.slug || parts.length > 3) break
+        if (parts.length === 2) {
+          body = { course, areas: data.entryAreas }
+          break
+        }
+        const at = course.lessons.findIndex((l) => l.slug === parts[2])
+        if (at === -1) break
+        const row = course.lessons[at]
+        const near = (l) => (l ? { slug: l.slug, title: l.title, url: l.url } : null)
+        body = {
+          lesson: {
+            id: row.id, slug: row.slug, type: 'video', title: row.title, summary: null, url: row.url, hero: null, media_url: null,
+            publish_at: course.publish_at, updated_at: course.updated_at, terms: [], authors: [], access: row.access, locked: row.locked,
+            lock: row.lock, duration_seconds: row.duration_seconds, body: { markdown: row.locked ? '' : 'Where each dollar of the levy lands.' }, fields: {},
+          },
+          course,
+          previous: near(course.lessons[at - 1]),
+          next: near(course.lessons[at + 1]),
+          areas: data.entryAreas,
+        }
+        break
+      }
       case 'events': {
         // GET /events/:slug: an upcoming row whose url ends in the slug, with
         // its page's words and BackGold's RSVP frame; any other slug is a 404.
@@ -2670,6 +2733,7 @@ const ROW_TEXT = {
   // The kit layout lists the downloads; talks, appearances and mentions are the speaker and press layouts'.
   MediaKit: (i) => (i.kind === 'asset' ? [i.title] : []),
   Booking: (i) => [i.name],
+  Classroom: (i) => [i.title],
   Countdown: () => [],
   Leaderboard: () => [],
   SocialFeed: () => [],

@@ -367,6 +367,9 @@ declare const SECTION_LAYOUTS: {
     readonly TeamGrid: readonly ["grid", "board", "list"];
     readonly Membership: readonly ["card", "tiers", "compare"];
     readonly Booking: readonly ["cards", "list"];
+    readonly Classroom: readonly ["grid", "list"];
+    readonly Course: readonly ["syllabus", "outline"];
+    readonly Lesson: readonly ["player", "reading"];
     readonly Donate: readonly ["form", "story"];
     readonly SignupCapture: readonly ["card", "band", "inline"];
     readonly FormBlock: readonly ["card", "wide"];
@@ -387,7 +390,7 @@ type SectionLayoutType = keyof typeof SECTION_LAYOUTS;
  * draws each as one plain section (packages/site TemplateSection.tsx), and the
  * builder offers them only on a site drawn by a template or built elsewhere.
  */
-declare const TEMPLATE_SECTION_TYPES: readonly ["QuickDonate", "VoterTools", "SampleBallot", "Scorecard", "Membership", "Faq", "Comparison", "Stories", "ShareKit", "Financials", "Services", "CaseStudies", "Resources", "Pathways", "Portfolio", "MediaKit", "Booking"];
+declare const TEMPLATE_SECTION_TYPES: readonly ["QuickDonate", "VoterTools", "SampleBallot", "Scorecard", "Membership", "Faq", "Comparison", "Stories", "ShareKit", "Financials", "Services", "CaseStudies", "Resources", "Pathways", "Portfolio", "MediaKit", "Booking", "Classroom", "Course", "Lesson"];
 type TemplateSectionType = (typeof TEMPLATE_SECTION_TYPES)[number];
 type SectionLayout<T extends SectionLayoutType> = (typeof SECTION_LAYOUTS)[T][number];
 /**
@@ -2108,6 +2111,52 @@ declare const CONTENT_API_BLOCKS: {
                 };
             }];
         };
+    };
+    readonly Classroom: {
+        readonly role: "data";
+        readonly copy: readonly ["heading", "kicker"];
+        readonly links: readonly [];
+        readonly variant: "layout";
+        readonly options: readonly ["limit", "anchorId"];
+        readonly hosted: readonly ["orgSlug", "siteId"];
+        readonly data: {
+            readonly source: "courses";
+            readonly lists: readonly [{
+                readonly prop: "courses";
+                readonly fields: {
+                    readonly slug: "slug";
+                    readonly title: "title";
+                    readonly summary: "summary";
+                    readonly url: "url";
+                    readonly hero_url: "hero_url";
+                    readonly lesson_count: {
+                        readonly prop: "lesson_count";
+                        readonly as: "number";
+                    };
+                    readonly total_seconds: {
+                        readonly prop: "total_seconds";
+                        readonly as: "number";
+                    };
+                    readonly access: "access";
+                    readonly locked: {
+                        readonly prop: "locked";
+                        readonly as: "flag";
+                    };
+                };
+            }];
+        };
+    };
+    readonly Course: {
+        readonly role: "data";
+        readonly copy: readonly [];
+        readonly variant: "layout";
+        readonly options: readonly ["courseSlug", "anchorId"];
+    };
+    readonly Lesson: {
+        readonly role: "data";
+        readonly copy: readonly [];
+        readonly variant: "layout";
+        readonly options: readonly ["courseSlug", "anchorId"];
     };
     readonly Donate: {
         readonly role: "compliance";
