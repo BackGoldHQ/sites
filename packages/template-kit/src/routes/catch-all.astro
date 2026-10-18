@@ -44,6 +44,15 @@
 // upcoming event. `/events.ics` is every upcoming event as one calendar file
 // and `/events/<slug>.ics` one event's (src/lib/events.ts).
 //
+// A lesson, `/<courses base>/<course>/<lesson>`, is the video read through
+// its course (resolveRoute's `lesson`): drawn by the template's `course:lesson`
+// entry layout when it registers one, else by its video entry layout, given
+// the lesson as `entry` and the api's whole answer (the course, the lessons
+// either side) as `lesson`. The course's list and its own page are the
+// course type's list and entry layouts. Every read here is made for the
+// signed-in visitor when there is one (`locals.backgold.visitorReads`), so
+// their locks open; their pages are never cached (the middleware).
+//
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
 // page, an entry, a list, a term and an event pass their areas to the layout
@@ -75,7 +84,7 @@ const { sections } = template
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503 })
 
-const { client, site, siteUrl } = bg
+const { client, site, siteUrl, visitorReads } = bg
 const siteName = site.name ?? site.domain
 const pathname = Astro.url.pathname
 // `/events.ics` is every upcoming event as one calendar file (the events
@@ -98,7 +107,7 @@ if (calendarSlug !== null) {
   })
 }
 // The URL, not just the path: a list's `?cursor=` asks for a later page.
-let resolved: Resolved = await resolveRoute(client, Astro.url)
+let resolved: Resolved = await resolveRoute(client, Astro.url, visitorReads)
 const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
 if (typed) resolved = { kind: 'page', page: typed.page }
 const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
@@ -146,6 +155,16 @@ switch (resolved.kind) {
     }
     break
   }
+  case 'lesson': {
+    const { lesson, course } = resolved.lesson
+    head = {
+      title: `${lesson.title} · ${course.title}`,
+      description: lesson.summary ?? undefined,
+      image: lesson.hero ? (safeSrc(lesson.hero.url) ?? undefined) : undefined,
+      canonicalPath: pathname,
+    }
+    break
+  }
   case 'author':
     head = {
       title: `${resolved.author.display_name} · ${siteName}`,
@@ -171,7 +190,7 @@ const menuPage: MenuPage | null =
 const areas: Areas | null =
   resolved.kind === 'page'
     ? resolved.page.areas
-    : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term'
+    : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term' || resolved.kind === 'lesson'
       ? resolved.areas
       : event?.areas ?? null
 if (drawsDonateFrame(resolved.kind === 'page' ? resolved.page.sections : [], areas)) {
@@ -180,6 +199,7 @@ if (drawsDonateFrame(resolved.kind === 'page' ? resolved.page.sections : [], are
 }
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
+if (resolved.kind === 'lesson') markReading(Astro.locals, resolved.lesson.lesson.id)
 const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
 const heroOverSplit = sidebar && resolved.kind === 'page' && leadsWithHero(resolved.page.sections)
 const eventMore = event !== null && areaEntriesOf(event.areas, 'sidebar').length > 0
@@ -191,7 +211,7 @@ let list: { Layout: ReturnType<typeof listLayoutFor>; props: ListLayoutProps } |
 if (resolved.kind === 'index' || resolved.kind === 'term') {
   const key = resolved.type === 'blog' ? 'post' : resolved.type.key
   const base = basePath(resolved.base)
-  const whole = resolved.kind === 'index' && resolved.cursor === null ? resolved : await resolveRoute(client, base)
+  const whole = resolved.kind === 'index' && resolved.cursor === null ? resolved : await resolveRoute(client, base, visitorReads)
   const news = resolved.type === 'blog'
   const q = news && resolved.kind === 'index' ? searchQuery(rawQuery) : null
   list = {
@@ -212,6 +232,7 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
 }
 const ListLayout = list?.Layout ?? null
 const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(template, resolved.entry.type) : null
+const LessonLayout = resolved.kind === 'lesson' ? (template.entries['course:lesson'] ?? entryLayoutFor(template, resolved.lesson.lesson.type)) : null
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
@@ -239,6 +260,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
       <div class="layout-main">
         {resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only={heroOverSplit ? 'rest' : undefined} />}
         {resolved.kind === 'entry' && EntryLayout && <EntryLayout entry={resolved.entry} type={resolved.type} areas={areas} />}
+        {resolved.kind === 'lesson' && LessonLayout && <LessonLayout entry={resolved.lesson.lesson} type={undefined} areas={areas} lesson={resolved.lesson} />}
         {ListLayout && list && <ListLayout {...list.props} />}
       </div>
       {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}

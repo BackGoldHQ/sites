@@ -1,0 +1,53 @@
+---
+// The one-time notice after a sign-in (board D4, "Back on the site"): the
+// portal's return leg lands on the page with `#signed-in`, which shows it
+// (`:target`, no script). Close is a link to the page's main region, which
+// takes the fragment away and the notice with it. Drawn only for a signed-in
+// visitor, whose page is theirs alone.
+import type { Visitor } from '@backgold/content'
+
+interface Props {
+  visitor: Visitor
+  /** The host the visitor is on. */
+  domain: string
+}
+
+const { visitor, domain } = Astro.props
+---
+<div class="signed-in-notice" id="signed-in" role="status">
+  <div class="signed-in-notice-inner">
+    <span>You are signed in as <b>{visitor.email}</b> on {domain}.</span>
+    <a class="signed-in-notice-close" href="#main">Close</a>
+  </div>
+</div>
+
+<style>
+  .signed-in-notice {
+    display: none;
+    background: var(--band-tint);
+    color: var(--band-tint-ink);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+  }
+  .signed-in-notice:target {
+    display: block;
+  }
+  .signed-in-notice-inner {
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: 0.75rem var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .signed-in-notice-close {
+    flex-shrink: 0;
+    color: inherit;
+    font-weight: 700;
+  }
+  .signed-in-notice-close:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+</style>
