@@ -1,0 +1,17 @@
+---
+// A lesson's own page (board D3), at `/<courses base>/<course>/<lesson>`:
+// the Lesson section's Player layout drawn from the lesson the route already
+// read for this visitor, its title the page's <h1>.
+import LessonPlayer from '../../sections/Lesson/index.astro'
+import { lessonView } from '../../sections/Lesson/lesson'
+import type { LessonLayoutProps } from '../props'
+import { visitorOf } from '../../../lib/visitor'
+import { academySection } from './section'
+import '../../../styles/entries.css'
+
+type Props = LessonLayoutProps
+
+const { lesson } = Astro.props
+const view = lessonView(lesson, visitorOf(Astro.locals), Astro.url.pathname)
+---
+<LessonPlayer section={academySection('Lesson', 'player', lesson.course.slug)} view={view} lead />

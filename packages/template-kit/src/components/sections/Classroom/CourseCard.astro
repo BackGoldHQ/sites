@@ -1,0 +1,179 @@
+---
+// One course on a Classroom (board D1): its cover with the lesson count on
+// it, the title (the whole card is the link to the course), its line, and
+// under them what this reader needs to know. With a visitor: the bar and
+// "4 of 12 lessons" with "38 min left", "Not started · 52 min" or
+// "Finished"; on a course they cannot open, the lock's word ("For members"),
+// the count and length, and for a members course "Join <org> to start this
+// course.". Signed out: what it takes to watch ("Free with your email",
+// "For members") and "12 lessons · 1 h 1 min". `layout` is the section's:
+// a card in the grid, or a row in the list.
+import Bar from '../Course/Bar.astro'
+import Icon from '../Course/Icon.astro'
+import type { CourseCard } from './classroom'
+import { accessChipOf, countAndLength, leftOf, lengthOf, lessonsOf, lockWordOf, stateOf } from '../../../lib/academy'
+
+interface Props {
+  card: CourseCard
+  signedIn: boolean
+  level: 2 | 3
+  layout: 'grid' | 'list'
+}
+
+const { card, signedIn, level, layout } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const tracked = signedIn && !card.locked && card.progress ? card.progress : null
+const state = tracked ? stateOf(tracked) : null
+const length = lengthOf(card.seconds)
+const chip = signedIn && card.locked && card.lock ? lockWordOf(card.lock) : accessChipOf(card.access, card.lock?.tag_label ?? null)
+const lockedChip = card.access === 'members' || card.access === 'tag'
+const join = signedIn && card.locked && card.lock?.reason === 'members' ? `Join ${card.lock.org_name} to start this course.` : null
+---
+<article class:list={['card', 'cr-card', `cr-${layout}`]}>
+  <div class="cr-cover">
+    {card.cover ? <img src={card.cover} alt="" loading="lazy" decoding="async" /> : <span class="cr-cover-blank" aria-hidden="true"></span>}
+    <span class="chip cr-count">{lessonsOf(card.lessons)}</span>
+  </div>
+  <div class="card-body cr-body">
+    <Title class="card-title cr-title">{card.href ? <a href={card.href}>{card.title}</a> : card.title}</Title>
+    {card.summary && <p class="card-summary cr-summary">{card.summary}</p>}
+    {tracked && state ? (
+      <div class="cr-status">
+        <Bar completed={tracked.completed} total={tracked.total} label={`${card.title}: ${tracked.completed} of ${tracked.total} lessons`} />
+        <p class="cr-figures">
+          <span>{tracked.completed} of {tracked.total} lessons</span>
+          {state === 'finished' && <span class="cr-state cr-done"><Icon name="check" /> Finished</span>}
+          {state === 'new' && <span class="cr-state">{length ? `Not started · ${length}` : 'Not started'}</span>}
+          {state === 'started' && leftOf(tracked) && <span class="cr-state">{leftOf(tracked)}</span>}
+        </p>
+      </div>
+    ) : (
+      <div class="cr-status">
+        <p class="cr-figures cr-access">
+          <span class:list={['cr-chip', lockedChip && 'cr-chip-locked']}>{lockedChip && <Icon name="lock" />} {chip}</span>
+          <span class="cr-state">{countAndLength(card.lessons, card.seconds)}</span>
+        </p>
+        {join && <p class="cr-join">{join}</p>}
+      </div>
+    )}
+  </div>
+</article>
+
+<style>
+  .cr-card {
+    height: 100%;
+  }
+  .cr-cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  }
+  .cr-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cr-cover-blank {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 78% 28%, color-mix(in srgb, var(--accent) 34%, transparent) 0 18%, transparent 19%),
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), color-mix(in srgb, var(--ink) 10%, var(--surface)));
+  }
+  .cr-count {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-ink, #000) 18%, transparent);
+  }
+  .cr-body {
+    flex: 1;
+  }
+  .cr-card .cr-title {
+    font-size: calc(var(--h3) * 0.92);
+  }
+  .cr-card .cr-title a:focus-visible {
+    outline: none;
+  }
+  .cr-card:focus-within {
+    outline: 3px solid var(--link);
+    outline-offset: 3px;
+  }
+  .cr-status {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+  .cr-status > * {
+    margin: 0;
+  }
+  .cr-figures {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .cr-figures > :first-child {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .cr-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .cr-done {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .cr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.625rem;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .cr-access > .cr-chip {
+    font-size: var(--text-xs);
+  }
+  .cr-chip-locked {
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+  }
+  .cr-join {
+    color: var(--ink);
+    font-size: var(--text-sm);
+  }
+  /* The list: the cover at the left, the words beside it. */
+  .cr-list {
+    flex-direction: column;
+  }
+  @media (min-width: 40rem) {
+    .cr-list {
+      display: grid;
+      grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+    }
+    .cr-list .cr-cover {
+      aspect-ratio: auto;
+      min-height: 100%;
+    }
+    .cr-list .cr-cover img {
+      position: absolute;
+      inset: 0;
+    }
+    .cr-list .cr-status {
+      max-width: 28rem;
+    }
+  }
+</style>

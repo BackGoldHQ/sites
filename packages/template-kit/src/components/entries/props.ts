@@ -2,6 +2,7 @@
 // src/routes/catch-all.astro and src/routes/preview.astro.
 
 import type { Areas, ContentTypeSummary, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
+import type { LessonResponse } from '@backgold/contract/content-api'
 import type { Pager, ResolvedType } from '@backgold/astro/server'
 import type { ListFilter } from '../../lib/entries'
 import type { TemplateConfig } from '../../template'
@@ -47,4 +48,9 @@ export interface ListSearch {
   action: string
   /** The search the rows answer (`entries` are its results, with no pager); null when they are the list itself. */
   q: string | null
+}
+
+/** What the lesson layout is given: the lesson at `/<courses base>/<course>/<lesson>`, read for this visitor. */
+export interface LessonLayoutProps {
+  lesson: LessonResponse
 }

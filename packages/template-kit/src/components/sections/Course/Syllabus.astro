@@ -1,0 +1,146 @@
+---
+// A course's lessons in order (board D2's syllabus): each row the lesson's
+// mark (its number, the check when this visitor finished it, the lock when
+// they cannot open it), "Lesson 5: Decide what you want" (the whole row is
+// the link to the lesson; a locked one opens its door), the state in words
+// (Done, Up next, For members with Join to watch, Sign in to watch) and the
+// lesson's length at the right.
+import Icon from './Icon.astro'
+import type { SyllabusRow } from './course'
+import { clockOf, lessonTitle } from '../../../lib/academy'
+
+interface Props {
+  rows: SyllabusRow[]
+}
+
+const { rows } = Astro.props
+---
+<ol class="cs-rows" role="list">
+  {rows.map((row) => (
+    <li class:list={['cs-row', `cs-row-${row.state}`, row.href && 'cs-row-linked']}>
+      <span class="cs-mark" aria-hidden="true">{row.state === 'done' ? <Icon name="check" /> : row.state === 'locked' ? <Icon name="lock" /> : row.n}</span>
+      <span class="cs-name">{row.href ? <a href={row.href}>{lessonTitle(row.n, row.name)}</a> : lessonTitle(row.n, row.name)}</span>
+      <span class="cs-word">
+        {row.state === 'done' && 'Done'}
+        {row.state === 'next' && 'Up next'}
+        {row.state === 'locked' && (
+          <>
+            {row.lockWord}
+            {row.lock?.reason === 'members' && <span class="cs-join">Join to watch</span>}
+          </>
+        )}
+      </span>
+      {clockOf(row.seconds) && <span class="cs-len">{clockOf(row.seconds)}</span>}
+    </li>
+  ))}
+</ol>
+
+<style>
+  .cs-rows {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line);
+  }
+  .cs-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    grid-template-areas: 'mark name len' 'mark word word';
+    gap: 0.125rem 0.875rem;
+    align-items: center;
+    padding: 0.875rem 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .cs-row-linked:hover {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  .cs-mark {
+    grid-area: mark;
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .cs-row-done .cs-mark {
+    border-color: var(--button);
+    background: var(--button);
+    color: var(--button-ink);
+  }
+  .cs-row-next .cs-mark {
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+  .cs-name {
+    grid-area: name;
+    min-width: 0;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .cs-name a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .cs-name a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .cs-name a:focus-visible {
+    outline: none;
+  }
+  .cs-row-linked:focus-within {
+    outline: 3px solid var(--link);
+    outline-offset: -3px;
+  }
+  .cs-row-linked:hover .cs-name a {
+    text-decoration: underline;
+  }
+  .cs-word {
+    grid-area: word;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .cs-word:empty {
+    display: none;
+  }
+  .cs-row-next .cs-word,
+  .cs-row-done .cs-word {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .cs-join {
+    color: var(--link);
+    font-weight: 700;
+  }
+  .cs-len {
+    grid-area: len;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (min-width: 48rem) {
+    .cs-row {
+      grid-template-columns: 2rem minmax(0, 1fr) auto 3.5rem;
+      grid-template-areas: 'mark name word len';
+      gap: 0 1rem;
+      padding: 0.875rem 0.75rem;
+    }
+    .cs-word {
+      justify-content: flex-end;
+    }
+    .cs-len {
+      text-align: right;
+    }
+  }
+</style>
