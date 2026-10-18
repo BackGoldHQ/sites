@@ -1298,8 +1298,8 @@ triggers its rebuild here instead.
 ### Typed fields
 
 `entry(type, slug)` returns `fields` as a loose record until the client knows
-the type's fields. The seven built-in types (`post`, `podcast`, `video`,
-`plank`, `team_member`, `open_role`, `newsletter`) are typed already. For the
+the type's fields. The eight built-in types (`post`, `podcast`, `video`,
+`plank`, `team_member`, `open_role`, `newsletter`, `course`) are typed already. For the
 organization's own types, the `backgold-content` command reads `GET /types`
 and writes a TypeScript file:
 

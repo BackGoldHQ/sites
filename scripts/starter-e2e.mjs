@@ -1640,6 +1640,7 @@ function fixtureData(ex, kitchenSections) {
   return {
     legal,
     site,
+    orgName: ex.SiteResponse.org_name,
     types,
     geo,
     events: { upcoming, calendar, types: eventTypes, live },
@@ -1946,7 +1947,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     let body
     switch (parts[0]) {
       case 'site':
-        body = { site: data.site, legal: data.legal, version: state.version }
+        body = { site: data.site, legal: data.legal, version: state.version, org_name: data.orgName }
         break
       case 'menus':
         body = data.menus[parts[1]]

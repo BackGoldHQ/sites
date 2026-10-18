@@ -460,8 +460,8 @@ exported: `VISITOR_COOKIE` (`bg_visitor`), `VISITOR_HEADER`,
 
 ## Typed fields
 
-The seven built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
-`open_role`, `newsletter`) are typed out of the box. Any other type's `fields` are
+The eight built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
+`open_role`, `newsletter`, `course`) are typed out of the box. Any other type's `fields` are
 `Record<string, unknown>` until the client knows the type. The
 `backgold-content types` command reads `/types` and writes a file that
 declares each type's fields:

@@ -18,7 +18,7 @@
 import type { Section } from '@backgold/content'
 import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '@backgold/contract/content-api'
 import { renderMarkdown, safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
-import { countAndLength, inSentence, lockWordOf, orgNameOf } from '../../../lib/academy'
+import { countAndLength, inSentence, lockWordOf } from '../../../lib/academy'
 import { listOf, text } from '../../../lib/format'
 import { academyReads } from '../../../lib/visitor'
 import { pinnedCourseOf, routeOf, type AcademyContext } from '../Course/course'
@@ -97,11 +97,11 @@ function newsletterOf(areas: Areas | null | undefined): string {
   return 'the newsletter'
 }
 
-function doorOf(lock: EntryLock, n: number, visitor: Visitor | null, path: string, areas: Areas | null | undefined): Door {
+function doorOf(lock: EntryLock, n: number, visitor: Visitor | null, path: string, areas: Areas | null | undefined, orgName: string | null): Door {
   if (lock.reason === 'members') {
-    return { kind: 'join', n, orgName: lock.org_name || null, name: visitor ? (visitor.first_name ?? visitor.email) : null, signOut: signOutHref(signInHref(path)), signIn: signInHref(path) }
+    return { kind: 'join', n, orgName, name: visitor ? (visitor.first_name ?? visitor.email) : null, signOut: signOutHref(signInHref(path)), signIn: signInHref(path) }
   }
-  if (lock.reason === 'tag') return { kind: 'tag', tag: lock.tag_label, orgName: lock.org_name || null }
+  if (lock.reason === 'tag') return { kind: 'tag', tag: lock.tag_label, orgName }
   return { kind: 'sign-in', returnPath: path, newsletter: newsletterOf(areas) }
 }
 
@@ -120,8 +120,8 @@ const neighborOf = (lessons: CourseLesson[], slug: string | undefined): Neighbor
   return i === -1 ? null : { n: i + 1, name: lessons[i]!.title, href: safeHref(lessons[i]!.url) }
 }
 
-/** The lesson as the layouts draw it, for this visitor (null signed out) and this page's address. */
-export function lessonView(answer: LessonResponse, visitor: Visitor | null, path: string): LessonView {
+/** The lesson as the layouts draw it, for this visitor (null signed out), this page's address and the organization's name. */
+export function lessonView(answer: LessonResponse, visitor: Visitor | null, path: string, orgName: string | null): LessonView {
   const { lesson, course } = answer
   const lessons = [...course.lessons].sort((a, b) => a.position - b.position)
   const index = lessons.findIndex((l) => l.slug === lesson.slug)
@@ -135,7 +135,6 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
   const position = visitor && !completed ? (row?.position_seconds ?? null) : null
   const free = lessons.flatMap((l, i) => (l.access === 'public' ? [String(i + 1)] : []))
   const notes = !locked && lesson.body.markdown.trim() ? renderMarkdown(lesson.body.markdown) : ''
-  const orgName = orgNameOf([lock, course.lock, ...lessons.map((l) => l.lock)])
   return {
     courseSlug: course.slug,
     slug: lesson.slug,
@@ -150,7 +149,7 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
     cover,
     locked,
     lockWord: locked && lock ? lockWordOf(lock) : null,
-    door: locked && lock ? doorOf({ ...lock, org_name: lock.org_name || orgName || '' }, n, visitor, path, answer.areas) : null,
+    door: locked && lock ? doorOf(lock, n, visitor, path, answer.areas, orgName) : null,
     visitor,
     completed,
     resumeAt: position !== null && position > 0 ? position : null,
@@ -191,5 +190,5 @@ export async function lessonOf(section: Section, astro: AcademyContext): Promise
   }
   if (!lessonSlug) return null
   const answer = await reads.lesson(courseSlug, lessonSlug)
-  return answer ? lessonView(answer, reads.visitor, astro.url.pathname) : null
+  return answer ? lessonView(answer, reads.visitor, astro.url.pathname, reads.orgName) : null
 }

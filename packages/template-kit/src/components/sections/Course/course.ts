@@ -12,7 +12,7 @@
 import type { Section } from '@backgold/content'
 import type { ContentAccessLevel, CourseDetail, CourseLesson, CourseProgress, EntryLock, Visitor } from '@backgold/contract/content-api'
 import { safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
-import { COURSE_TYPE_KEY, finishedOn, lockWordOf, orgNameOf, whoCanWatch } from '../../../lib/academy'
+import { COURSE_TYPE_KEY, finishedOn, lockWordOf, whoCanWatch } from '../../../lib/academy'
 import { SLUG, academyReads, type AcademyReads } from '../../../lib/visitor'
 
 export interface AcademyContext {
@@ -97,17 +97,12 @@ function rowOf(lesson: CourseLesson, n: number, progress: CourseProgress | null)
   }
 }
 
-/**
- * The newest `completed_at` among the visitor's finished lessons. The field
- * is read where the api's answer carries it: a contract without it on
- * CourseLesson leaves the line out.
- */
+/** The newest `completed_at` among the visitor's finished lessons. */
 function lastFinishedOf(lessons: CourseLesson[], visitor: Visitor | null): { n: number; on: string } | null {
   if (!visitor) return null
   let best: { n: number; at: number } | null = null
   for (const [i, lesson] of lessons.entries()) {
-    const raw = (lesson as CourseLesson & { completed_at?: string | null }).completed_at
-    const at = lesson.completed && typeof raw === 'string' ? Date.parse(raw) : NaN
+    const at = lesson.completed && lesson.completed_at !== null ? Date.parse(lesson.completed_at) : NaN
     if (!Number.isNaN(at) && (best === null || at > best.at)) best = { n: i + 1, at }
   }
   if (best === null) return null
@@ -115,12 +110,11 @@ function lastFinishedOf(lessons: CourseLesson[], visitor: Visitor | null): { n: 
   return on ? { n: best.n, on } : null
 }
 
-/** The course as the layouts draw it, for this visitor (null signed out) and this page's address. */
-export function courseView(course: CourseDetail, visitor: Visitor | null, path: string): CourseView {
+/** The course as the layouts draw it, for this visitor (null signed out), this page's address and the organization's name. */
+export function courseView(course: CourseDetail, visitor: Visitor | null, path: string, orgName: string | null): CourseView {
   const lessons = [...course.lessons].sort((a, b) => a.position - b.position)
   const progress = visitor ? course.progress : null
   const rows = lessons.map((lesson, i) => rowOf(lesson, i + 1, progress))
-  const orgName = orgNameOf([course.lock, ...lessons.map((l) => l.lock)])
   const nextRow = progress ? rows.find((r) => r.slug === progress.next_lesson_slug) : rows[0]
   const coursesPath = course.url.replace(/\/[^/]+\/?$/, '')
   return {
@@ -148,5 +142,5 @@ export async function courseOf(section: Section, astro: AcademyContext, reads: A
   const slug = pinnedCourseOf(section) ?? (await routeOf(astro))?.course ?? null
   if (!slug) return null
   const found = await reads.course(slug)
-  return found ? courseView(found.course, reads.visitor, astro.url.pathname) : null
+  return found ? courseView(found.course, reads.visitor, astro.url.pathname, reads.orgName) : null
 }

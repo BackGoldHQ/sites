@@ -53,6 +53,8 @@ export interface Classroom {
   heading: string | null
   cards: CourseCard[]
   visitor: Visitor | null
+  /** The organization's name, for a members card's "Join <org> to start this course." */
+  orgName: string | null
   /** "You have finished 1 of 6 courses and have 3 under way.", with a visitor and a course. */
   summary: { finished: number; total: number; started: number } | null
   /** The sign-in door, back to this page; signed out only. */
@@ -129,6 +131,7 @@ export async function classroomOf(
     heading: text(section.copy.heading),
     cards,
     visitor,
+    orgName: reads.orgName,
     summary:
       visitor && cards.length > 0
         ? { finished: states.filter((s) => s === 'finished').length, total: cards.length, started: states.filter((s) => s === 'started').length }

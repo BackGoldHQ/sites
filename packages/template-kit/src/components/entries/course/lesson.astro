@@ -6,13 +6,13 @@
 import LessonPlayer from '../../sections/Lesson/index.astro'
 import { lessonView } from '../../sections/Lesson/lesson'
 import type { LessonLayoutProps } from '../props'
-import { visitorOf } from '../../../lib/visitor'
+import { orgNameOf, visitorOf } from '../../../lib/visitor'
 import { academySection } from './section'
 import '../../../styles/entries.css'
 
 type Props = LessonLayoutProps
 
 const { lesson } = Astro.props
-const view = lessonView(lesson, visitorOf(Astro.locals), Astro.url.pathname)
+const view = lessonView(lesson, visitorOf(Astro.locals), Astro.url.pathname, orgNameOf(Astro.locals))
 ---
 <LessonPlayer section={academySection('Lesson', 'player', lesson.course.slug)} view={view} lead />

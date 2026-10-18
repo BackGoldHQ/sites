@@ -37,7 +37,7 @@ const plural = (n: number) => (n === 1 ? 'course' : 'courses')
     {cards.length > 0 ? (
       <ul class:list={['cr-cards', `cr-cards-${layout}`]} role="list">
         {cards.map((card) => (
-          <li><CourseCard card={card} signedIn={visitor !== null} level={heading ? 3 : 2} layout={layout} /></li>
+          <li><CourseCard card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={heading ? 3 : 2} layout={layout} /></li>
         ))}
       </ul>
     ) : (

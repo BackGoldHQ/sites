@@ -65,12 +65,6 @@ export function leftOf(progress: CourseProgress): string | null {
   return length ? `${length} left` : null
 }
 
-/** The organization's name, from the first lock that carries it (the Content API names it on a lock only). */
-export function orgNameOf(locks: (EntryLock | null | undefined)[]): string | null {
-  for (const lock of locks) if (lock?.org_name) return lock.org_name
-  return null
-}
-
 /**
  * Who can watch, as D2's About this course words it: "Anyone", "Anyone
  * signed in with their email", "Members of <org>", "People in <tag>".

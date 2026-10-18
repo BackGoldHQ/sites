@@ -11,7 +11,9 @@
 // the same middleware; undefined signed out) to the client's `courses`,
 // `course` and `lesson`: a signed-in visitor's read is theirs and never
 // stored, anyone else's is the public, cached read. The kit never reads the
-// token itself.
+// token itself. `orgNameOf` is the organization's name from the site's
+// `/site` answer (`locals.backgold.orgName`), for the doors and "Members of
+// <org>".
 
 import type { CourseResponse, CoursesResponse, LessonResponse, Visitor } from '@backgold/content'
 
@@ -20,8 +22,14 @@ export function visitorOf(locals: App.Locals): Visitor | null {
   return locals.backgold.visitor
 }
 
+/** The organization's name, or null while the site is not configured. */
+export function orgNameOf(locals: App.Locals): string | null {
+  return locals.backgold.orgName || null
+}
+
 export interface AcademyReads {
   visitor: Visitor | null
+  orgName: string | null
   courses: () => Promise<CoursesResponse | null>
   course: (slug: string) => Promise<CourseResponse | null>
   lesson: (courseSlug: string, lessonSlug: string) => Promise<LessonResponse | null>
@@ -34,10 +42,11 @@ export const SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,120}$/
 export function academyReads(astro: { locals: App.Locals }): AcademyReads {
   const bg = astro.locals.backgold
   const none = async () => null
-  if (bg.setup !== null) return { visitor: null, courses: none, course: none, lesson: none }
+  if (bg.setup !== null) return { visitor: null, orgName: null, courses: none, course: none, lesson: none }
   const { client, visitorReads } = bg
   return {
     visitor: bg.visitor,
+    orgName: bg.orgName || null,
     courses: () => client.courses(visitorReads),
     course: (slug) => (SLUG.test(slug) ? client.course(slug, visitorReads) : none()),
     lesson: (courseSlug, lessonSlug) => (SLUG.test(courseSlug) && SLUG.test(lessonSlug) ? client.lesson(courseSlug, lessonSlug, visitorReads) : none()),

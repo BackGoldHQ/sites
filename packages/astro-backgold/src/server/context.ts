@@ -20,6 +20,8 @@ export interface BackgoldReady {
    */
   siteId: string
   site: SiteResponse['site']
+  /** The organization's name (the `/site` answer's `org_name`), for "Members of <org>". */
+  orgName: string
   /** The legal line every HTML page must show. */
   legal: ContentApiLegal
   /** The content version this request renders. */
@@ -60,6 +62,7 @@ export interface BackgoldSetup {
   client: null
   siteId: null
   site: null
+  orgName: null
   legal: null
   version: null
   siteUrl: string
@@ -182,18 +185,19 @@ export async function backgoldFor(env: BackgoldEnv, context: BackgoldContextLike
   let bg: BackgoldLocals
   if (missing.length > 0) {
     const firstParty = text(env.BACKGOLD_SITE_ID) !== undefined || isDispatched(env)
-    bg = { client: null, siteId: null, site: null, legal: null, version: null, siteUrl, variant: '', visitorId, visitor: null, visitorReads: undefined, firstParty, setup: { missing } }
+    bg = { client: null, siteId: null, site: null, orgName: null, legal: null, version: null, siteUrl, variant: '', visitorId, visitor: null, visitorReads: undefined, firstParty, setup: { missing } }
   } else {
     if (namesNoSite(env, context.request?.headers)) throw new Error('No site: this dispatched request carries no well-formed X-BackGold-Site')
     const firstParty = firstPartyOf(env, context.request?.headers)
     const client = siteClient(env, text(env.BACKGOLD_API_ORIGIN) ?? DEFAULT_API_ORIGIN, firstParty)
     const answer = await client.site()
-    const { site, legal, version } = answer
+    const { site, legal, version, org_name: orgName } = answer
     const siteId = firstParty?.siteId ?? site.id
     bg = {
       client,
       siteId,
       site,
+      orgName,
       legal,
       version: client.version() ?? version,
       siteUrl,

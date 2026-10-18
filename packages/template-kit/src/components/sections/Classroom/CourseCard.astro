@@ -16,18 +16,20 @@ import { accessChipOf, countAndLength, leftOf, lengthOf, lessonsOf, lockWordOf, 
 interface Props {
   card: CourseCard
   signedIn: boolean
+  /** The organization's name (the site's), for the members card's line. */
+  orgName: string | null
   level: 2 | 3
   layout: 'grid' | 'list'
 }
 
-const { card, signedIn, level, layout } = Astro.props
+const { card, signedIn, orgName, level, layout } = Astro.props
 const Title = level === 2 ? 'h2' : 'h3'
 const tracked = signedIn && !card.locked && card.progress ? card.progress : null
 const state = tracked ? stateOf(tracked) : null
 const length = lengthOf(card.seconds)
 const chip = signedIn && card.locked && card.lock ? lockWordOf(card.lock) : accessChipOf(card.access, card.lock?.tag_label ?? null)
 const lockedChip = card.access === 'members' || card.access === 'tag'
-const join = signedIn && card.locked && card.lock?.reason === 'members' ? `Join ${card.lock.org_name} to start this course.` : null
+const join = signedIn && card.locked && card.lock?.reason === 'members' ? (orgName ? `Join ${orgName} to start this course.` : 'Join to start this course.') : null
 ---
 <article class:list={['card', 'cr-card', `cr-${layout}`]}>
   <div class="cr-cover">
