@@ -1,7 +1,33 @@
-import { BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-H26EJR32.js';
+import { OPERATOR_TAG_CATEGORIES, TAG_CATEGORIES, CONTENT_ACCESS_LEVELS, BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-O4RPYQ2R.js';
 import { z } from 'zod';
 import MarkdownIt from 'markdown-it';
 
+var TAG_NAME_MAX = 80;
+var TAG_DESCRIPTION_MAX = 280;
+var tagNameSchema = z.string().trim().min(1, "Name the tag").max(TAG_NAME_MAX, `A tag name is at most ${TAG_NAME_MAX} characters`).refine((s) => !s.includes(","), "A tag name cannot contain a comma");
+var operatorCategorySchema = z.enum(
+  OPERATOR_TAG_CATEGORIES
+);
+z.enum(TAG_CATEGORIES);
+var descriptionSchema = z.string().trim().max(TAG_DESCRIPTION_MAX, `A description is at most ${TAG_DESCRIPTION_MAX} characters`).transform((s) => s.length === 0 ? null : s);
+z.object({
+  name: tagNameSchema,
+  category: operatorCategorySchema,
+  description: descriptionSchema.nullish()
+});
+z.object({
+  name: tagNameSchema.optional(),
+  category: operatorCategorySchema.optional(),
+  description: descriptionSchema.nullish()
+}).refine(
+  (v) => v.name !== void 0 || v.category !== void 0 || v.description !== void 0,
+  "Nothing to change"
+);
+z.object({
+  into_id: z.string().min(1).max(64)
+});
+
+// src/content.ts
 var CONTENT_KINDS = ["article", "podcast", "vlog"];
 var CONTENT_STATUSES = ["draft", "published"];
 var CONTENT_DIRECTIVE_LABELS = {
@@ -25,7 +51,9 @@ var CONTENT_LIMITS = {
   /** How many terms one entry may carry. */
   TERMS_MAX: 100,
   /** How many bylines one entry may carry. */
-  BYLINES_MAX: 20
+  BYLINES_MAX: 20,
+  /** A video's running time cap, in seconds (24 hours). */
+  DURATION_SECONDS_MAX: 86400
 };
 var BLOG_URL_BASE_LEGACY = "blog";
 var RESERVED_ORG_HOST_PATHS = [
@@ -33,10 +61,12 @@ var RESERVED_ORG_HOST_PATHS = [
   "store",
   "donate",
   "events",
+  "volunteer",
   "form",
   "poll",
   "petition",
   "frame",
+  "run",
   "join",
   "member",
   "rss",
@@ -115,17 +145,52 @@ var contentShape = {
       byline_id: z.string().min(1).max(CONTENT_LIMITS.REF_ID_MAX),
       role_label: z.enum(BYLINE_ROLE_LABELS).default("Written by")
     })
-  ).max(CONTENT_LIMITS.BYLINES_MAX).optional()
+  ).max(CONTENT_LIMITS.BYLINES_MAX).optional(),
+  /**
+   * Who may open the entry (CONTENT_ACCESS_LEVELS, 0547); null = follows (a
+   * lesson follows its course, any other entry is public). Absent on create =
+   * the type's default_access.
+   */
+  access: z.enum(CONTENT_ACCESS_LEVELS).nullable().optional(),
+  /**
+   * The tag a reader must carry when `access` is 'tag', else null. The route
+   * proves the tag is in the org's vocabulary and stores its current name.
+   */
+  access_tag: tagNameSchema.nullable().optional(),
+  /** A video's running time in whole seconds; null when unknown. */
+  duration_seconds: z.number().int().min(0).max(CONTENT_LIMITS.DURATION_SECONDS_MAX).nullable().optional()
 };
 var contentBaseSchema = z.strictObject(contentShape);
+function refineAccess(data, ctx) {
+  const { access, access_tag } = data;
+  if (access === void 0) {
+    if (access_tag !== void 0) {
+      ctx.addIssue({ code: "custom", message: "Send access with access_tag", path: ["access"] });
+    }
+    return;
+  }
+  if (access === "tag" && access_tag == null) {
+    ctx.addIssue({ code: "custom", message: "Pick the tag a reader must carry", path: ["access_tag"] });
+  } else if (access !== "tag" && access_tag != null) {
+    ctx.addIssue({ code: "custom", message: "A tag is named only when access is tag", path: ["access_tag"] });
+  }
+}
 contentBaseSchema.extend({ kind: z.enum(CONTENT_KINDS).optional() }).superRefine((data, ctx) => {
   if (!data.kind && !data.content_type_id) {
     ctx.addIssue({ code: "custom", message: "kind or content_type_id is required", path: ["kind"] });
   }
   refineMedia(data, ctx, false);
+  refineAccess(data, ctx);
 });
-contentBaseSchema.partial().extend({ status: z.enum(CONTENT_STATUSES).optional() }).superRefine((data, ctx) => refineMedia(data, ctx, true));
+contentBaseSchema.partial().extend({ status: z.enum(CONTENT_STATUSES).optional() }).superRefine((data, ctx) => {
+  refineMedia(data, ctx, true);
+  refineAccess(data, ctx);
+});
 contentBaseSchema.pick({ title: true, summary: true, body_md: true, media_url: true, data: true }).partial();
+var COURSE_LESSONS_MAX = 200;
+z.strictObject({
+  ids: z.array(z.string().min(1).max(CONTENT_LIMITS.REF_ID_MAX)).max(COURSE_LESSONS_MAX).refine((ids) => new Set(ids).size === ids.length, { message: "A lesson is listed once" })
+});
 z.strictObject({
   publish_at: z.string().datetime({ offset: true }).nullable().optional()
 });
@@ -264,7 +329,8 @@ var BUILT_IN_CONTENT_TYPES = [
   { key: "plank", singular_label: "Plank", plural_label: "Platform planks", icon: "flag", routable: false, url_base: null, ordered: true, position: 3, kind: "article" },
   { key: "team_member", singular_label: "Team member", plural_label: "Team", icon: "users", routable: false, url_base: null, ordered: true, position: 4, kind: "article" },
   { key: "open_role", singular_label: "Open role", plural_label: "Open roles", icon: "star", routable: false, url_base: null, ordered: true, position: 5, kind: "article" },
-  { key: "newsletter", singular_label: "Newsletter", plural_label: "Newsletters", icon: "mega", routable: true, url_base: "newsletters", ordered: false, position: 6, kind: "article" }
+  { key: "newsletter", singular_label: "Newsletter", plural_label: "Newsletters", icon: "mega", routable: true, url_base: "newsletters", ordered: false, position: 6, kind: "article" },
+  { key: "course", singular_label: "Course", plural_label: "Courses", icon: "star", routable: true, url_base: "courses", ordered: false, position: 7, kind: "article" }
 ];
 function isBlogContentType(type) {
   return !!type.built_in && BLOG_CONTENT_TYPE_KEYS.includes(type.key);
@@ -353,7 +419,8 @@ var CONTENT_TYPE_RESERVED_URL_BASES = [
     "health",
     "campaigns",
     "preview",
-    "newsletters"
+    "newsletters",
+    "courses"
   ])
 ];
 var KEY_RE = /^[a-z][a-z0-9_]*$/;
@@ -393,7 +460,9 @@ var contentTypeUpdateSchema = z.strictObject({
   plural_label: label.optional(),
   icon: z.enum(CONTENT_TYPE_ICONS).optional(),
   routable: z.boolean().optional(),
-  url_base: urlBaseUpdate.nullable().optional()
+  url_base: urlBaseUpdate.nullable().optional(),
+  /** The access rule a new entry of the type starts with (0547); null = new entries follow. */
+  default_access: z.enum(CONTENT_ACCESS_LEVELS).nullable().optional()
 });
 function isContentReferenceTarget(value) {
   if (CONTENT_REFERENCE_TARGETS.includes(value)) return true;

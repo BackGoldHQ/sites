@@ -1,0 +1,120 @@
+---
+// A locked lesson's door (board D3, "The door, three states"), under the
+// teaser and the lesson's head. The lock's reason picks it (lesson.ts):
+//   sign-in  "Sign in with your email to watch": a real form to the site's
+//            sign-in door, coming back here and naming the lesson
+//            ("Lesson 3: Read a budget, in Foundations"), with the newsletter box
+//            unticked; ticked, it rides along as `newsletter=1`.
+//   join     "Join to watch": See how to join (the site's Join page, which
+//            says what joining costs), and for a member under another email
+//            the way to sign out and back in.
+//   tag      "This lesson is for <tag> members": nobody can give themselves
+//            a tag, so it says to ask and links the Contact page.
+import { VISITOR_SIGN_IN_PATH } from '@backgold/contract/content-api'
+import type { Door } from './lesson'
+import { CONTACT_PATH, JOIN_PATH } from '../../../lib/academy'
+import { idFor } from '../SampleBallot/ballot'
+import type { Section } from '@backgold/content'
+
+interface Props {
+  door: Door
+  section: Section
+  level: 2 | 3
+}
+
+const { door, section, level } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const id = idFor(section, 'lesson-door')
+const tagName = door.kind === 'tag' ? door.tag : null
+---
+<section class="ls-door" aria-labelledby={id}>
+  {door.kind === 'sign-in' && (
+    <>
+      <Title id={id} class="ls-door-title">Sign in with your email to watch</Title>
+      <p>This lesson is free. Sign in with your email and we bring you straight back here.</p>
+      <form class="ls-door-form" method="get" action={VISITOR_SIGN_IN_PATH}>
+        <input type="hidden" name="return" value={door.returnPath} />
+        <input type="hidden" name="title" value={door.title} />
+        <button class="button" type="submit">Sign in with your email</button>
+        <label class="ls-check">
+          <input type="checkbox" name="newsletter" value="1" />
+          <span>Also send me the newsletter</span>
+        </label>
+        <p class="fine">Signing in does not sign you up for any email. Tick this if you want {door.newsletter} too.</p>
+      </form>
+    </>
+  )}
+  {door.kind === 'join' && (
+    <>
+      <Title id={id} class="ls-door-title">Join to watch</Title>
+      <p>
+        {door.orgName ? `Lesson ${door.n} is for members of ${door.orgName}.` : `Lesson ${door.n} is for members.`}
+        {door.name && ` You are signed in as ${door.name}, and we have no active membership for you.`}
+      </p>
+      <p class="ls-door-actions"><a class="button" href={JOIN_PATH}>See how to join</a></p>
+      {door.name ? (
+        <p class="fine">A member already, under another email? <a href={door.signOut}>Sign out</a> and sign in with that one.</p>
+      ) : (
+        <p class="fine">A member already? <a href={door.signIn}>Sign in</a> with the email you joined with.</p>
+      )}
+    </>
+  )}
+  {door.kind === 'tag' && (
+    <>
+      <Title id={id} class="ls-door-title">{tagName ? `This lesson is for ${tagName} members` : 'This lesson is by invitation'}</Title>
+      <p>
+        {door.orgName ?? 'The organization'} adds people to {tagName ?? 'this group'}. If you think you should be in it, ask them.
+      </p>
+      <p class="ls-door-actions"><a class="button" href={CONTACT_PATH}>Contact the Academy</a></p>
+    </>
+  )}
+</section>
+
+<style>
+  .ls-door {
+    display: grid;
+    gap: 0.75rem;
+    padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .ls-door > *,
+  .ls-door-form > * {
+    margin: 0;
+  }
+  .ls-door .ls-door-title {
+    font-size: calc(var(--h3) * 1.05);
+  }
+  .ls-door-form {
+    display: grid;
+    justify-items: start;
+    gap: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  .ls-door .button:focus-visible {
+    outline: 3px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ls-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ls-check input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    accent-color: var(--button);
+  }
+  .ls-check input:focus-visible {
+    outline: 3px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ls-door-actions {
+    margin-top: 0.25rem;
+  }
+</style>

@@ -2,7 +2,8 @@
 // Every address on the site. resolveRoute reads what the path is from
 // BackGold (a page, a type's list, an entry, an author, a term, a feed), so
 // a content type the organization adds gets its pages with no change here.
-// Redirects were already answered by the middleware.
+// Redirects were already answered by the middleware. A kind this page does
+// not draw (a course's lesson, `lesson`) is the 404, as an unknown path is.
 //
 // A page passes itself to the layout as `{ id, takes_donations }`, so the
 // menus apply each link's Shows on rule; every other route passes null. A
@@ -40,7 +41,10 @@ if (resolved.kind === 'feed') {
     headers: { 'Content-Type': 'application/atom+xml; charset=utf-8' },
   })
 }
-if (resolved.kind === 'not_found') Astro.response.status = 404
+/** The kinds this page draws; any other is answered as not found. */
+const DRAWN: readonly string[] = ['page', 'index', 'entry', 'author', 'term']
+const missing = !DRAWN.includes(resolved.kind)
+if (missing) Astro.response.status = 404
 
 /**
  * A list's name: the blog types' list is named by its intro page's title when
@@ -186,5 +190,5 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'not_found' && <NotFound />}
+  {missing && <NotFound />}
 </Site>

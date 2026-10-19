@@ -1,0 +1,21 @@
+---
+// Lesson · Reading: the same lesson held to the reading column, for a lesson
+// that is mostly its notes: the player, the head, completion and the notes
+// in one column, Previous and Next, then the course's rail last
+// (LessonBody, lesson.ts). Nothing is drawn without a lesson.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import LessonBody from './LessonBody.astro'
+import { lessonOf } from './lesson'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, lead = false } = Astro.props
+const view = Astro.props.view !== undefined ? Astro.props.view : await lessonOf(section, Astro)
+---
+{view && (
+  <Band section={section} class="lesson lesson-reading">
+    <LessonBody view={view} section={section} layout="reading" lead={lead} />
+  </Band>
+)}

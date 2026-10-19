@@ -42,6 +42,15 @@
 //   node scripts/starter-e2e.mjs --template candidate
 //                                         the candidate template's checks, its
 //                                         starter pages at /candidate-<slug>
+// --template academy also runs the template first-party, as BackGold serves
+// it (its block, near the end): the Worker reads the fixture through a
+// service binding to a stand-in api Worker, a visitor signs in through the
+// portal's return leg, and the classroom, a course, a lesson's player and
+// the locked lessons' doors are read signed out and signed in, in Chrome at
+// 1440 and 375, light and dark.
+//   node scripts/starter-e2e.mjs --template academy --shots <dir>
+//                                         also writes a full-page PNG of each
+//                                         page it reads in Chrome to <dir>
 //
 // Needs node >= 22.12, pnpm and npm. No dependencies beyond node's own.
 
@@ -276,6 +285,109 @@ function filesUnder(dir) {
 // ── The kitchen sink: one block of every type, through the api's own projection ──
 
 /** The kitchen sink's membership program's benefits, on every one of its rows. */
+/**
+ * The fixture's one course as GET /courses/:slug answers a reader with no
+ * visitor: its first lesson free, the second for anyone signed in, the third
+ * for members. The kitchen sink's Course and Lesson sections pin it.
+ */
+const ACADEMY_ORG = 'Pine Valley for Liberty'
+const ACADEMY_COURSE = (() => {
+  const lesson = (position, slug, title, duration_seconds, access, lock) => ({
+    id: `les_${slug}`, slug, title, summary: null, url: `/courses/reading-the-budget/${slug}`, hero: null, duration_seconds, position,
+    access, locked: lock !== null, lock, completed: false, position_seconds: null,
+  })
+  const org_name = ACADEMY_ORG
+  return {
+    id: 'crs_budget', slug: 'reading-the-budget', title: 'Reading the Budget', summary: 'Three short lessons on the county budget, line by line.',
+    url: '/courses/reading-the-budget', hero: null, publish_at: '2026-09-01T12:00:00.000Z', updated_at: '2026-09-02T12:00:00.000Z',
+    access: 'signed_in', locked: true, lock: { reason: 'signed_in', tag_label: null, org_name }, lesson_count: 3, total_seconds: 1140, progress: null,
+    body: { markdown: '' },
+    lessons: [
+      lesson(1, 'where-the-money-goes', 'Where the money goes', 300, 'public', null),
+      lesson(2, 'the-levy-line', 'The levy line', 420, 'signed_in', { reason: 'signed_in', tag_label: null, org_name }),
+      lesson(3, 'asking-at-the-hearing', 'Asking at the hearing', 420, 'members', { reason: 'members', tag_label: null, org_name }),
+    ],
+  }
+})()
+
+/** The fixture's second course, every lesson for members: the Classroom's members card and a course no visitor here can open. */
+const ACADEMY_MEMBERS_COURSE = (() => {
+  const lock = { reason: 'members', tag_label: null, org_name: ACADEMY_ORG }
+  const lesson = (position, slug, title, duration_seconds) => ({
+    id: `les_${slug}`, slug, title, summary: null, url: `/courses/chapter-officers/${slug}`, hero: null, duration_seconds, position,
+    access: 'members', locked: true, lock, completed: false, position_seconds: null,
+  })
+  return {
+    id: 'crs_officers', slug: 'chapter-officers', title: 'Chapter Officers', summary: 'How a chapter elects officers and plans its year.',
+    url: '/courses/chapter-officers', hero: null, publish_at: '2026-09-03T12:00:00.000Z', updated_at: '2026-09-04T12:00:00.000Z',
+    access: 'members', locked: true, lock, lesson_count: 2, total_seconds: 780, progress: null,
+    body: { markdown: '' },
+    lessons: [lesson(1, 'the-officers', 'The officers', 360), lesson(2, 'a-budget-for-the-year', 'A budget for the year', 420)],
+  }
+})()
+
+const ACADEMY_COURSES = [ACADEMY_COURSE, ACADEMY_MEMBERS_COURSE]
+
+/** The visitor the fixture's portal hands back (`ACADEMY_CODE`), and their token: signed in with their email, not a member. */
+const ACADEMY_CODE = 'e2e-handoff-code'
+const ACADEMY_TOKEN = 'visitor:e2e-visitor-token'
+const ACADEMY_VISITOR = { first_name: 'Robin', email: 'robin@example.org', member: false }
+/** When the visitor finished the budget course's first lesson: three days before the run, a weekday the course head names. */
+const ACADEMY_FINISHED_AT = new Date(Date.now() - 3 * 86400000).toISOString()
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** A playable lesson's file: an upload the fixture serves a stand-in for. */
+const lessonMedia = (slug) => `https://api.backgold.com/api/media-files/med_${slug}.mp4`
+
+/**
+ * A course as the api answers it to `visitor` (null: the public reader).
+ * Signed in, the visitor opens every public and signed-in lesson, has
+ * finished the budget course's first lesson (and any lesson the fixture was
+ * told of since, `done`), and stops at the members lessons; their place is
+ * the course's `progress`.
+ */
+function courseFor(course, visitor, done = new Set()) {
+  const open = (l) => l.access === 'public' || (visitor !== null && l.access === 'signed_in')
+  const lessons = course.lessons.map((l) => {
+    const completed = visitor !== null && open(l) && (l.slug === 'where-the-money-goes' || done.has(`${course.slug}/${l.slug}`))
+    return {
+      ...l,
+      locked: !open(l),
+      lock: open(l) ? null : l.lock,
+      completed,
+      completed_at: completed ? ACADEMY_FINISHED_AT : null,
+      position_seconds: visitor !== null && l.slug === 'the-levy-line' && !completed ? 72 : null,
+    }
+  })
+  const courseOpen = course.access === 'public' || (visitor !== null && course.access === 'signed_in')
+  if (!visitor) return { ...course, lessons }
+  const openable = lessons.filter((l) => !l.locked)
+  const left = openable.filter((l) => !l.completed)
+  return {
+    ...course,
+    locked: !courseOpen,
+    lock: courseOpen ? null : course.lock,
+    lessons,
+    progress: {
+      completed: lessons.filter((l) => l.completed).length,
+      total: lessons.length,
+      openable: openable.length,
+      seconds_left: left.length ? left.reduce((sum, l) => sum + (l.duration_seconds ?? 0), 0) : null,
+      next_lesson_slug: left[0]?.slug ?? null,
+    },
+  }
+}
+
+/** A course's row in GET /courses: the course without its body and lessons. */
+function courseSummary(course) {
+  const { body, lessons, ...summary } = course
+  return summary
+}
+
+/** The fixture's courses as a Classroom section's baked rows carry them (public, no progress). */
+const classroomRows = () =>
+  ACADEMY_COURSES.map((c) => ({ slug: c.slug, title: c.title, summary: c.summary, url: c.url, hero_url: null, lesson_count: c.lesson_count, total_seconds: c.total_seconds, access: c.access, locked: c.locked }))
+
 const MEMBER_BENEFITS = ['A vote at the county convention', 'The members’ letter each month', 'First pick of volunteer shifts']
 
 /**
@@ -784,6 +896,20 @@ function kitchenSinkDocument() {
           { name: 'Check-in', slug: 'check-in', description: null, duration_minutes: 30, location_kind: 'phone', price_cents: null, url: 'https://app.backgold.com/book/pine-valley/check-in' },
         ],
       }),
+      // The academy (sections batch 4): the classroom baked from the org's
+      // courses; the course and the lesson pinned to the fixture's course,
+      // which the sections read from GET /courses (ACADEMY_COURSE).
+      block('Classroom', {
+        kicker: 'The classroom',
+        heading: 'Two courses, at your own pace',
+        layout: 'grid',
+        courses: [
+          { slug: 'reading-the-budget', title: 'Reading the Budget', summary: 'Three short lessons on the county budget, line by line.', url: '/courses/reading-the-budget', hero_url: asset('budget-cover.webp'), lesson_count: 3, total_seconds: 1140, access: 'signed_in', locked: true },
+          { slug: 'chapter-officers', title: 'Chapter Officers', summary: 'How a chapter elects officers and plans its year.', url: '/courses/chapter-officers', hero_url: null, lesson_count: 5, total_seconds: null, access: 'members', locked: true },
+        ],
+      }),
+      block('Course', { courseSlug: ACADEMY_COURSE.slug, layout: 'syllabus' }),
+      block('Lesson', { courseSlug: ACADEMY_COURSE.slug, layout: 'player' }),
       // Compliance: each frames what BackGold serves, or carries only its heading.
       block('Donate', { heading: 'Chip in', presetAmounts: '10,25,50', donationFormId: 'df_general' }),
       block('FormBlock', { heading: 'Get updates', subtext: 'One email a week.', buttonText: 'Sign up', pageId: 'lp_ks', fields: [{ label: 'Email', type: 'email', required: true }] }),
@@ -1514,6 +1640,7 @@ function fixtureData(ex, kitchenSections) {
   return {
     legal,
     site,
+    orgName: ex.SiteResponse.org_name,
     types,
     geo,
     events: { upcoming, calendar, types: eventTypes, live },
@@ -1680,10 +1807,13 @@ function previewDraft(page) {
   }
 }
 
-function startFixture(examples, kitchenSections, blogBase = 'blog') {
+function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = false } = {}) {
   const plain = fixtureData(examples, kitchenSections)
-  const data = withCandidate(blogBase === 'news' ? newsBaseData(plain, examples) : plain, examples)
-  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '' }
+  const based = blogBase === 'news' ? newsBaseData(plain, examples) : plain
+  // `academy`: the organization is an academy on the academy template's starter (withAcademy).
+  const data = academy ? withAcademy(based, examples) : withCandidate(based, examples)
+  // `progress`: what the lesson pages saved, as the api took it; `done`, the lessons it marked finished.
+  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '', progress: [], done: new Set() }
   const MOUNT = '/api/content/v1'
   // The Content API answers every origin itself (a browser on the site reads
   // GET /events/live with the publishable key), as the api's contentApiCors does.
@@ -1695,7 +1825,15 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     'Access-Control-Max-Age': '86400',
   }
 
+  // A POST's body is read whole before it is answered (the visitor's code, a lesson's progress).
   const server = createServer((req, res) => {
+    if (req.method !== 'POST') return answer(req, res, '')
+    let raw = ''
+    req.setEncoding('utf8')
+    req.on('data', (chunk) => (raw += chunk))
+    req.on('end', () => answer(req, res, raw))
+  })
+  const answer = (req, res, rawBody) => {
     const url = new URL(req.url, 'http://fixture')
     const path = url.pathname.startsWith(MOUNT) ? url.pathname.slice(MOUNT.length) : null
     state.total++
@@ -1712,6 +1850,11 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     if (url.pathname === '/__bump' && req.method === 'POST') {
       state.version++
       res.writeHead(204)
+      return res.end()
+    }
+    if (url.pathname.startsWith('/media/') && url.pathname.endsWith('.mp4')) {
+      // A lesson's file: no video to play here, so nothing at all.
+      res.writeHead(204, { 'Cache-Control': 'no-store' })
       return res.end()
     }
     if (url.pathname.startsWith('/media/')) {
@@ -1747,6 +1890,43 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
     const parts = path.split('/').filter(Boolean).map(decodeURIComponent)
     const missing = () => send(404, { error: 'Not found', code: 'NOT_FOUND' })
 
+    // The visitor (0547): the X-BackGold-Visitor header names them; an answer for one is private.
+    const visitorHeader = req.headers['x-backgold-visitor']
+    const visitor = visitorHeader === ACADEMY_TOKEN ? ACADEMY_VISITOR : null
+    const PRIVATE = { 'Cache-Control': 'private, no-store' }
+    const jsonBody = () => {
+      try {
+        return JSON.parse(rawBody || '{}')
+      } catch {
+        return {}
+      }
+    }
+    if (parts[0] === 'visitor') {
+      if (parts[1] === 'exchange' && parts.length === 2 && req.method === 'POST') {
+        return jsonBody().code === ACADEMY_CODE
+          ? send(200, { token: ACADEMY_TOKEN, expires_at: new Date(Date.now() + 3600000).toISOString(), visitor: ACADEMY_VISITOR }, PRIVATE)
+          : send(400, { error: 'That sign-in link has expired', code: 'INVALID_CODE' }, PRIVATE)
+      }
+      if (parts.length === 1 && req.method === 'GET') return send(200, { visitor }, PRIVATE)
+      if (parts.length === 1 && req.method === 'DELETE') {
+        res.writeHead(204, { ...headers, ...PRIVATE })
+        return res.end()
+      }
+      return missing()
+    }
+    if (parts[0] === 'courses' && parts[3] === 'progress' && parts.length === 4 && req.method === 'POST') {
+      if (!visitor) return send(401, { error: 'Sign in to save your place.', code: 'VISITOR_REQUIRED' }, PRIVATE)
+      const course = ACADEMY_COURSES.find((c) => c.slug === parts[1])
+      if (!course || !course.lessons.some((l) => l.slug === parts[2])) return missing()
+      const saved = jsonBody()
+      state.progress.push({ course: parts[1], lesson: parts[2], ...saved })
+      if (saved.completed === true) state.done.add(`${parts[1]}/${parts[2]}`)
+      if (saved.completed === false) state.done.delete(`${parts[1]}/${parts[2]}`)
+      const after = courseFor(course, visitor, state.done)
+      const row = after.lessons.find((l) => l.slug === parts[2])
+      return send(200, { progress: { completed: row.completed, completed_at: row.completed_at, position_seconds: saved.position_seconds ?? null }, course: after.progress }, PRIVATE)
+    }
+
     // GET /events/live?ids=: the counts, outside the content version.
     if (parts[0] === 'events' && parts[1] === 'live' && parts.length === 2) {
       const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean)
@@ -1762,12 +1942,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
       const draft = previewDraft(data.page('home', 'A draft headline, not yet published'))
       return send(200, draft, { 'Cache-Control': 'private, no-store' })
     }
-    if (req.headers['if-none-match'] === etag) return send(304)
+    if (req.headers['if-none-match'] === etag && !visitor) return send(304)
 
     let body
     switch (parts[0]) {
       case 'site':
-        body = { site: data.site, legal: data.legal, version: state.version }
+        body = { site: data.site, legal: data.legal, version: state.version, org_name: data.orgName }
         break
       case 'menus':
         body = data.menus[parts[1]]
@@ -1815,6 +1995,38 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
         const shown = matching.slice(0, limit)
         const last = shown[shown.length - 1]
         body = { entries: shown, next_cursor: matching.length > limit ? Buffer.from(key(last)).toString('base64url') : null }
+        break
+      }
+      case 'courses': {
+        // GET /courses, /courses/:slug and /courses/:slug/:lesson, as the
+        // reader reads them: the visitor's own answer (courseFor) is private.
+        if (visitor) Object.assign(headers, PRIVATE)
+        if (parts.length === 1) {
+          body = { courses: ACADEMY_COURSES.map((c) => courseSummary(courseFor(c, visitor, state.done))), next_cursor: null, areas: data.entryAreas }
+          break
+        }
+        const found = ACADEMY_COURSES.find((c) => c.slug === parts[1])
+        if (!found || parts.length > 3) break
+        const course = courseFor(found, visitor, state.done)
+        if (parts.length === 2) {
+          body = { course, areas: data.entryAreas }
+          break
+        }
+        const at = course.lessons.findIndex((l) => l.slug === parts[2])
+        if (at === -1) break
+        const row = course.lessons[at]
+        const near = (l) => (l ? { slug: l.slug, title: l.title, url: l.url } : null)
+        body = {
+          lesson: {
+            id: row.id, slug: row.slug, type: 'video', title: row.title, summary: null, url: row.url, hero: null, media_url: row.locked ? null : lessonMedia(row.slug),
+            publish_at: course.publish_at, updated_at: course.updated_at, terms: [], authors: [], access: row.access, locked: row.locked,
+            lock: row.lock, duration_seconds: row.duration_seconds, body: { markdown: row.locked ? '' : 'Where each dollar of the levy lands.' }, fields: {},
+          },
+          course,
+          previous: near(course.lessons[at - 1]),
+          next: near(course.lessons[at + 1]),
+          areas: data.entryAreas,
+        }
         break
       }
       case 'events': {
@@ -1895,7 +2107,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
         break
     }
     return body === undefined ? missing() : send(200, body)
-  })
+  }
 
   return new Promise((resolveServer) => {
     server.listen(0, '127.0.0.1', () => {
@@ -1920,10 +2132,11 @@ function startFixture(examples, kitchenSections, blogBase = 'blog') {
 // ── 4. The built Worker on wrangler dev ──────────────────────────────────────
 
 /** The built Worker on `wrangler dev`; `persist` names its local KV's directory under the site (one per organization served). */
-async function startWorker(siteDir, { vars, logFile, persist = '.wrangler-e2e' }) {
-  const port = await freePort()
+async function startWorker(siteDir, { vars, logFile, persist = '.wrangler-e2e', configs = [], port: chosen }) {
+  const port = chosen ?? (await freePort())
   const inspector = await freePort()
-  const args = ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(port), '--inspector-port', String(inspector), '--persist-to', join(siteDir, persist), '--show-interactive-dev-session=false']
+  // `configs`: the Workers to run in one session, the site's first (the first-party run's site and its stand-in api).
+  const args = ['wrangler', 'dev', ...configs.flatMap((c) => ['-c', c]), '--ip', '127.0.0.1', '--port', String(port), '--inspector-port', String(inspector), '--persist-to', join(siteDir, persist), '--show-interactive-dev-session=false']
   const values = typeof vars === 'function' ? vars(`http://127.0.0.1:${port}`) : vars
   for (const [name, value] of Object.entries(values)) args.push('--var', `${name}:${value}`)
   const out = openSync(logFile, 'a')
@@ -2543,6 +2756,15 @@ async function headlessChrome(chrome) {
         await send('Page.navigate', { url }, sessionId)
         await loaded
       },
+      /** The whole page as a PNG at `file`. */
+      async shot(file) {
+        const { cssContentSize } = await send('Page.getLayoutMetrics', {}, sessionId)
+        const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: cssContentSize.width, height: cssContentSize.height, scale: 1 } }, sessionId)
+        writeFileSync(file, Buffer.from(data, 'base64'))
+      },
+      async clearCookies() {
+        await send('Network.clearBrowserCookies', {}, sessionId)
+      },
       async evaluate(expression) {
         const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId)
         if (exceptionDetails) throw new Error(`in the page: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`)
@@ -2670,6 +2892,7 @@ const ROW_TEXT = {
   // The kit layout lists the downloads; talks, appearances and mentions are the speaker and press layouts'.
   MediaKit: (i) => (i.kind === 'asset' ? [i.title] : []),
   Booking: (i) => [i.name],
+  Classroom: (i) => [i.title],
   Countdown: () => [],
   Leaderboard: () => [],
   SocialFeed: () => [],
@@ -4484,9 +4707,314 @@ async function checkCandidateNewsIntro(origin, chrome) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── The academy template (--template academy) ────────────────────────────────
+//
+// The academy as BackGold serves it: first-party, the site's Worker reading
+// the Content API through its BACKGOLD_API service binding (here a stand-in
+// api Worker that forwards to the fixture with the site key), so the visitor
+// routes answer and the header offers Sign in (`visitorSignIn`). The
+// fixture's organization is an academy on the template's starter
+// (withAcademy): its pages at their own addresses, its menus, the course
+// type at /courses with the fixture's two courses, and the letter above the
+// footer. A visitor signs in through the portal's return leg
+// (`/_backgold/visitor?code=`), and the checks read the classroom, the
+// courses list, a course's syllabus, a lesson's player and the locked
+// lessons' doors signed out and signed in, then save a lesson's progress
+// through the page's form, then all of it in a headless Chrome at 1440 and
+// 375, light and dark, with no sideways scroll.
+
+const ACADEMY = TEMPLATE_NAME === 'academy'
+const SHOTS_FLAG = process.argv.indexOf('--shots')
+const SHOTS = SHOTS_FLAG === -1 ? null : resolve(process.argv[SHOTS_FLAG + 1] ?? '.')
+const COURSE_TYPE = { key: 'course', singular_label: 'Course', plural_label: 'Courses', routable: true, url_base: 'courses', built_in: true, index: null, fields: [] }
+/** The site id the first-party Worker is configured with. */
+const ACADEMY_SITE_ID = 'site_e2e_academy'
+
+/** `data` as an academy on the academy template's starter (the first-party run's fixture). */
+function withAcademy(data, ex) {
+  const manifest = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
+  const { starter } = manifest
+  const signupEmbed = ex.PageResponse.areas.above_footer[0].sections[0].embed
+  const fill = (section) => {
+    const s = { options: {}, ...structuredClone(section) }
+    if (s.type === 'Classroom') s.data = { source: 'courses', items: classroomRows() }
+    if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
+    if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/lp_academy_contact/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    return s
+  }
+  const letter = starter.sections.find((r) => r.rules.some((rule) => rule.area_key === 'above_footer'))
+  const areas = { top_banner: [], sidebar: [], above_footer: letter ? [{ key: letter.key, label: letter.label, from: null, until: null, sections: letter.document.map(fill) }] : [] }
+  const pages = starter.pages.map((p) => {
+    const slug = p.slug || 'home'
+    const url = p.slug ? `/${p.slug}` : '/'
+    const id = `lp_academy_${slug}`
+    return {
+      summary: { id, slug, title: p.title, url, is_home: slug === 'home', published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z', takes_donations: false },
+      response: {
+        page: { ...ex.PageResponse.page, id, slug, title: p.title, url, is_home: slug === 'home', takes_donations: false, meta: { title: null, description: null, image_url: null } },
+        sections: p.sections.map(fill),
+        areas,
+        legal: data.legal,
+      },
+    }
+  })
+  const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
+  const types = [...data.types.filter((t) => t.key !== 'course'), COURSE_TYPE]
+  let n = 0
+  const menuItem = (item) => ({
+    id: `nav_a${++n}`,
+    label: item.label,
+    kind: item.kind,
+    target: { kind: item.kind, ...item.target },
+    url:
+      item.kind === 'page'
+        ? item.target.slug ? `/${item.target.slug}` : '/'
+        : item.kind === 'content_list'
+          ? `/${types.find((t) => t.key === item.target.type_key)?.url_base ?? item.target.type_key}`
+          : null,
+    external: false,
+    header_button: item.header_button,
+    shows_on: item.shows_on,
+    children: item.children.map(menuItem),
+  })
+  // A course's own page is its entry (GET /entries/course/:slug); the lessons are the course's.
+  const courseEntry = (c) => ({
+    id: c.id, slug: c.slug, type: 'course', title: c.title, summary: c.summary, url: c.url, hero: null, media_url: null,
+    publish_at: c.publish_at, updated_at: c.updated_at, terms: [], authors: [], access: c.access, locked: false, lock: null, duration_seconds: null,
+  })
+  return {
+    ...data,
+    site: { ...data.site, name: 'Your Academy', chrome: { header: { layout: 'bar' }, footer: { ...data.site.chrome.footer, layout: 'columns', blurb: 'Short video courses for people who want to lead where they live.' } } },
+    pages: pages.map((p) => p.summary),
+    page: (slug) => bySlug.get(slug),
+    types,
+    entries: { ...data.entries, course: ACADEMY_COURSES.map(courseEntry) },
+    entry: { ...data.entry, course: Object.fromEntries(ACADEMY_COURSES.map((c) => [c.slug, { ...courseEntry(c), body: { markdown: '' }, fields: {} }])) },
+    entryAreas: areas,
+    menus: {
+      ...data.menus,
+      primary: { menu: { key: 'primary' }, items: starter.menus.primary.map(menuItem) },
+      footer: { menu: { key: 'footer' }, items: starter.menus.footer.map(menuItem) },
+    },
+  }
+}
+
+/**
+ * The built academy on `wrangler dev`, first-party: a copy of the build's
+ * deploy config with the BACKGOLD_API service binding to a stand-in api
+ * Worker in the same session, which forwards each request to the fixture
+ * with the site key. BACKGOLD_SITE_ID names the site; no site key is set.
+ */
+async function startFirstPartyWorker(siteDir, fixture) {
+  const proxyDir = join(work, 'api-proxy')
+  mkdirSync(proxyDir, { recursive: true })
+  writeFileSync(
+    join(proxyDir, 'index.mjs'),
+    `export default {
+  async fetch(request, env) {
+    const url = new URL(request.url)
+    const headers = new Headers(request.headers)
+    headers.set('Authorization', 'Bearer ' + env.SITE_KEY)
+    const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer()
+    return fetch(new URL(url.pathname + url.search, env.FIXTURE_ORIGIN), { method: request.method, headers, body, redirect: 'manual' })
+  },
+}
+`,
+  )
+  writeFileSync(
+    join(proxyDir, 'wrangler.json'),
+    JSON.stringify({ name: 'backgold-e2e-api', main: 'index.mjs', compatibility_date: '2026-10-04', vars: { FIXTURE_ORIGIN: fixture.origin, SITE_KEY } }, null, 2),
+  )
+  const built = JSON.parse(readFileSync(join(siteDir, 'dist/server/wrangler.json'), 'utf8'))
+  const config = join(siteDir, 'dist/server/wrangler.first-party.json')
+  const port = await freePort()
+  writeFileSync(
+    config,
+    JSON.stringify({
+      ...built,
+      services: [{ binding: 'BACKGOLD_API', service: 'backgold-e2e-api' }],
+      vars: { BACKGOLD_SITE_ID: ACADEMY_SITE_ID, BACKGOLD_API_ORIGIN: fixture.origin, SITE_URL: `http://127.0.0.1:${port}` },
+    }),
+  )
+  return startWorker(siteDir, { vars: {}, logFile: join(work, 'wrangler-first-party.log'), persist: '.wrangler-e2e-first-party', configs: [config, join(proxyDir, 'wrangler.json')], port })
+}
+
+const COOKIE = `bg_visitor=${ACADEMY_TOKEN}`
+const signedIn = (origin, path, init = {}) => get(origin, path, { ...init, headers: { Cookie: COOKIE, ...(init.headers ?? {}) } })
+const courseAt = '/courses/reading-the-budget'
+const lessonAt = (slug) => `${courseAt}/${slug}`
+
+/** The academy's pages in the HTML, signed out and signed in, and a lesson's progress saved through its form. */
+async function checkAcademy(origin, fixture) {
+  log('\nAcademy (first-party): the classroom, a course, a lesson and its doors, signed out and signed in')
+  let res = await get(origin, '/')
+  let html = await res.text()
+  const classroom = sectionsOf(html).find((s) => s.type === 'Classroom')?.html ?? ''
+  check(res.status === 200 && /data-variant="grid"/.test(classroom) && classroom.includes('Reading the Budget') && classroom.includes('Chapter Officers'), 'home draws the Classroom grid with both courses')
+  check(/<p class="kicker">The classroom<\/p>/.test(classroom), 'under the starter’s kicker, The classroom')
+  check(/class="header-account-link" href="\/_backgold\/sign-in\?return=%2F"[^>]*>Sign in</.test(html), 'the header offers Sign in, back to this page (visitorSignIn)')
+  check(!/data-bg-donate/.test(html) && !/>Donate</.test(html), 'and no Donate anywhere on home: the template adds no donate call')
+  const headerMenu = /<nav class="header-bar-menu" aria-label="Header menu">[\s\S]*?<\/nav>/.exec(html)?.[0] ?? ''
+  const menuWords = [...headerMenu.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)].map((m) => plain(m[1]))
+  check(menuWords.join(' · ') === 'Courses · About · Join' && /href="\/join"/.test(headerMenu), `the header menu is Courses · About · Join (${menuWords.join(' · ')})`)
+  check(!/\bheader-button\b/.test(html), 'and the header has no button: Join is a menu item (board D1)')
+  const footer = /<footer[\s\S]*?<\/footer>/.exec(html)?.[0] ?? ''
+  check(['Academy', 'The organization', 'Courses', 'Newsletter', 'Contact'].every((w) => footer.includes(w)), 'the footer lists the Academy’s links and the organization’s')
+
+  res = await get(origin, '/courses')
+  html = await res.text()
+  check(res.status === 200 && /<h1[^>]*>Courses<\/h1>/.test(html) && /class="[^"]*list-courses/.test(html) && html.includes('Reading the Budget') && html.includes('Chapter Officers'), '/courses is the course type’s list, drawn as the classroom, every course from GET /courses')
+
+  res = await get(origin, courseAt)
+  html = await res.text()
+  const rows = (html.match(/class="cs-row /g) ?? []).length
+  check(res.status === 200 && rows === 3 && /<h1 class="cs-title[^"]*"[^>]*>Reading the Budget<\/h1>/.test(html) && html.includes('Where the money goes') && html.includes('The levy line') && html.includes('Asking at the hearing'), `a course's page is its syllabus, every lesson in order (${rows} rows)`)
+  const courseSignIn = `/_backgold/sign-in?${new URLSearchParams({ return: courseAt, title: 'Reading the Budget' })}`.replace(/&/g, '&amp;')
+  check(html.includes(`href="${courseSignIn}"`), "the course's sign-in names the course to the portal")
+
+  res = await get(origin, lessonAt('where-the-money-goes'))
+  html = await res.text()
+  check(res.status === 200 && /<video\b/.test(html) && /<h1[^>]*>Lesson 1: Where the money goes<\/h1>/.test(html), 'the free lesson draws its player and its title as the <h1>')
+  check(!/action="\/_backgold\/progress"/.test(html), 'signed out, it offers no Mark complete')
+
+  res = await get(origin, lessonAt('the-levy-line'))
+  html = await res.text()
+  check(res.status === 200 && !/<video\b/.test(html) && html.includes('Sign in with your email to watch') && /<form class="ls-door-form" method="get" action="\/_backgold\/sign-in"/.test(html), 'a lesson for anyone signed in draws its teaser and the sign-in door')
+  const levyTitle = 'Lesson 2: The levy line, in Reading the Budget'
+  check(html.includes(`name="title" value="${levyTitle}"`), 'the door names the lesson to the portal: "Lesson 2: The levy line, in Reading the Budget"')
+  const levySignIn = `/_backgold/sign-in?${new URLSearchParams({ return: lessonAt('the-levy-line'), title: levyTitle })}`.replace(/&/g, '&amp;')
+  check(html.includes(`class="header-account-link" href="${levySignIn}"`), "and so does the header's Sign in on the lesson's page")
+  res = await get(origin, `/_backgold/sign-in?${new URLSearchParams({ return: lessonAt('the-levy-line'), title: levyTitle, newsletter: '1' })}`)
+  const door = new URL(res.headers.get('location') ?? '', 'https://portal.invalid')
+  check(
+    res.status === 302 && door.pathname === '/site-signin' && door.searchParams.get('title') === levyTitle && door.searchParams.get('newsletter') === '1',
+    `the sign-in route carries the title and the newsletter tick to the portal's door (${res.status}, ${door.search})`,
+  )
+  res = await get(origin, lessonAt('asking-at-the-hearing'))
+  html = await res.text()
+  check(html.includes('Join to watch') && html.includes(`Lesson 3 is for members of ${ACADEMY_ORG}.`) && /href="\/join"/.test(html), 'a members lesson draws the Join door, naming the organization')
+
+  // The portal's return leg: the code becomes the HttpOnly cookie, back to the path with the notice.
+  res = await get(origin, `/_backgold/visitor?code=${ACADEMY_CODE}&return=%2Fcourses`)
+  const cookie = res.headers.getSetCookie().find((c) => c.startsWith('bg_visitor=')) ?? ''
+  check(res.status === 302 && res.headers.get('location') === '/courses#signed-in' && cookie.startsWith(`bg_visitor=${ACADEMY_TOKEN};`) && /HttpOnly/i.test(cookie), `the return leg sets the visitor's cookie and goes back to the page (${res.status}, ${res.headers.get('location')}, ${cookie})`)
+  res = await get(origin, '/_backgold/visitor?code=not-the-code&return=%2F')
+  check(res.status === 400 && (await res.text()).includes('That sign-in link has expired'), 'a code the api would not redeem is the expired page')
+
+  res = await signedIn(origin, '/')
+  html = await res.text()
+  check(/private|no-store/.test(res.headers.get('cache-control') ?? '') && res.headers.get('x-backgold-cache') !== 'HIT', `a signed-in visitor's page is never cached (${res.headers.get('cache-control')}, ${res.headers.get('x-backgold-cache')})`)
+  const account = /<div class="header-account"[^>]*>[\s\S]*?<\/div>/.exec(html)?.[0] ?? ''
+  check(/<span class="header-account-name"[^>]*>Robin<\/span>/.test(account) && /href="\/_backgold\/sign-out\?return=%2F"/.test(account), `signed in, the header names the visitor and offers Sign out (${account.replace(/\s+/g, ' ')})`)
+  const standing = /You have finished[^.]*\./.exec(plain(html))?.[0]
+  check(standing === 'You have finished 0 of 2 courses and have 1 under way.', `the classroom says where the visitor stands (${standing})`)
+  check(/<progress class="ac-bar"/.test(sectionsOf(html).find((s) => s.type === 'Classroom')?.html ?? ''), 'and the course under way carries its bar')
+
+  res = await signedIn(origin, courseAt)
+  html = await res.text()
+  const weekday = WEEKDAYS[new Date(ACADEMY_FINISHED_AT).getUTCDay()]
+  check(plain(html).includes(`Lesson 1 finished on ${weekday}`), `the course head says when the newest lesson was finished ("Lesson 1 finished on ${weekday}")`)
+  check(/>Continue · Lesson 2</.test(html), 'and Continue opens the next lesson')
+
+  res = await signedIn(origin, lessonAt('the-levy-line'))
+  html = await res.text()
+  check(/<video\b/.test(html) && !html.includes('Sign in with your email to watch'), 'signed in, the lesson for anyone signed in opens its player')
+  check(/action="\/_backgold\/progress"/.test(html) && /name="return" value="\/courses\/reading-the-budget\/the-levy-line"/.test(html), 'with Mark complete, a form that comes back to the lesson')
+  check(plain(html).includes('Picks up at 1:12, where you stopped.'), 'and picks up where the visitor stopped')
+  res = await signedIn(origin, lessonAt('asking-at-the-hearing'))
+  html = await res.text()
+  check(html.includes('Join to watch') && html.includes('You are signed in as Robin'), 'the members lesson still draws the Join door, naming who is signed in')
+
+  // The page without its script: the form posts, the Worker saves it and sends the visitor back.
+  const form = new URLSearchParams({ course: 'reading-the-budget', lesson: 'the-levy-line', completed: 'true', return: lessonAt('the-levy-line') })
+  res = await signedIn(origin, '/_backgold/progress', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: origin }, body: form.toString() })
+  check(res.status === 303 && res.headers.get('location') === lessonAt('the-levy-line'), `Mark complete without the script saves and comes back to the lesson (${res.status}, ${res.headers.get('location')})`)
+  const saved = fixture.state.progress.at(-1)
+  check(saved?.lesson === 'the-levy-line' && saved.completed === true, `the api was told the lesson is finished (${JSON.stringify(saved)})`)
+  res = await signedIn(origin, lessonAt('the-levy-line'))
+  html = await res.text()
+  check(/<form method="post" action="\/_backgold\/progress" data-complete="true" hidden/.test(html), 'and the lesson now reads Completed')
+  res = await get(origin, '/_backgold/progress', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example', Cookie: COOKIE }, body: form.toString() })
+  check(res.status === 403, `a form from another site is refused (${res.status})`)
+  res = await get(origin, '/_backgold/progress', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: origin }, body: form.toString() })
+  check(res.status === 303 && res.headers.get('location') === `/_backgold/sign-in?return=${encodeURIComponent(lessonAt('the-levy-line'))}`, `without the cookie the form goes to the sign-in door, back to the lesson (${res.headers.get('location')})`)
+  // Put the lesson back, for the look checks.
+  await signedIn(origin, '/_backgold/progress', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin }, body: JSON.stringify({ course: 'reading-the-budget', lesson: 'the-levy-line', completed: false }) })
+}
+
+/** The academy in Chrome at 1440 and 375, light and dark, signed out then signed in. */
+async function checkAcademyLook(origin, chrome) {
+  log('\nAcademy: the classroom, the courses list, a course, a lesson and its doors in Chrome at 1440 and 375, light and dark')
+  if (SHOTS) mkdirSync(SHOTS, { recursive: true })
+  const browser = await headlessChrome(chrome)
+  try {
+    for (const width of [1440, 375]) {
+      await browser.width(width)
+      for (const scheme of ['light', 'dark']) {
+        const where = `${width} ${scheme}`
+        const look = async (path, name, expression) => {
+          await browser.open(`${origin}${path}`, scheme)
+          const at = await browser.evaluate('location.pathname')
+          check(at === path.replace(/[?#].*$/, ''), `${where}: Chrome is on ${path} (${at})`)
+          const found = await browser.evaluate(`(() => ({ overflow: document.documentElement.scrollWidth - window.innerWidth, dark: document.documentElement.dataset.theme ?? null, value: (${expression})() }))()`)
+          check(found.overflow <= 0, `${where}: ${name} has no horizontal scroll (${found.overflow}px over)`)
+          if (SHOTS) await browser.shot(join(SHOTS, `${name}-${width}-${scheme}.png`))
+          return found.value
+        }
+        await browser.clearCookies()
+        const home = await look('/', 'home-signed-out', `() => ({
+          cards: document.querySelectorAll('[data-type="Classroom"] .cr-card').length,
+          signIn: [...document.querySelectorAll('.site-header a')].some((a) => a.textContent.trim() === 'Sign in'),
+          bg: getComputedStyle(document.body).backgroundColor,
+        })`)
+        check(home.cards >= 2 && home.signIn, `${where}: home draws the classroom's cards and the header's Sign in (${JSON.stringify(home)})`)
+        const list = await look('/courses', 'courses', `() => document.querySelectorAll('.list-courses .cr-card').length`)
+        check(list >= 2, `${where}: /courses draws both courses (${list})`)
+        const syllabus = await look(courseAt, 'course-signed-out', `() => ({ rows: document.querySelectorAll('.cs-row').length, h1: document.querySelector('h1')?.textContent.trim() })`)
+        check(syllabus.rows === 3 && syllabus.h1 === 'Reading the Budget', `${where}: the course's syllabus lists its three lessons (${JSON.stringify(syllabus)})`)
+        const door = await look(lessonAt('the-levy-line'), 'lesson-door-sign-in', `() => {
+          // A computed colour as sRGB bytes, through a canvas (color-mix answers in color(srgb …)).
+          const rgb = (css) => {
+            const c = document.createElement('canvas').getContext('2d')
+            c.fillStyle = css
+            c.fillRect(0, 0, 1, 1)
+            return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3)
+          }
+          const lum = (bytes) => bytes.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
+          const words = document.querySelector('.ls-teaser .ls-veil p')
+          const ground = document.querySelector('.ls-teaser')
+          const [a, b] = [lum(rgb(getComputedStyle(words).color)), lum(rgb(getComputedStyle(ground).backgroundColor))]
+          return { door: !!document.querySelector('.ls-door .ls-door-form'), video: !!document.querySelector('video'), teaser: Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 100) / 100 }
+        }`)
+        check(door.door && !door.video, `${where}: the locked lesson draws its sign-in door, no player (${JSON.stringify(door)})`)
+        check(door.teaser >= 4.5, `${where}: the teaser's words read at AA on its ground (${door.teaser}:1)`)
+
+        // Signed in through the portal's return leg, as a browser follows it.
+        await browser.open(`${origin}/_backgold/visitor?code=${ACADEMY_CODE}&return=%2F`, scheme)
+        const back = await browser.evaluate('location.pathname + location.hash')
+        check(back === '/#signed-in', `${where}: the return leg lands on the page with the signed-in notice (${back})`)
+        const mine = await look('/', 'home-signed-in', `() => ({ name: document.querySelector('.site-header .header-account-name')?.textContent.trim() ?? null, bars: document.querySelectorAll('[data-type="Classroom"] .ac-bar').length })`)
+        check(mine.name === 'Robin' && mine.bars >= 1, `${where}: signed in, the header names the visitor (${JSON.stringify(mine)})`)
+        await look(courseAt, 'course-signed-in', `() => null`)
+        const player = await look(lessonAt('the-levy-line'), 'lesson-player', `() => {
+          const video = document.querySelector('video')
+          const main = document.querySelector('.layout-main')
+          return { video: !!video, fits: video && main ? video.getBoundingClientRect().width <= main.getBoundingClientRect().width + 1 : null, complete: !!document.querySelector('.ls-complete form:not([hidden]) button') }
+        }`)
+        check(player.video && player.fits && player.complete, `${where}: the lesson's player fits its column, Mark complete under it (${JSON.stringify(player)})`)
+        const joinDoor = await look(lessonAt('asking-at-the-hearing'), 'lesson-door-join', `() => document.querySelector('.ls-door .ls-door-title')?.textContent.trim() ?? null`)
+        check(joinDoor === 'Join to watch', `${where}: the members lesson draws the Join door (${joinDoor})`)
+      }
+    }
+  } finally {
+    await browser.clearCookies().catch(() => {})
+    await browser.close()
+  }
+}
+
 async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
-  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
+  const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE || ACADEMY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
   log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
   const packDir = join(work, 'pack')
@@ -4555,6 +5083,19 @@ async function main() {
     await killTree(configured.child)
   }
 
+  // The academy first-party, on its own Worker, fixture and local KV.
+  if (ACADEMY) {
+    const academyFixture = await startFixture(examples, kitchen.sections, 'blog', { academy: true })
+    log(`Fixture Content API for the academy: ${academyFixture.origin}`)
+    const firstParty = await startFirstPartyWorker(siteDir, academyFixture)
+    try {
+      await checkAcademy(firstParty.origin, academyFixture)
+      await checkAcademyLook(firstParty.origin, chrome)
+    } finally {
+      await killTree(firstParty.child)
+    }
+  }
+
   // A second organization, at /news, on its own Worker and its own local KV.
   const newsFixture = await startFixture(examples, kitchen.sections, 'news')
   log(`Fixture Content API at /news: ${newsFixture.origin}`)
@@ -4607,7 +5148,7 @@ async function main() {
     await killTree(redeployed.child)
   }
 
-  const workerLog = ['configured', 'news', 'setup', 'redeployed'].map((name) => readFileSync(join(work, `wrangler-${name}.log`), 'utf8')).join('')
+  const workerLog = ['configured', 'news', 'setup', 'redeployed', ...(ACADEMY ? ['first-party'] : [])].map((name) => readFileSync(join(work, `wrangler-${name}.log`), 'utf8')).join('')
   check(!workerLog.includes(SECRET_KEY) && !workerLog.includes(WEBHOOK_SECRET), 'no secret reached the Worker log')
   log('\nAll checks passed.')
 }

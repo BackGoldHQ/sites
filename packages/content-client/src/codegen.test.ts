@@ -126,7 +126,7 @@ test('generateTypes: the api example', () => {
 /** The party and newsletter types' locked fields; the blog types have none. */
 const LOCKED_FIELDS: Partial<Record<string, readonly BuiltInFieldDef[]>> = BUILT_IN_TYPE_FIELDS
 
-/** GET /types for an org with only the seven built-ins, built the way the api's listTypes builds it. */
+/** GET /types for an org with only the eight built-ins, built the way the api's listTypes builds it. */
 const BUILT_IN_TYPES: ContentTypeSummary[] = BUILT_IN_CONTENT_TYPES.map((t) => ({
   key: t.key,
   singular_label: t.singular_label,
@@ -150,7 +150,7 @@ function builtInText(): string {
   return renderTypes({
     types: BUILT_IN_TYPES,
     header: [
-      'The seven built-in content types, so their fields are typed without running the CLI.',
+      'The eight built-in content types, so their fields are typed without running the CLI.',
       "A generated file's own members override these. Do not edit by hand: regenerate with",
       'UPDATE_BUILTIN_TYPES=1 pnpm --filter @backgold/content test',
     ],
@@ -166,7 +166,7 @@ test('builtin-types.ts is a fresh generation from the shared built-ins', async (
   assert.equal(checkedIn, fresh, 'src/builtin-types.ts is stale: UPDATE_BUILTIN_TYPES=1 pnpm --filter @backgold/content test')
   assert.deepEqual(
     BUILT_IN_TYPES.map((t) => t.key),
-    ['post', 'podcast', 'video', 'plank', 'team_member', 'open_role', 'newsletter'],
+    ['post', 'podcast', 'video', 'plank', 'team_member', 'open_role', 'newsletter', 'course'],
   )
   assert.match(fresh, /^ {4}group: 'Leadership' \| 'Staff'; \/\/ Group$/m)
   assert.match(fresh, /^ {2}interface BackgoldTypeMap extends BackgoldFields \{\}$/m)

@@ -1,0 +1,82 @@
+---
+// The header's account links (board D1): signed in, the visitor's first name
+// (else the part of their email before the @) and Sign out; signed out, Sign
+// in. Both are quiet links beside the light and dark switch, each taking the
+// visitor back to this page; Sign in names the page's lesson or course to the
+// portal's door when the page has one (`signInTitle`). On a phone with a menu sheet the name stays in
+// the bar and Sign out moves into the sheet (`mode="sheet"` draws it there).
+// Signed in or not, it is drawn only on a page answered to one person or to
+// everyone alike: a visitor's page is private (the middleware), and the
+// signed-out links name no one.
+import { signInHref, signOutHref } from '@backgold/astro/server'
+import type { Visitor } from '@backgold/content'
+
+interface Props {
+  visitor: Visitor | null
+  mode: 'bar' | 'sheet'
+  /** What Sign in names to the portal's door: the page's lesson or course; none elsewhere. */
+  signInTitle?: string | null
+}
+
+const { visitor, mode, signInTitle = null } = Astro.props
+const here = `${Astro.url.pathname}${Astro.url.search}`
+const name = visitor ? (visitor.first_name?.trim() || visitor.email.split('@')[0] || visitor.email) : null
+---
+{mode === 'bar' ? (
+  <div class="header-account">
+    {visitor ? (
+      <>
+        <span class="header-account-name">{name}</span>
+        <a class="header-account-link header-account-out" href={signOutHref(here)}>Sign out</a>
+      </>
+    ) : (
+      <a class="header-account-link" href={signInHref(here, signInTitle)}>Sign in</a>
+    )}
+  </div>
+) : (
+  visitor && (
+    <p class="header-sheet-account">
+      <a class="header-account-link" href={signOutHref(here)}>Sign out</a>
+    </p>
+  )
+)}
+
+<style>
+  .header-account {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .header-account-name {
+    color: var(--ink);
+  }
+  .header-account-out {
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--line);
+  }
+  .header-account-link {
+    border-radius: 0.25rem;
+  }
+  .header-account-link:hover {
+    text-decoration: underline;
+  }
+  .header-account-link:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .header-sheet-account {
+    margin: 1.25rem 0 0;
+    text-align: center;
+    font-weight: 600;
+  }
+  /* Under the bar width, with a sheet to hold it, Sign out moves into the sheet. */
+  @media (max-width: 55.99rem) {
+    :global(.site-header:has(.header-sheet)) .header-account-out {
+      display: none;
+    }
+  }
+</style>

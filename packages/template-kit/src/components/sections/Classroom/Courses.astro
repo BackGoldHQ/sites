@@ -1,0 +1,81 @@
+---
+// A Classroom's head and its courses, for both layouts (board D1): the
+// kicker and heading the organization typed, then the line under them (with
+// a visitor, "You have finished 1 of 6 courses and have 3 under way."; signed
+// out, why to sign in and the Sign in link), then the cards in the grid or
+// the rows of the list. With no course the heading stands over "Nothing here
+// yet."; with neither, nothing is drawn.
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import SectionHead from '../SectionHead.astro'
+import CourseCard from './CourseCard.astro'
+import type { Classroom } from './classroom'
+
+interface Props {
+  section: Section
+  classroom: Classroom
+  layout: 'grid' | 'list'
+}
+
+const { section, classroom, layout } = Astro.props
+const { kicker, heading, cards, summary, signIn, visitor } = classroom
+const plural = (n: number) => (n === 1 ? 'course' : 'courses')
+---
+{(heading || cards.length > 0) && (
+  <Band section={section} class:list={['classroom', `classroom-${layout}`]}>
+    <SectionHead kicker={kicker} heading={heading} more={[]} />
+    {summary && (
+      <p class="cr-line">
+        You have finished <strong>{summary.finished}</strong> of {summary.total} {plural(summary.total)}{summary.started > 0 && <> and have <strong>{summary.started}</strong> under way</>}.
+      </p>
+    )}
+    {signIn && cards.length > 0 && (
+      <p class="cr-line">
+        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={signIn}>Sign in</a>
+      </p>
+    )}
+    {cards.length > 0 ? (
+      <ul class:list={['cr-cards', `cr-cards-${layout}`]} role="list">
+        {cards.map((card) => (
+          <li><CourseCard card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={heading ? 3 : 2} layout={layout} /></li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+  </Band>
+)}
+
+<style>
+  .cr-line {
+    max-width: var(--measure);
+    margin: -0.75rem 0 1.75rem;
+    color: var(--muted);
+  }
+  .cr-line strong {
+    color: var(--ink);
+  }
+  .cr-cards {
+    display: grid;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cr-cards > li {
+    min-width: 0;
+  }
+  @media (min-width: 40rem) {
+    .cr-cards-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 64rem) {
+    .cr-cards-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .cr-cards-list {
+    gap: 1rem;
+  }
+</style>
