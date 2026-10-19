@@ -642,7 +642,7 @@ interface Visitor {
 interface VisitorResponse {
     visitor: Visitor | null;
 }
-/** POST /visitor/exchange { code } (first-party only): the hand-off code the portal minted for this site. */
+/** POST /visitor/exchange { code } (first-party, or a secret key from a server): the hand-off code the portal minted for this site. */
 interface VisitorExchangeRequest {
     code: string;
 }
