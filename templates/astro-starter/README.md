@@ -337,9 +337,10 @@ To turn it on:
    npx wrangler secret put BACKGOLD_SECRET_KEY
    ```
 
-2. Set `SITE_URL` to the site's `https://` address on the domain connected to
-   the site in BackGold, exactly (`www.example.org` and `example.org` are two
-   different hosts). The portal sends a visitor back only to that host.
+2. Set `SITE_URL` to the site's `https://` address in BackGold: its connected
+   domain, or, while it has none, the host of the preview address on its
+   Developer page. The exact host (`www.example.org` and `example.org` are
+   two different hosts). The portal sends a visitor back only to that host.
 
 On every page after that, `@backgold/astro` reads who is signed in from the
 cookie (`Astro.locals.backgold.visitor`) and passes their token to the page's

@@ -1385,10 +1385,12 @@ https://giving.backgold.com/site-signin?site=<site id>&return=<https://your-doma
 - `site` is your site's id: `site.id` from `GET /site` (`(await
   bg.site()).site.id`), the `cd_…` id the Developer page names.
 - `return` is where the portal sends the visitor back: an absolute `https://`
-  address whose host is the domain connected to the site in BackGold,
-  **exactly** (`www.example.org` and `example.org` are two hosts; register the
-  one you use). Its path and query are yours. It carries no user name or
-  password, no fragment and no port. The portal refuses any other address.
+  address whose host is the site's address in BackGold: its connected
+  domain, or, while it has none, the host of the preview address on its
+  Developer page. The exact host (`www.example.org` and `example.org` are two
+  hosts). Its path and query are yours. It carries no user name or password,
+  no fragment and no port. The portal refuses any other address, and answers
+  `404` for an organization without the headless CMS.
 - `title` (optional, plain text) is what the door names: "Sign in to watch
   Lesson 2: The levy line".
 - The portal is `https://giving.backgold.com` for `api.backgold.com`;
@@ -1398,7 +1400,7 @@ https://giving.backgold.com/site-signin?site=<site id>&return=<https://your-doma
 ```ts
 // auth.ts
 const PORTAL = 'https://giving.backgold.com'
-const SITE_URL = 'https://www.example.org' // the site's address on its connected domain
+const SITE_URL = 'https://www.example.org' // the site's address in BackGold: its connected domain, else its preview address's host
 
 export function signInUrl(siteId: string, to: string, title?: string): string {
   const back = new URL('/auth/visitor', SITE_URL)

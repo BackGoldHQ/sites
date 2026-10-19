@@ -429,9 +429,10 @@ built elsewhere (a site key, not a BackGold template):
 1. **Link to the portal's door** for your site:
    `https://giving.backgold.com/site-signin?site=<site id>&return=<https://your-domain/auth/visitor?to=/courses/foundations>&title=<lesson title>`.
    `site` is `(await bg.site()).site.id`. `return` must be an absolute
-   `https://` address whose host is the domain connected to the site in
-   BackGold, exactly (no other subdomain, no port, no fragment, no user name
-   or password); its path and query are yours. `title` is plain text the door
+   `https://` address whose host is the site's address in BackGold (its
+   connected domain, or, while it has none, the host of the preview address
+   on its Developer page), the exact host (no other subdomain, no port, no
+   fragment, no user name or password); its path and query are yours. `title` is plain text the door
    names. BackGold's staging api, on `backgold.dev`, has its portal at
    `https://giving.backgold.dev`.
 2. **Redeem the code on your server with the secret key.** The portal sends

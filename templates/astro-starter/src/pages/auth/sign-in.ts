@@ -1,7 +1,8 @@
 // GET /auth/sign-in?to=<path>&title=<text>: to the giving portal's door for
 // this site. The portal sends the visitor back to <SITE_URL>/auth/visitor
-// with a one-minute code, so SITE_URL must be the site's address on the
-// domain connected to the site in BackGold (https, the exact host). `title`
+// with a one-minute code, so SITE_URL must be the site's address in
+// BackGold: its connected domain, or, while it has none, the host of the
+// preview address on its Developer page (https, the exact host). `title`
 // is what the door names: the entry or lesson being opened.
 import type { APIRoute } from 'astro'
 import { safeReturnPath } from '@backgold/astro/server'
