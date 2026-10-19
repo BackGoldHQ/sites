@@ -47,10 +47,17 @@ const plural = (n: number) => (n === 1 ? 'course' : 'courses')
 )}
 
 <style>
+  /* The line sets as one sentence: wide enough that the signed-out line and
+     its Sign in link share a line on a desktop, and where it does wrap, the
+     link stays whole and never sits alone on the last line. */
   .cr-line {
-    max-width: var(--measure);
+    max-width: 46rem;
     margin: -0.75rem 0 1.75rem;
     color: var(--muted);
+    text-wrap: pretty;
+  }
+  .cr-line .text-link {
+    white-space: nowrap;
   }
   .cr-line strong {
     color: var(--ink);
