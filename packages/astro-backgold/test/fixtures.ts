@@ -98,7 +98,7 @@ export function fakeKv(): KvLike & { data: Map<string, string> } {
   }
 }
 
-/** `caches.default` in a Map: what was stored, by key URL. */
+/** The edge cache in a Map: what was stored, by key URL. */
 export function fakeCache(): EdgeCache & { stored: Map<string, { status: number; headers: Headers; body: string }> } {
   const stored = new Map<string, { status: number; headers: Headers; body: string }>()
   return {
