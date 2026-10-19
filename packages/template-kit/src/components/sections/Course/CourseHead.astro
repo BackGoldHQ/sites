@@ -1,0 +1,123 @@
+---
+// A course's head (board D2): "Course · 12 lessons · 1 h 1 min" as the
+// kicker, the title, the summary, and for a visitor the course's bar with
+// "4 of 12 · 38 min left" and "Lesson 4 finished on Tuesday" (the newest
+// lesson the visitor finished, when the api says when); then the one accent button, "Continue · Lesson 5"
+// with the lesson's title and length under it ("Start · Lesson 1" before the
+// first lesson is finished, nothing once the course is finished, which says
+// Finished instead). Signed out, the line under it says why to sign in. The
+// cover sits at the right (`cover`), above the words on a phone.
+import Bar from './Bar.astro'
+import Icon from './Icon.astro'
+import type { CourseView } from './course'
+import { clockOf, countAndLength, leftOf, stateOf } from '../../../lib/academy'
+
+interface Props {
+  view: CourseView
+  /** The title is the page's <h1> (the course's own page) rather than an <h2>. */
+  lead: boolean
+  cover: boolean
+}
+
+const { view, lead, cover } = Astro.props
+const Title = lead ? 'h1' : 'h2'
+const finished = view.progress ? stateOf(view.progress) === 'finished' : false
+const left = view.progress ? leftOf(view.progress) : null
+const nextLength = view.next ? clockOf(view.next.row.seconds) : null
+---
+<header class:list={['cs-head', cover && view.cover && 'cs-head-cover']}>
+  {cover && view.cover && <img class="cs-cover" src={view.cover} alt="" decoding="async" />}
+  <div class="cs-words">
+    <p class="kicker">Course · {countAndLength(view.lessons, view.seconds)}</p>
+    <Title class="cs-title">{view.title}</Title>
+    {view.summary && <p class="lede cs-summary">{view.summary}</p>}
+    {view.progress && (
+      <div class="cs-progress">
+        <Bar completed={view.progress.completed} total={view.progress.total} label={`${view.title}: ${view.progress.completed} of ${view.progress.total} lessons`} />
+        <p class="cs-figures">
+          <strong>{view.progress.completed} of {view.progress.total}</strong>
+          {left && !finished && <> · {left}</>}
+          {finished && <span class="cs-finished"> · <Icon name="check" /> Finished</span>}
+        </p>
+        {view.lastFinished && <p class="fine cs-last">Lesson {view.lastFinished.n} finished {view.lastFinished.on}</p>}
+      </div>
+    )}
+    {view.next && !finished && (
+      <div class="cs-next">
+        <a class="button" href={view.next.row.href ?? undefined}>{view.next.verb} · Lesson {view.next.row.n}</a>
+        <p class="fine">{nextLength ? `${view.next.row.name} · ${nextLength}` : view.next.row.name}</p>
+      </div>
+    )}
+    {!view.visitor && (
+      <p class="fine cs-sign-in">
+        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={view.signIn}>Sign in</a>
+      </p>
+    )}
+  </div>
+</header>
+
+<style>
+  .cs-head {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: clamp(2rem, 1.5rem + 2vw, 3rem);
+  }
+  .cs-words {
+    display: grid;
+    gap: 0.875rem;
+    align-content: start;
+    min-width: 0;
+  }
+  .cs-words > * {
+    margin: 0;
+  }
+  .cs-title {
+    font-size: var(--h1);
+  }
+  .cs-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-card);
+    object-fit: cover;
+  }
+  .cs-progress {
+    display: grid;
+    gap: 0.5rem;
+    max-width: 26rem;
+  }
+  .cs-progress > * {
+    margin: 0;
+  }
+  .cs-figures {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .cs-figures strong,
+  .cs-finished {
+    color: var(--ink);
+  }
+  .cs-next {
+    display: grid;
+    justify-items: start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .cs-next > * {
+    margin: 0;
+  }
+  .cs-next .button:focus-visible {
+    outline-color: var(--link);
+  }
+  @media (min-width: 56rem) {
+    .cs-head-cover {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      gap: 3rem;
+      align-items: center;
+    }
+    .cs-head-cover .cs-cover {
+      order: 2;
+    }
+  }
+</style>

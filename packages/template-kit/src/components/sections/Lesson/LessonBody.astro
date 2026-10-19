@@ -1,0 +1,440 @@
+---
+// One lesson (board D3), for both layouts. The breadcrumb, then:
+//   the player  the browser's own <video> (preload="metadata", the cover as
+//               its poster, the api's Range-served file); for a visitor it
+//               picks up at the place they stopped ("Picks up at 1:12, where
+//               you stopped."). Locked: the teaser, the cover under a lock
+//               and the lock's word, the length still on it.
+//   the head    "Lesson 5: Decide what you want", "Lesson 5 of 12 in
+//               <course> · 4:50".
+//   the door    a locked lesson's (Door.astro), and "The notes for this
+//               lesson open with the video." in place of the notes.
+//   completion  for a visitor: Mark complete, a real form posting to the
+//               site's progress path, with "Or watch to the end and the
+//               Academy marks it for you."; once done, "Completed" and Mark
+//               as not done. The script below sends both through fetch and
+//               swaps them in place, saves the place on pause and every 15
+//               seconds of play, and marks the lesson at the video's end.
+//               Without the script the forms post and the page comes back.
+//   the notes   the lesson's body under "Notes".
+//   Previous and Next, then the course's rail (Rail.astro).
+// `layout` is the section's: `player` puts the rail at the right on a wide
+// screen; `reading` holds everything to the reading column, the rail last.
+import type { Section } from '@backgold/content'
+import { VISITOR_PROGRESS_PATH } from '@backgold/contract/content-api'
+import Crumbs from '../Course/Crumbs.astro'
+import Icon from '../Course/Icon.astro'
+import Door from './Door.astro'
+import Rail from './Rail.astro'
+import type { LessonView } from './lesson'
+import { clockOf, lessonTitle } from '../../../lib/academy'
+
+interface Props {
+  view: LessonView
+  section: Section
+  layout: 'player' | 'reading'
+  /** Drawn as the lesson's own page: its title is the <h1>. */
+  lead: boolean
+}
+
+const { view, section, layout, lead } = Astro.props
+const Title = lead ? 'h1' : 'h2'
+const sub: 2 | 3 = lead ? 2 : 3
+const Sub = lead ? 'h2' : 'h3'
+const length = clockOf(view.seconds)
+const resume = view.resumeAt !== null ? clockOf(view.resumeAt) : null
+const tracks = view.visitor !== null && !view.locked
+// The body's headings move under the notes' own heading: h2 becomes the level below "Notes".
+const shift = lead ? 1 : 2
+const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: string) => `<${slash}h${Math.min(Number(level) + shift, 6)}>`) ?? null
+---
+<div
+  class:list={['ls', `ls-${layout}`]}
+  data-lesson={tracks ? '' : undefined}
+  data-course-slug={tracks ? view.courseSlug : undefined}
+  data-lesson-slug={tracks ? view.slug : undefined}
+  data-progress={tracks ? VISITOR_PROGRESS_PATH : undefined}
+  data-resume={tracks && view.resumeAt !== null ? String(Math.floor(view.resumeAt)) : undefined}
+>
+  <Crumbs steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.courseTitle, href: view.courseHref }, { label: `Lesson ${view.n}`, href: null }]} />
+  <div class="ls-grid">
+    <div class="ls-main">
+      {view.video && (
+        <div class="ls-frame">
+          <video src={view.video.src} poster={view.video.poster ?? undefined} controls playsinline preload="metadata">
+            <a href={view.video.src}>Watch the video</a>
+          </video>
+        </div>
+      )}
+      {view.locked && (
+        <div class="ls-frame ls-teaser on-photo">
+          {view.cover && <img src={view.cover} alt="" decoding="async" />}
+          <div class="ls-veil">
+            <span class="ls-ring"><Icon name="lock" /></span>
+            {view.lockWord && <p>{view.lockWord}</p>}
+          </div>
+          {length && <span class="chip ls-length">{length}</span>}
+        </div>
+      )}
+      {!view.video && !view.locked && (
+        <div class="ls-frame ls-missing"><p>The video for this lesson is not up yet.</p></div>
+      )}
+      <header class="ls-head">
+        <Title class="ls-title">{lessonTitle(view.n, view.name)}</Title>
+        <p class="fine">
+          Lesson {view.n} of {view.total} in {view.courseHref ? <a href={view.courseHref}>{view.courseTitle}</a> : view.courseTitle}
+          {length && <> · {length}</>}
+        </p>
+        {resume && <p class="ls-resume">Picks up at {resume}, where you stopped.</p>}
+      </header>
+      {view.door && <Door door={view.door} section={section} level={sub} />}
+      {tracks && (
+        <div class="ls-complete">
+          <form method="post" action={VISITOR_PROGRESS_PATH} data-complete="true" hidden={view.completed}>
+            <input type="hidden" name="course" value={view.courseSlug} />
+            <input type="hidden" name="lesson" value={view.slug} />
+            <input type="hidden" name="completed" value="true" />
+            <input type="hidden" name="return" value={view.path} />
+            <button class="button" type="submit">Mark complete</button>
+            <p class="fine">Or watch to the end and the Academy marks it for you.</p>
+          </form>
+          <form method="post" action={VISITOR_PROGRESS_PATH} data-complete="false" hidden={!view.completed}>
+            <input type="hidden" name="course" value={view.courseSlug} />
+            <input type="hidden" name="lesson" value={view.slug} />
+            <input type="hidden" name="completed" value="false" />
+            <input type="hidden" name="return" value={view.path} />
+            <p class="ls-completed"><Icon name="check" /> Completed</p>
+            <button class="button button-quiet button-small" type="submit">Mark as not done</button>
+          </form>
+        </div>
+      )}
+      {notes && (
+        <section class="ls-notes">
+          <Sub class="ls-label">Notes</Sub>
+          <div class="prose" set:html={notes} />
+        </section>
+      )}
+      {view.locked && <p class="ls-notes-locked">The notes for this lesson open with the video.</p>}
+      {(view.previous || view.next) && (
+        <nav class="ls-pn" aria-label="Other lessons in this course">
+          {view.previous && view.previous.href && (
+            <a class="ls-pn-card" href={view.previous.href} rel="prev">
+              <span class="ls-pn-arrow" aria-hidden="true">←</span>
+              <span class="ls-pn-text">
+                <span class="ls-pn-dir">Previous</span>
+                <span class="ls-pn-name">{lessonTitle(view.previous.n, view.previous.name)}</span>
+              </span>
+            </a>
+          )}
+          {view.next && view.next.href && (
+            <a class="ls-pn-card ls-pn-next" href={view.next.href} rel="next">
+              <span class="ls-pn-text">
+                <span class="ls-pn-dir">Next</span>
+                <span class="ls-pn-name">{lessonTitle(view.next.n, view.next.name)}</span>
+              </span>
+              <span class="ls-pn-arrow" aria-hidden="true">→</span>
+            </a>
+          )}
+        </nav>
+      )}
+    </div>
+    <Rail view={view} section={section} level={sub} />
+  </div>
+  {tracks && (
+    <script is:inline>
+      ;(function (root) {
+        if (!root || !window.fetch) return
+        var path = root.getAttribute('data-progress')
+        var course = root.getAttribute('data-course-slug')
+        var lesson = root.getAttribute('data-lesson-slug')
+        var forms = root.querySelectorAll('.ls-complete form')
+        var video = root.querySelector('video')
+        var send = function (body, keep) {
+          body.course = course
+          body.lesson = lesson
+          return fetch(path, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(body),
+            keepalive: !!keep,
+          })
+        }
+        var show = function (done) {
+          forms[0].hidden = done
+          forms[1].hidden = !done
+        }
+        for (var f = 0; f < forms.length; f++) {
+          forms[f].addEventListener('submit', function (event) {
+            var form = event.currentTarget
+            var done = form.getAttribute('data-complete') === 'true'
+            event.preventDefault()
+            send({ completed: done })
+              .then(function (res) {
+                if (!res.ok) throw new Error(String(res.status))
+                show(done)
+                forms[done ? 1 : 0].querySelector('button').focus()
+              })
+              .catch(function () {
+                form.submit()
+              })
+          })
+        }
+        if (!video) return
+        var resume = Number(root.getAttribute('data-resume')) || 0
+        var last = 0
+        var save = function (keep) {
+          var at = Math.floor(video.currentTime)
+          last = Date.now()
+          if (at > 0 && !video.ended) send({ position_seconds: at }, keep).catch(function () {})
+        }
+        video.addEventListener('loadedmetadata', function () {
+          if (resume > 0 && (!video.duration || resume < video.duration - 3)) video.currentTime = resume
+        })
+        video.addEventListener('play', function () {
+          last = Date.now()
+        })
+        video.addEventListener('timeupdate', function () {
+          if (!video.paused && Date.now() - last >= 15000) save(false)
+        })
+        video.addEventListener('pause', function () {
+          if (!video.ended) save(true)
+        })
+        video.addEventListener('ended', function () {
+          send({ completed: true })
+            .then(function (res) {
+              if (res.ok) show(true)
+            })
+            .catch(function () {})
+        })
+      })(document.currentScript.closest('[data-lesson]'))
+    </script>
+  )}
+</div>
+
+<style>
+  .ls-grid {
+    display: grid;
+    gap: 2rem;
+  }
+  .ls-main {
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+    min-width: 0;
+  }
+  .ls-main > * {
+    margin: 0;
+  }
+  .ls-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--ink) 88%, var(--surface));
+  }
+  .ls-frame video,
+  .ls-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    object-fit: cover;
+  }
+  .ls-frame video {
+    object-fit: contain;
+    background: #000;
+  }
+  /* The photo band's pair, the same in both themes: its ink reads at AA on its ground, and on its scrim over the cover. */
+  .ls-teaser {
+    background: var(--band-photo);
+  }
+  .ls-teaser img {
+    filter: saturate(0.6) brightness(0.55);
+  }
+  .ls-veil {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--band-photo) 60%, transparent);
+    color: var(--ink);
+    text-align: center;
+  }
+  .ls-veil p {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
+  .ls-ring {
+    display: inline-grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    font-size: 1.5rem;
+  }
+  .ls-length {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    background: #fff;
+    color: #16191f;
+  }
+  .ls-missing {
+    display: grid;
+    place-items: center;
+    background: var(--surface);
+    border: 1px dashed var(--line-strong);
+  }
+  .ls-missing p {
+    margin: 0;
+    padding: 1rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .ls-head {
+    display: grid;
+    gap: 0.375rem;
+  }
+  .ls-head > * {
+    margin: 0;
+  }
+  .ls-head .ls-title {
+    font-size: calc(var(--h2) * 0.85);
+    line-height: 1.12;
+  }
+  .ls-resume {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .ls-complete form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+  }
+  .ls-complete form[hidden] {
+    display: none;
+  }
+  .ls-complete p {
+    margin: 0;
+  }
+  .ls-complete .button:focus-visible {
+    outline: 3px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ls-completed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+  }
+  .ls-label {
+    margin: 0 0 0.625rem;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  .ls-notes .prose > :global(:first-child) {
+    margin-top: 0;
+  }
+  .ls-notes .prose > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .ls-notes .prose :global(:is(h3, h4, h5, h6)) {
+    margin: 1.5rem 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .ls-notes-locked {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .ls-pn {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .ls-pn-card {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1.125rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .ls-pn-card:hover {
+    border-color: var(--ink);
+  }
+  .ls-pn-card:hover .ls-pn-name {
+    text-decoration: underline;
+  }
+  .ls-pn-card:focus-visible {
+    outline: 3px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ls-pn-text {
+    display: grid;
+    flex: 1;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .ls-pn-arrow {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .ls-pn-card:hover .ls-pn-arrow {
+    color: var(--ink);
+  }
+  .ls-pn-dir {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .ls-pn-name {
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .ls-pn-next {
+    text-align: right;
+  }
+  @media (min-width: 40rem) {
+    .ls-pn {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .ls-pn-next:only-child {
+      grid-column: 2;
+    }
+  }
+  @media (min-width: 56rem) {
+    .ls-player .ls-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
+      gap: 2.5rem;
+      align-items: start;
+    }
+    .ls-player :global(.ls-rail) {
+      position: sticky;
+      top: 1.5rem;
+    }
+  }
+  .ls-reading .ls-grid {
+    max-width: calc(var(--measure) + 4rem);
+  }
+</style>

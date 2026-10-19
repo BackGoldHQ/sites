@@ -1,5 +1,5 @@
 import { createClient, kvStore, memoryCache } from '@backgold/content'
-import type { BackgoldContent, ContentApiLegal, KvLike, SiteResponse } from '@backgold/content'
+import type { BackgoldContent, ContentApiLegal, KvLike, SiteResponse, Visitor, VisitorOptions } from '@backgold/content'
 import { analyticsOf, type BackgoldAnalytics } from './analytics.js'
 import { DEFAULT_API_ORIGIN, SITE_ID_PATTERN, firstPartyOf, isDispatched, kvBinding, namesNoSite, serviceBinding, text, workerEnv, type BackgoldEnv } from './env.js'
 import { withTimeout } from './timeout.js'
@@ -20,6 +20,8 @@ export interface BackgoldReady {
    */
   siteId: string
   site: SiteResponse['site']
+  /** The organization's name (the `/site` answer's `org_name`), for "Members of <org>". */
+  orgName: string
   /** The legal line every HTML page must show. */
   legal: ContentApiLegal
   /** The content version this request renders. */
@@ -30,6 +32,20 @@ export interface BackgoldReady {
   variant: string
   /** The `bg_vid` visitor id; null until the middleware has read or minted it. */
   visitorId: string | null
+  /**
+   * The person signed in on the site (the `bg_visitor` cookie, read by the
+   * middleware with `GET /visitor`); null for everyone else. A page drawn
+   * for a visitor is answered `private, no-store` and never cached.
+   */
+  visitor: Visitor | null
+  /**
+   * What a read made for the signed-in visitor passes as its options
+   * (`client.course(slug, bg.visitorReads)`): their token, and the callback
+   * that writes a renewed one back to the cookie. Undefined when no one is
+   * signed in, so the same call reads anonymously, from the cache. Server
+   * side only: never render it.
+   */
+  visitorReads: VisitorOptions | undefined
   /** The `/site` answer's analytics block; absent while the site does not share its analytics. */
   analytics?: BackgoldAnalytics
   /** True for a site Worker inside BackGold's namespace (`BACKGOLD_SITE_ID` set, or the dispatched form). */
@@ -46,11 +62,14 @@ export interface BackgoldSetup {
   client: null
   siteId: null
   site: null
+  orgName: null
   legal: null
   version: null
   siteUrl: string
   variant: string
   visitorId: string | null
+  visitor: null
+  visitorReads: undefined
   /** True when `BACKGOLD_SITE_ID` is set, or in the dispatched form. */
   firstParty: boolean
   /** The variable names to set or fix, for the setup page. */
@@ -166,15 +185,29 @@ export async function backgoldFor(env: BackgoldEnv, context: BackgoldContextLike
   let bg: BackgoldLocals
   if (missing.length > 0) {
     const firstParty = text(env.BACKGOLD_SITE_ID) !== undefined || isDispatched(env)
-    bg = { client: null, siteId: null, site: null, legal: null, version: null, siteUrl, variant: '', visitorId, firstParty, setup: { missing } }
+    bg = { client: null, siteId: null, site: null, orgName: null, legal: null, version: null, siteUrl, variant: '', visitorId, visitor: null, visitorReads: undefined, firstParty, setup: { missing } }
   } else {
     if (namesNoSite(env, context.request?.headers)) throw new Error('No site: this dispatched request carries no well-formed X-BackGold-Site')
     const firstParty = firstPartyOf(env, context.request?.headers)
     const client = siteClient(env, text(env.BACKGOLD_API_ORIGIN) ?? DEFAULT_API_ORIGIN, firstParty)
     const answer = await client.site()
-    const { site, legal, version } = answer
+    const { site, legal, version, org_name: orgName } = answer
     const siteId = firstParty?.siteId ?? site.id
-    bg = { client, siteId, site, legal, version: client.version() ?? version, siteUrl, variant: '', visitorId, firstParty: firstParty !== undefined, setup: null }
+    bg = {
+      client,
+      siteId,
+      site,
+      orgName,
+      legal,
+      version: client.version() ?? version,
+      siteUrl,
+      variant: '',
+      visitorId,
+      visitor: null,
+      visitorReads: undefined,
+      firstParty: firstParty !== undefined,
+      setup: null,
+    }
     const analytics = analyticsOf(answer)
     if (analytics) bg.analytics = analytics
   }

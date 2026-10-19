@@ -53,7 +53,7 @@ describe.skipIf(!BUILT)('dist', () => {
   })
 
   it('ships every injected route the integration points at', async () => {
-    for (const name of ['webhook', 'revalidate', 'sitemap', 'robots', 'llms', 'llms-full', 'feed']) {
+    for (const name of ['webhook', 'revalidate', 'sitemap', 'robots', 'llms', 'llms-full', 'feed', 'sign-in', 'visitor', 'sign-out', 'progress']) {
       expect(existsSync(`${DIST}routes/${name}.js`), name).toBe(true)
     }
     expect(existsSync(`${DIST}render.js`), 'the components’ render module').toBe(true)

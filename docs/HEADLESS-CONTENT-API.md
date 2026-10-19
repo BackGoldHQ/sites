@@ -1298,8 +1298,8 @@ triggers its rebuild here instead.
 ### Typed fields
 
 `entry(type, slug)` returns `fields` as a loose record until the client knows
-the type's fields. The seven built-in types (`post`, `podcast`, `video`,
-`plank`, `team_member`, `open_role`, `newsletter`) are typed already. For the
+the type's fields. The eight built-in types (`post`, `podcast`, `video`,
+`plank`, `team_member`, `open_role`, `newsletter`, `course`) are typed already. For the
 organization's own types, the `backgold-content` command reads `GET /types`
 and writes a TypeScript file:
 
@@ -1337,13 +1337,15 @@ Run the command again whenever the organization changes a content type.
 
 ### What the client never does
 
-- **It never writes.** Every request is a `GET`, like the API.
+- **It never writes but for a signed-in visitor.** Every request is a `GET`
+  except a visitor's lesson progress, sign-in code exchange and sign-out.
 - **It sends your key only to `apiOrigin`.** No other host ever sees it, and
   the client sends nothing anywhere else. A key that is not shaped like one
   BackGold mints is refused before any request, and no error message repeats
   a key.
-- **It never stores a preview.** Draft reads and `preview(token)` go to the
-  API every time and never reach the cache.
+- **It never stores a preview or a visitor's read.** Draft reads,
+  `preview(token)` and every call made with a visitor's token go to the API
+  every time and never reach the cache.
 - **A secret key refuses to run in a browser.** `createClient` with a
   `bg_site_sk_` key throws a `SecretKeyInBrowserError` in a browser page or a
   browser worker. Cloudflare Workers are servers and may hold one. Give browser code the publishable key.

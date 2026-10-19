@@ -1,0 +1,29 @@
+---
+// The academy's two marks: the check beside Done and Finished, the lock
+// beside For members and Sign in to watch. Each only repeats the word
+// printed next to it, so it is hidden from screen readers.
+interface Props {
+  name: 'check' | 'lock'
+  class?: string
+}
+
+const { name, class: className } = Astro.props
+---
+<svg class:list={['ac-icon', className]} viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+  {name === 'check' && <path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />}
+  {name === 'lock' && (
+    <>
+      <rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+      <path d="M6.75 9V6.75a3.25 3.25 0 0 1 6.5 0V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </>
+  )}
+</svg>
+
+<style>
+  .ac-icon {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+  }
+</style>

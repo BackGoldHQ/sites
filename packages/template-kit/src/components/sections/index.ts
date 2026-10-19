@@ -22,21 +22,32 @@
 // which it asks to wear the site in the chosen layout. The fields, limits,
 // receipts and consent stay inside BackGold's frame; never draw them here.
 // SocialFrame has no frame a site can place and stays unlisted.
+//
+// The academy's sections (Classroom, Course, Lesson) read their courses for
+// the visitor signed in on the site, if any (lib/visitor.ts): a section's
+// baked rows are the public courses only, and a visitor's progress and locks
+// come from the visitor's own reads, never from the cached page data.
 
 import About from './About/index.astro'
 import Blog from './Blog/index.astro'
 import CandidateRoster from './CandidateRoster/index.astro'
+import Classroom from './Classroom/index.astro'
+import ClassroomList from './Classroom/list.astro'
 import Collection from './Collection/index.astro'
 import ContentPost from './ContentPost/index.astro'
 import ContentPostPlayer from './ContentPost/player.astro'
 import ContentPostBanner from './ContentPost/banner.astro'
 import ContentPostTheater from './ContentPost/theater.astro'
 import Countdown from './Countdown/index.astro'
+import Course from './Course/index.astro'
+import CourseOutline from './Course/outline.astro'
 import Cta from './Cta/index.astro'
 import EventsList from './EventsList/index.astro'
 import Hero from './Hero/index.astro'
 import Issues from './Issues/index.astro'
 import Leaderboard from './Leaderboard/index.astro'
+import Lesson from './Lesson/index.astro'
+import LessonReading from './Lesson/reading.astro'
 import MapSection from './Map/index.astro'
 import MovementMap from './MovementMap/index.astro'
 import MovementTicker from './MovementTicker/index.astro'
@@ -348,4 +359,10 @@ export const sections = {
   'MediaKit:press': MediaKitPress,
   Booking,
   'Booking:list': BookingList,
+  Classroom,
+  'Classroom:list': ClassroomList,
+  Course,
+  'Course:outline': CourseOutline,
+  Lesson,
+  'Lesson:reading': LessonReading,
 }

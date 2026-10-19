@@ -1,0 +1,44 @@
+---
+// The academy's breadcrumb (boards D2, D3): "Courses › Foundational
+// Leadership" on a course, "Courses › Foundational Leadership › Lesson 5" on
+// a lesson, the last step the page itself.
+interface Props {
+  steps: { label: string; href: string | null }[]
+}
+
+const { steps } = Astro.props
+---
+<nav class="ac-crumbs" aria-label="Breadcrumb">
+  <ol role="list">
+    {steps.map((step, i) => (
+      <li>
+        {i < steps.length - 1 && step.href ? <a href={step.href}>{step.label}</a> : <span aria-current={i === steps.length - 1 ? 'page' : undefined}>{step.label}</span>}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .ac-crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .ac-crumbs li + li::before {
+    content: '›';
+    padding: 0 0.5rem;
+    color: var(--muted);
+  }
+  .ac-crumbs a {
+    color: var(--link);
+    font-weight: 600;
+  }
+  .ac-crumbs [aria-current] {
+    color: var(--ink);
+  }
+</style>

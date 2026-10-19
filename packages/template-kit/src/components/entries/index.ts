@@ -8,9 +8,17 @@
 //
 // To give a type a different layout, add the file, register it in the
 // template's `entries`, and change the name in its template.json.
+//
+// A lesson (`/<courses base>/<course>/<lesson>`) is not an entry of a type
+// of its own: it is drawn by the template's `course:lesson` (the kit's is
+// the Lesson section's Player layout), given LessonLayoutProps
+// (lessonLayoutFor).
 
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
 import type { TemplateConfig } from '../../template'
+import CourseClassroom from './course/classroom.astro'
+import CourseLesson from './course/lesson.astro'
+import CourseSyllabus from './course/syllabus.astro'
 import NewsletterIssue from './newsletter/issue.astro'
 import NewsletterList from './newsletter/list.astro'
 import PodcastEpisode from './podcast/episode.astro'
@@ -25,10 +33,13 @@ export const entries = {
   'podcast:episode': PodcastEpisode,
   'video:watch': VideoWatch,
   'newsletter:issue': NewsletterIssue,
+  'course:syllabus': CourseSyllabus,
   'post:list': PostList,
   'podcast:list': PodcastList,
   'video:grid': VideoGrid,
   'newsletter:list': NewsletterList,
+  'course:classroom': CourseClassroom,
+  'course:lesson': CourseLesson,
 }
 
 function pick(template: TemplateConfig, key: string, which: 'entry' | 'list', fallback: AstroComponentFactory): AstroComponentFactory {
@@ -44,3 +55,7 @@ export const entryLayoutFor = (template: TemplateConfig, key: string) => pick(te
 
 /** The template's list layout for a list of type `key` (`post` for the built-in types' shared list). */
 export const listLayoutFor = (template: TemplateConfig, key: string) => pick(template, key, 'list', PostList)
+
+/** The template's lesson layout: the `course:lesson` its entries register, else the kit's. */
+export const lessonLayoutFor = (template: TemplateConfig): AstroComponentFactory =>
+  Object.hasOwn(template.entries, 'course:lesson') ? template.entries['course:lesson']! : CourseLesson

@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-H26EJR32.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-O4RPYQ2R.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -109,6 +109,11 @@ var SECTION_LAYOUTS = {
   Membership: ["card", "tiers", "compare"],
   // The services sections (2026-10-14): the org's meeting types.
   Booking: ["cards", "list"],
+  // The academy (2026-10-18): drawn by templates only, like the services
+  // sections. The classroom's courses, one course's syllabus, and a lesson.
+  Classroom: ["grid", "list"],
+  Course: ["syllabus", "outline"],
+  Lesson: ["player", "reading"],
   Donate: ["form", "story"],
   SignupCapture: ["card", "band", "inline"],
   FormBlock: ["card", "wide"],
@@ -137,12 +142,24 @@ var TEMPLATE_SECTION_TYPES = [
   "Pathways",
   "Portfolio",
   "MediaKit",
-  "Booking"
+  "Booking",
+  "Classroom",
+  "Course",
+  "Lesson"
 ];
 var SITE_CHROME_LAYOUTS = {
   header: ["bar", "centered"],
   footer: ["columns", "closing", "compact", "giving"]
 };
+var VISITOR_COOKIE = "bg_visitor";
+var VISITOR_HEADER = "X-BackGold-Visitor";
+var VISITOR_RENEW_HEADER = "X-BackGold-Visitor-Renew";
+var VISITOR_TOKEN_TTL_SECONDS = 60 * 60;
+var VISITOR_RENEW_WINDOW_SECONDS = 30 * 24 * 60 * 60;
+var VISITOR_RETURN_PATH = "/_backgold/visitor";
+var VISITOR_SIGN_OUT_PATH = "/_backgold/sign-out";
+var VISITOR_SIGN_IN_PATH = "/_backgold/sign-in";
+var VISITOR_PROGRESS_PATH = "/_backgold/progress";
 function siteKeyKind(key) {
   if (key.startsWith(SITE_KEY_PREFIXES.publishable)) return "publishable";
   if (key.startsWith(SITE_KEY_PREFIXES.secret)) return "secret";
@@ -195,6 +212,7 @@ function contentApiEmbedUrls(origins) {
     petition: (orgSlug, slug) => `${donor}/embed/p/${seg(orgSlug)}/${seg(slug)}`,
     petitionBlock: (pageId, blockId) => `${api}/embed/petition/${seg(pageId)}/${seg(blockId)}`,
     movementMapBlock: (pageId, blockId) => `${api}/embed/movement-map/${seg(pageId)}/${seg(blockId)}`,
+    movementTickerBlock: (pageId, blockId) => `${api}/embed/movement-ticker/${seg(pageId)}/${seg(blockId)}`,
     event: (orgSlug, slug) => `${donor}/embed/e/${seg(orgSlug)}/${seg(slug)}`,
     events: (orgSlug) => `${api}/embed/events/${seg(orgSlug)}`,
     calendar: (orgSlug) => `${api}/embed/calendar/${seg(orgSlug)}`,
@@ -270,6 +288,12 @@ function movementMapEmbed(p, ctx) {
   const hasSource = !!str(p.datasetUrl) || !!str(p.datasetPreset) && !!str(p.datasetArea);
   if (!pageId || !blockId || !hasSource) return null;
   return iframeEmbed(ctx.embedUrls.movementMapBlock(pageId, blockId), ctx);
+}
+function movementTickerEmbed(p, ctx) {
+  const pageId = str(p.pageId);
+  const blockId = str(p.id);
+  if (!pageId || !blockId) return null;
+  return iframeEmbed(ctx.embedUrls.movementTickerBlock(pageId, blockId), ctx);
 }
 var HEADING_ONLY = ["heading"];
 var CONTENT_API_BLOCKS = {
@@ -888,11 +912,15 @@ var CONTENT_API_BLOCKS = {
     hosted: ["campaignId"],
     data: { source: "social_feed" }
   },
+  // The stat tiles travel as rows for a site to draw; the live feed of the
+  // people signing, giving and RSVPing, with its count, is BackGold's, framed
+  // by the page's block (`embed`) whenever the bake stamped `pageId`.
   MovementTicker: {
     role: "data",
     copy: HEADING_ONLY,
     options: ["kinds", "showTotal", "anchorId"],
-    hosted: ["orgSlug", "petitionSlug", "eventSlug"],
+    hosted: ["orgSlug", "petitionSlug", "eventSlug", "pageId"],
+    embed: (p, ctx) => movementTickerEmbed(p, ctx),
     data: { source: "movement", lists: [{ prop: "statTiles", fields: { value: "value", label: "label" } }] }
   },
   // The org's upcoming events as the bake listed them, as many as the block
@@ -1190,6 +1218,52 @@ var CONTENT_API_BLOCKS = {
       ]
     }
   },
+  // The academy (2026-10-18). Classroom lists the org's published courses
+  // (GET /courses' public fields): rows are shared and cached, so they never
+  // carry a visitor's progress; a template overlays that from its own
+  // visitor-scoped read. Course and Lesson draw the course and the lesson the
+  // page's route names (GET /courses/:slug, GET /courses/:slug/:lesson), so
+  // they bake no rows; `courseSlug` pins a course for a page that is not a
+  // course route.
+  Classroom: {
+    role: "data",
+    copy: ["heading", "kicker"],
+    links: [],
+    variant: "layout",
+    options: ["limit", "anchorId"],
+    hosted: ["orgSlug", "siteId"],
+    data: {
+      source: "courses",
+      lists: [
+        {
+          prop: "courses",
+          fields: {
+            slug: "slug",
+            title: "title",
+            summary: "summary",
+            url: "url",
+            hero_url: "hero_url",
+            lesson_count: { prop: "lesson_count", as: "number" },
+            total_seconds: { prop: "total_seconds", as: "number" },
+            access: "access",
+            locked: { prop: "locked", as: "flag" }
+          }
+        }
+      ]
+    }
+  },
+  Course: {
+    role: "data",
+    copy: [],
+    variant: "layout",
+    options: ["courseSlug", "anchorId"]
+  },
+  Lesson: {
+    role: "data",
+    copy: [],
+    variant: "layout",
+    options: ["courseSlug", "anchorId"]
+  },
   // ── compliance ──
   // Each BackGold module's `layout` is how the frame around it is arranged
   // (CONTRACT §2): the module's fields, limits and consent never change with it.
@@ -1334,6 +1408,9 @@ var BLOCK_BAND_INTRINSICS = {
   Portfolio: { role: "plain", bleed: "full" },
   MediaKit: { role: "plain", bleed: "full" },
   Booking: { role: "plain", bleed: "full" },
+  Classroom: { role: "plain", bleed: "full" },
+  Course: { role: "plain", bleed: "full" },
+  Lesson: { role: "plain", bleed: "full" },
   Issues: { role: "panel", bleed: "full" },
   Donate: { role: "panel", bleed: "full" },
   Leaderboard: { role: "panel", bleed: "full" },
@@ -1595,4 +1672,4 @@ function projectedBlockProps(block, ctx) {
   return props;
 }
 
-export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, EVENTS_WINDOW_MAX_DAYS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, EVENTS_WINDOW_MAX_DAYS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

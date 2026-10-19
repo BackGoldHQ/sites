@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S as SiteNavItemType } from './constants-BcK31coy.js';
+import { S as SiteNavItemType } from './constants-BgQMMyNq.js';
 
 /**
  * A site template's manifest: the `template.json` at the root of each
@@ -20,7 +20,7 @@ import { S as SiteNavItemType } from './constants-BcK31coy.js';
  */
 
 /** Every template BackGold ships, by its manifest `key`. */
-declare const SITE_TEMPLATE_KEYS: readonly ["party", "candidate", "petition-drive"];
+declare const SITE_TEMPLATE_KEYS: readonly ["party", "candidate", "petition-drive", "academy"];
 type SiteTemplateKey = (typeof SITE_TEMPLATE_KEYS)[number];
 /**
  * The data sources whose rows an author types in BackGold, named exactly as
@@ -75,6 +75,7 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     entryLayouts: z.ZodRecord<z.ZodEnum<{
         post: "post";
         video: "video";
+        course: "course";
         podcast: "podcast";
         plank: "plank";
         team_member: "team_member";
@@ -269,8 +270,8 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                         petition: "petition";
                         form: "form";
                         poll: "poll";
-                        signup: "signup";
                         event: "event";
+                        signup: "signup";
                         donation_form: "donation_form";
                         advocacy: "advocacy";
                     }>;
@@ -280,5 +281,25 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 type SiteTemplateManifest = z.infer<typeof siteTemplateManifestSchema>;
+/**
+ * One section a template switch draws differently
+ * (GET /api/orgs/domains/:id/template/switch, PUT /api/orgs/domains/:id/template):
+ * a section of a live page whose layout (`layout`, its `variant`) the new
+ * template does not draw. It takes `fallback`, the new template's default
+ * layout for the type, until the author picks one. A section whose type the
+ * new template does not draw at all has `fallback: null` and `undrawn: true`.
+ * `section_label` is the section's heading, else its type.
+ */
+interface LostLayout {
+    page_id: string;
+    page_name: string;
+    page_slug: string;
+    section_id: string;
+    section_type: string;
+    section_label: string;
+    layout: string;
+    fallback: string | null;
+    undrawn?: true;
+}
 
-export { SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, siteTemplateManifestSchema };
+export { type LostLayout, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, siteTemplateManifestSchema };

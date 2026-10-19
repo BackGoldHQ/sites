@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { k as BuiltInContentTypeKey, l as ContentTypeIcon, m as BuiltInTaxonomyKey, C as ContentFieldKind, n as ContentReferenceTarget } from './constants-BcK31coy.js';
+import { l as BuiltInContentTypeKey, m as ContentTypeIcon, n as BuiltInTaxonomyKey, C as ContentFieldKind, o as ContentReferenceTarget } from './constants-BgQMMyNq.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
@@ -71,8 +71,8 @@ interface BuiltInContentType {
 }
 /**
  * The built-in types a new org is given (lib/content-types.ts
- * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party) and 0453
- * (newsletter) seeded the same rows for the orgs that existed then, with one
+ * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party), 0453
+ * (newsletter) and 0547 (course) seeded the same rows for the orgs that existed then, with one
  * difference: the post row's url_base — the org's blog base — was `blog`
  * (BLOG_URL_BASE_LEGACY) there and is `news` for a new org.
  */
@@ -256,7 +256,8 @@ declare function entryKindForType(type: {
  * Addresses a routable type may not take: every fixed org-host route (the
  * legacy blog address among them, which only the post built-in may return
  * to), `preview` (a template site's Worker answers its drafts there), and the
- * newsletter built-in's `newsletters`, so a custom type can never shadow it.
+ * newsletter built-in's `newsletters` and the course built-in's `courses`, so
+ * a custom type can never shadow either.
  * The org's blog base is held by its post row (unique among live routable
  * types), not by this list.
  */
@@ -285,9 +286,9 @@ declare const contentTypeCreateSchema: z.ZodObject<{
 }, z.core.$strict>;
 type ContentTypeCreateInput = z.infer<typeof contentTypeCreateSchema>;
 /**
- * Labels, icon and routing. The key never changes. `url_base` may be the
- * legacy blog address here (urlBaseUpdate); the route takes it for the post
- * built-in only.
+ * Labels, icon, routing and the default access rule. The key never changes.
+ * `url_base` may be the legacy blog address here (urlBaseUpdate); the route
+ * takes it for the post built-in only.
  */
 declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
@@ -306,6 +307,12 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     }>>;
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    default_access: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
+        tag: "tag";
+        public: "public";
+        signed_in: "signed_in";
+        members: "members";
+    }>>>;
 }, z.core.$strict>;
 type ContentTypeUpdateInput = z.infer<typeof contentTypeUpdateSchema>;
 /** A reference target: one of CONTENT_REFERENCE_TARGETS, or `content_type:<key>`. */

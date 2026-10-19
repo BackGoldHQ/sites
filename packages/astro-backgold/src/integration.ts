@@ -1,4 +1,5 @@
 import type { AstroIntegration } from 'astro'
+import { VISITOR_PROGRESS_PATH, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH } from '@backgold/content'
 import { fillPreviewVars } from './preview-vars.js'
 import { DEV_BUILD_ID, mintBuildId, resolveOptions, type BackgoldOptions, type RuntimeBackgoldOptions } from './options.js'
 
@@ -11,9 +12,10 @@ const RESOLVED_OPTIONS_MODULE = `\0${OPTIONS_MODULE}`
 const route = (file: string) => new URL(file, import.meta.url)
 
 /**
- * The BackGold integration: the middleware (setup check, `bg_vid`, redirects,
- * edge cache) and the routes — webhook, revalidate, and the text routes each
- * option can turn off. `/preview` is the site's own page (`loadPreview`).
+ * The BackGold integration: the middleware (setup check, `bg_vid`, the
+ * signed-in visitor, redirects, edge cache) and the routes — webhook,
+ * revalidate, a visitor's sign-in, sign-out and lesson progress under
+ * `/_backgold/`, and the text routes each option can turn off. `/preview` is the site's own page (`loadPreview`).
  * A build also gives Cloudflare's preview deployments the site key.
  */
 export function backgold(options: BackgoldOptions = {}): AstroIntegration {
@@ -43,6 +45,10 @@ export function backgold(options: BackgoldOptions = {}): AstroIntegration {
 
         injectRoute({ pattern: '/api/backgold/webhook', entrypoint: route('./routes/webhook.js'), prerender: false })
         injectRoute({ pattern: '/api/backgold/revalidate', entrypoint: route('./routes/revalidate.js'), prerender: false })
+        injectRoute({ pattern: VISITOR_SIGN_IN_PATH, entrypoint: route('./routes/sign-in.js'), prerender: false })
+        injectRoute({ pattern: VISITOR_RETURN_PATH, entrypoint: route('./routes/visitor.js'), prerender: false })
+        injectRoute({ pattern: VISITOR_SIGN_OUT_PATH, entrypoint: route('./routes/sign-out.js'), prerender: false })
+        injectRoute({ pattern: VISITOR_PROGRESS_PATH, entrypoint: route('./routes/progress.js'), prerender: false })
         if (resolved.sitemap) injectRoute({ pattern: '/sitemap.xml', entrypoint: route('./routes/sitemap.js'), prerender: false })
         if (resolved.robots) injectRoute({ pattern: '/robots.txt', entrypoint: route('./routes/robots.js'), prerender: false })
         if (resolved.llms) {

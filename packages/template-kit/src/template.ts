@@ -66,6 +66,14 @@ export interface TemplateConfig {
    * wraps to the end of its own line (src/components/entries/ListFrame.astro).
    */
   newsSearch?: 'filter' | 'head'
+  /**
+   * Whether the header offers visitors Sign in (board D1), on a first-party
+   * site: a template whose pages hold what the organization keeps for people
+   * it knows (the academy's lessons) sets it. Left out, the header has no
+   * Sign in; a visitor already signed in (through a lesson's door) still sees
+   * their name and Sign out on every template (src/components/chrome/VisitorAccount.astro).
+   */
+  visitorSignIn?: boolean
 }
 
 /** Every section type and layout the kit draws. */
