@@ -420,9 +420,66 @@ it knows: `signed_in`, `members` or a tag (`entry.access`). A locked entry
 comes back as its teaser: `locked: true`, `lock` saying why (the door to
 draw), the body empty and no `media_url`.
 
-The api mints the visitor a **token** at sign-in. Keep it server side (a
-BackGold template keeps it in an `HttpOnly` cookie on the site's own host)
-and pass it to the reads you make for that person:
+### Signing a visitor in
+
+The portal runs the sign-in and hands it back to your site; your server
+redeems the hand-off for the visitor's **token** and keeps it. On a site
+built elsewhere (a site key, not a BackGold template):
+
+1. **Link to the portal's door** for your site:
+   `https://giving.backgold.com/site-signin?site=<site id>&return=<https://your-domain/auth/visitor?to=/courses/foundations>&title=<lesson title>`.
+   `site` is `(await bg.site()).site.id`. `return` must be an absolute
+   `https://` address whose host is the domain connected to the site in
+   BackGold, exactly (no other subdomain, no port, no fragment, no user name
+   or password); its path and query are yours. `title` is plain text the door
+   names. BackGold's staging api, on `backgold.dev`, has its portal at
+   `https://giving.backgold.dev`.
+2. **Redeem the code on your server with the secret key.** The portal sends
+   the browser back to `return` with `code=<code>` added (one minute, single
+   use). `exchangeVisitor(code)` on a client made with the site's secret key
+   answers `{ token, expires_at, visitor }`. Never from the browser: a
+   publishable-key client throws `403 SECRET_KEY_REQUIRED` before any
+   request, a secret key refuses to run in a browser, and the api answers
+   `403 SERVER_ONLY` to a request carrying `Origin` or `Sec-Fetch-*`.
+3. **Keep the token in your own cookie**: `HttpOnly`, `Secure`,
+   `SameSite=Lax`, `Path=/`, thirty days. The token is good for an hour and
+   the api renews it (see `onVisitorRenew` below) while the visitor's portal
+   session stands, for up to thirty days.
+
+```ts
+import { BackgoldApiError, VISITOR_COOKIE, createClient } from '@backgold/content'
+
+// GET /auth/visitor?code=<code>&to=<path>, on your server.
+export async function onVisitorReturn(request: Request, env: { BACKGOLD_SITE_SECRET_KEY: string }): Promise<Response> {
+  const url = new URL(request.url)
+  const raw = url.searchParams.get('to')
+  const to = raw !== null && /^\/(?![/\\])/.test(raw) && !/[\u0000-\u0020\\]/.test(raw) ? raw : '/' // a path on this site only
+  const server = createClient({ key: env.BACKGOLD_SITE_SECRET_KEY }) // bg_site_sk_…
+  try {
+    const { token } = await server.exchangeVisitor(url.searchParams.get('code') ?? '')
+    const cookie = `${VISITOR_COOKIE}=${token}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; Secure; SameSite=Lax`
+    return new Response(null, { status: 302, headers: { Location: to, 'Set-Cookie': cookie, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } })
+  } catch (error) {
+    if (!(error instanceof BackgoldApiError) && !(error instanceof TypeError)) throw error
+    return new Response('That sign-in link has expired. Sign in again.', { status: 400, headers: { 'Cache-Control': 'no-store' } })
+  }
+}
+```
+
+4. **Sign out by clearing the cookie.** There is no revocation call today:
+   the api has no way to end a token, so the one that was in the cookie stays
+   good until its hour is up (and, while the portal session stands, a request
+   presenting it after that is still renewed). Keep it on your server.
+
+A BackGold template's own Worker reads first-party and does all this in
+`@backgold/astro`'s `/_backgold/*` routes. The full recipe for a site built
+elsewhere, progress and sign-out included, is in
+[docs/HEADLESS-CONTENT-API.md](../../docs/HEADLESS-CONTENT-API.md#visitors-letting-people-sign-in-on-your-site),
+and the public starter has it as four Astro endpoints under `src/pages/auth/`.
+
+### Reading for a visitor
+
+Pass the token to the reads you make for that person, from your server:
 
 ```ts
 const course = await bg.course('foundations', {
@@ -437,7 +494,8 @@ visitor })` for a client that reads for one person only) sends
 private, no-store`, and **never reads or writes the store**, so one
 visitor's answer can never reach another. When the answer carries
 `X-BackGold-Visitor-Renew`, the fresh token goes to `onVisitorRenew` (the
-call's own, else the client's); write it where the old one was kept. Visitor
+call's own, else the client's); write it back to the cookie. Any of the
+site's keys reads this way. Never cache a page drawn for a visitor. Visitor
 calls are server-side calls: the api's CORS does not let a browser send the
 header.
 
@@ -446,16 +504,16 @@ header.
 | `courses({ cursor?, limit?, visitor? })` | `GET /courses`: the published courses, each with its lesson count and running time, and with a visitor their `progress`; null when the site has no course type |
 | `course(slug, { visitor? })` | `GET /courses/:slug`: the course and its lessons in order (each `locked` or not, `completed` and `position_seconds` for the visitor) |
 | `lesson(courseSlug, lessonSlug, { visitor? })` | `GET /courses/:course/:lesson`: the lesson read through its course, the course, and the lessons either side |
-| `visitor(token)` | `GET /visitor`: `{ visitor: { first_name, email, member } }`, or `{ visitor: null }` for a token the api no longer takes |
-| `lessonProgress(courseSlug, lessonSlug, { completed?, position_seconds? }, token)` | `POST …/progress`: saves the visitor's place or that they finished |
-| `exchangeVisitor(code)` | `POST /visitor/exchange`: the portal's one-minute hand-off code for the token. First-party clients only; any other throws `403 FIRST_PARTY_REQUIRED` without a request |
-| `signOutVisitor(token)` | `DELETE /visitor`: ends the token at the api |
+| `visitor(token)` | `GET /visitor`: `{ visitor: { first_name, email, member } }`, or `{ visitor: null }` for a token the api no longer takes (clear the cookie then) |
+| `lessonProgress(courseSlug, lessonSlug, { completed?, position_seconds? }, token)` | `POST …/progress`: saves the visitor's place or that they finished; post to your own server from the lesson page and forward from there |
+| `exchangeVisitor(code)` | `POST /visitor/exchange`: the portal's one-minute hand-off code for the token. A secret-key client or a first-party one; a publishable-key client throws `403 SECRET_KEY_REQUIRED` without a request |
+| `signOutVisitor(token)` | `DELETE /visitor`. The api does not answer it today; sign a visitor out by clearing your cookie |
 
 `entries`, `entry`, `page` and `raw` take `visitor` too. A token is refused
 with a `TypeError`, before any request and without repeating it, unless it is
 1–4096 printable characters with no space. The names a site needs are
 exported: `VISITOR_COOKIE` (`bg_visitor`), `VISITOR_HEADER`,
-`VISITOR_RENEW_HEADER` and the site paths `VISITOR_SIGN_IN_PATH`,
+`VISITOR_RENEW_HEADER` and the first-party site paths `VISITOR_SIGN_IN_PATH`,
 `VISITOR_RETURN_PATH`, `VISITOR_SIGN_OUT_PATH`, `VISITOR_PROGRESS_PATH`.
 
 ## Typed fields
