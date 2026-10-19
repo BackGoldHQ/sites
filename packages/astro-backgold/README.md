@@ -321,7 +321,8 @@ U+2028 and U+2029 escaped, so no content can close the script element.
 
 ## Caching
 
-Every `GET` that renders a 200 is stored in the Workers Cache API under
+Every `GET` that renders a 200 is stored in the Workers Cache API, in the
+named cache `backgold-pages` (`EDGE_CACHE_NAME`), under
 
 ```
 https://backgold.cache/<site id>/<build id>/<content version>/<variant>/<site origin>/<path>?<query>
@@ -369,7 +370,10 @@ never answered from the cache either), anything but a 200, a render that sets a 
 `Cache-Control` (what the page set for browsers) comes back on a hit; the edge copy lives up to a week. Responses carry
 `X-Backgold-Cache: HIT` or `MISS`.
 
-**Where it works.** Cloudflare documents the Cache API as working for
+**Where it works.** The cache is a named one, not `caches.default`, because
+a Worker in a Workers for Platforms dispatch namespace (a template's shared
+Worker) runs untrusted, where `caches.default` is disabled and a named cache
+is the Worker's own. Cloudflare documents the Cache API as working for
 Workers on a custom domain, as a no-op in the dashboard editor and
 playground previews, and as unavailable for Workers behind Cloudflare
 Access; it is local to each data center. Its documentation makes no promise
