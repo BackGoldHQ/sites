@@ -345,9 +345,12 @@ export interface BackgoldContent {
   ): Promise<LessonProgressResponse>
   /**
    * `POST /visitor/exchange { code }`: redeems the hand-off code the giving
-   * portal minted for this site for the visitor's token. First-party clients
-   * only: any other throws `BackgoldApiError` 403 `FIRST_PARTY_REQUIRED`
-   * before a request. A used or expired code throws the api's error.
+   * portal minted for this site for the visitor's token. A first-party
+   * client or a secret-key client (`bg_site_sk_…`, on a server: the api
+   * refuses a request that carries `Origin` or `Sec-Fetch-*` with 403
+   * `SERVER_ONLY`); a publishable-key client throws `BackgoldApiError` 403
+   * `SECRET_KEY_REQUIRED` before a request. A used or expired code, or one
+   * minted for another site, throws the api's error.
    */
   exchangeVisitor(code: string): Promise<VisitorExchangeResponse>
   /** `DELETE /visitor` with the token: ends it at the api. */

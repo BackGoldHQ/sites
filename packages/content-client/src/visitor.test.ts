@@ -9,6 +9,7 @@ import type { CacheStore, ClientOptions } from './contract.js'
 // alone, the renewed token handed on, and the visitor's three calls.
 
 const PK = 'bg_site_pk_testPublishable0001'
+const SK = 'bg_site_sk_testSecret0001'
 const SITE = 'cd_8f2a'
 const TOKEN = 'visitor.eyJhaWQiOiJkYV8xIn0.c2ln'
 const FRESH = 'visitor.eyJhaWQiOiJkYV8xIiwiZXhwIjoyfQ.bmV3'
@@ -177,10 +178,22 @@ describe('the visitor’s calls', () => {
     await assert.rejects(client.exchangeVisitor('used'), { name: 'BackgoldApiError', status: 400, code: 'BAD_VISITOR_CODE' })
   })
 
-  it('exchangeVisitor is refused before any request on a key client', async () => {
+  it('exchangeVisitor redeems a code with a secret key: Authorization and the code, the token back', async () => {
+    const api = fakeApi()
+    const client = createClient({ key: SK, fetch: api.fetch })
+    const answer = await client.exchangeVisitor('good')
+    assert.equal(answer.token, TOKEN)
+    const call = api.callsTo('/visitor/exchange')[0]!
+    assert.equal(call.method, 'POST')
+    assert.equal(call.headers.get('Authorization'), `Bearer ${SK}`)
+    assert.equal(call.headers.has('X-BackGold-Site'), false)
+    assert.deepEqual(JSON.parse(call.body!), { code: 'good' })
+  })
+
+  it('exchangeVisitor is refused before any request on a publishable-key client', async () => {
     const api = fakeApi()
     const client = createClient({ key: PK, fetch: api.fetch })
-    await assert.rejects(client.exchangeVisitor('good'), { name: 'BackgoldApiError', status: 403, code: 'FIRST_PARTY_REQUIRED' })
+    await assert.rejects(client.exchangeVisitor('good'), { name: 'BackgoldApiError', status: 403, code: 'SECRET_KEY_REQUIRED' })
     assert.equal(api.calls.length, 0)
   })
 
