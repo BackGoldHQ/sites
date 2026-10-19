@@ -102,6 +102,7 @@ A secret takes effect as soon as it is deployed; nothing needs rebuilding.
 | `BACKGOLD_API_ORIGIN` | variable | no | Where the Content API lives. Keep `https://api.backgold.com`. |
 | `BACKGOLD_CACHE` | KV namespace | no (created by the Deploy button) | Where the site keeps its BackGold reads and the last content version, shared by every copy of the Worker. Without it each copy keeps them in memory only: a new copy reads everything from BackGold again, and the webhook's version reaches only the copy that received it until the others re-check. |
 | `BACKGOLD_SECRET_KEY` | secret | for previews | A secret key, `bg_site_sk_…`, from **Developer → Keys**. Only the `/preview` page uses it; it never reaches a page or the cache. |
+| `BACKGOLD_SITE_SECRET_KEY` | secret | for visitors signing in | A secret key, `bg_site_sk_…`, from **Developer → Keys**: the `/auth/` routes redeem the giving portal's sign-in codes and save lesson progress with it (see [Visitors signing in](#visitors-signing-in)). Without it every `/auth/` address answers 404 and gated entries show their teaser. |
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for the webhook | The webhook endpoint's signing secret, `whsec_…`, from **Developer → Webhooks**. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | A URL to POST after each content change, for a site you also rebuild statically (a pipeline trigger). This starter does not need it: it renders on request. Do not add it unless you have such a pipeline. |
 
@@ -310,6 +311,42 @@ Nothing here runs an A/B test, but the three things one needs are in place:
    as `'<Type>:<variant>'` (say `'Hero:b'`) and pass `variant="b"` to show it.
    The prop wins over the section's stored layout.
 
+## Visitors signing in
+
+An entry the organization keeps for people it knows (its access is
+`signed_in`, `members` or a tag) reads as its teaser: the title and summary,
+no body and no media. A visitor signs in with their email through BackGold's
+giving portal, and the site then reads that entry for them. This starter does
+it with four server routes under `src/pages/auth/` and the site's secret key:
+
+| Route | |
+| --- | --- |
+| `GET /auth/sign-in?to=<path>&title=<text>` | `302` to the portal's door for this site, which sends the visitor back to `<SITE_URL>/auth/visitor?to=<path>`. A locked entry links here ("Sign in with your email"). |
+| `GET /auth/visitor?code=<code>&to=<path>` | The way back: redeems the portal's one-minute code with the secret key, keeps the visitor's token in the `bg_visitor` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, thirty days), and `302`s to the path. A used or expired code: a short "That sign-in link has expired" page. |
+| `POST /auth/progress` | JSON `{ course, lesson, completed?, position_seconds? }` from the site's own pages: saves where the visitor is in a lesson and answers BackGold's JSON. `401` without the cookie. |
+| `GET /auth/sign-out?to=<path>` | Clears the cookie and `302`s to the path. |
+
+To turn it on:
+
+1. Give the Worker the secret `BACKGOLD_SITE_SECRET_KEY`, a secret key from
+   **Developer → Keys** (see [Adding a secret](#adding-a-secret-to-the-worker)):
+
+   ```bash
+   npx wrangler secret put BACKGOLD_SITE_SECRET_KEY
+   ```
+
+2. Set `SITE_URL` to the site's `https://` address on the domain connected to
+   the site in BackGold, exactly (`www.example.org` and `example.org` are two
+   different hosts). The portal sends a visitor back only to that host.
+
+On every page after that, `@backgold/astro` reads who is signed in from the
+cookie (`Astro.locals.backgold.visitor`) and passes their token to the page's
+reads (`Astro.locals.backgold.visitorReads`), so an entry kept for them opens.
+Such a page is never cached and is answered `private, no-store`. Signing out
+clears the cookie; BackGold has no call that ends a token today, so the token
+that was in it stays good until its hour is up. The token never reaches page
+script: only this Worker reads the cookie.
+
 ## Develop locally
 
 Requires Node 22.12 or later.
@@ -323,6 +360,7 @@ git-ignored; never commit it) holding the secrets you have:
 
 ```
 BACKGOLD_SECRET_KEY=bg_site_sk_…
+BACKGOLD_SITE_SECRET_KEY=bg_site_sk_…
 BACKGOLD_WEBHOOK_SECRET=whsec_…
 ```
 

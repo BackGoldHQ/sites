@@ -1,7 +1,8 @@
 // The Worker that serves the site. The Deploy to Cloudflare button asks for
 // each `vars` value and creates the KV namespace below. Keep the `vars` here
 // filled in: every deploy applies them, replacing what the dashboard holds.
-// The secrets (BACKGOLD_SECRET_KEY, BACKGOLD_WEBHOOK_SECRET; the README's
+// The secrets (BACKGOLD_SECRET_KEY, BACKGOLD_SITE_SECRET_KEY,
+// BACKGOLD_WEBHOOK_SECRET; the README's
 // Settings table has them all) are added after the first deploy, with
 // `npx wrangler secret put <NAME>` or in the dashboard (Worker → Settings →
 // Variables and Secrets). A deploy never removes a secret. There is no

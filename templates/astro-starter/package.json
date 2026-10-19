@@ -38,6 +38,9 @@
       "BACKGOLD_API_ORIGIN": {
         "description": "Where BackGold's Content API lives. Keep `https://api.backgold.com` unless BackGold tells you otherwise."
       },
+      "BACKGOLD_SITE_SECRET_KEY": {
+        "description": "A **secret** (not a variable), added after the first deploy with `npx wrangler secret put BACKGOLD_SITE_SECRET_KEY`: a secret key (`bg_site_sk_…`) from **Sites → your site → Developer → Keys**. It lets visitors sign in to read what the organization keeps for people it knows. Optional; never put it in `vars`."
+      },
       "BACKGOLD_CACHE": {
         "description": "A KV namespace the site keeps its BackGold reads and content version in. Cloudflare creates it for you."
       }
