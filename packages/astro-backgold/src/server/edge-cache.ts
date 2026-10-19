@@ -16,6 +16,26 @@ import { SEARCH_PARAM, validSearch } from './search.js'
 const KEY_ORIGIN = 'https://backgold.cache'
 
 /**
+ * The named Cache API cache the pages live in. Not `caches.default`: a
+ * Worker in a Workers for Platforms dispatch namespace (a template's shared
+ * Worker, the dispatched form) runs untrusted, where `caches.default` is
+ * disabled and every match misses, while a named cache is that Worker's own.
+ * On a custom domain the two behave alike.
+ */
+export const EDGE_CACHE_NAME = 'backgold-pages'
+
+/**
+ * The edge cache (`caches.open(EDGE_CACHE_NAME)`), opened per request;
+ * undefined where the runtime has no Cache API or refuses to open it, and
+ * the page just renders.
+ */
+export async function openEdgeCache(): Promise<EdgeCache | undefined> {
+  const storage = (globalThis as { caches?: { open?: (name: string) => Promise<EdgeCache> } }).caches
+  if (typeof storage?.open !== 'function') return undefined
+  return storage.open(EDGE_CACHE_NAME).catch(() => undefined)
+}
+
+/**
  * Query names that enter the key, each with the check its value must pass:
  * `cursor`, a list page past the first, when it is a cursor the api would
  * accept; `q`, a list's search term, when it is 2–80 characters after trim,

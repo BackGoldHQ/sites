@@ -10,7 +10,7 @@ import './locals.js'
 import type { MiddlewareHandler } from 'astro'
 import options from 'virtual:backgold/options'
 import { backgoldFor, type BackgoldContextLike } from './server/context.js'
-import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, readsRequestQuery, toStore, type EdgeCache } from './server/edge-cache.js'
+import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, openEdgeCache, readsRequestQuery, toStore, type EdgeCache } from './server/edge-cache.js'
 import { namesNoSite, waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
 import { PREVIEW_HEADERS } from './server/preview.js'
 import { redirectFor } from './server/redirects.js'
@@ -35,7 +35,7 @@ export type MiddlewareNext = (rewrite?: string) => Promise<Response>
 
 export interface MiddlewareDeps {
   env: BackgoldEnv
-  /** `caches.default`; absent where the runtime has no Cache API (and in `astro dev`). */
+  /** The named edge cache (openEdgeCache); absent where the runtime has no Cache API (and in `astro dev`). */
   cache: EdgeCache | undefined
   /** This build's id (the integration's options module), part of every edge-cache key. */
   buildId: string
@@ -141,6 +141,6 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
   // Written as the one property `import.meta.env.DEV` so Vite replaces it with
   // a literal: any other reference to `import.meta.env` is inlined as the whole
   // object, which in an SSR build carries the build machine's environment.
-  const cache = import.meta.env.DEV ? undefined : (globalThis as { caches?: { default?: EdgeCache } }).caches?.default
+  const cache = import.meta.env.DEV ? undefined : await openEdgeCache()
   return runMiddleware(context, next, { env: await workerEnv(), cache, buildId: options.buildId, waitUntil: waitUntilOf(context.locals) })
 }
