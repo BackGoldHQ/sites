@@ -1911,11 +1911,13 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     if (parts[0] === 'visitor') {
       if (parts[1] === 'exchange' && parts.length === 2 && req.method === 'POST') {
         // As the api: a first-party request (the stand-in api Worker forwards
-        // X-BackGold-Site) or a secret key; a key request carrying a browser's
-        // Origin or Sec-Fetch-* is refused before the code is read.
+        // X-BackGold-Site) or a secret key; a key request carrying a header
+        // only a browser sends (Origin, Sec-Fetch-Site, Sec-Fetch-Dest) is
+        // refused before the code is read. Sec-Fetch-Mode alone passes:
+        // Node's fetch adds it to every request.
         if (!firstParty) {
           if (key !== SECRET_KEY) return send(403, { error: "Redeem a sign-in code with the site's secret key", code: 'SECRET_KEY_REQUIRED' }, PRIVATE)
-          if (req.headers.origin !== undefined || Object.keys(req.headers).some((h) => h.startsWith('sec-fetch-'))) {
+          if (req.headers.origin !== undefined || req.headers['sec-fetch-site'] !== undefined || req.headers['sec-fetch-dest'] !== undefined) {
             return send(403, { error: 'Redeem the code from your server, never from a browser', code: 'SERVER_ONLY' }, PRIVATE)
           }
         }
@@ -2571,7 +2573,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
 /**
  * The starter's /auth/ routes: a visitor signing in on a site that reads with
  * a key, through the portal's door and back, redeeming the code with the
- * secret key (BACKGOLD_SITE_SECRET_KEY), then a gated entry read signed out
+ * secret key (BACKGOLD_SECRET_KEY, the one previews use), then a gated entry read signed out
  * and signed in, progress saved, and signed out.
  */
 async function checkPartnerVisitor(origin, fixture) {
@@ -2582,6 +2584,10 @@ async function checkPartnerVisitor(origin, fixture) {
   check(res.status === 403 && (await res.json()).code === 'SECRET_KEY_REQUIRED', `the fixture refuses a code with a publishable key (${res.status})`)
   res = await exchange({ Authorization: `Bearer ${SECRET_KEY}`, Origin: 'https://www.example.org' })
   check(res.status === 403 && (await res.json()).code === 'SERVER_ONLY', `and one sent with a browser's Origin (${res.status})`)
+  res = await exchange({ Authorization: `Bearer ${SECRET_KEY}`, 'Sec-Fetch-Site': 'cross-site' })
+  check(res.status === 403 && (await res.json()).code === 'SERVER_ONLY', `and one sent with Sec-Fetch-Site (${res.status})`)
+  res = await exchange({ Authorization: `Bearer ${SECRET_KEY}` })
+  check(res.status === 200 && (await res.json()).token === ACADEMY_TOKEN, `but takes one from Node's own fetch, whose Sec-Fetch-Mode alone passes (${res.status})`)
 
   res = await get(origin, `/auth/sign-in?${new URLSearchParams({ to: '/some-path', title: 'T' })}`)
   const door = new URL(res.headers.get('location') ?? '', 'https://portal.invalid')
@@ -5166,8 +5172,7 @@ async function main() {
     }
   }
   // ── petition-drive (end) ──
-  // BACKGOLD_SITE_SECRET_KEY: the starter's /auth/ routes (visitors signing in on a key-mode site).
-  writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_SITE_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
+writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
 
   // SITE_URL is the Worker's own address, so canonicals point at the page Lighthouse reads.
   const configuredVars = (origin) => ({ BACKGOLD_SITE_KEY: SITE_KEY, BACKGOLD_API_ORIGIN: fixture.origin, SITE_URL: origin })

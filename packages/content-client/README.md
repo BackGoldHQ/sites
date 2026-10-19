@@ -440,7 +440,9 @@ built elsewhere (a site key, not a BackGold template):
    answers `{ token, expires_at, visitor }`. Never from the browser: a
    publishable-key client throws `403 SECRET_KEY_REQUIRED` before any
    request, a secret key refuses to run in a browser, and the api answers
-   `403 SERVER_ONLY` to a request carrying `Origin` or `Sec-Fetch-*`.
+   `403 SERVER_ONLY` to a request carrying `Origin`, `Sec-Fetch-Site` or
+   `Sec-Fetch-Dest` (headers only a browser sends; `Sec-Fetch-Mode` alone,
+   which Node's `fetch` adds, passes).
 3. **Keep the token in your own cookie**: `HttpOnly`, `Secure`,
    `SameSite=Lax`, `Path=/`, thirty days. The token is good for an hour and
    the api renews it (see `onVisitorRenew` below) while the visitor's portal
@@ -450,11 +452,11 @@ built elsewhere (a site key, not a BackGold template):
 import { BackgoldApiError, VISITOR_COOKIE, createClient } from '@backgold/content'
 
 // GET /auth/visitor?code=<code>&to=<path>, on your server.
-export async function onVisitorReturn(request: Request, env: { BACKGOLD_SITE_SECRET_KEY: string }): Promise<Response> {
+export async function onVisitorReturn(request: Request, env: { BACKGOLD_SECRET_KEY: string }): Promise<Response> {
   const url = new URL(request.url)
   const raw = url.searchParams.get('to')
   const to = raw !== null && /^\/(?![/\\])/.test(raw) && !/[\u0000-\u0020\\]/.test(raw) ? raw : '/' // a path on this site only
-  const server = createClient({ key: env.BACKGOLD_SITE_SECRET_KEY }) // bg_site_sk_…
+  const server = createClient({ key: env.BACKGOLD_SECRET_KEY }) // bg_site_sk_…
   try {
     const { token } = await server.exchangeVisitor(url.searchParams.get('code') ?? '')
     const cookie = `${VISITOR_COOKIE}=${token}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; Secure; SameSite=Lax`
@@ -467,9 +469,9 @@ export async function onVisitorReturn(request: Request, env: { BACKGOLD_SITE_SEC
 ```
 
 4. **Sign out by clearing the cookie.** There is no revocation call today:
-   the api has no way to end a token, so the one that was in the cookie stays
-   good until its hour is up (and, while the portal session stands, a request
-   presenting it after that is still renewed). Keep it on your server.
+   the api has no way to end a token. The token that was in the cookie lapses
+   within its hour, and without the cookie nothing renews it. Keep it on your
+   server.
 
 A BackGold template's own Worker reads first-party and does all this in
 `@backgold/astro`'s `/_backgold/*` routes. The full recipe for a site built
@@ -507,7 +509,7 @@ header.
 | `visitor(token)` | `GET /visitor`: `{ visitor: { first_name, email, member } }`, or `{ visitor: null }` for a token the api no longer takes (clear the cookie then) |
 | `lessonProgress(courseSlug, lessonSlug, { completed?, position_seconds? }, token)` | `POST …/progress`: saves the visitor's place or that they finished; post to your own server from the lesson page and forward from there |
 | `exchangeVisitor(code)` | `POST /visitor/exchange`: the portal's one-minute hand-off code for the token. A secret-key client or a first-party one; a publishable-key client throws `403 SECRET_KEY_REQUIRED` without a request |
-| `signOutVisitor(token)` | `DELETE /visitor`. The api does not answer it today; sign a visitor out by clearing your cookie |
+| `signOutVisitor(token)` | `DELETE /visitor`, best effort: the api has no `DELETE /visitor` today and answers `404`. Signing out is clearing your cookie; the token lapses within its hour and is never renewed without the cookie |
 
 `entries`, `entry`, `page` and `raw` take `visitor` too. A token is refused
 with a `TypeError`, before any request and without repeating it, unless it is

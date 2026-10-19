@@ -347,13 +347,18 @@ export interface BackgoldContent {
    * `POST /visitor/exchange { code }`: redeems the hand-off code the giving
    * portal minted for this site for the visitor's token. A first-party
    * client or a secret-key client (`bg_site_sk_…`, on a server: the api
-   * refuses a request that carries `Origin` or `Sec-Fetch-*` with 403
-   * `SERVER_ONLY`); a publishable-key client throws `BackgoldApiError` 403
+   * refuses a request that carries `Origin`, `Sec-Fetch-Site` or
+   * `Sec-Fetch-Dest` with 403 `SERVER_ONLY`); a publishable-key client throws `BackgoldApiError` 403
    * `SECRET_KEY_REQUIRED` before a request. A used or expired code, or one
    * minted for another site, throws the api's error.
    */
   exchangeVisitor(code: string): Promise<VisitorExchangeResponse>
-  /** `DELETE /visitor` with the token: ends it at the api. */
+  /**
+   * `DELETE /visitor` with the token, best effort: the api has no
+   * `DELETE /visitor` today and answers 404, which throws. Signing a visitor
+   * out is clearing the site's cookie; the token lapses within its hour and is
+   * never renewed without the cookie.
+   */
   signOutVisitor(token: string): Promise<void>
   /** `GET /preview/:token` — a secret key; never cached. Throws BAD_PREVIEW_TOKEN on a bad or expired token. */
   preview(token: string): Promise<PreviewResponse | null>

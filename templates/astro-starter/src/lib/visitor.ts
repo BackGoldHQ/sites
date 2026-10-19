@@ -6,7 +6,8 @@
 // middleware reads who that is on every page (`locals.backgold.visitor`) and
 // what to pass to a read made for them (`locals.backgold.visitorReads`).
 //
-// The secret key is the Worker secret BACKGOLD_SITE_SECRET_KEY. Without it,
+// The secret key is the Worker secret BACKGOLD_SECRET_KEY, the one the
+// /preview page reads too. Without it,
 // and while the site is still being set up, every /auth/ route answers 404.
 
 import type { AstroCookies } from 'astro'
@@ -19,9 +20,9 @@ const DEFAULT_API_ORIGIN = 'https://api.backgold.com'
 
 const trimmed = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 
-/** The site's secret key when BACKGOLD_SITE_SECRET_KEY holds one; null otherwise. */
+/** The site's secret key when BACKGOLD_SECRET_KEY holds one; null otherwise. */
 function secretKey(): string | null {
-  const key = trimmed(env.BACKGOLD_SITE_SECRET_KEY)
+  const key = trimmed(env.BACKGOLD_SECRET_KEY)
   return SECRET_KEY.test(key) ? key : null
 }
 

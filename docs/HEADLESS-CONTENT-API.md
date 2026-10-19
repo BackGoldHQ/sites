@@ -93,7 +93,7 @@ curl -s https://api.backgold.com/api/content/v1/site \
 | --- | --- | --- |
 | `401` | `INVALID_KEY` | The key is missing, is not a site key, is unknown, or was revoked. |
 | `403` | `SECRET_KEY_REQUIRED` | You asked for a draft or a preview, or redeemed a visitor's sign-in code, with a publishable key. |
-| `403` | `SERVER_ONLY` | A visitor's sign-in code was sent with a browser's `Origin` or `Sec-Fetch-*` headers: redeem it from your server ([Visitors](#visitors-letting-people-sign-in-on-your-site)). |
+| `403` | `SERVER_ONLY` | A visitor's sign-in code was sent with a browser's `Origin`, `Sec-Fetch-Site` or `Sec-Fetch-Dest` header (headers only a browser sends; `Sec-Fetch-Mode` alone, which Node's `fetch` adds, passes): redeem it from your server ([Visitors](#visitors-letting-people-sign-in-on-your-site)). |
 | `404` | `NOT_FOUND` | Nothing at that address. This is also the answer when the key's site was removed or the organization no longer has the Content API, because for that organization the API does not exist. |
 
 Every error body is `{ "error": "<message>", "code": "<CODE>" }`. Responses
@@ -1424,7 +1424,7 @@ portal session stands, for up to thirty days, so give the cookie thirty days.
 import { BackgoldApiError, VISITOR_COOKIE, createClient } from '@backgold/content'
 
 interface Env {
-  BACKGOLD_SITE_SECRET_KEY: string // bg_site_sk_…, a server secret
+  BACKGOLD_SECRET_KEY: string // bg_site_sk_…, a server secret
 }
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60
@@ -1442,7 +1442,7 @@ export function localPath(raw: string | null): string {
 export async function onVisitorReturn(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url)
   const to = localPath(url.searchParams.get('to'))
-  const server = createClient({ key: env.BACKGOLD_SITE_SECRET_KEY })
+  const server = createClient({ key: env.BACKGOLD_SECRET_KEY })
   try {
     const { token } = await server.exchangeVisitor(url.searchParams.get('code') ?? '')
     return new Response(null, {
@@ -1459,8 +1459,8 @@ export async function onVisitorReturn(request: Request, env: Env): Promise<Respo
 
 Only a secret key (or a BackGold template's own Worker) redeems a code. The
 api answers `403 SECRET_KEY_REQUIRED` to a publishable key (and the client
-throws it before any request), `403 SERVER_ONLY` to a request that carries a
-browser's `Origin` or `Sec-Fetch-*` headers, and `400 INVALID_CODE` to a code
+throws it before any request), `403 SERVER_ONLY` to a request that carries
+a browser's `Origin`, `Sec-Fetch-Site` or `Sec-Fetch-Dest` header (headers only a browser sends; `Sec-Fetch-Mode` alone, which Node's `fetch` adds, passes), and `400 INVALID_CODE` to a code
 that is unknown, used, expired, or minted for another site.
 
 **3. Read for the visitor.** Pass the token to the reads you make for that
@@ -1528,7 +1528,7 @@ import { visitorCookie } from './auth'
 import { tokenFrom } from './visitor-reads'
 
 // POST /auth/progress {course, lesson, completed?, position_seconds?}
-export async function onProgress(request: Request, env: { BACKGOLD_SITE_SECRET_KEY: string }): Promise<Response> {
+export async function onProgress(request: Request, env: { BACKGOLD_SECRET_KEY: string }): Promise<Response> {
   const site = request.headers.get('Sec-Fetch-Site')
   const ownPage = site !== null ? site === 'same-origin' : request.headers.get('Origin') === new URL(request.url).origin
   if (!ownPage) return Response.json({ error: 'From this site only', code: 'CROSS_ORIGIN' }, { status: 403 })
@@ -1540,7 +1540,7 @@ export async function onProgress(request: Request, env: { BACKGOLD_SITE_SECRET_K
     completed?: boolean
     position_seconds?: number
   }
-  const server = createClient({ key: env.BACKGOLD_SITE_SECRET_KEY })
+  const server = createClient({ key: env.BACKGOLD_SECRET_KEY })
   let renewed: string | undefined
   try {
     const saved = await server.lessonProgress(course, lesson, { completed, position_seconds }, token, {
@@ -1557,10 +1557,10 @@ export async function onProgress(request: Request, env: { BACKGOLD_SITE_SECRET_K
 ```
 
 **5. Sign out: clear the cookie.** There is no revocation call today: the api
-has no way to end a token. Clearing your cookie is the sign-out. The token
-that was in it stays good until its hour is up, and while the visitor's portal
-session stands a request that presents it after that is still renewed; that is
-one more reason it never leaves your server.
+has no way to end a token (`signOutVisitor` sends `DELETE /visitor`, which
+the api answers `404` today). Clearing your cookie is the sign-out: the token
+that was in it lapses within its hour, and without the cookie nothing renews
+it.
 
 ```ts
 // auth.ts, continued
