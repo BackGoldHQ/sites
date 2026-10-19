@@ -2,7 +2,7 @@ import { encodeEntryCursor } from '@backgold/contract/content-api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor } from '../src/server/context.js'
-import { cacheKey } from '../src/server/edge-cache.js'
+import { EDGE_CACHE_NAME, cacheKey, openEdgeCache } from '../src/server/edge-cache.js'
 import type { BackgoldEnv } from '../src/server/env.js'
 import { SETUP_PATH } from '../src/server/setup.js'
 import { API_ORIGIN, OTHER_SITE_ID, PK, SITE_ID, SK, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
@@ -350,6 +350,23 @@ describe('edge cache', () => {
     expect(pending).toHaveLength(1)
     await Promise.all(pending)
     expect(d.cache.stored.size).toBe(1)
+  })
+})
+
+describe('openEdgeCache', () => {
+  it('opens the named cache, never caches.default', async () => {
+    const named = fakeCache()
+    const open = vi.fn(async () => named)
+    vi.stubGlobal('caches', { default: fakeCache(), open })
+    expect(await openEdgeCache()).toBe(named)
+    expect(open).toHaveBeenCalledWith(EDGE_CACHE_NAME)
+  })
+
+  it('is undefined where there is no Cache API, or it will not open', async () => {
+    vi.stubGlobal('caches', undefined)
+    expect(await openEdgeCache()).toBeUndefined()
+    vi.stubGlobal('caches', { open: async () => Promise.reject(new Error('no cache here')) })
+    expect(await openEdgeCache()).toBeUndefined()
   })
 })
 
