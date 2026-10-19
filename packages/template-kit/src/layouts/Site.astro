@@ -18,7 +18,15 @@
 //                    opens as a sheet under it (its groups open in place, the
 //                    header button again full width, the legal line under it)
 //                    and the button stays beside Menu in the bar until the
-//                    sheet opens.
+//                    sheet opens. The account links (VisitorAccount, board
+//                    D1) sit before the switch: a signed-in visitor's first
+//                    name and Sign out (in the sheet on a phone), else Sign
+//                    in when the template offers it (`visitorSignIn`), naming
+//                    the page's lesson or course to the portal's door
+//                    (`signInTitle`); only on a first-party site, where the
+//                    sign-in routes answer.
+//                    After a sign-in, the notice "You are signed in as …"
+//                    under the header (SignedInNotice, board D4).
 //   the page         <main>; each page renders its own single <h1>.
 //   other areas      any area this template does not place (one the
 //                    organization added in BackGold), after the page, full
@@ -81,7 +89,9 @@ import FooterColumns from '../components/chrome/FooterColumns.astro'
 import FooterContact from '../components/chrome/FooterContact.astro'
 import MenuList from '../components/chrome/MenuList.astro'
 import ModeToggle from '../components/chrome/ModeToggle.astro'
+import SignedInNotice from '../components/chrome/SignedInNotice.astro'
 import SignupBand from '../components/chrome/SignupBand.astro'
+import VisitorAccount from '../components/chrome/VisitorAccount.astro'
 import { appearanceOf, brandCss } from '../lib/brand'
 import { chromeOf, copyrightLine } from '../lib/chrome'
 import { siteFonts } from '../lib/fonts'
@@ -99,6 +109,8 @@ interface Props {
   jsonLd?: object[]
   page?: MenuPage | null
   areas?: Areas | null
+  /** What the portal's sign-in door names for this page (a lesson's "Lesson 3: Read a budget, in Foundations", a course's title); none elsewhere. */
+  signInTitle?: string | null
 }
 
 /** The areas this layout (and the routes, for the Sidebar) place by name. */
@@ -108,7 +120,7 @@ const bg = Astro.locals.backgold
 if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
 
 const { site, legal, client } = bg
-const { template, page, areas = null, ...head } = Astro.props
+const { template, page, areas = null, signInTitle = null, ...head } = Astro.props
 const { sections } = template
 const [primary, footer, utility] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility')])
 const pathname = Astro.url.pathname
@@ -153,6 +165,9 @@ const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (he
 const appearance = appearanceOf(site.style)
 /** An auto site on a template that opens dark (src/template.ts `defaultAppearance`). */
 const opensDark = appearance === 'auto' && template.defaultAppearance === 'dark'
+/** The account links: a signed-in visitor's always, Sign in where the template offers it; first-party sites only. */
+const { visitor } = bg
+const account = bg.firstParty && (visitor !== null || template.visitorSignIn === true)
 /** The theme's faces, else the template's own (src/lib/fonts.ts). */
 const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
 ---
@@ -210,15 +225,18 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
                   <MenuList nodes={headerNodes} mode="sheet" />
                 </nav>
                 <MenuButton items={headerItems} page={page} class="button header-sheet-button" />
+                {account && <VisitorAccount visitor={visitor} mode="sheet" />}
                 <div class="header-sheet-legal"><Disclaimer legal={legal} /></div>
               </div>
             </details>
           </>
         )}
+        {account && <VisitorAccount visitor={visitor} mode="bar" signInTitle={signInTitle} />}
         {appearance === 'auto' && <ModeToggle />}
         <MenuButton items={headerItems} page={page} class="button button-small header-button" />
       </div>
     </header>
+    {visitor && <SignedInNotice visitor={visitor} domain={new URL(bg.siteUrl).host} />}
 
     <main id="main" tabindex="-1">
       <slot />

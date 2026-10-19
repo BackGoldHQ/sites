@@ -1,0 +1,39 @@
+---
+// Course · Outline: the same course held to the reading column, for a page
+// that carries a course among other sections. The head without its cover
+// (CourseHead: the bar and "Continue · Lesson 5" for a visitor), then the
+// syllabus (Syllabus) and one line under it, "Who can watch: …", with the
+// lessons whose rule is not the course's. Nothing is drawn without a course
+// (course.ts).
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Band from '../Band.astro'
+import CourseHead from './CourseHead.astro'
+import Syllabus from './Syllabus.astro'
+import { courseOf } from './course'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, lead = false } = Astro.props
+const view = Astro.props.view !== undefined ? Astro.props.view : await courseOf(section, Astro)
+---
+{view && (
+  <Band section={section} class="course course-outline">
+    <div class="co">
+      <CourseHead view={view} lead={lead} cover={false} />
+      <Syllabus rows={view.rows} />
+      <p class="fine co-who">
+        Who can watch: {view.whoCanWatch}{view.exceptions.map((e) => <>; Lesson {e.n}: {e.who}</>)}.
+      </p>
+    </div>
+  </Band>
+)}
+
+<style>
+  .co {
+    max-width: calc(var(--measure) + 6rem);
+  }
+  .co-who {
+    margin: 1rem 0 0;
+  }
+</style>

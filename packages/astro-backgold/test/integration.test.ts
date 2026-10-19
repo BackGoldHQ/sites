@@ -27,6 +27,10 @@ describe('backgold()', () => {
     expect(patterns).toEqual([
       '/api/backgold/webhook',
       '/api/backgold/revalidate',
+      '/_backgold/sign-in',
+      '/_backgold/visitor',
+      '/_backgold/sign-out',
+      '/_backgold/progress',
       '/sitemap.xml',
       '/robots.txt',
       '/llms.txt',
@@ -39,7 +43,7 @@ describe('backgold()', () => {
 
   it('turns each text route off by its option', () => {
     const { patterns } = run(backgold({ sitemap: false, robots: false, llms: false, feeds: false }))
-    expect(patterns).toEqual(['/api/backgold/webhook', '/api/backgold/revalidate'])
+    expect(patterns).toEqual(['/api/backgold/webhook', '/api/backgold/revalidate', '/_backgold/sign-in', '/_backgold/visitor', '/_backgold/sign-out', '/_backgold/progress'])
   })
 
   it('serves the resolved options to the routes through the virtual module', () => {

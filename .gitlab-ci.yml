@@ -1,5 +1,6 @@
 # BackGold sites pipeline: the two public npm packages, the templates built on
-# them, and the three templates' deploys (party, candidate, petition-drive).
+# them, and the four templates' deploys (party, candidate, petition-drive,
+# academy).
 #
 # Each check job is path-filtered, so an MR that only touches the starter never
 # re-runs any template's e2e (the runners are shared with the platform's
@@ -27,7 +28,7 @@
 #   templates/<name>        → <name>           (astro check, then the same e2e
 #                                                with --template <name>), for
 #                                                <name> = party, candidate,
-#                                                petition-drive; each extends
+#                                                petition-drive, academy; each extends
 #                                                .template-check;
 #                             deploy-<name>-staging on main (automatic: the
 #                                                template into the sites-staging
@@ -59,11 +60,17 @@
 #                            deploy-candidate-staging, deploy-candidate-production
 #   PETITION_DRIVE_STAGING_KV_ID, PETITION_DRIVE_PRODUCTION_KV_ID
 #                            deploy-petition-drive-staging, deploy-petition-drive-production
+#   ACADEMY_STAGING_KV_ID, ACADEMY_PRODUCTION_KV_ID
+#                            deploy-academy-staging, deploy-academy-production
 #   NPM_TOKEN                publish-content, publish-astro
 #   STARTER_SYNC_KEY         sync-starter (a FILE variable, not masked: it is
 #                            a multi-line private key)
 # All six are set on this project, which is the only repository that deploys
-# template-party, publishes the packages and syncs the starter. The
+# template-party, publishes the packages and syncs the starter.
+# ACADEMY_STAGING_KV_ID and ACADEMY_PRODUCTION_KV_ID are created with the
+# academy's KV namespaces (templates/academy/README.md, Staging deploy);
+# until then deploy-academy-staging stops with the sentence that names its
+# variable. The
 # deploy jobs exist only while CLOUDFLARE_API_TOKEN is set, and sync-starter
 # only while STARTER_SYNC_KEY is; every job whose variable is unset stops
 # with a sentence that names it before it does anything, so nothing deploys
@@ -368,6 +375,25 @@ petition-drive:
         - pnpm-workspace.yaml
         - vendor/**/*
 
+# academy = the academy template (templates/academy), on the kit.
+academy:
+  extends: .template-check
+  variables:
+    TEMPLATE: academy
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/academy/**/*
+        - packages/template-kit/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+
 # manifests = every templates/<dir>/template.json against
 # siteTemplateManifestSchema from the vendored contract slice, and each
 # manifest's key against its directory (scripts/check-manifests.mjs). The
@@ -410,7 +436,7 @@ gate:
 # TEMPLATE DEPLOYS. The MR already ran the checks, so the deploys build
 # straight off the push rather than re-running them. wrangler reads
 # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the environment. Each
-# template (party, candidate, petition-drive) has a staging and a production
+# template (party, candidate, petition-drive, academy) has a staging and a production
 # job, shaped by the two hidden jobs below.
 # =========================================================================
 
@@ -677,6 +703,34 @@ deploy-petition-drive-production:
     TEMPLATE: petition-drive
     KV_VAR: PETITION_DRIVE_PRODUCTION_KV_ID
   resource_group: petition-drive-production
+
+# deploy-academy-staging: templates/academy as the Worker `template-academy` in `sites-staging`.
+deploy-academy-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: academy
+    KV_VAR: ACADEMY_STAGING_KV_ID
+  resource_group: academy-staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+      changes:
+        - templates/academy/**/*
+        - packages/**/*
+        - packages/template-kit/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+
+# deploy-academy-production: templates/academy as the Worker `template-academy` in `sites-production`.
+deploy-academy-production:
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: academy
+    KV_VAR: ACADEMY_PRODUCTION_KV_ID
+  resource_group: academy-production
 
 # =========================================================================
 # NPM — MANUAL ONLY. Publishes the two public packages to the npm registry,

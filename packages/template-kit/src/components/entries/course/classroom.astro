@@ -1,0 +1,26 @@
+---
+// The course list layout, `classroom` (board D1): the courses list page's
+// head (ListFrame: the list's name as the <h1>, the pager) over the
+// Classroom section's Grid, its courses read from `GET /courses` for this
+// visitor (sections/Classroom/classroom.ts): each card's bar with a
+// visitor, what it takes to watch without one.
+import ClassroomGrid from '../../sections/Classroom/index.astro'
+import ListFrame from '../ListFrame.astro'
+import type { ListLayoutProps } from '../props'
+import { academySection } from './section'
+
+type Props = ListLayoutProps
+
+const props = Astro.props
+---
+<ListFrame {...props} noun="courses" class="list-courses">
+  <ClassroomGrid section={academySection('Classroom', 'grid')} from="read" />
+</ListFrame>
+
+<style>
+  /* The list's own column holds the cards: the section adds no band or padding of its own. */
+  :global(.list-courses .classroom) {
+    --bg-section-padding: 0;
+    background: none;
+  }
+</style>

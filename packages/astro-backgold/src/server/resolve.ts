@@ -1,5 +1,17 @@
 import { BackgoldApiError } from '@backgold/content'
-import type { Areas, Author, BackgoldContent, ContentTypeSummary, EntriesResponse, Entry, EntryDetail, PageResponse, TermsResponse } from '@backgold/content'
+import type {
+  Areas,
+  Author,
+  BackgoldContent,
+  ContentTypeSummary,
+  EntriesResponse,
+  Entry,
+  EntryDetail,
+  LessonResponse,
+  PageResponse,
+  TermsResponse,
+  VisitorOptions,
+} from '@backgold/content'
 import { CURSOR_PARAM, validCursor } from './cursor.js'
 import { blogBaseOf, isBlogType } from './format.js'
 
@@ -25,6 +37,13 @@ export type ResolvedType = ContentTypeSummary | 'blog'
  * blog base is `news`), for the site to draw its sections above the list. The
  * page is the list's intro, never a page of its own at that address. Null on
  * every other list, and when no page sits at the base.
+ *
+ * A lesson is a video read through its course, at
+ * `/<courses base>/<course>/<lesson>` (the course built-in's url_base): the
+ * course's and the lesson's slugs, and the api's answer for the reader
+ * (`lesson`, the teaser when it is locked for them), its areas the answer's.
+ * The course's own list and its entry page are the `index` and `entry` of
+ * the course type, as for any routable type.
  */
 export type Resolved =
   | { kind: 'page'; page: PageResponse }
@@ -51,6 +70,17 @@ export type Resolved =
       next_cursor: string | null
       areas: Areas
     }
+  | {
+      kind: 'lesson'
+      /** The course built-in, from GET /types. */
+      type: ContentTypeSummary
+      /** The courses' address without slashes: the course type's url_base. */
+      base: string
+      courseSlug: string
+      lessonSlug: string
+      lesson: LessonResponse
+      areas: Areas
+    }
   | { kind: 'feed'; type: ResolvedType }
   | { kind: 'not_found' }
 
@@ -58,6 +88,8 @@ export type Resolved =
 const INDEX_LIMIT = 50
 const AUTHORS_BASE = 'authors'
 const FEED_FILE = 'feed.xml'
+/** The course built-in's key (the api's COURSE_CONTENT_TYPE_KEY). */
+const COURSE_TYPE_KEY = 'course'
 const NOT_FOUND: Resolved = { kind: 'not_found' }
 
 /** The path, and the `?cursor=` it asks for: null when it names none the api would accept. */
@@ -113,12 +145,13 @@ async function typePage(
   key: string,
   term: string | undefined,
   cursor: string | null,
+  visitor: VisitorOptions | undefined,
 ): Promise<{ page: EntriesResponse | null; cursor: string | null }> {
-  if (cursor === null) return { page: await bg.entries(key, { limit: INDEX_LIMIT, term }), cursor: null }
+  if (cursor === null) return { page: await bg.entries(key, { ...visitor, limit: INDEX_LIMIT, term }), cursor: null }
   try {
-    return { page: await bg.entries(key, { limit: INDEX_LIMIT, term, cursor }), cursor }
+    return { page: await bg.entries(key, { ...visitor, limit: INDEX_LIMIT, term, cursor }), cursor }
   } catch (error) {
-    if (error instanceof BackgoldApiError && error.code === 'BAD_CURSOR') return typePage(bg, key, term, null)
+    if (error instanceof BackgoldApiError && error.code === 'BAD_CURSOR') return typePage(bg, key, term, null, visitor)
     throw error
   }
 }
@@ -131,12 +164,18 @@ async function typePage(
  * place a section on a list are per site, so every type's list answers the
  * same areas.
  */
-async function listPage(bg: BackgoldContent, types: ContentTypeSummary[], term: string | undefined, cursor: string | null): Promise<ListPage> {
+async function listPage(
+  bg: BackgoldContent,
+  types: ContentTypeSummary[],
+  term: string | undefined,
+  cursor: string | null,
+  visitor: VisitorOptions | undefined,
+): Promise<ListPage> {
   if (types.length === 1) {
-    const read = await typePage(bg, types[0]!.key, term, cursor)
+    const read = await typePage(bg, types[0]!.key, term, cursor, visitor)
     return { entries: read.page?.entries ?? [], cursor: read.cursor, next_cursor: read.page?.next_cursor ?? null, areas: read.page?.areas ?? {} }
   }
-  const pages = (await Promise.all(types.map((t) => bg.entries(t.key, { limit: INDEX_LIMIT, term })))).filter(
+  const pages = (await Promise.all(types.map((t) => bg.entries(t.key, { ...visitor, limit: INDEX_LIMIT, term })))).filter(
     (p): p is EntriesResponse => p !== null,
   )
   const areas = pages[0]?.areas ?? {}
@@ -155,10 +194,14 @@ async function listPage(bg: BackgoldContent, types: ContentTypeSummary[], term: 
  * list, with the page as `intro`. `location` is the pathname, or the
  * request's URL (or a path with its query), whose `?cursor=` asks an index or
  * a term for that page of one type's list; a cursor the api would not accept
- * reads the first page. Redirects are the middleware's. A malformed path is
+ * reads the first page. A lesson, `/<courses base>/<course>/<lesson>`, wins
+ * over a term at the same address. `visitor` (the request's
+ * `locals.backgold.visitorReads`) reads the entries, lists and lesson for the
+ * signed-in visitor, so their locks open; without it every read is the
+ * anonymous, cached one. Redirects are the middleware's. A malformed path is
  * `not_found`; an api failure throws.
  */
-export async function resolveRoute(bg: BackgoldContent, location: string | URL): Promise<Resolved> {
+export async function resolveRoute(bg: BackgoldContent, location: string | URL, visitor?: VisitorOptions): Promise<Resolved> {
   const { pathname, cursor } = locate(location)
   const segments = segmentsOf(pathname)
   if (!segments) return NOT_FOUND
@@ -203,23 +246,28 @@ export async function resolveRoute(bg: BackgoldContent, location: string | URL):
   if (rest.length > 0) return NOT_FOUND
 
   if (second === undefined) {
-    const [list, intro] = await Promise.all([listPage(bg, members, undefined, cursor), introPage ? bg.page(introPage.slug) : null])
+    const [list, intro] = await Promise.all([listPage(bg, members, undefined, cursor, visitor), introPage ? bg.page(introPage.slug) : null])
     return { kind: 'index', type, base, intro, ...list }
   }
 
   if (third === undefined) {
     if (second === FEED_FILE) return { kind: 'feed', type }
     for (const member of members) {
-      const found = await bg.entry(member.key, second)
+      const found = await bg.entry(member.key, second, visitor)
       if (found) return { kind: 'entry', type: member, entry: found.entry as EntryDetail, areas: found.areas }
     }
     return NOT_FOUND
   }
 
+  if (type !== 'blog' && type.key === COURSE_TYPE_KEY) {
+    const lesson = await bg.lesson(second, third, visitor)
+    if (lesson) return { kind: 'lesson', type, base, courseSlug: second, lessonSlug: third, lesson, areas: lesson.areas }
+  }
+
   const terms = await bg.terms(second)
   const term = terms?.terms.find((t) => t.slug === third)
   if (!terms || !term) return NOT_FOUND
-  const listing = await listPage(bg, members, term.slug, cursor)
+  const listing = await listPage(bg, members, term.slug, cursor, visitor)
   // `?term=` matches the slug in any taxonomy; the page names one.
   const entries = listing.entries.filter((e) => e.terms.some((t) => t.taxonomy === terms.taxonomy.key && t.slug === term.slug))
   return { kind: 'term', type, base, taxonomy: terms.taxonomy, term, ...listing, entries }

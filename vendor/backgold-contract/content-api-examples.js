@@ -166,7 +166,8 @@ var siteExample = {
     { key: "above_footer", name: "Above the footer" }
   ],
   legal: legalExample,
-  version: 184
+  version: 184,
+  org_name: "Pine Valley for Liberty"
 };
 var menuExample = {
   menu: { key: "primary" },
@@ -455,6 +456,10 @@ var entry = {
   updated_at: "2026-09-29T12:05:00.000Z",
   terms: [{ taxonomy: "tag", slug: "taxes", label: "Taxes" }],
   authors: [{ slug: "dana-k", display_name: "Dana K.", avatar_url: null, link_url: null, role: "Written by" }],
+  access: "public",
+  locked: false,
+  lock: null,
+  duration_seconds: null,
   body: { markdown: "## Where it goes\n\nEvery dollar\u2026" },
   fields: { endorser: { kind: "entry", label: "Mayor Jones", slug: "mayor-jones" }, give_here: { kind: "form", label: "General fund", url: "https://pine-valley.backgold.com/donate/give" } }
 };
@@ -552,6 +557,112 @@ var eventsLiveExample = {
     { id: "evt_4m1", going: 88, seats_left: 12 }
   ]
 };
+var course = {
+  id: "ci_c01",
+  slug: "foundations",
+  title: "Foundational Leadership",
+  summary: "Short lessons on leading a local chapter.",
+  url: "/courses/foundations",
+  hero: { url: "https://api.backgold.com/api/content-pages/pine-valley/hero/ci_c01?v=1" },
+  publish_at: "2026-10-01T12:00:00.000Z",
+  updated_at: "2026-10-02T09:00:00.000Z",
+  access: "signed_in",
+  locked: false,
+  lock: null,
+  lesson_count: 3,
+  total_seconds: 1010,
+  progress: { completed: 1, total: 3, openable: 2, seconds_left: 290, next_lesson_slug: "decide-what-you-want" },
+  body: { markdown: "Three lessons, about seventeen minutes in all." },
+  lessons: [
+    {
+      id: "ci_l01",
+      slug: "start-here",
+      title: "Start here",
+      summary: null,
+      url: "/courses/foundations/start-here",
+      hero: null,
+      duration_seconds: 240,
+      position: 0,
+      access: "signed_in",
+      locked: false,
+      lock: null,
+      completed: true,
+      completed_at: "2026-10-14T18:20:00.000Z",
+      position_seconds: 240
+    },
+    {
+      id: "ci_l02",
+      slug: "decide-what-you-want",
+      title: "Decide what you want",
+      summary: "One thing you want to be true in a year.",
+      url: "/courses/foundations/decide-what-you-want",
+      hero: null,
+      duration_seconds: 290,
+      position: 1,
+      access: "signed_in",
+      locked: false,
+      lock: null,
+      completed: false,
+      completed_at: null,
+      position_seconds: 72
+    },
+    {
+      id: "ci_l03",
+      slug: "run-the-meeting",
+      title: "Run the meeting",
+      summary: null,
+      url: "/courses/foundations/run-the-meeting",
+      hero: null,
+      duration_seconds: 480,
+      position: 2,
+      access: "members",
+      locked: true,
+      lock: { reason: "members", tag_label: null, org_name: "Pine Valley for Liberty" },
+      completed: false,
+      completed_at: null,
+      position_seconds: null
+    }
+  ]
+};
+var { body: _courseBody, lessons: _courseLessons, ...courseSummary } = course;
+var coursesExample = { courses: [courseSummary], next_cursor: null, areas: areasExample };
+var courseExample = { course, areas: areasExample };
+var lessonExample = {
+  lesson: {
+    id: "ci_l02",
+    slug: "decide-what-you-want",
+    type: "video",
+    title: "Decide what you want",
+    summary: "One thing you want to be true in a year.",
+    url: "/videos/decide-what-you-want",
+    hero: null,
+    media_url: "https://api.backgold.com/api/media-files/med_9f2",
+    publish_at: "2026-10-01T12:00:00.000Z",
+    updated_at: "2026-10-01T12:00:00.000Z",
+    terms: [],
+    authors: [],
+    access: "signed_in",
+    locked: false,
+    lock: null,
+    duration_seconds: 290,
+    body: { markdown: "Three questions before the next lesson." },
+    fields: {}
+  },
+  course,
+  previous: { slug: "start-here", title: "Start here", url: "/courses/foundations/start-here" },
+  next: { slug: "run-the-meeting", title: "Run the meeting", url: "/courses/foundations/run-the-meeting" },
+  areas: areasExample
+};
+var lessonProgressExample = {
+  progress: { completed: true, completed_at: "2026-10-18T15:04:00.000Z", position_seconds: 290 },
+  course: { completed: 2, total: 3, openable: 2, seconds_left: 0, next_lesson_slug: null }
+};
+var visitorExample = { visitor: { first_name: "Dana", email: "dana.m@example.com", member: false } };
+var visitorExchangeExample = {
+  token: "YWNjdF8xLnNlc3NfMS5zaXRlX3B2LjE3NjA4MDA0MDA.3f9a\u2026",
+  expires_at: "2026-10-18T16:00:00.000Z",
+  visitor: { first_name: "Dana", email: "dana.m@example.com", member: false }
+};
 var CONTENT_API_EXAMPLES = {
   SiteResponse: siteExample,
   MenuResponse: menuExample,
@@ -569,7 +680,13 @@ var CONTENT_API_EXAMPLES = {
   AreasResponse: areasResponseExample,
   EventsResponse: eventsExample,
   EventResponse: eventExample,
-  EventsLiveResponse: eventsLiveExample
+  EventsLiveResponse: eventsLiveExample,
+  CoursesResponse: coursesExample,
+  CourseResponse: courseExample,
+  LessonResponse: lessonExample,
+  LessonProgressResponse: lessonProgressExample,
+  VisitorResponse: visitorExample,
+  VisitorExchangeResponse: visitorExchangeExample
 };
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, siteExample, sitemapExample, termsExample, typesExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };

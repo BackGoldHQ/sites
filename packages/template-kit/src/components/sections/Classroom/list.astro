@@ -1,0 +1,15 @@
+---
+// Classroom · List: the same courses as rows held to the content width, the
+// cover at the left and the words, the bar or what it takes to watch beside
+// it; on a phone each row is a card again (classroom.ts).
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import Courses from './Courses.astro'
+import { classroomOf } from './classroom'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, from } = Astro.props
+const classroom = await classroomOf(section, Astro, from)
+---
+<Courses section={section} classroom={classroom} layout="list" />

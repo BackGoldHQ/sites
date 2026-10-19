@@ -1,0 +1,7 @@
+/*
+  What the academy template draws differently from the kit's stylesheet
+  (@backgold/template-kit's src/styles/site.css and entries.css). Nothing:
+  the Classroom, Course and Lesson sections carry their own look (boards D1
+  to D3), in the kit's tokens. A template that restyles sets its own here;
+  this file loads after the kit's on every page.
+*/

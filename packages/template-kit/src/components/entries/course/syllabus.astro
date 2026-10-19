@@ -1,0 +1,15 @@
+---
+// The course entry layout, `syllabus` (board D2): the course's own page is
+// the Course section's Syllabus layout with the course pinned to this entry,
+// its title the page's <h1>. Its lessons, this visitor's place and the
+// locks are read for the visitor by the section (sections/Course/course.ts).
+import CourseSyllabus from '../../sections/Course/index.astro'
+import type { EntryLayoutProps } from '../props'
+import { academySection } from './section'
+import '../../../styles/entries.css'
+
+type Props = EntryLayoutProps
+
+const { entry } = Astro.props
+---
+<CourseSyllabus section={academySection('Course', 'syllabus', entry.slug)} lead />

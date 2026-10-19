@@ -17,11 +17,16 @@ import type {
   AuthorResponse,
   AuthorsResponse,
   ContentTypeSummary,
+  CourseResponse,
+  CoursesResponse,
   EntriesResponse,
   Entry,
   EntryDetail,
   EntryResponse,
   EventsResponse,
+  LessonProgressRequest,
+  LessonProgressResponse,
+  LessonResponse,
   MenuResponse,
   PageResponse,
   PagesResponse,
@@ -32,6 +37,8 @@ import type {
   SitemapResponse,
   TermsResponse,
   TypesResponse,
+  VisitorExchangeResponse,
+  VisitorResponse,
 } from '@backgold/contract/content-api'
 
 export type {
@@ -41,14 +48,22 @@ export type {
   Author,
   AuthorResponse,
   AuthorsResponse,
+  ContentAccessLevel,
   ContentApiError,
   ContentApiLegal,
   ContentTypeField,
   ContentTypeSummary,
+  CourseDetail,
+  CourseLesson,
+  CourseProgress,
+  CourseResponse,
+  CoursesResponse,
+  CourseSummary,
   EntriesResponse,
   Entry,
   EntryAuthor,
   EntryDetail,
+  EntryLock,
   EntryResponse,
   EntryTerm,
   EventLiveCounts,
@@ -56,6 +71,9 @@ export type {
   EventsLiveResponse,
   EventsResponse,
   EventTypeSummary,
+  LessonProgressRequest,
+  LessonProgressResponse,
+  LessonResponse,
   MenuItem,
   MenuResponse,
   MenuShowsOn,
@@ -80,6 +98,9 @@ export type {
   SitemapResponse,
   TermsResponse,
   TypesResponse,
+  Visitor,
+  VisitorExchangeResponse,
+  VisitorResponse,
 } from '@backgold/contract/content-api'
 
 // ── Cache ────────────────────────────────────────────────────────────────────
@@ -146,6 +167,36 @@ export interface ClientOptions {
   cacheTtlSeconds?: number
   /** The fetch to use. Default `globalThis.fetch`. Tests pass their own. */
   fetch?: typeof fetch
+  /**
+   * A signed-in visitor's token, for a client that reads for one person only:
+   * every read sends it (see `VisitorOptions`) and none reads or writes the
+   * store. A client shared between visitors leaves it unset and passes
+   * `visitor` per call.
+   */
+  visitor?: string
+  /** Called with the fresh token when an answer renews the visitor's (`VisitorOptions.onVisitorRenew`); a per-call one takes precedence. */
+  onVisitorRenew?: (token: string) => void
+}
+
+/**
+ * A read for a signed-in visitor of the site (0547: gated entries, courses,
+ * progress). The token is the one the api minted at sign-in, which a site's
+ * Worker keeps in its own `bg_visitor` cookie and never shows to page script.
+ * A read that carries it sends `X-BackGold-Visitor`, is answered for that
+ * person (`private, no-store`), and never reads or writes the client's store.
+ * Server side only: the header is not one the api's CORS allows a browser to
+ * send.
+ */
+export interface VisitorOptions {
+  /** The visitor's token; the client's own `visitor` when left out. */
+  visitor?: string
+  /**
+   * Called with the fresh token when the answer carries
+   * `X-BackGold-Visitor-Renew` (the api renews a token whose hour has passed
+   * while the visitor's portal session stands); write it where the old one
+   * was kept. The client's own `onVisitorRenew` when left out.
+   */
+  onVisitorRenew?: (token: string) => void
 }
 
 export interface FirstPartyOptions {
@@ -165,7 +216,7 @@ export interface AreasOptions {
 }
 
 /** Options a list read takes. */
-export interface EntriesOptions {
+export interface EntriesOptions extends VisitorOptions {
   /** A term slug (`?term=`). */
   term?: string
   /**
@@ -192,9 +243,17 @@ export interface EventsOptions {
   limit?: number
 }
 
-export interface ReadOptions {
+export interface ReadOptions extends VisitorOptions {
   /** Read the draft (`?preview=1`; needs a secret key; never cached). */
   preview?: boolean
+}
+
+/** What `courses()` takes. */
+export interface CoursesOptions extends VisitorOptions {
+  /** The `next_cursor` of the previous page. */
+  cursor?: string
+  /** 1–50; the api's default when omitted. */
+  limit?: number
 }
 
 /**
@@ -259,6 +318,40 @@ export interface BackgoldContent {
    * an empty list or an entry that is not a module kind or `form:<id>`.
    */
   areas(opts: AreasOptions): Promise<AreasResponse>
+  /**
+   * `GET /courses`: the site's published courses, each with its lesson count
+   * and running time, and with a visitor (`opts.visitor`) that person's
+   * `progress` and locks; null when the site has no course type.
+   */
+  courses(opts?: CoursesOptions): Promise<CoursesResponse | null>
+  /** `GET /courses/:slug`: the course and its lessons in order, as this reader may see them; null when unpublished or unknown. */
+  course(slug: string, opts?: VisitorOptions): Promise<CourseResponse | null>
+  /**
+   * `GET /courses/:course/:lesson`: the lesson read through its course, with
+   * the course and the lessons either side. Locked for this reader, the
+   * lesson is its teaser (empty body, no `media_url`, `lock` set). Null when
+   * the course or the lesson in it is unknown.
+   */
+  lesson(courseSlug: string, lessonSlug: string, opts?: VisitorOptions): Promise<LessonResponse | null>
+  /** `GET /visitor` with the token: who it is, or `{ visitor: null }` for a token the api no longer takes. Never stored. */
+  visitor(token: string, opts?: Pick<VisitorOptions, 'onVisitorRenew'>): Promise<VisitorResponse>
+  /** `POST /courses/:course/:lesson/progress` with the visitor's token: saves where they are, or that they finished. */
+  lessonProgress(
+    courseSlug: string,
+    lessonSlug: string,
+    body: LessonProgressRequest,
+    token: string,
+    opts?: Pick<VisitorOptions, 'onVisitorRenew'>,
+  ): Promise<LessonProgressResponse>
+  /**
+   * `POST /visitor/exchange { code }`: redeems the hand-off code the giving
+   * portal minted for this site for the visitor's token. First-party clients
+   * only: any other throws `BackgoldApiError` 403 `FIRST_PARTY_REQUIRED`
+   * before a request. A used or expired code throws the api's error.
+   */
+  exchangeVisitor(code: string): Promise<VisitorExchangeResponse>
+  /** `DELETE /visitor` with the token: ends it at the api. */
+  signOutVisitor(token: string): Promise<void>
   /** `GET /preview/:token` — a secret key; never cached. Throws BAD_PREVIEW_TOKEN on a bad or expired token. */
   preview(token: string): Promise<PreviewResponse | null>
   /**

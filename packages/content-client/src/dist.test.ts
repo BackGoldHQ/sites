@@ -17,7 +17,7 @@ const BUILT = existsSync(`${DIST}index.js`)
 const FORBIDDEN = ['@backgold/contract', '@givegold/shared', 'zod', 'markdown-it']
 /** fs.js is the filesystem store; cli.js is the `backgold-content` command. */
 const NODE_ONLY = new Set(['fs.js', 'cli.js'])
-const INDEX_BUDGET_BYTES = 25 * 1024
+const INDEX_BUDGET_BYTES = 28 * 1024
 
 /** Every module specifier a file imports or re-exports: `from '…'`, `import '…'`, `import('…')`, `require('…')`. */
 function specifiers(text: string): string[] {

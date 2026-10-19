@@ -14,23 +14,32 @@
 //   - A preview read — `{ preview: true }`, a `preview=1` query, or a path
 //     under /preview/ — needs a secret key or first-party reads, is refused
 //     locally without one, and never reads or writes the store.
-//   - Requests carry only Authorization, Accept and If-None-Match (the api's
+//   - A visitor read — a call with a visitor's token, per call or on the
+//     client — sends X-BackGold-Visitor, never reads or writes the store, and
+//     hands a renewed token (X-BackGold-Visitor-Renew) to onVisitorRenew.
+//   - Reads carry only Authorization, Accept and If-None-Match (the api's
 //     CORS allows no other request header) and go only to apiOrigin. A
 //     first-party client (a site Worker in BackGold's namespace, reaching the
 //     api through a service binding, where CORS does not apply) sends
-//     X-BackGold-Site in place of Authorization.
+//     X-BackGold-Site in place of Authorization. Visitor calls add
+//     X-BackGold-Visitor, and the two writes (progress, the code exchange)
+//     Content-Type: they are server-side calls.
 
-import { type SITE_KEY_PREFIXES, siteKeyKind } from '@backgold/contract/content-api'
+import { type SITE_KEY_PREFIXES, VISITOR_HEADER, VISITOR_RENEW_HEADER, siteKeyKind } from '@backgold/contract/content-api'
 import type {
   AreasResponse,
   AuthorResponse,
   AuthorsResponse,
   BackgoldContent,
   CachedRead,
+  CourseResponse,
+  CoursesResponse,
   CreateClient,
   EntriesResponse,
   Entry,
   EventsResponse,
+  LessonProgressResponse,
+  LessonResponse,
   MenuResponse,
   PageResponse,
   PagesResponse,
@@ -43,6 +52,9 @@ import type {
   TermsResponse,
   TypedEntryResponse,
   TypesResponse,
+  VisitorExchangeResponse,
+  VisitorOptions,
+  VisitorResponse,
 } from './contract.js'
 import { holdsQuery } from './areas.js'
 import { memoryCache } from './cache.js'
@@ -62,6 +74,21 @@ const VERSION_WRITE_INTERVAL_MS = 5000
 
 /** The key prefixes, held equal to the api's SITE_KEY_PREFIXES by the type check. */
 const KEY_PREFIXES = { publishable: 'bg_site_pk_', secret: 'bg_site_sk_' } as const satisfies typeof SITE_KEY_PREFIXES
+
+/**
+ * A visitor token as a header can carry it: printable ASCII with no space,
+ * at most 4096 characters. Anything else is refused before a request, and a
+ * renewed token outside it is never handed on.
+ */
+const VISITOR_TOKEN_PATTERN = /^[\x21-\x7E]{1,4096}$/
+
+/** A token the client will send, else a TypeError that never repeats the value. */
+function checkVisitorToken(token: unknown): string {
+  if (typeof token !== 'string' || !VISITOR_TOKEN_PATTERN.test(token)) {
+    throw new TypeError('A visitor token is the string the api minted at sign-in: 1–4096 printable characters, no spaces')
+  }
+  return token
+}
 
 /** The api's answer to a preview read with a publishable key (lib/content-api/cache.ts SECRET_KEY_REQUIRED). */
 const secretKeyRequired = () => new BackgoldApiError(403, 'SECRET_KEY_REQUIRED', 'Preview needs a secret site key')
@@ -215,6 +242,7 @@ interface Credential {
   kind: 'publishable' | 'secret'
   headers: Record<string, string>
   scopeSeed: string
+  firstParty: boolean
 }
 
 /**
@@ -235,7 +263,7 @@ function credentialOf(opts: Parameters<CreateClient>[0] | undefined): Credential
     if (typeof siteId !== 'string' || !SITE_ID_PATTERN.test(siteId)) {
       throw new TypeError('firstParty.siteId is a site id: 1–64 letters, digits, "_" or "-"')
     }
-    return { kind: 'secret', headers: { [SITE_HEADER]: siteId }, scopeSeed: `first-party:${siteId}` }
+    return { kind: 'secret', headers: { [SITE_HEADER]: siteId }, scopeSeed: `first-party:${siteId}`, firstParty: true }
   }
   const kind = typeof key === 'string' && SITE_KEY_PATTERN.test(key) ? siteKeyKind(key) : null
   if (!kind || typeof key !== 'string') {
@@ -243,7 +271,7 @@ function credentialOf(opts: Parameters<CreateClient>[0] | undefined): Credential
       `createClient needs a site key: ${KEY_PREFIXES.publishable}… (publishable) or ${KEY_PREFIXES.secret}… (secret) followed by letters and digits, from the site's Developer page`,
     )
   }
-  return { kind, headers: { Authorization: `Bearer ${key}` }, scopeSeed: key }
+  return { kind, headers: { Authorization: `Bearer ${key}` }, scopeSeed: key, firstParty: false }
 }
 
 /**
@@ -252,8 +280,10 @@ function credentialOf(opts: Parameters<CreateClient>[0] | undefined): Credential
  * or first-party reads in a browser page or worker.
  */
 export const createClient: CreateClient = (opts) => {
-  const { kind, headers: credentialHeaders, scopeSeed } = credentialOf(opts)
+  const { kind, headers: credentialHeaders, scopeSeed, firstParty } = credentialOf(opts)
   if (kind === 'secret' && inBrowser()) throw new SecretKeyInBrowserError()
+  const clientVisitor = opts.visitor === undefined ? undefined : checkVisitorToken(opts.visitor)
+  const clientOnRenew = opts.onVisitorRenew
 
   const api = contentApiBase(opts.apiOrigin ?? DEFAULT_API_ORIGIN)
   const store = opts.cache ?? memoryCache()
@@ -325,19 +355,46 @@ export const createClient: CreateClient = (opts) => {
 
   const fresh = () => known !== null && maxVersionAgeMs > 0 && Date.now() - confirmedAt < maxVersionAgeMs
 
-  const send = (path: string, qs: string, ifNoneMatch?: string) => {
+  interface SendInit {
+    ifNoneMatch?: string
+    /** The visitor's token, sent as X-BackGold-Visitor. */
+    visitor?: string
+    method?: 'GET' | 'POST' | 'DELETE'
+    /** A JSON body. */
+    body?: unknown
+  }
+
+  const send = (path: string, qs: string, init: SendInit = {}) => {
     const url = `${api.base}${path}${qs ? `?${qs}` : ''}`
     if (new URL(url).origin !== api.origin) throw new TypeError(`Refusing to send a request outside ${api.origin}`)
     const headers: Record<string, string> = { ...credentialHeaders, Accept: 'application/json' }
-    if (ifNoneMatch) headers['If-None-Match'] = ifNoneMatch
+    if (init.ifNoneMatch) headers['If-None-Match'] = init.ifNoneMatch
+    if (init.visitor) headers[VISITOR_HEADER] = init.visitor
+    if (init.body !== undefined) headers['Content-Type'] = 'application/json'
     // A redirect is never followed: the credential goes to apiOrigin and nowhere else.
-    return doFetch(url, { method: 'GET', headers, redirect: 'manual' })
+    return doFetch(url, {
+      method: init.method ?? 'GET',
+      headers,
+      redirect: 'manual',
+      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+    })
+  }
+
+  /** The call's visitor: its own token, else the client's, with its renew callback; null for an anonymous read. */
+  const visitorOf = (call: VisitorOptions | undefined): { token: string; onRenew: ((token: string) => void) | undefined } | null => {
+    const token = call?.visitor !== undefined ? checkVisitorToken(call.visitor) : clientVisitor
+    return token === undefined ? null : { token, onRenew: call?.onVisitorRenew ?? clientOnRenew }
+  }
+  /** Hands a renewed token on, when the answer carries a well-formed one. */
+  const reportRenewal = (res: Response, onRenew: ((token: string) => void) | undefined) => {
+    const fresh = res.headers.get(VISITOR_RENEW_HEADER)?.trim()
+    if (onRenew && fresh && VISITOR_TOKEN_PATTERN.test(fresh)) onRenew(fresh)
   }
 
   /** GET /site, conditional on the known version; a 304 confirms it, a 200 is stored like any read. */
   const checkSite = async (): Promise<number> => {
     const held = known
-    const res = await send('/site', '', held !== null ? etagOf(held) : undefined)
+    const res = await send('/site', '', { ifNoneMatch: held !== null ? etagOf(held) : undefined })
     const answered = answeredVersion(res)
     if (res.status === 304 && (answered ?? held) !== null) {
       await learn((answered ?? held)!, true)
@@ -384,6 +441,28 @@ export const createClient: CreateClient = (opts) => {
     throw await apiError(res)
   }
 
+  /**
+   * A call made for one visitor (a read, or one of the visitor's writes):
+   * never stored, its version trusted but not persisted, a renewed token
+   * handed on whatever the status. A 204 answers undefined.
+   */
+  const visitorCall = async <T>(
+    path: string,
+    qs: string,
+    visitor: { token: string; onRenew: ((token: string) => void) | undefined },
+    onMissing: OnMissing,
+    init: Omit<SendInit, 'visitor' | 'ifNoneMatch'> = {},
+  ): Promise<T | null> => {
+    const res = await send(path, qs, { ...init, visitor: visitor.token })
+    reportRenewal(res, visitor.onRenew)
+    const answered = answeredVersion(res)
+    if (answered !== null) await learn(answered, false)
+    if (res.status === 204) return undefined as T
+    if (res.ok) return JSON.parse(await res.text()) as T
+    if (missing(res, onMissing)) return null
+    throw await apiError(res)
+  }
+
   const read = async <T>(path: string, query: Query, opts: ReadOptions | undefined, onMissing: OnMissing): Promise<T | null> => {
     checkPath(path)
     const params = normalizeQuery(opts?.preview ? { ...query, preview: '1' } : query)
@@ -391,6 +470,9 @@ export const createClient: CreateClient = (opts) => {
     // A draft never reaches the store, however the caller asked for it.
     const preview = params.some(([name, value]) => name === 'preview' && value === '1') || path.startsWith('/preview/')
     if (preview) return previewRead<T>(path, qs, onMissing)
+    // Nor does an answer for one visitor.
+    const visitor = visitorOf(opts)
+    if (visitor) return visitorCall<T>(path, qs, visitor, onMissing)
 
     const version = await ensureVersion()
     const key = await readKey(version, path, qs)
@@ -408,7 +490,7 @@ export const createClient: CreateClient = (opts) => {
       const tagged = read ? etagVersion(read.etag) : null
       if (read && body && tagged !== null) prior = { read, version: tagged, body: body.value }
     }
-    const res = await send(path, qs, prior?.read.etag)
+    const res = await send(path, qs, { ifNoneMatch: prior?.read.etag })
     const answered = answeredVersion(res)
     if (answered !== null) await learn(answered, true)
 
@@ -435,7 +517,7 @@ export const createClient: CreateClient = (opts) => {
     read<EntriesResponse>(
       `/entries/${seg(type)}`,
       { term: opts.term, q: opts.q, cursor: opts.cursor, limit: opts.limit === undefined ? undefined : String(opts.limit) },
-      { preview: opts.preview },
+      { preview: opts.preview, visitor: opts.visitor, onVisitorRenew: opts.onVisitorRenew },
       'null',
     )
 
@@ -486,6 +568,38 @@ export const createClient: CreateClient = (opts) => {
     areas: async (areasOpts) => {
       const holds = holdsQuery(areasOpts?.holds)
       return (await read<AreasResponse>('/areas', { holds }, undefined, 'throw'))!
+    },
+    courses: (coursesOpts = {}) =>
+      read<CoursesResponse>(
+        '/courses',
+        { cursor: coursesOpts.cursor, limit: coursesOpts.limit === undefined ? undefined : String(coursesOpts.limit) },
+        coursesOpts,
+        'null',
+      ),
+    course: (slug, courseOpts) => read<CourseResponse>(`/courses/${seg(slug)}`, {}, courseOpts, 'null'),
+    lesson: (courseSlug, lessonSlug, lessonOpts) =>
+      read<LessonResponse>(`/courses/${seg(courseSlug)}/${seg(lessonSlug)}`, {}, lessonOpts, 'null'),
+    visitor: async (token, visitorOpts) =>
+      (await visitorCall<VisitorResponse>('/visitor', '', { token: checkVisitorToken(token), onRenew: visitorOpts?.onVisitorRenew ?? clientOnRenew }, 'throw'))!,
+    lessonProgress: async (courseSlug, lessonSlug, body, token, progressOpts) =>
+      (await visitorCall<LessonProgressResponse>(
+        `/courses/${seg(courseSlug)}/${seg(lessonSlug)}/progress`,
+        '',
+        { token: checkVisitorToken(token), onRenew: progressOpts?.onVisitorRenew ?? clientOnRenew },
+        'throw',
+        { method: 'POST', body },
+      ))!,
+    async exchangeVisitor(code) {
+      if (!firstParty) throw new BackgoldApiError(403, 'FIRST_PARTY_REQUIRED', 'Only a first-party client redeems a visitor hand-off code')
+      if (typeof code !== 'string' || code === '' || code.length > 512) throw new TypeError('A hand-off code is the non-empty string the portal sent back')
+      const res = await send('/visitor/exchange', '', { method: 'POST', body: { code } })
+      const answered = answeredVersion(res)
+      if (answered !== null) await learn(answered, false)
+      if (!res.ok) throw await apiError(res)
+      return JSON.parse(await res.text()) as VisitorExchangeResponse
+    },
+    async signOutVisitor(token) {
+      await visitorCall<void>('/visitor', '', { token: checkVisitorToken(token), onRenew: undefined }, 'throw', { method: 'DELETE' })
     },
     preview: (token) => read<PreviewResponse>(`/preview/${seg(token)}`, {}, undefined, 'null'),
     raw: <T = unknown>(path: string, query: Query = {}, opts?: ReadOptions) => read<T>(path, query, opts, 'null'),
