@@ -57,8 +57,13 @@ export interface LessonView {
   courseTitle: string
   courseHref: string | null
   coursesHref: string | null
-  /** The video, for a reader who may watch it; null when locked or not up yet. */
-  video: { src: string; poster: string | null } | null
+  /**
+   * The video, for a reader who may watch it; null when locked or not up yet.
+   * `sources` are its copies: 720p for a narrow viewport, 1080p for a wide one;
+   * the original at `src` is the fallback and the download link. Null until the
+   * copies are ready; a size the source was too small for is null.
+   */
+  video: { src: string; poster: string | null; sources: { '720': string | null; '1080': string | null } | null } | null
   /** The cover, for the locked teaser. */
   cover: string | null
   locked: boolean
@@ -140,6 +145,8 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
   const lock = lesson.lock ?? row?.lock ?? null
   const src = locked ? null : safeSrc(lesson.media_url)
   const cover = lesson.hero ? safeSrc(lesson.hero.url) : null
+  const copies = locked ? null : lesson.renditions
+  const sources = copies ? { '720': safeSrc(copies['720']), '1080': safeSrc(copies['1080']) } : null
   const completed = visitor !== null && row?.completed === true
   const position = visitor && !completed ? (row?.position_seconds ?? null) : null
   const free = lessons.flatMap((l, i) => (l.access === 'public' ? [String(i + 1)] : []))
@@ -154,7 +161,7 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
     courseTitle: course.title,
     courseHref: safeHref(course.url),
     coursesHref: safeHref(course.url.replace(/\/[^/]+\/?$/, '')),
-    video: src ? { src, poster: cover } : null,
+    video: src ? { src, poster: cover, sources: sources && (sources['720'] || sources['1080']) ? sources : null } : null,
     cover,
     locked,
     lockWord: locked && lock ? lockWordOf(lock) : null,
