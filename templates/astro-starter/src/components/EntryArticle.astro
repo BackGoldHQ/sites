@@ -1,6 +1,7 @@
 ---
 // An entry's page: its title, summary, byline and date, the hero image, a
-// podcast's or video's media, the body, then the type's own fields.
+// podcast's or video's media, the body, then the type's own fields. An entry
+// kept for people the organization knows also says how to sign in (`door`).
 import type { ContentTypeSummary, EntryDetail } from '@backgold/content'
 import { relFor, renderMarkdown, safeSrc } from '@backgold/astro/server'
 import FieldValue from './FieldValue.astro'
@@ -10,9 +11,11 @@ interface Props {
   entry: EntryDetail
   /** The entry's type from GET /types; without it the custom fields are left out. */
   type: ContentTypeSummary | undefined
+  /** On a gated entry: where a signed-out visitor signs in, or who is signed in and where they sign out. */
+  door?: { signIn: string } | { name: string; signOut: string } | null
 }
 
-const { entry, type } = Astro.props
+const { entry, type, door } = Astro.props
 const day = formatDay(entry.publish_at)
 const hero = entry.hero ? safeSrc(entry.hero.url) : null
 const media = safeSrc(entry.media_url)
@@ -57,6 +60,8 @@ const body = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
         {day && entry.publish_at && <time datetime={entry.publish_at}>{day}</time>}
       </p>
     )}
+    {door && 'signIn' in door && <p class="byline"><a href={door.signIn}>Sign in with your email</a> to read this.</p>}
+    {door && 'signOut' in door && <p class="byline">Signed in as {door.name}. <a href={door.signOut}>Sign out</a></p>}
   </header>
   {hero && <img class="entry-hero" src={hero} alt="" decoding="async" fetchpriority="high" />}
   {media && entry.type === 'podcast' && <audio class="entry-media" src={media} controls preload="none"></audio>}
