@@ -338,6 +338,8 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
 /** A playable lesson's file: an upload the fixture serves a stand-in for. */
 const lessonMedia = (slug) => `https://api.backgold.com/api/media-files/med_${slug}.mp4`
+/** Its 720p and 1080p copies, the same address with `?size=`. */
+const lessonRenditions = (slug) => ({ '720': `${lessonMedia(slug)}?size=720`, '1080': `${lessonMedia(slug)}?size=1080` })
 
 /**
  * A course as the api answers it to `visitor` (null: the public reader).
@@ -1122,6 +1124,7 @@ function fixtureData(ex, kitchenSections) {
     url: '/endorsements/maple-hollow-neighbors',
     hero: null,
     media_url: null,
+    renditions: null,
     publish_at: '2026-09-25T10:00:00.000Z',
     updated_at: '2026-09-25T10:00:00.000Z',
     terms: [],
@@ -1853,7 +1856,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
       return res.end()
     }
     if (url.pathname.startsWith('/media/') && url.pathname.endsWith('.mp4')) {
-      // A lesson's file: no video to play here, so nothing at all.
+      // A lesson's file or one of its copies (`?size=`): no video to play here, so nothing at all.
       res.writeHead(204, { 'Cache-Control': 'no-store' })
       return res.end()
     }
@@ -2018,7 +2021,9 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         const near = (l) => (l ? { slug: l.slug, title: l.title, url: l.url } : null)
         body = {
           lesson: {
+            // The free lesson's copies are ready; an open signed-in lesson's are not yet, so it plays the original.
             id: row.id, slug: row.slug, type: 'video', title: row.title, summary: null, url: row.url, hero: null, media_url: row.locked ? null : lessonMedia(row.slug),
+            renditions: !row.locked && row.access === 'public' ? lessonRenditions(row.slug) : null,
             publish_at: course.publish_at, updated_at: course.updated_at, terms: [], authors: [], access: row.access, locked: row.locked,
             lock: row.lock, duration_seconds: row.duration_seconds, body: { markdown: row.locked ? '' : 'Where each dollar of the levy lands.' }, fields: {},
           },
@@ -4779,7 +4784,7 @@ function withAcademy(data, ex) {
   })
   // A course's own page is its entry (GET /entries/course/:slug); the lessons are the course's.
   const courseEntry = (c) => ({
-    id: c.id, slug: c.slug, type: 'course', title: c.title, summary: c.summary, url: c.url, hero: null, media_url: null,
+    id: c.id, slug: c.slug, type: 'course', title: c.title, summary: c.summary, url: c.url, hero: null, media_url: null, renditions: null,
     publish_at: c.publish_at, updated_at: c.updated_at, terms: [], authors: [], access: c.access, locked: false, lock: null, duration_seconds: null,
   })
   return {
@@ -4876,6 +4881,11 @@ async function checkAcademy(origin, fixture) {
   html = await res.text()
   check(res.status === 200 && /<video\b/.test(html) && /<h1[^>]*>Lesson 1: Where the money goes<\/h1>/.test(html), 'the free lesson draws its player and its title as the <h1>')
   check(!/action="\/_backgold\/progress"/.test(html), 'signed out, it offers no Mark complete')
+  const freeVideo = /<video\b[^>]*>/.exec(html)?.[0] ?? ''
+  check(
+    /\ssrc="[^"]*\/med_where-the-money-goes\.mp4\?size=1080"/.test(freeVideo) && /\sdata-src-720="[^"]*\/med_where-the-money-goes\.mp4\?size=720"/.test(freeVideo) && /\sdata-src-original="[^"]*\/med_where-the-money-goes\.mp4"/.test(freeVideo),
+    `the free lesson's player is drawn on its 1080p copy, the 720p one and the original beside it (${freeVideo})`,
+  )
 
   res = await get(origin, lessonAt('the-levy-line'))
   html = await res.text()
@@ -4988,6 +4998,9 @@ async function checkAcademyLook(origin, chrome) {
         }`)
         check(door.door && !door.video, `${where}: the locked lesson draws its sign-in door, no player (${JSON.stringify(door)})`)
         check(door.teaser >= 4.5, `${where}: the teaser's words read at AA on its ground (${door.teaser}:1)`)
+        const free = await look(lessonAt('where-the-money-goes'), 'lesson-free', `() => document.querySelector('video')?.getAttribute('src') ?? null`)
+        const size = width <= 768 ? 720 : 1080
+        check(free?.endsWith(`/med_where-the-money-goes.mp4?size=${size}`), `${where}: the free lesson plays its ${size}p copy (${free})`)
 
         // Signed in through the portal's return leg, as a browser follows it.
         await browser.open(`${origin}/_backgold/visitor?code=${ACADEMY_CODE}&return=%2F`, scheme)

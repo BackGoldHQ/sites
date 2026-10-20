@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-O4RPYQ2R.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-M4T5UZWC.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {

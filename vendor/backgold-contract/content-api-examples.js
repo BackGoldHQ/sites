@@ -460,6 +460,7 @@ var entry = {
   locked: false,
   lock: null,
   duration_seconds: null,
+  renditions: null,
   body: { markdown: "## Where it goes\n\nEvery dollar\u2026" },
   fields: { endorser: { kind: "entry", label: "Mayor Jones", slug: "mayor-jones" }, give_here: { kind: "form", label: "General fund", url: "https://pine-valley.backgold.com/donate/give" } }
 };
@@ -645,6 +646,7 @@ var lessonExample = {
     locked: false,
     lock: null,
     duration_seconds: 290,
+    renditions: { "720": "https://api.backgold.com/api/media-files/med_9f2?size=720", "1080": "https://api.backgold.com/api/media-files/med_9f2?size=1080" },
     body: { markdown: "Three questions before the next lesson." },
     fields: {}
   },
