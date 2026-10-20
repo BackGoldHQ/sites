@@ -1,10 +1,14 @@
 ---
 // One lesson (board D3), for both layouts. The breadcrumb, then:
 //   the player  the browser's own <video> (preload="metadata", the cover as
-//               its poster, the api's Range-served file); for a visitor it
-//               picks up at the place they stopped ("Picks up at 1:12, where
-//               you stopped."). Locked: the teaser, the cover under a lock
-//               and the lock's word, the length still on it.
+//               its poster) over the api's Range-served file: the 1080p copy,
+//               which the script below trades for the 720p one on a viewport
+//               768px wide or narrower, before it plays; the original until
+//               the copies are ready, and always behind the fallback link.
+//               For a visitor it picks up at the place they stopped ("Picks
+//               up at 1:12, where you stopped."). Locked: the teaser, the
+//               cover under a lock and the lock's word, the length still on
+//               it.
 //   the head    "Lesson 5: Decide what you want", "Lesson 5 of 12 in
 //               <course> · 4:50".
 //   the door    a locked lesson's (Door.astro), and "The notes for this
@@ -44,6 +48,7 @@ const Sub = lead ? 'h2' : 'h3'
 const length = clockOf(view.seconds)
 const resume = view.resumeAt !== null ? clockOf(view.resumeAt) : null
 const tracks = view.visitor !== null && !view.locked
+const narrow = view.video?.sources?.['720'] ?? null
 // The body's headings move under the notes' own heading: h2 becomes the level below "Notes".
 const shift = lead ? 1 : 2
 const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: string) => `<${slash}h${Math.min(Number(level) + shift, 6)}>`) ?? null
@@ -61,7 +66,16 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     <div class="ls-main">
       {view.video && (
         <div class="ls-frame">
-          <video src={view.video.src} poster={view.video.poster ?? undefined} controls playsinline preload="metadata">
+          <video
+            src={view.video.sources?.['1080'] ?? view.video.src}
+            poster={view.video.poster ?? undefined}
+            data-src-720={narrow ?? undefined}
+            data-src-1080={view.video.sources?.['1080'] ?? undefined}
+            data-src-original={view.video.src}
+            controls
+            playsinline
+            preload="metadata"
+          >
             <a href={view.video.src}>Watch the video</a>
           </video>
         </div>
@@ -140,15 +154,29 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     </div>
     <Rail view={view} section={section} level={sub} />
   </div>
-  {tracks && (
+  {(tracks || narrow) && (
     <script is:inline>
       ;(function (root) {
-        if (!root || !window.fetch) return
+        if (!root) return
+        var video = root.querySelector('video')
+        var resume = Number(root.getAttribute('data-resume')) || 0
+        // The resume listener is on before the copy below loads, so the saved place applies to it.
+        if (video && resume > 0) {
+          video.addEventListener('loadedmetadata', function () {
+            if (!video.duration || resume < video.duration - 3) video.currentTime = resume
+          })
+        }
+        // The 720p copy on a narrow viewport, picked once at load; a resize mid-play keeps what is playing.
+        var narrow = video && video.getAttribute('data-src-720')
+        if (narrow && window.matchMedia && window.matchMedia('(max-width: 768px)').matches && video.currentSrc !== narrow && video.getAttribute('src') !== narrow) {
+          video.src = narrow
+          video.load()
+        }
+        if (!root.hasAttribute('data-lesson') || !window.fetch) return
         var path = root.getAttribute('data-progress')
         var course = root.getAttribute('data-course-slug')
         var lesson = root.getAttribute('data-lesson-slug')
         var forms = root.querySelectorAll('.ls-complete form')
-        var video = root.querySelector('video')
         var send = function (body, keep) {
           body.course = course
           body.lesson = lesson
@@ -181,16 +209,12 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
           })
         }
         if (!video) return
-        var resume = Number(root.getAttribute('data-resume')) || 0
         var last = 0
         var save = function (keep) {
           var at = Math.floor(video.currentTime)
           last = Date.now()
           if (at > 0 && !video.ended) send({ position_seconds: at }, keep).catch(function () {})
         }
-        video.addEventListener('loadedmetadata', function () {
-          if (resume > 0 && (!video.duration || resume < video.duration - 3)) video.currentTime = resume
-        })
         video.addEventListener('play', function () {
           last = Date.now()
         })
@@ -207,7 +231,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
             })
             .catch(function () {})
         })
-      })(document.currentScript.closest('[data-lesson]'))
+      })(document.currentScript.closest('.ls'))
     </script>
   )}
 </div>
