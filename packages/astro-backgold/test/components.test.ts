@@ -179,11 +179,10 @@ describe('DefaultSection', () => {
 })
 
 describe('Embed', () => {
-  it('renders the frame lazily, titled, unsandboxed, with one sizing script', async () => {
+  it('renders the frame lazily, titled, unsandboxed, sent the page address, with one sizing script', async () => {
     const html = await render(Embed, { props: { embed: donateEmbed } })
-    expect(html).toMatch(/<iframe data-bg-embed class="bg-embed" src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general" title="Embedded form" loading="lazy" allow="payment"/)
+    expect(html).toMatch(/<iframe data-bg-embed class="bg-embed" src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general" title="Embedded form" loading="lazy" allow="payment" referrerpolicy="no-referrer-when-downgrade"/)
     expect(html).not.toContain('sandbox')
-    expect(html).not.toContain('referrerpolicy')
     expect(html).not.toContain('embed.js')
     expect(scripts(html)).toBe(1)
     expect(html).toContain("data.type !== 'givegold:resize'")

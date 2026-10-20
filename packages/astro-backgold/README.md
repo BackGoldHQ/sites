@@ -588,9 +588,11 @@ Each page is its own edge-cache entry (see [Caching](#caching)).
   BackGold it renders nothing, never a made-up line, and logs a warning
   naming the site), `<PreviewBar />` ("Draft · not published").
 - `<Embed embed={s.embed} title="Donate" />` places a money or consent module
-  as BackGold serves it: the frame (lazy, `allow="payment"`, no `sandbox`),
-  sized from its `givegold:resize` message by one script per page that
-  trusts only the page's own frames at their own origin; or, for a
+  as BackGold serves it: the frame (lazy, `allow="payment"`, no `sandbox`,
+  sent the page's whole address as its referrer so a petition signed in it
+  counts for the link the signer arrived by, `?src=`), sized from its
+  `givegold:resize` message by one script per page that trusts only the
+  page's own frames at their own origin; or, for a
   script-only module, the `mount` container and its script once. An address
   that is not https renders nothing, except plain http on `localhost` or
   `127.0.0.1`, for an api running on your own machine.
