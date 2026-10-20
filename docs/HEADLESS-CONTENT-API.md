@@ -651,6 +651,12 @@ builds:
   referrer. Do not set `referrerpolicy="no-referrer"` on these frames (or a
   site-wide `Referrer-Policy: no-referrer`), or they cannot report their
   height.
+- Send the petition frame your page's whole address as its referrer
+  (`referrerpolicy="no-referrer-when-downgrade"` on the frame; a browser's
+  default sends the origin alone across origins). The frame reads the link
+  tag (`?src=`) off it, so a signature made through it counts for the link
+  the signer arrived by; without it, signatures through the frame carry no
+  tag. The share row after signing shares the page's own address either way.
 - Keep `allow="payment"` on the donate and event frames. Checkout happens
   inside them.
 

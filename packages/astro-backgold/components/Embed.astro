@@ -6,8 +6,12 @@
 // renders.
 // `allow="payment"` because checkout happens inside the donate and event
 // frames; no `sandbox`, which would break the checkout and the frames'
-// height messages; no `referrerpolicy`, because some frames address their
-// height message to the referrer's origin.
+// height messages. `referrerpolicy="no-referrer-when-downgrade"` sends the
+// frame this page's whole address (the browser's default sends the origin
+// alone across origins): BackGold's petition frame reads the link tag
+// (`?src=`) off it, so a signature made through the frame counts for the
+// link the signer arrived by, and frames that address their height message
+// to the referrer's origin still have it.
 import type { SectionEmbed } from '@backgold/content'
 import { embedPlan, firstOnPage } from '../dist/render.js'
 
@@ -22,7 +26,7 @@ const resizeScript = plan?.kind === 'iframe' && firstOnPage(Astro.request, 'back
 const moduleScript = plan?.kind === 'mount' && firstOnPage(Astro.request, `backgold:script:${plan.script}`)
 ---
 {plan?.kind === 'iframe' && (
-  <iframe data-bg-embed class="bg-embed" src={plan.src} title={title} loading="lazy" allow="payment"></iframe>
+  <iframe data-bg-embed class="bg-embed" src={plan.src} title={title} loading="lazy" allow="payment" referrerpolicy="no-referrer-when-downgrade"></iframe>
 )}
 {plan?.kind === 'mount' && <div class="bg-embed-mount" {...plan.attributes}></div>}
 {moduleScript && plan?.kind === 'mount' && <script is:inline src={plan.script} async></script>}
