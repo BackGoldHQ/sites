@@ -1,7 +1,12 @@
-// The site's colours as CSS custom properties, from the brand in BackGold
-// (`/site.brand`): the template's token sheet. The layout writes them into
-// `:root`, a light set and a dark set; src/styles/site.css reads only these
-// names, so restyling starts here or there.
+// The site's colours as CSS custom properties: the template's token sheet.
+// A site that wears a saved theme in BackGold (`/site.theme`) paints each
+// mode from that theme's own tokens, the values its hosted pages bake (the
+// page and card colours, the ink, the accent, the hero ground), so a palette
+// look moves to the template whole; a site with no theme paints from the
+// brand in BackGold (`/site.brand`), derived as the boards draw it. The
+// layout writes them into `:root`, a light set and a dark set;
+// src/styles/site.css reads only these names, so restyling starts here or
+// there.
 //
 // Which set shows is the site's appearance (`/site.style`'s `appearance`, the
 // same pin a hosted BackGold site keeps): `light` or `dark` pins one set and
@@ -53,6 +58,8 @@
 // pairs, a card colour and two rule colours, chosen here so text meets WCAG
 // AA (4.5:1) on that ground whatever the brand is: a brand colour that would
 // fail on a band is swapped for the band's ink.
+
+import type { SiteResponse } from '@backgold/content'
 
 type Rgb = [number, number, number]
 
@@ -273,6 +280,78 @@ function lightPalette(brand: BrandColors | null | undefined): Palette {
   }
 }
 
+/** The theme tokens one mode's palette reads (`/site.theme`'s `light.tokens` and `dark.tokens`). */
+const THEME_TOKENS = ['bg', 'surface', 'surface_2', 'ink', 'line', 'line_strong', 'accent_1', 'accent_text', 'hero_1'] as const
+type ThemeTokens = Record<(typeof THEME_TOKENS)[number], string>
+
+/** The theme a site wears, as `/site` sends it; its tokens are read here, its fonts in src/lib/fonts.ts. */
+export type SiteThemeLike = NonNullable<SiteResponse['site']['theme']>
+
+/** `mode`'s tokens when every one the palette reads is a `#rrggbb`, else null (the brand palette stands in). */
+function themeTokens(theme: SiteThemeLike | null | undefined, mode: 'light' | 'dark'): ThemeTokens | null {
+  const tokens = theme?.[mode]?.tokens as Record<string, unknown> | undefined
+  if (!tokens || typeof tokens !== 'object') return null
+  const out: Partial<ThemeTokens> = {}
+  for (const key of THEME_TOKENS) {
+    const value = brandColor(tokens[key])
+    if (!value) return null
+    out[key] = value
+  }
+  return out as ThemeTokens
+}
+
+/**
+ * A mode's palette from the theme's own tokens: the page is the theme's
+ * page, the card its card, the ink its ink, the accent its accent (the fill
+ * for the main call, the accent text for kickers), the hero ground for the
+ * contrast and brand bands, and the second surface for the tint. Every band
+ * still goes through `band`, so text keeps AA on whatever the theme chose.
+ * The three brand colours stay the brand's own, for `--bg-brand-*`.
+ */
+function themePalette(t: ThemeTokens, brand: BrandColors | null | undefined, mode: 'light' | 'dark'): Palette {
+  const { primary, secondary, accent } = colorsOf(brand)
+  const page = t.bg
+  const inkIsLight = luminance(t.ink) > 0.5
+  const m: Mode = {
+    primary: t.accent_1,
+    accent: t.accent_text,
+    darkText: inkIsLight ? INK : t.ink,
+    lightText: inkIsLight ? t.ink : '#f1ede6',
+    call: t.accent_1,
+    quietFloor: mode === 'dark' ? NON_TEXT : 1.25,
+    surface: t.surface,
+    line: t.line,
+    lineStrong: t.line_strong,
+  }
+  return {
+    primary,
+    secondary,
+    accent,
+    page,
+    bands: {
+      plain: band(page, m),
+      tint: band(t.surface_2, m),
+      panel: band(t.surface, m),
+      wash: band(mix(t.accent_1, page, 0.11), m),
+      contrast: band(t.hero_1, m),
+      brand: band(t.hero_1, m),
+      photo: band(darkGround(mix(t.hero_1, BLACK, 0.4)), m),
+    },
+  }
+}
+
+/** The light set: the theme's light tokens when the site wears a theme, else the brand's light palette. */
+function lightOf(brand: BrandColors | null | undefined, theme: SiteThemeLike | null | undefined): Palette {
+  const t = themeTokens(theme, 'light')
+  return t ? themePalette(t, brand, 'light') : lightPalette(brand)
+}
+
+/** The dark set: the theme's dark tokens when the site wears a theme, else the brand's dark palette. */
+function darkOf(brand: BrandColors | null | undefined, theme: SiteThemeLike | null | undefined): Palette {
+  const t = themeTokens(theme, 'dark')
+  return t ? themePalette(t, brand, 'dark') : darkPalette(brand)
+}
+
 /** The dark palette (board A13's other theme): the primary deep in shadow, the secondary as ink, the contrast band light. */
 function darkPalette(brand: BrandColors | null | undefined): Palette {
   const { primary, secondary, accent } = colorsOf(brand)
@@ -358,7 +437,8 @@ export function appearanceOf(style: string | null | undefined): Appearance {
 }
 
 /**
- * The palettes as CSS. A pinned appearance is one `:root` rule. Auto is the
+ * The palettes as CSS, from the theme the site wears when it wears one
+ * (`theme`, `/site.theme`), else from its brand. A pinned appearance is one `:root` rule. Auto is the
  * light set on `:root`, the dark set under `prefers-color-scheme: dark`
  * unless the visitor chose light, and the dark set when the visitor chose
  * dark. Auto with a template that opens dark (`opensDark`, the template's
@@ -366,9 +446,14 @@ export function appearanceOf(style: string | null | undefined): Appearance {
  * visitor's system says, and the light set only when the visitor chose light.
  * Every value is a `#rrggbb` built above, never text from BackGold.
  */
-export function brandCss(brand: BrandColors | null | undefined, appearance: Appearance = 'auto', opensDark = false): string {
-  const light = lines(lightPalette(brand)).join(';')
-  const dark = lines(darkPalette(brand)).join(';')
+export function brandCss(
+  brand: BrandColors | null | undefined,
+  appearance: Appearance = 'auto',
+  opensDark = false,
+  theme: SiteThemeLike | null | undefined = null,
+): string {
+  const light = lines(lightOf(brand, theme)).join(';')
+  const dark = lines(darkOf(brand, theme)).join(';')
   if (appearance === 'light') return `:root{color-scheme:light;${light}}`
   if (appearance === 'dark') return `:root{color-scheme:dark;${dark}}`
   if (opensDark) return `:root{color-scheme:dark;${dark}}:root[data-gg-mode="light"]{color-scheme:light;${light}}`
@@ -396,9 +481,14 @@ function lookValue(b: Band): string {
  * light set, and the dark set unless the appearance pins one. A module drawn
  * in a card sits on the card colour, which is the panel band's ground.
  */
-export function moduleLook(brand: BrandColors | null | undefined, band: SectionBand, appearance: Appearance): Record<string, string> {
-  const light = lookValue(lightPalette(brand).bands[band])
-  const dark = lookValue(darkPalette(brand).bands[band])
+export function moduleLook(
+  brand: BrandColors | null | undefined,
+  band: SectionBand,
+  appearance: Appearance,
+  theme: SiteThemeLike | null | undefined = null,
+): Record<string, string> {
+  const light = lookValue(lightOf(brand, theme).bands[band])
+  const dark = lookValue(darkOf(brand, theme).bands[band])
   if (appearance === 'light') return { look: light }
   if (appearance === 'dark') return { look: dark }
   return { look: light, look_dark: dark }
