@@ -43,7 +43,7 @@ const lede = text(section.copy.lede)
       layout={layout}
       card={layout === 'card'}
       title={heading ?? 'Sign up'}
-      height={layout === 'inline' ? '7rem' : layout === 'band' ? '13rem' : '24rem'}
+      height={layout === 'inline' ? '7rem' : layout === 'band' ? 'var(--signup-band-frame, 17rem)' : '24rem'}
     />
   </div>
 </Band>
@@ -58,6 +58,13 @@ const lede = text(section.copy.lede)
     display: grid;
     gap: 1.625rem;
     align-items: center;
+  }
+  /* The band's frame starts as tall as its sign-up stands (on a phone the
+     fields two and one to a row, the button, the consent line; wider, two to a
+     row), so the whole sign-up shows before the frame reports its own height,
+     and still shows when that report never comes. */
+  :global(.signup-band) .signup-grid {
+    --signup-band-frame: 22rem;
   }
   .signup-words h2 {
     max-width: 16em;
@@ -84,6 +91,7 @@ const lede = text(section.copy.lede)
   }
   @media (min-width: 48rem) {
     :global(.signup-band) .signup-grid {
+      --signup-band-frame: 17rem;
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       gap: 2.5rem;
     }
