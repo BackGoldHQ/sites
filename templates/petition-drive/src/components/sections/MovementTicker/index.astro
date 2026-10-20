@@ -1,15 +1,15 @@
 ---
 // MovementTicker, the petition drive's "Neighbors signing on" card: the
-// heading as a live label (a dot beside it in the mono face), then the
-// figures the organization wrote for it, each a large mono numeral over its
-// label. The Content API sends the figures an author typed and none of the
-// live feed a hosted BackGold page runs (its signers and their count come
-// from BackGold's own feed, which no site reads), so a figure BackGold fills
-// in live is left out (literalStat) and a ticker with no typed figure draws
-// nothing, as the kit's does. The dot pulses only for a visitor who has not
-// asked for reduced motion.
+// heading as a live label (a dot beside it in the mono face), then the live
+// feed BackGold frames when the api sends one (the people signing, giving
+// and RSVPing, with its count), else the figures the organization wrote for
+// it, each a large mono numeral over its label. A figure BackGold fills in
+// live is left out of that list (literalStat), and a ticker with neither a
+// frame nor a typed figure draws nothing, as the kit's does. The dot pulses
+// only for a visitor who has not asked for reduced motion.
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
 import { rows } from '@backgold/template-kit/lib/section'
 import { literalStat, text } from '@backgold/template-kit/lib/format'
 
@@ -20,11 +20,14 @@ interface Props {
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
-const stats = rows(section)
-  .map((row) => ({ value: literalStat(row.value), label: text(row.label) }))
-  .filter((stat) => stat.value !== null)
+const framed = !!section.embed
+const stats = framed
+  ? []
+  : rows(section)
+      .map((row) => ({ value: literalStat(row.value), label: text(row.label) }))
+      .filter((stat) => stat.value !== null)
 ---
-{stats.length > 0 && (
+{(framed || stats.length > 0) && (
   <Band section={section} class="ticker drive-ticker">
     {heading && (
       <h2 class="drive-ticker-label">
@@ -32,14 +35,19 @@ const stats = rows(section)
         {heading}
       </h2>
     )}
-    <ul class="drive-ticker-figures" role="list">
-      {stats.map((stat) => (
-        <li>
-          <p class="drive-ticker-value">{stat.value}</p>
-          {stat.label && <p class="drive-ticker-name">{stat.label}</p>}
-        </li>
-      ))}
-    </ul>
+    {framed && (
+      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="ticker" title={heading || 'Activity'} height="28rem" />
+    )}
+    {stats.length > 0 && (
+      <ul class="drive-ticker-figures" role="list">
+        {stats.map((stat) => (
+          <li>
+            <p class="drive-ticker-value">{stat.value}</p>
+            {stat.label && <p class="drive-ticker-name">{stat.label}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
   </Band>
 )}
 
