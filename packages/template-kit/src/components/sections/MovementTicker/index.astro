@@ -1,9 +1,11 @@
 ---
-// MovementTicker: a heading and the figures the organization wrote for it.
-// BackGold's hosted pages also run a live feed of gifts and signatures; a
-// figure BackGold fills in live is left out here (see literalStat).
+// MovementTicker: a heading and the live feed BackGold frames when the api
+// sends one — the people signing, giving and RSVPing, with its count. A
+// section with no frame draws the figures the organization wrote instead; a
+// figure BackGold fills in live is left out of that list (see literalStat).
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import { rows } from '../../../lib/section'
 import { literalStat, text } from '../../../lib/format'
 
@@ -14,20 +16,28 @@ interface Props {
 
 const { section } = Astro.props
 const heading = text(section.copy.heading)
-const stats = rows(section)
-  .map((row) => ({ value: literalStat(row.value), label: text(row.label) }))
-  .filter((stat) => stat.value !== null)
+const framed = !!section.embed
+const stats = framed
+  ? []
+  : rows(section)
+      .map((row) => ({ value: literalStat(row.value), label: text(row.label) }))
+      .filter((stat) => stat.value !== null)
 ---
-{stats.length > 0 && (
+{(framed || stats.length > 0) && (
   <Band section={section} class="ticker">
     {heading && <h2>{heading}</h2>}
-    <ul class="grid grid-3 stat-list" role="list">
-      {stats.map((stat) => (
-        <li class="stat">
-          <p class="stat-value">{stat.value}</p>
-          {stat.label && <p class="stat-label">{stat.label}</p>}
-        </li>
-      ))}
-    </ul>
+    {framed && (
+      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="ticker" title={heading || 'Activity'} height="28rem" />
+    )}
+    {stats.length > 0 && (
+      <ul class="grid grid-3 stat-list" role="list">
+        {stats.map((stat) => (
+          <li class="stat">
+            <p class="stat-value">{stat.value}</p>
+            {stat.label && <p class="stat-label">{stat.label}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
   </Band>
 )}
