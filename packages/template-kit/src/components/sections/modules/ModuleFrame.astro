@@ -55,6 +55,7 @@ interface Props {
 const { embed: sent, band: sectionBand, type, layout, card = false, title, height = '32rem', class: className } = Astro.props
 const bg = Astro.locals.backgold
 const brand = bg.setup === null ? bg.site.brand : null
+const theme = bg.setup === null ? bg.site.theme : null
 const appearance = bg.setup === null ? appearanceOf(bg.site.style) : 'auto'
 /** The faces BackGold's embed look accepts (the api's EMBED_LOOK_FONTS). */
 const FRAME_FONTS = ['public-sans', 'inter', 'system-sans', 'system-serif']
@@ -73,7 +74,7 @@ function framed(iframe: string | null): string | null {
   }
   if (isDonateFrame(type)) withDonateQuery(url, Astro.url.searchParams)
   url.searchParams.set('layout', layout)
-  for (const [key, value] of Object.entries(moduleLook(brand, band, appearance))) url.searchParams.set(key, value)
+  for (const [key, value] of Object.entries(moduleLook(brand, band, appearance, theme))) url.searchParams.set(key, value)
   url.searchParams.set('radius', '12')
   url.searchParams.set('font', font)
   return url.toString()
