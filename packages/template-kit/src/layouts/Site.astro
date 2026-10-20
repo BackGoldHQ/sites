@@ -187,7 +187,7 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
         <noscript><link rel="stylesheet" href={fonts.stylesheet} /></noscript>
       </>
     )}
-    <style is:inline set:html={brandCss(site.brand, appearance, opensDark)}></style>
+    <style is:inline set:html={brandCss(site.brand, appearance, opensDark, site.theme)}></style>
     {/* The theme's faces: @font-face rules with font-display swap, so they too arrive after first paint. */}
     {fonts.css && <style is:inline set:html={fonts.css}></style>}
     {/* The visitor's kept choice, else the set a template that opens dark
