@@ -16,6 +16,10 @@
 // podcasts and videos together, at the organization's blog base: `/news`, or
 // `/blog` on an organization that kept it) opens with its intro when a
 // published page sits at its address: that page's sections, above the list.
+// Every read is made for the signed-in visitor (`visitorReads`), so an entry
+// kept for people the organization knows opens for them; locked, it is its
+// teaser with a way to sign in (src/lib/visitor.ts) when the site signs
+// visitors in.
 import type { Areas, PageResponse } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
 import { areaEntriesOf, atomFeed, isBlogType, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type ResolvedType } from '@backgold/astro/server'
@@ -26,6 +30,7 @@ import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
 import { sections } from '../components/sections'
 import { entryCard } from '../lib/section'
+import { signInHref, signInReady, signOutHref } from '../lib/visitor'
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503 })
@@ -34,7 +39,7 @@ const { client, site, siteUrl } = bg
 const siteName = site.name ?? site.domain
 const pathname = Astro.url.pathname
 // The URL, not just the path: a list's `?cursor=` asks for a later page.
-const resolved = await resolveRoute(client, Astro.url)
+const resolved = await resolveRoute(client, Astro.url, bg.visitorReads)
 
 if (resolved.kind === 'feed') {
   return new Response(await atomFeed(client, siteUrl, resolved.type), {
@@ -117,6 +122,15 @@ const areas: Areas | null =
       : null
 const sidebar = (resolved.kind === 'page' || resolved.kind === 'entry') && areaEntriesOf(areas, 'sidebar').length > 0
 const pager = pagerOf(resolved, pathname)
+// A gated entry's line about signing in: the way in for someone signed out, who is signed in for everyone else.
+const door =
+  resolved.kind !== 'entry' || resolved.entry.access === 'public' || !signInReady(Astro.locals)
+    ? null
+    : bg.visitor
+      ? { name: bg.visitor.first_name ?? bg.visitor.email, signOut: signOutHref(pathname) }
+      : resolved.entry.locked
+        ? { signIn: signInHref(pathname, resolved.entry.title) }
+        : null
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
@@ -151,7 +165,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
 
   {resolved.kind === 'entry' && (
     <div class:list={['layout', sidebar && 'layout-split']}>
-      <div class="layout-main"><EntryArticle entry={resolved.entry} type={resolved.type} /></div>
+      <div class="layout-main"><EntryArticle entry={resolved.entry} type={resolved.type} door={door} /></div>
       {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}
     </div>
   )}
