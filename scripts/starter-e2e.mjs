@@ -334,6 +334,9 @@ const ACADEMY_TOKEN = 'visitor:e2e-visitor-token'
 const ACADEMY_VISITOR = { first_name: 'Robin', email: 'robin@example.org', member: false }
 /** When the visitor finished the budget course's first lesson: three days before the run, a weekday the course head names. */
 const ACADEMY_FINISHED_AT = new Date(Date.now() - 3 * 86400000).toISOString()
+/** A post kept for people signed in (0547): the teaser without the visitor's token, the body with it. */
+const GATED_SLUG = 'members-briefing'
+const GATED_BODY = 'The briefing for people who signed in: where the levy money lands, line by line.'
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 /** A playable lesson's file: an upload the fixture serves a stand-in for. */
@@ -1897,6 +1900,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     const visitorHeader = req.headers['x-backgold-visitor']
     const visitor = visitorHeader === ACADEMY_TOKEN ? ACADEMY_VISITOR : null
     const PRIVATE = { 'Cache-Control': 'private, no-store' }
+    const firstParty = req.headers['x-backgold-site'] !== undefined
     const jsonBody = () => {
       try {
         return JSON.parse(rawBody || '{}')
@@ -1906,6 +1910,17 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     }
     if (parts[0] === 'visitor') {
       if (parts[1] === 'exchange' && parts.length === 2 && req.method === 'POST') {
+        // As the api: a first-party request (the stand-in api Worker forwards
+        // X-BackGold-Site) or a secret key; a key request carrying a header
+        // only a browser sends (Origin, Sec-Fetch-Site, Sec-Fetch-Dest) is
+        // refused before the code is read. Sec-Fetch-Mode alone passes:
+        // Node's fetch adds it to every request.
+        if (!firstParty) {
+          if (key !== SECRET_KEY) return send(403, { error: "Redeem a sign-in code with the site's secret key", code: 'SECRET_KEY_REQUIRED' }, PRIVATE)
+          if (req.headers.origin !== undefined || req.headers['sec-fetch-site'] !== undefined || req.headers['sec-fetch-dest'] !== undefined) {
+            return send(403, { error: 'Redeem the code from your server, never from a browser', code: 'SERVER_ONLY' }, PRIVATE)
+          }
+        }
         return jsonBody().code === ACADEMY_CODE
           ? send(200, { token: ACADEMY_TOKEN, expires_at: new Date(Date.now() + 3600000).toISOString(), visitor: ACADEMY_VISITOR }, PRIVATE)
           : send(400, { error: 'That sign-in link has expired', code: 'INVALID_CODE' }, PRIVATE)
@@ -1967,6 +1982,14 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
       case 'entries': {
         const list = data.entries[parts[1]]
         if (!list) break
+        if (parts[1] === 'post' && parts[2] === GATED_SLUG && parts.length === 3) {
+          const base = Object.values(data.entry.post)[0]
+          const lock = visitor ? null : { reason: 'signed_in', tag_label: null, org_name: data.orgName ?? 'Example Org' }
+          const entry = { ...base, id: 'ci_gated', slug: GATED_SLUG, title: 'The members briefing', url: `/blog/${GATED_SLUG}`, access: 'signed_in', locked: !visitor, lock, media_url: null, body: { markdown: visitor ? GATED_BODY : '' }, fields: visitor ? base.fields : {} }
+          if (visitor) Object.assign(headers, PRIVATE)
+          body = { entry, areas: data.entryAreas }
+          break
+        }
         if (parts[2] !== undefined) {
           const entry = data.entry[parts[1]]?.[parts[2]]
           body = entry ? { entry, areas: data.entryAreas } : undefined
@@ -2547,6 +2570,86 @@ async function checkConfigured(origin, fixture, disclaimer) {
  * the featured post's, the menu's), the feed, the sitemap, and nothing at
  * /blog.
  */
+/**
+ * The starter's /auth/ routes: a visitor signing in on a site that reads with
+ * a key, through the portal's door and back, redeeming the code with the
+ * secret key (BACKGOLD_SECRET_KEY, the one previews use), then a gated entry read signed out
+ * and signed in, progress saved, and signed out.
+ */
+async function checkPartnerVisitor(origin, fixture) {
+  log('\nVisitors signing in on a key-mode site (/auth/)')
+  const exchange = (headers) =>
+    fetch(`${fixture.origin}/api/content/v1/visitor/exchange`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ code: ACADEMY_CODE }) })
+  let res = await exchange({ Authorization: `Bearer ${SITE_KEY}` })
+  check(res.status === 403 && (await res.json()).code === 'SECRET_KEY_REQUIRED', `the fixture refuses a code with a publishable key (${res.status})`)
+  res = await exchange({ Authorization: `Bearer ${SECRET_KEY}`, Origin: 'https://www.example.org' })
+  check(res.status === 403 && (await res.json()).code === 'SERVER_ONLY', `and one sent with a browser's Origin (${res.status})`)
+  res = await exchange({ Authorization: `Bearer ${SECRET_KEY}`, 'Sec-Fetch-Site': 'cross-site' })
+  check(res.status === 403 && (await res.json()).code === 'SERVER_ONLY', `and one sent with Sec-Fetch-Site (${res.status})`)
+  res = await exchange({ Authorization: `Bearer ${SECRET_KEY}` })
+  check(res.status === 200 && (await res.json()).token === ACADEMY_TOKEN, `but takes one from Node's own fetch, whose Sec-Fetch-Mode alone passes (${res.status})`)
+
+  res = await get(origin, `/auth/sign-in?${new URLSearchParams({ to: '/some-path', title: 'T' })}`)
+  const door = new URL(res.headers.get('location') ?? '', 'https://portal.invalid')
+  const back = new URL(door.searchParams.get('return') ?? '', 'https://return.invalid')
+  check(
+    res.status === 302 &&
+      door.origin === 'https://giving.backgold.dev' &&
+      door.pathname === '/site-signin' &&
+      door.searchParams.get('site') === fixture.data.site.id &&
+      door.searchParams.get('title') === 'T' &&
+      back.origin === origin &&
+      back.pathname === '/auth/visitor' &&
+      back.searchParams.get('to') === '/some-path',
+    `/auth/sign-in goes to the portal's door with the site, the title and return=<SITE_URL>/auth/visitor?to=<path> (${res.status}, ${door.href})`,
+  )
+
+  res = await get(origin, `/auth/visitor?code=${ACADEMY_CODE}&to=%2Fsome-path`)
+  const cookie = res.headers.getSetCookie().find((c) => c.startsWith('bg_visitor=')) ?? ''
+  check(
+    res.status === 302 && res.headers.get('location') === '/some-path' && cookie.startsWith(`bg_visitor=${ACADEMY_TOKEN};`) && /HttpOnly/i.test(cookie) && /SameSite=Lax/i.test(cookie),
+    `/auth/visitor redeems the code with the secret key, sets the HttpOnly cookie and goes on to the path (${res.status}, ${res.headers.get('location')}, ${cookie})`,
+  )
+  res = await get(origin, '/auth/visitor?code=not-the-code&to=%2Fsome-path')
+  const expired = await res.text()
+  check(res.status === 400 && expired.includes('That sign-in link has expired') && expired.includes('href="/auth/sign-in?to=%2Fsome-path"'), `a code the api will not redeem is the expired page, back to the door (${res.status})`)
+  res = await get(origin, `/auth/visitor?code=${ACADEMY_CODE}&to=%2F%2Fevil.example`)
+  await res.text()
+  check(res.status === 302 && res.headers.get('location') === '/', `and \`to\` never names another host (${res.headers.get('location')})`)
+
+  const gatedAt = `/blog/${GATED_SLUG}`
+  res = await get(origin, gatedAt)
+  let html = await res.text()
+  const signInLink = `href="${`/auth/sign-in?${new URLSearchParams({ to: gatedAt, title: 'The members briefing' })}`.replace(/&/g, '&amp;')}"`
+  check(res.status === 200 && html.includes('The members briefing') && !html.includes(GATED_BODY) && html.includes(signInLink), 'signed out, a gated entry is its teaser with a way to sign in')
+  const signedInCookie = { Cookie: `bg_visitor=${ACADEMY_TOKEN}` }
+  res = await get(origin, gatedAt, { headers: signedInCookie })
+  html = await res.text()
+  check(
+    res.status === 200 && html.includes(GATED_BODY) && plain(html).includes('Signed in as Robin.') && /private|no-store/.test(res.headers.get('cache-control') ?? '') && res.headers.get('x-backgold-cache') !== 'HIT',
+    `signed in (the cookie), it reads the body, names the visitor and is never cached (${res.headers.get('cache-control')})`,
+  )
+
+  const progress = (headers) =>
+    get(origin, '/auth/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: origin, ...headers },
+      body: JSON.stringify({ course: 'reading-the-budget', lesson: 'the-levy-line', position_seconds: 72 }),
+    })
+  res = await progress(signedInCookie)
+  const saved = await res.json()
+  check(res.status === 200 && saved.progress?.position_seconds === 72 && typeof saved.course?.total === 'number', `POST /auth/progress with the cookie saves through the api and answers its JSON (${res.status}, ${JSON.stringify(saved)})`)
+  check(fixture.state.progress.at(-1)?.lesson === 'the-levy-line', 'and the api was told')
+  res = await progress({})
+  check(res.status === 401 && (await res.json()).code === 'VISITOR_REQUIRED', `without the cookie, 401 (${res.status})`)
+  res = await progress({ ...signedInCookie, Origin: 'https://evil.example' })
+  check(res.status === 403, `from another site, 403 (${res.status})`)
+
+  res = await get(origin, '/auth/sign-out?to=%2Fsome-path', { headers: signedInCookie })
+  const cleared = res.headers.getSetCookie().find((c) => c.startsWith('bg_visitor=')) ?? ''
+  check(res.status === 302 && res.headers.get('location') === '/some-path' && /(Max-Age=0|Expires=Thu, 01 Jan 1970)/i.test(cleared), `/auth/sign-out clears the cookie and goes on to the path (${res.status}, ${cleared})`)
+}
+
 async function checkNewsBase(origin, fixture) {
   log('\nAn organization at /news')
   let res = await get(origin, '/news')
@@ -5069,7 +5172,7 @@ async function main() {
     }
   }
   // ── petition-drive (end) ──
-  writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
+writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
 
   // SITE_URL is the Worker's own address, so canonicals point at the page Lighthouse reads.
   const configuredVars = (origin) => ({ BACKGOLD_SITE_KEY: SITE_KEY, BACKGOLD_API_ORIGIN: fixture.origin, SITE_URL: origin })
@@ -5082,6 +5185,7 @@ async function main() {
   try {
     await checkConfigured(configured.origin, fixture, disclaimer)
     await checkKitchenSink(configured.origin, kitchen, disclaimer)
+    if (TEMPLATE_NAME === 'astro-starter') await checkPartnerVisitor(configured.origin, fixture)
     if (PARTY) await checkPartyBoards(configured.origin, fixture)
     if (PARTY) await checkPartyMap(configured.origin, fixture)
     if (PARTY) await checkPartyUnwired(configured.origin)

@@ -429,6 +429,17 @@ Such a request is never answered from or stored in the edge cache, and every
 response to it carries `Cache-Control: private, no-store`. Nothing about a
 visitor is ever written into a page anyone else is served.
 
+The `/_backgold/*` routes answer `404` on a site that reads with a key: a
+site built elsewhere signs visitors in through its own server routes and its
+secret key (docs/HEADLESS-CONTENT-API.md, "Visitors: letting people sign in
+on your site"; the starter's `src/pages/auth/` is a worked example). Those
+routes keep the token in the same cookie with the helpers
+`@backgold/astro/server` exports: `readVisitorToken(cookies)` (`{ present,
+token }`), `visitorTokenCookieOptions(url)` (the attributes above, `Secure`
+but on plain http localhost) and `VISITOR_TOKEN_DELETE_OPTIONS`; the name is
+`VISITOR_COOKIE` from `@backgold/content`. The middleware then reads who the
+visitor is on every page exactly as it does for a first-party site.
+
 ## A/B testing hooks
 
 Nothing here runs an experiment; these are the three things an experiment

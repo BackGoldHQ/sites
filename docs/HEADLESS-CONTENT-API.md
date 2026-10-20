@@ -92,7 +92,8 @@ curl -s https://api.backgold.com/api/content/v1/site \
 | Status | `code` | Meaning |
 | --- | --- | --- |
 | `401` | `INVALID_KEY` | The key is missing, is not a site key, is unknown, or was revoked. |
-| `403` | `SECRET_KEY_REQUIRED` | You asked for a draft or a preview with a publishable key. |
+| `403` | `SECRET_KEY_REQUIRED` | You asked for a draft or a preview, or redeemed a visitor's sign-in code, with a publishable key. |
+| `403` | `SERVER_ONLY` | A visitor's sign-in code was sent with a browser's `Origin`, `Sec-Fetch-Site` or `Sec-Fetch-Dest` header (headers only a browser sends; `Sec-Fetch-Mode` alone, which Node's `fetch` adds, passes): redeem it from your server ([Visitors](#visitors-letting-people-sign-in-on-your-site)). |
 | `404` | `NOT_FOUND` | Nothing at that address. This is also the answer when the key's site was removed or the organization no longer has the Content API, because for that organization the API does not exist. |
 
 Every error body is `{ "error": "<message>", "code": "<CODE>" }`. Responses
@@ -1355,3 +1356,221 @@ Run the command again whenever the organization changes a content type.
 - **A secret key refuses to run in a browser.** `createClient` with a
   `bg_site_sk_` key throws a `SecretKeyInBrowserError` in a browser page or a
   browser worker. Cloudflare Workers are servers and may hold one. Give browser code the publishable key.
+
+### Visitors: letting people sign in on your site
+
+An organization can keep entries and lessons for people it knows: an entry's
+`access` is `signed_in`, `members` or `tag` (a tag the person carries), and a
+course's lessons follow the course. Read without a visitor, such an entry is
+its teaser: `locked: true`, `lock` saying why (`reason`, `tag_label`,
+`org_name`: the door to draw), the body empty, `fields` empty and no
+`media_url`. A visitor signs in with their email through BackGold's giving
+portal, which hands the sign-in back to your site; your server then reads for
+them with their **visitor token**, and their locks open.
+
+Everything below runs on your server. The token, the hand-off code and the
+secret key never reach page script, and a page drawn for a visitor is theirs
+alone: never cache it. The examples are plain `Request` → `Response`
+handlers (a Cloudflare Worker, or any framework that hands you a `Request`);
+[the public starter](../templates/astro-starter/README.md#visitors-signing-in)
+has the same four routes as Astro endpoints under `src/pages/auth/`.
+
+**1. The sign-in link.** Send the visitor to the portal's door for your
+site:
+
+```
+https://giving.backgold.com/site-signin?site=<site id>&return=<https://your-domain/auth/visitor?to=/courses/foundations>&title=<lesson title>
+```
+
+- `site` is your site's id: `site.id` from `GET /site` (`(await
+  bg.site()).site.id`), the `cd_…` id the Developer page names.
+- `return` is where the portal sends the visitor back: an absolute `https://`
+  address whose host is the site's address in BackGold: its connected
+  domain, or, while it has none, the host of the preview address on its
+  Developer page. The exact host (`www.example.org` and `example.org` are two
+  hosts). Its path and query are yours. It carries no user name or password,
+  no fragment and no port. The portal refuses any other address, and answers
+  `404` for an organization without the headless CMS.
+- `title` (optional, plain text) is what the door names: "Sign in to watch
+  Lesson 2: The levy line".
+- The portal is `https://giving.backgold.com` for `api.backgold.com`;
+  BackGold's staging api, on `backgold.dev`, has its portal at
+  `https://giving.backgold.dev`.
+
+```ts
+// auth.ts
+const PORTAL = 'https://giving.backgold.com'
+const SITE_URL = 'https://www.example.org' // the site's address in BackGold: its connected domain, else its preview address's host
+
+export function signInUrl(siteId: string, to: string, title?: string): string {
+  const back = new URL('/auth/visitor', SITE_URL)
+  back.searchParams.set('to', to)
+  const door = new URLSearchParams({ site: siteId, return: back.href })
+  if (title) door.set('title', title)
+  return `${PORTAL}/site-signin?${door}`
+}
+```
+
+**2. The way back: redeem the code with the secret key.** Once the visitor
+has signed in, the portal sends their browser to your `return` address with
+`code=<code>` added to its query. The code is good for one minute and once.
+Redeem it from your server with a client on the site's **secret key**
+(`exchangeVisitor(code)`, `POST /visitor/exchange`); the api answers
+`{ token, expires_at, visitor }`. Keep the token in your own cookie:
+`HttpOnly` (page script never sees it), `Secure`, `SameSite=Lax`, `Path=/`.
+The token is good for an hour, and the api renews it while the visitor's
+portal session stands, for up to thirty days, so give the cookie thirty days.
+
+```ts
+// auth.ts, continued
+import { BackgoldApiError, VISITOR_COOKIE, createClient } from '@backgold/content'
+
+interface Env {
+  BACKGOLD_SECRET_KEY: string // bg_site_sk_…, a server secret
+}
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60
+
+export function visitorCookie(token: string): string {
+  return `${VISITOR_COOKIE}=${token}; Path=/; Max-Age=${THIRTY_DAYS}; HttpOnly; Secure; SameSite=Lax`
+}
+
+/** A path on this site to go on to; `/` for anything else, so the link can never send anyone off the site. */
+export function localPath(raw: string | null): string {
+  return raw !== null && /^\/(?![/\\])/.test(raw) && !/[\u0000- \\]/.test(raw) ? raw : '/'
+}
+
+// GET /auth/visitor?code=<code>&to=<path>
+export async function onVisitorReturn(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url)
+  const to = localPath(url.searchParams.get('to'))
+  const server = createClient({ key: env.BACKGOLD_SECRET_KEY })
+  try {
+    const { token } = await server.exchangeVisitor(url.searchParams.get('code') ?? '')
+    return new Response(null, {
+      status: 302,
+      // The code is in this address: no page it leads to is told it.
+      headers: { Location: to, 'Set-Cookie': visitorCookie(token), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' },
+    })
+  } catch (error) {
+    if (!(error instanceof BackgoldApiError) && !(error instanceof TypeError)) throw error
+    return new Response('That sign-in link has expired. Sign in again.', { status: 400, headers: { 'Cache-Control': 'no-store' } })
+  }
+}
+```
+
+Only a secret key (or a BackGold template's own Worker) redeems a code. The
+api answers `403 SECRET_KEY_REQUIRED` to a publishable key (and the client
+throws it before any request), `403 SERVER_ONLY` to a request that carries
+a browser's `Origin`, `Sec-Fetch-Site` or `Sec-Fetch-Dest` header (headers only a browser sends; `Sec-Fetch-Mode` alone, which Node's `fetch` adds, passes), and `400 INVALID_CODE` to a code
+that is unknown, used, expired, or minted for another site.
+
+**3. Read for the visitor.** Pass the token to the reads you make for that
+person: `entry`, `entries`, `page`, `courses`, `course`, `lesson` and `raw`
+take `{ visitor, onVisitorRenew }`. Any of the site's keys reads this way.
+Such a read sends `X-BackGold-Visitor`, is answered for that person with
+`Cache-Control: private, no-store`, and never reads or writes the client's
+store. When the api renews the token, `onVisitorRenew` has the fresh one:
+write it back to the cookie. `visitor(token)` (`GET /visitor`) says who the
+token is, `{ visitor: { first_name, email, member } }`, or `{ visitor: null }`
+once the api no longer takes it (clear the cookie then).
+
+```ts
+// visitor-reads.ts
+import { VISITOR_COOKIE, type BackgoldContent, type VisitorOptions } from '@backgold/content'
+import { visitorCookie } from './auth'
+
+/** The visitor's token from the request's cookie. */
+export function tokenFrom(request: Request): string | null {
+  for (const part of (request.headers.get('Cookie') ?? '').split(';')) {
+    const [name, ...value] = part.trim().split('=')
+    if (name === VISITOR_COOKIE && value.length > 0) return value.join('=')
+  }
+  return null
+}
+
+/** The options for a read made for the request's visitor, and the Set-Cookie to send when the api renewed the token. */
+export function visitorReads(request: Request): { reads: VisitorOptions | undefined; setCookie: () => string | null } {
+  const token = tokenFrom(request)
+  let renewed: string | undefined
+  const reads = token ? { visitor: token, onVisitorRenew: (fresh: string) => void (renewed = fresh) } : undefined
+  return { reads, setCookie: () => (renewed === undefined ? null : visitorCookie(renewed)) }
+}
+
+// GET /courses/:course/:lesson, with `bg` the client your pages read with.
+export async function onLesson(request: Request, bg: BackgoldContent, course: string, lesson: string): Promise<Response> {
+  const { reads, setCookie } = visitorReads(request)
+  const read = await bg.lesson(course, lesson, reads)
+  if (!read) return new Response('Not found', { status: 404 })
+  const { title, locked, lock, body } = read.lesson
+  const html = locked
+    ? `<h1>${escapeHtml(title)}</h1><p>${lock?.reason === 'signed_in' ? 'Sign in with your email to watch.' : `For members of ${escapeHtml(lock?.org_name ?? '')}.`}</p>`
+    : `<h1>${escapeHtml(title)}</h1>${renderMarkdown(body.markdown)}`
+  const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' })
+  // A visitor's page is theirs alone; the anonymous one is the cacheable one.
+  headers.set('Cache-Control', reads ? 'private, no-store' : 'public, max-age=60')
+  const cookie = setCookie()
+  if (cookie) headers.append('Set-Cookie', cookie)
+  return new Response(html, { headers })
+}
+```
+
+`escapeHtml` and `renderMarkdown` are your own (section 5 on rendering the body). A visitor's header is not one
+the api's CORS lets a browser send, so these reads are server-side reads too.
+
+**4. Save progress from the server.** A lesson page posts to your own
+server, which forwards with the token (`lessonProgress`, `POST
+/courses/{course}/{lesson}/progress` with `{ completed?, position_seconds? }`).
+Take the post from your own pages only.
+
+```ts
+// progress.ts
+import { BackgoldApiError, createClient } from '@backgold/content'
+import { visitorCookie } from './auth'
+import { tokenFrom } from './visitor-reads'
+
+// POST /auth/progress {course, lesson, completed?, position_seconds?}
+export async function onProgress(request: Request, env: { BACKGOLD_SECRET_KEY: string }): Promise<Response> {
+  const site = request.headers.get('Sec-Fetch-Site')
+  const ownPage = site !== null ? site === 'same-origin' : request.headers.get('Origin') === new URL(request.url).origin
+  if (!ownPage) return Response.json({ error: 'From this site only', code: 'CROSS_ORIGIN' }, { status: 403 })
+  const token = tokenFrom(request)
+  if (!token) return Response.json({ error: 'Sign in to save your place.', code: 'VISITOR_REQUIRED' }, { status: 401 })
+  const { course, lesson, completed, position_seconds } = (await request.json()) as {
+    course: string
+    lesson: string
+    completed?: boolean
+    position_seconds?: number
+  }
+  const server = createClient({ key: env.BACKGOLD_SECRET_KEY })
+  let renewed: string | undefined
+  try {
+    const saved = await server.lessonProgress(course, lesson, { completed, position_seconds }, token, {
+      onVisitorRenew: (fresh) => void (renewed = fresh),
+    })
+    const headers = new Headers({ 'Cache-Control': 'no-store' })
+    if (renewed !== undefined) headers.append('Set-Cookie', visitorCookie(renewed))
+    return Response.json(saved, { headers }) // { progress, course }: where the visitor now stands
+  } catch (error) {
+    if (error instanceof BackgoldApiError) return Response.json({ error: error.message, code: error.code }, { status: error.status })
+    throw error
+  }
+}
+```
+
+**5. Sign out: clear the cookie.** There is no revocation call today: the api
+has no way to end a token (`signOutVisitor` sends `DELETE /visitor`, which
+the api answers `404` today). Clearing your cookie is the sign-out: the token
+that was in it lapses within its hour, and without the cookie nothing renews
+it.
+
+```ts
+// auth.ts, continued
+
+// GET /auth/sign-out?to=<path>
+export function onSignOut(request: Request): Response {
+  const to = localPath(new URL(request.url).searchParams.get('to'))
+  const cleared = `${VISITOR_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`
+  return new Response(null, { status: 302, headers: { Location: to, 'Set-Cookie': cleared, 'Cache-Control': 'no-store' } })
+}
+```

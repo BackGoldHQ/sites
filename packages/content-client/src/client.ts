@@ -590,7 +590,9 @@ export const createClient: CreateClient = (opts) => {
         { method: 'POST', body },
       ))!,
     async exchangeVisitor(code) {
-      if (!firstParty) throw new BackgoldApiError(403, 'FIRST_PARTY_REQUIRED', 'Only a first-party client redeems a visitor hand-off code')
+      if (!firstParty && kind !== 'secret') {
+        throw new BackgoldApiError(403, 'SECRET_KEY_REQUIRED', 'Redeeming a visitor hand-off code needs a secret site key or a first-party client')
+      }
       if (typeof code !== 'string' || code === '' || code.length > 512) throw new TypeError('A hand-off code is the non-empty string the portal sent back')
       const res = await send('/visitor/exchange', '', { method: 'POST', body: { code } })
       const answered = answeredVersion(res)
