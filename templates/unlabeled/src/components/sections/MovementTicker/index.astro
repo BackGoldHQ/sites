@@ -2,7 +2,11 @@
 // MovementTicker, Unlabeled's (board U1, section 2): one line across the page
 // under a hairline, "Live //" in a white block at its left, then what is
 // happening. When the api sends the live feed (the people signing, RSVPing
-// and giving, BackGold's frame), the frame fills the line in her look. With
+// and giving, BackGold's frame), the frame fills the line in her look: on her
+// black ground whatever band the section names, its colours, face and
+// corners hers, and her
+// frame skin (src/lib/frame-skin.ts) setting its card as the line itself (the
+// count, then each name and what they did, between hairlines). With
 // no frame, the figures the organization typed run along it, each a value
 // over its label, at a reading pace (a full pass every 60 seconds or slower),
 // and hold still for a visitor who asked for reduced motion; the run is drawn
@@ -21,7 +25,9 @@ interface Props {
   variant?: string
 }
 
-const { section } = Astro.props
+const { section: sent } = Astro.props
+/** Always on her black ground. */
+const section: Section = { ...sent, band: 'plain' }
 const heading = text(section.copy.heading)
 const framed = !!section.embed
 const stats = framed
@@ -38,7 +44,7 @@ const seconds = Math.max(60, stats.length * 12)
       <p class="u-ticker-label">Live //{heading && <span class="u-ticker-heading"> {heading}</span>}</p>
       {framed ? (
         <div class="u-ticker-frame">
-          <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="ticker" title={heading || 'Activity'} height="3rem" />
+          <ModuleFrame embed={section.embed} band="plain" type={section.type} layout="ticker" title={heading || 'Activity'} height="3.5rem" />
         </div>
       ) : (
         <div class="u-ticker-window">
@@ -66,9 +72,6 @@ const seconds = Math.max(60, stats.length * 12)
     background-image: none;
     border-bottom: 1px solid var(--line);
   }
-  :global(.bg-section.u-ticker) > :global(.bg-section-inner) {
-    max-width: none;
-  }
   .u-ticker-line {
     display: flex;
     align-items: stretch;
@@ -76,6 +79,8 @@ const seconds = Math.max(60, stats.length * 12)
   }
   .u-ticker-label {
     flex: 0 0 auto;
+    align-self: flex-start;
+    min-height: 2.75rem;
     display: flex;
     align-items: center;
     margin: 0;

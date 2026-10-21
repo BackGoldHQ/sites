@@ -1,0 +1,255 @@
+---
+// One event's page at /events/<slug>, Unlabeled's (board U8, the second
+// comp; src/template.ts `eventPage`). The running head (`§ 01 // EVENTS //
+// HEARING`, the title in the centre, the folio). Then the day set huge at the
+// left (the date at the numeral size, the month and weekday under it), the
+// title as the page's one <h1> at the right with the meta line under it: the
+// time in the event's zone, the place, Directions and Add to calendar (this
+// site's .ics). Under them, at the left: the event's photo through the
+// halftone screen when it has one, the description, the venue's map when the
+// event has coordinates, and, for a board meeting (a Hearing, or a title that
+// names a board meeting), the archive's door: "From the archive", the last
+// meeting on the record, what it holds, Read it yourself, linking to the
+// meeting's page. At the right (under it on a phone): BackGold's RSVP and
+// tickets on a hairline box (ModuleFrame, layout `detail`), its fields,
+// limits, receipts and consent BackGold's, in her faces and her skin.
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import EventMap from '@backgold/template-kit/components/EventMap.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
+import LiveCounts from '@backgold/template-kit/components/sections/EventsList/LiveCounts.astro'
+import { typeLabel } from '@backgold/template-kit/components/sections/EventsList/events.ts'
+import { EVENTS_PATH, eventCalendarPath, type EventDetail } from '@backgold/template-kit/lib/events'
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import RunningHead from './RunningHead.astro'
+import { lastMeeting } from '../lib/last-meeting'
+
+interface Props {
+  event: EventDetail
+}
+
+const { event } = Astro.props
+
+/** The start's parts in the event's own zone (UTC without one); null when it does not parse. */
+function partsOf(value: string, timeZone: string | null) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  const zone = (() => {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timeZone ?? 'UTC' })
+      return timeZone ?? 'UTC'
+    } catch {
+      return 'UTC'
+    }
+  })()
+  const get = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-US', { ...opts, timeZone: zone }).format(date)
+  return {
+    day: get({ day: 'numeric' }),
+    month: get({ month: 'short' }).toUpperCase(),
+    weekday: get({ weekday: 'short' }).toUpperCase(),
+    time: get({ hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }),
+  }
+}
+
+const start = partsOf(event.starts_at, event.timezone)
+const type = typeLabel(event.type)
+const place = event.is_virtual && !event.venue && !event.location ? 'Online' : (event.venue ?? event.location ?? event.address)
+/** The street address under the place on the map, when it says more than the place does. */
+const street = event.address && event.address !== place ? event.address : null
+const directions = event.directions_url ? safeHref(event.directions_url) : null
+const photo = event.image_url ? safeSrc(event.image_url) : null
+const pinned =
+  !event.is_virtual && event.lat !== null && event.lng !== null && Math.abs(event.lat) <= 90 && Math.abs(event.lng) <= 180
+    ? { lat: event.lat, lng: event.lng }
+    : null
+/** A board meeting: the archive's door under the description. */
+const hearing = event.type?.toLowerCase() === 'hearing' || /\bboard meeting\b/i.test(event.title)
+const bg = Astro.locals.backgold
+const meeting = hearing && bg.setup === null ? await lastMeeting(bg.client) : null
+---
+<article class="u-event u-grid">
+  <RunningHead kicker={['Events', type].filter(Boolean).join(' // ')} title={event.title} />
+  <div class="u-event-top">
+    <div class="u-event-date">
+      {type && <p class="chip">{type}</p>}
+      {start && (
+        <time datetime={event.starts_at}>
+          <b>{start.day}</b>
+          <span>{start.month} · {start.weekday}</span>
+        </time>
+      )}
+    </div>
+    <div class="u-event-title">
+      <h1>{event.title}</h1>
+      <p class="u-event-meta">
+        {start && <b>{start.time}</b>}
+        {place && <span>{place}</span>}
+        {directions && <a href={directions} rel="noopener">Directions ↗</a>}
+        <a href={eventCalendarPath(event.slug)}>Add to calendar</a>
+        <span class="event-live" data-bg-live={event.id}></span>
+      </p>
+    </div>
+  </div>
+  <div class="u-event-grid">
+    <div class="u-event-words">
+      {photo && (
+        <figure class="u-event-figure">
+          <div class="u-event-photo u-halftone"><img src={photo} alt="" loading="eager" decoding="async" /></div>
+          <figcaption class="u-meta">Fig. 01 // {event.title}</figcaption>
+        </figure>
+      )}
+      <Prose value={event.description} class="u-event-body" />
+      {pinned && <EventMap lat={pinned.lat} lng={pinned.lng} place={place} address={street} title={event.title} />}
+      {meeting && (
+        <aside class="u-event-archive" aria-label="From the archive">
+          <p class="kicker">From the archive</p>
+          <h2>The last meeting: {meeting.date}</h2>
+          {meeting.holds.length > 0 && <p class="u-meta">{meeting.holds.join(' · ')}</p>}
+          <p><a class="button button-quiet" href={meeting.href}>Read it yourself →</a></p>
+        </aside>
+      )}
+      <p class="u-event-back u-meta"><a href={EVENTS_PATH}>← Every event</a></p>
+    </div>
+    <ModuleFrame embed={event.embed} band="plain" type="Event" layout="detail" card title={`RSVP: ${event.title}`} height="40rem" class="u-event-rsvp" />
+  </div>
+  <LiveCounts />
+</article>
+
+<style>
+  .u-event {
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space) var(--gutter);
+  }
+  .u-event-top {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  }
+  .u-event-date .chip {
+    display: inline-block;
+    margin: 0 0 0.75rem;
+  }
+  .u-event-date time {
+    display: block;
+  }
+  .u-event-date b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: clamp(6rem, 4rem + 8vw, 11rem);
+    font-weight: 500;
+    line-height: 0.82;
+    letter-spacing: -0.03em;
+  }
+  .u-event-date span {
+    display: block;
+    margin-top: 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--u-d2);
+    line-height: 1;
+  }
+  .u-event-title h1 {
+    margin: 0;
+    font-size: var(--u-d1);
+    line-height: 0.92;
+    overflow-wrap: anywhere;
+  }
+  .u-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 0;
+    margin: 1.125rem 0 0;
+    color: var(--muted);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+    text-transform: uppercase;
+  }
+  .u-event-meta > :not(:empty) + :not(:empty)::before {
+    content: '·';
+    display: inline-block;
+    margin: 0 0.625rem;
+    color: var(--u-faint);
+  }
+  .u-event-meta b {
+    color: var(--ink);
+  }
+  .u-event-meta a {
+    color: var(--ink);
+  }
+  .u-event-meta .event-live:empty {
+    display: none;
+  }
+  .u-event-grid {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+  .u-event-figure {
+    margin: 0 0 1.5rem;
+  }
+  .u-event-photo {
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--line-strong);
+  }
+  .u-event-figure figcaption {
+    margin-top: 0.625rem;
+    color: var(--u-faint);
+  }
+  .u-event-words :global(.u-event-body) {
+    max-width: var(--measure);
+    font-size: var(--text-lg);
+  }
+  .u-event-words :global(.event-map) {
+    margin-top: 1.5rem;
+  }
+  .u-event-archive {
+    margin-top: 2rem;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+    border: 1px solid var(--line-strong);
+  }
+  .u-event-archive h2 {
+    margin: 0.5rem 0 0.375rem;
+    font-size: var(--u-d3);
+  }
+  .u-event-archive .u-meta {
+    margin: 0;
+    color: var(--u-faint);
+  }
+  .u-event-archive p:last-child {
+    margin: 1.25rem 0 0;
+  }
+  .u-event-back {
+    margin: 2rem 0 0;
+  }
+  .u-event-back a {
+    color: var(--muted);
+  }
+  /* On a phone the meta line is a list, one fact a line. */
+  @media (max-width: 59.99rem) {
+    .u-event-meta {
+      flex-direction: column;
+    }
+    .u-event-meta > :not(:empty) + :not(:empty)::before {
+      display: none;
+    }
+  }
+  @media (min-width: 60rem) {
+    .u-event-top {
+      grid-template-columns: 5fr 7fr;
+      align-items: end;
+      gap: 0;
+    }
+    .u-event-top > .u-event-title {
+      padding-left: 1.5rem;
+      border-left: 1px solid var(--line-strong);
+    }
+    .u-event-grid {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      gap: 2rem;
+    }
+    .u-event-grid > :global(.u-event-rsvp) {
+      position: sticky;
+      top: 1.5rem;
+    }
+  }
+</style>

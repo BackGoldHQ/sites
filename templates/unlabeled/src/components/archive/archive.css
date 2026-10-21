@@ -1175,3 +1175,16 @@
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
 }
+
+/* An archive running head keeps to one line: a long address ends in an ellipsis, and on a phone the centre title gives way, as the template's running heads do. */
+.ar-running-head > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 47.49rem) {
+  .ar-running-head > span:nth-child(2) {
+    display: none;
+  }
+}

@@ -38,8 +38,8 @@
 // /events?type=`, src/lib/events.ts; the Calendar reads its month by type
 // itself), when the path is not already a page or an entry; a type with no upcoming event, or
 // one that does not exist, is a 404. Any other `/events/<slug>` that is not
-// a page or an entry is that event's own page (src/components/EventPage.astro),
-// read from `GET /events/<slug>`; a slug the api has no event for is a 404. A
+// a page or an entry is that event's own page (the template's `eventPage`,
+// else src/components/EventPage.astro), read from `GET /events/<slug>`; a slug the api has no event for is a 404. A
 // type's tab wins over an event slugged like the type while the type has an
 // upcoming event. `/events.ics` is every upcoming event as one calendar file
 // and `/events/<slug>.ics` one event's (src/lib/events.ts).
@@ -83,6 +83,9 @@ import template from 'virtual:backgold-template'
 const { sections } = template
 // Every component this request draws reads the template here (ModuleFrame's frame options, LeadingHero's sections), areas and event pages included.
 Astro.locals.template = template
+/** One event's page and the 404's content: the template's own when it draws them, else the kit's. */
+const EventLayout = template.eventPage ?? EventPage
+const NotFoundLayout = template.notFound ?? NotFound
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503 })
@@ -261,7 +264,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'not_found' && (event ? <EventPage event={event.event} /> : <NotFound />)}
+  {resolved.kind === 'not_found' && (event ? <EventLayout event={event.event} /> : <NotFoundLayout />)}
   {eventMore && event && <Area name="sidebar" areas={event.areas} components={sections} class="event-more" />}
 
   {heroOverSplit && resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only="lead" />}

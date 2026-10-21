@@ -1,0 +1,102 @@
+---
+// The 404 page's content, in her words (src/template.ts `notFound`): the
+// running head, the skull as the chapter mark, one <h1>, what happened, and
+// the ways back: the archive's search, which is where most of her visitors
+// were headed, home, the events, and the news when the site has any. The
+// legal line is the footer's, as on every page.
+import { blogBaseOf } from '@backgold/astro/server'
+import { basePath } from '@backgold/template-kit/lib/entries'
+import Mark from './Mark.astro'
+import RunningHead from './RunningHead.astro'
+
+const bg = Astro.locals.backgold
+const news = bg.setup === null ? blogBaseOf((await bg.client.types()).types) : null
+---
+<div class="u-404">
+  <RunningHead kicker="404" title="Not on the record" />
+  <div class="u-404-body">
+    <Mark kind="skull" class="u-404-mark" />
+    <div>
+      <h1>Not on the record.</h1>
+      <p class="u-404-lede">That address isn't here. Maybe it moved, maybe it never was. Everything we publish starts from the home page, and every board record we've pulled is in the archive.</p>
+      <form class="u-404-search" action="/archive" method="get" role="search">
+        <label class="u-meta" for="u-404-q">Search the archive</label>
+        <div>
+          <input id="u-404-q" name="q" type="search" placeholder="Try: superintendent, HVAC, budget…" autocomplete="off" maxlength="200" />
+          <button class="button" type="submit">Search</button>
+        </div>
+      </form>
+      <p class="actions">
+        <a class="button button-quiet" href="/">Go home</a>
+        <a class="button button-quiet" href="/events">See what's on</a>
+        {news && <a class="button button-quiet" href={basePath(news)}>Read the news</a>}
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .u-404 {
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space) var(--gutter) calc(var(--space) * 1.5);
+  }
+  .u-404-body {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+  .u-404-body :global(.u-404-mark) {
+    width: clamp(6rem, 4rem + 8vw, 12rem);
+    height: auto;
+    color: var(--ink);
+  }
+  .u-404 h1 {
+    margin: 0;
+    font-size: var(--u-mega);
+    line-height: 0.9;
+  }
+  .u-404-lede {
+    max-width: 52ch;
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .u-404-search {
+    max-width: 40rem;
+    margin-top: 2rem;
+  }
+  .u-404-search label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--u-faint);
+  }
+  .u-404-search div {
+    display: flex;
+  }
+  .u-404-search input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 3rem;
+    padding: 0 1rem;
+    border: 1px solid var(--line-strong);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: inherit;
+  }
+  .u-404-search input:focus {
+    outline: none;
+    border-color: var(--ink);
+  }
+  .u-404 .actions {
+    margin-top: 1.5rem;
+  }
+  @media (min-width: 60rem) {
+    .u-404-body {
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+</style>

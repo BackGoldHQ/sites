@@ -517,7 +517,7 @@ export const createClient: CreateClient = (opts) => {
   const entries = <K extends string>(type: K, opts: Parameters<BackgoldContent['entries']>[1] = {}) =>
     read<EntriesResponse>(
       `/entries/${seg(type)}`,
-      { term: opts.term, q: opts.q, cursor: opts.cursor, limit: opts.limit === undefined ? undefined : String(opts.limit) },
+      { term: opts.term, q: opts.q, cursor: opts.cursor, limit: opts.limit === undefined ? undefined : String(opts.limit), include: opts.include },
       { preview: opts.preview, visitor: opts.visitor, onVisitorRenew: opts.onVisitorRenew },
       'null',
     )

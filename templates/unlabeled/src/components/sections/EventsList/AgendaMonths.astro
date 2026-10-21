@@ -1,7 +1,7 @@
 ---
 // The agenda's rows, Unlabeled's (board U8; the kit's AgendaMonths with an
 // empty month that carries a door): the events grouped by month under the
-// month's name (44px capitals) and its count, each a row with the day, the
+// month's name and year (44px capitals) and its count, each a row with the day, the
 // type, the time, the place and an empty live-counts slot (LiveCounts fills
 // it). A month between two listed months that has no event is drawn as an
 // invitation ("November is open.") with the section's empty-events line and
@@ -42,11 +42,10 @@ const keyOf = (e: EventRow) => e.when!.year * 12 + e.when!.monthIndex
 const keys = dated.map(keyOf)
 const first = keys.length > 0 ? Math.min(...keys) : 0
 const last = keys.length > 0 ? Math.max(...keys) : -1
-const years = new Set(dated.map((e) => e.when!.year))
 const months: Month[] = []
 for (let key = first; key <= last; key++) {
   const name = monthName(key % 12)
-  months.push({ label: years.size > 1 ? `${name} ${Math.floor(key / 12)}` : name, name, events: dated.filter((e) => keyOf(e) === key) })
+  months.push({ label: `${name} ${Math.floor(key / 12)}`, name, events: dated.filter((e) => keyOf(e) === key) })
 }
 if (undated.length > 0) months.push({ label: 'Date to come', name: null, events: undated })
 const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)

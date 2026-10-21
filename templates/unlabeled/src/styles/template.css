@@ -104,19 +104,24 @@
   --band-wash-line: var(--u-line);
   --band-wash-line-strong: var(--u-line-strong);
 
-  /* The contrast band is the one white ground: black ink, a black button. */
-  --band-contrast: var(--u-ink);
-  --band-contrast-ink: var(--u-ground);
-  --band-contrast-muted: var(--u-ground);
-  --band-contrast-accent: var(--u-ground);
-  --band-contrast-link: var(--u-ground);
-  --band-contrast-button: var(--u-ground);
-  --band-contrast-button-ink: var(--u-ink);
-  --band-contrast-button-2: var(--u-ink);
-  --band-contrast-button-2-ink: var(--u-ground);
-  --band-contrast-surface: var(--u-ink);
-  --band-contrast-line: var(--u-ground);
-  --band-contrast-line-strong: var(--u-ground);
+  /*
+    The contrast band is black too (dark only, decision 8): a band an
+    organization marked to stand out stands out by its type, not a white
+    ground. The one white ground is a call to action's (the donate strip),
+    below.
+  */
+  --band-contrast: var(--u-ground);
+  --band-contrast-ink: var(--u-ink);
+  --band-contrast-muted: var(--u-muted);
+  --band-contrast-accent: var(--u-ink);
+  --band-contrast-link: var(--u-ink);
+  --band-contrast-button: var(--u-ink);
+  --band-contrast-button-ink: var(--u-ground);
+  --band-contrast-button-2: var(--u-ground);
+  --band-contrast-button-2-ink: var(--u-ink);
+  --band-contrast-surface: var(--u-ground);
+  --band-contrast-line: var(--u-line);
+  --band-contrast-line-strong: var(--u-line-strong);
 
   --band-brand-ink: var(--u-ink);
   --band-brand-muted: var(--u-muted);
@@ -141,6 +146,22 @@
   --band-photo-surface: var(--u-ground);
   --band-photo-line: var(--u-line);
   --band-photo-line-strong: var(--u-line-strong);
+}
+
+/* A call to action on the contrast band (the donate strip) is the one white ground: black ink, a black button. */
+.bg-section[data-type='Cta'].bg-band-contrast {
+  --band-contrast: var(--u-ink);
+  --band-contrast-ink: var(--u-ground);
+  --band-contrast-muted: var(--u-ground);
+  --band-contrast-accent: var(--u-ground);
+  --band-contrast-link: var(--u-ground);
+  --band-contrast-button: var(--u-ground);
+  --band-contrast-button-ink: var(--u-ink);
+  --band-contrast-button-2: var(--u-ink);
+  --band-contrast-button-2-ink: var(--u-ground);
+  --band-contrast-surface: var(--u-ink);
+  --band-contrast-line: var(--u-ground);
+  --band-contrast-line-strong: var(--u-ground);
 }
 
 /* ── 2. Type, rhythm, shape ── */
@@ -451,6 +472,13 @@ main .u-running-head {
 .u-rh-left::before {
   content: '§ ' counter(u-folio, decimal-leading-zero);
 }
+/* A long kicker (a record's address) keeps to one line. */
+.u-rh-left {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .u-rh-words::before {
   content: ' // ';
   white-space: pre;
@@ -489,7 +517,6 @@ main .u-running-head {
   --ink: var(--band-contrast-ink);
   --line: var(--band-contrast-line);
   background-color: var(--band-contrast);
-  background-image: none;
 }
 .u-rh-band > .u-running-head {
   margin-bottom: 0;
@@ -503,6 +530,69 @@ main .u-running-head {
 .bg-area .u-rh-band,
 .rail .u-rh-band {
   display: none;
+}
+/*
+  A page with no Hero (her events page, a form's page): its title is the
+  first band's running head, quiet (`§ 01 // EVENTS`, the folio at the
+  right), and the band's own heading leads under it at display size, as
+  U7 and U8 draw it. The band's own running head gives way to it.
+*/
+main .page-header:has(+ .u-rh-band) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  max-width: none;
+  margin: 0;
+  padding: var(--space) max(var(--gutter), (100% - var(--content)) / 2) 0.875rem;
+  border-bottom: 1px solid var(--line);
+  background-image: var(--u-grid);
+  background-size: min(var(--content), 100% - 2 * var(--gutter)) 100%;
+  background-position: center top;
+  background-repeat: no-repeat;
+  counter-increment: u-folio;
+}
+main .page-header:has(+ .u-rh-band) h1 {
+  max-width: none;
+  margin: 0;
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  font-weight: 400 !important;
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+}
+main .page-header:has(+ .u-rh-band) h1::before {
+  content: '§ ' counter(u-folio, decimal-leading-zero) ' // ';
+  white-space: pre;
+}
+main .page-header:has(+ .u-rh-band)::after {
+  content: counter(u-folio, decimal-leading-zero);
+  color: var(--ink);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+}
+main .page-header + .u-rh-band {
+  display: none;
+}
+main .page-header + .u-rh-band + .bg-section :is(.bg-section-inner > h2:first-child, .bg-section-inner > :first-child > h2:first-child) {
+  font-size: var(--u-d1);
+  line-height: 0.92;
+}
+/* The home page's title over a cover that stacks the site's title: for screen readers only, the stack says it on screen. */
+main .page-header:has(+ .bg-section.u-cover) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The white ground (the donate strip) carries no grid: black columns on white read as bars. */
+.bg-section[data-type='Cta'].bg-band-contrast {
+  background-image: none;
 }
 /* Bands that follow one another keep their own top padding, never none. */
 main .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
@@ -1024,7 +1114,7 @@ main .bg-section.cta-strip .strip-links a:hover {
 }
 
 /* Events: the date as a numeral, rows on hairlines, a row inverts on hover. */
-.bg-section[data-type='EventsList'] h3,
+.bg-section[data-type='EventsList'] h3:not(.agenda-heading),
 .bg-section[data-type='Event'] h3 {
   font-size: var(--u-d4);
 }
@@ -1141,22 +1231,62 @@ strong {
   background: var(--ink) !important;
   color: var(--page) !important;
 }
-/* EventsList · Agenda (U8): the day at 64px, the month under it in the meta face. */
+/*
+  EventsList · Agenda (U8): each month's rows on hairlines, no boxes; the day
+  at 64px set left, the weekday under it in the meta face, a rule after it;
+  the title in capitals, the time and place in the meta line.
+*/
 @media (min-width: 40rem) {
   .events-agenda .event-row {
-    grid-template-columns: 7rem minmax(0, 1fr) auto !important;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto !important;
   }
+}
+.events-agenda .event-rows {
+  gap: 0 !important;
+}
+.bg-section.events-agenda .event-row {
+  padding: 1.125rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+.events-agenda .event-day {
+  text-align: left !important;
+  border-right-color: var(--line-strong) !important;
 }
 .events-agenda .event-day b {
   font-family: var(--font-display);
-  font-size: clamp(2.75rem, 2rem + 2.5vw, 4rem) !important;
+  font-size: clamp(2.25rem, 1.6rem + 2.8vw, 4rem) !important;
   line-height: 0.95;
+  white-space: nowrap;
 }
-.events-agenda .event-row {
-  border-radius: 0 !important;
-  box-shadow: none !important;
+@media (max-width: 39.99rem) {
+  .events-agenda .event-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr) !important;
+  }
 }
-.events-agenda .event-row:hover {
+.events-agenda .event-day small {
+  color: var(--muted) !important;
+  font-family: var(--font-meta) !important;
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track) !important;
+}
+.events-agenda .event-title {
+  font-weight: 500 !important;
+  text-transform: uppercase;
+}
+.events-agenda .event-meta {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.events-agenda .event-action .button {
+  min-width: 6rem;
+}
+.bg-section.events-agenda .event-row:hover {
   background: var(--ink);
   color: var(--page);
   --ink: var(--page);
