@@ -42,7 +42,11 @@ them:
 
 A page can draw the same sections anywhere: Classroom (`grid`, `list`),
 Course (`syllabus`, `outline`, pinned to a course) and Lesson (`player`,
-`reading`). Who may open a lesson is the Content API's answer, never the
+`reading`), beside the kit's Hero, About (its `books` layout for an
+instructor and what they wrote), Pathways, Issues, StatCards, Faq, TeamGrid,
+VideoEmbed, Cta, QuoteStrip, SignupCapture, FormBlock and Map. A lesson's
+video is the org's own upload in the browser's player, or an imported YouTube
+or Vimeo video in that player's frame. Who may open a lesson is the Content API's answer, never the
 site's: a locked lesson arrives without its video or notes, and its `lock`
 names the door (sign in, join, or ask).
 
