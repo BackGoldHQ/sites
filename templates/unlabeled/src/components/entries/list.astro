@@ -1,0 +1,48 @@
+---
+// The list of an archive type, or of one of its terms (/meetings,
+// /decisions, /sources, /decisions/campus/odom-academy): the page of
+// entries the Content API answered, each as a dossier row from the index,
+// with the kit's pager (Older, Newest), the meetings strip on the meetings
+// list, and the door to search the type on /archive.
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import RecordRow from '../archive/RecordRow.astro'
+import MeetingStrip from '../archive/MeetingStrip.astro'
+import { loadArchive, sourceOf } from '../../lib/archive/index'
+import { isArchiveKind } from '../../lib/archive/kinds'
+import { meetingMarks } from '../../lib/archive/views'
+import { hrefOf, REST } from '../../lib/archive/search'
+import { plural } from '../../lib/archive/format'
+
+type Props = ListLayoutProps
+
+const { type, entries, pager, term } = Astro.props
+const key = type === 'blog' ? 'post' : type.key
+const kind = isArchiveKind(key) ? key : null
+const source = sourceOf(Astro.locals)
+const data = source ? await loadArchive(source) : null
+const docs = data?.docs ?? []
+const byId = new Map(docs.map((d) => [d.id, d]))
+const rows = entries.map((e) => byId.get(e.id)).filter((d) => d !== undefined)
+const all = kind ? docs.filter((d) => d.kind === kind).length : entries.length
+const plural_ = type === 'blog' ? 'Records' : type.plural_label
+---
+<ArchiveFrame crumbs={[{ label: plural_, href: term ? `/${type === 'blog' ? '' : type.url_base}` : undefined }, ...(term ? [{ label: term.term.label }] : [])]}>
+  <header class="ar-entry" style="margin-top:1.25rem">
+    <p class="ar-meta">{plural(all, type === 'blog' ? 'record' : type.singular_label.toLowerCase())} in the archive{term ? ` · ${term.taxonomy.label}: ${term.term.label}` : ''}</p>
+    <h1>{term ? term.term.label : plural_}</h1>
+    {kind && <p class="ar-intro"><a href={hrefOf(REST, { kind, category: term?.term.label ?? null })}>Search {term ? `${term.term.label} in ` : ''}{plural_.toLowerCase()} on /archive →</a></p>}
+  </header>
+  {kind === 'board_meeting' && !term && <div style="margin-top:1.5rem"><MeetingStrip marks={meetingMarks(docs)} /></div>}
+  {rows.length > 0 ? (
+    <ul class="ar-rows" style="margin-top:1.5rem">{rows.map((d) => <RecordRow doc={d} types={data!.types} />)}</ul>
+  ) : (
+    <p class="ar-faint" style="margin-top:1.5rem">Nothing is published here yet.</p>
+  )}
+  {(pager.newest || pager.older) && (
+    <nav class="ar-pager ar-meta" aria-label="Pages">
+      {pager.newest ? <a href={pager.newest}>← Newest</a> : <span />}
+      {pager.older ? <a href={pager.older}>Older →</a> : <span />}
+    </nav>
+  )}
+</ArchiveFrame>

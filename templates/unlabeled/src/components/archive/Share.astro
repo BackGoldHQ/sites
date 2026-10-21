@@ -1,0 +1,23 @@
+---
+// Share a record (board U3): copy its link, post it on X or Facebook, or
+// email it. Plain links; Copy link is a button the copy script shows.
+import Copy from './Copy.astro'
+
+interface Props {
+  title: string
+  /** The record's path on this site. */
+  path: string
+}
+
+const { title, path } = Astro.props
+const bg = Astro.locals.backgold
+const url = new URL(path, bg.setup === null ? bg.siteUrl : Astro.url.origin).href
+---
+<div class="ar-share" role="group" aria-label="Share this record">
+  <span class="ar-meta">Share this record</span>
+  <button type="button" class="ar-btn" data-ar-copy="url" hidden>Copy link</button>
+  <a class="ar-btn ar-btn-outline" href={`https://x.com/intent/post?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`} rel="noopener">X</a>
+  <a class="ar-btn ar-btn-outline" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} rel="noopener">Facebook</a>
+  <a class="ar-btn ar-btn-outline" href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`}>Email</a>
+</div>
+<Copy />

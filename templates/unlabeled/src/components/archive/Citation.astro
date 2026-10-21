@@ -1,0 +1,28 @@
+---
+// A record's source citation, set as a citation (board U3): monospace,
+// boxed, her skull as a large watermark behind it, Copy citation (a button
+// the copy script shows), and the record's links as buttons: Open
+// original, Readable text, and the rest.
+import type { ArchiveLink } from '../../lib/archive/record'
+import Copy from './Copy.astro'
+
+interface Props {
+  lines: string[]
+  links?: ArchiveLink[]
+  heading?: string
+}
+
+const { lines, links = [], heading = '// Source citation · as the archive gives it' } = Astro.props
+---
+{(lines.length > 0 || links.length > 0) && (
+  <section class="ar-cite u-watermark" aria-label="Source citation">
+    <p class="ar-meta">{heading}</p>
+    {lines.length > 0 ? <pre>{lines.join('\n')}</pre> : <p class="ar-faint" style="margin-top:0.5rem">The archive gives no citation for this record.</p>}
+    <slot />
+    <p class="ar-cite-actions">
+      {lines.length > 0 && <button type="button" class="ar-btn" data-ar-copy={lines.join('; ')} hidden>Copy citation</button>}
+      {links.map((l) => <a class="ar-btn ar-btn-outline" href={l.href} rel={l.external ? 'noopener' : undefined}>{l.label}{l.external ? ' ↗' : ''}</a>)}
+    </p>
+  </section>
+)}
+<Copy />

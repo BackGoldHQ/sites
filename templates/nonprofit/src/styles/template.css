@@ -1,0 +1,2837 @@
+/*
+  The nonprofit template's look, drawn to boards N1 to N12 and N-catalogue
+  (docs/design/nonprofit-template-2026-10 in the platform repository): bright,
+  bubbly and hand-drawn. It loads after the kit's stylesheet
+  (@backgold/template-kit's src/styles/site.css and entries.css) on every
+  page and restyles what the kit draws; the template's own layouts
+  (src/components/sections) are styled here too.
+
+  The template owns the type, the spacing, the shapes, the texture and the
+  motion; the organization owns the colours. Every colour below is a band
+  token the kit writes from the organization's brand (src/lib/brand.ts), or a
+  mix of them: the short names a band sets (--ink, --muted, --accent, --link,
+  --button, --button-2, --surface, --line, --line-strong, --bg-band-background)
+  and the brand's three colours for the confetti. Nothing here names a colour.
+
+  - Faces: Shantell Sans for display (headlines at 800 with "INFM" 55,
+    "BNCE" 22, so the letters sit a little off the line; buttons, chips and
+    small numerals at "INFM" 25, "BNCE" 0; the letter's signature in the
+    italic with "INFM" 100, "BNCE" 40), Nunito for text. Long reading stays in
+    Nunito (the letter, the article, the event's description).
+  - Stickers: every button. An eight-value blob pill, a 2px border in the
+    band's ink, a 2px inset ring in the band's ground (a sticker's die-cut
+    margin) and a hard 3px offset shadow in the ink, tilted -1deg (the second
+    in a row +0.8deg). Three kinds: Donate (the accent, `--button`, with the
+    heart doodle; the header's button, the only accent on a page), primary
+    (`--button-2`, every other call) and outline (`.button-quiet`). Hover
+    lifts it 1px, pressed sinks it, focus is a dashed accent ring. On /donate,
+    and on a page that carries QuickDonate, the header's Donate is the outline
+    sticker with the heart, so the page's own form is its one accent.
+  - Pen outlines: a card is a blob-cornered fill in the band's surface with a
+    wobbly 2px pen line over it, a hair out of register. The seven outlines
+    (card, card2, wide, wide2, tall, sq, band) are inline SVG data URIs
+    used as a mask on the card's ::before, stretched to its box with a
+    non-scaling stroke and flipped so neighbours never match. The pen is the
+    band's ink mixed 82% over its strong line (--edge). Firefox, which does
+    not keep the stroke's width in a stretched mask, draws a plain 2px blob
+    border instead.
+  - Tape is a torn-ended strip of the accent at 52% (--tape) or the primary at
+    40% (--tape-2); the soft field (--soft, the primary at 13% over the card
+    colour) is where a photo is missing, with a doodle on it, never grey.
+  - Marked words (src/middleware.ts marks the word an operator stars): a
+    circle in a page-opening Hero's headline, an underline swoosh elsewhere,
+    in the band's accent text colour. Figures sit on a highlighter swipe, the
+    accent at 40% (--hi).
+  - Texture: every band, the header, the strip and the footer carry a paper
+    grain of their own ink at 5% (an inline SVG feTurbulence noise as a
+    mask, 180px tile), dark specks on a light ground and light ones on a dark
+    ground. A full-width band whose ground differs from the one above tears up
+    into it by 16px, with a rim of its ink at 28% two pixels above the tear;
+    the hero never tears and the footer always does.
+  - Kickers are mixed case in the display face after a small loop doodle;
+    nothing is set in capitals.
+  - Motion, only under prefers-reduced-motion: no-preference: the sticker's
+    lift, and a marked word's stroke drawing in once (600ms) when it enters
+    the viewport (the middleware's small observer script; without it the
+    stroke is simply there). Nothing loops or moves on its own.
+*/
+
+:root {
+  --font: var(--site-font-body, 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --font-display: var(--site-font-heading, 'Shantell Sans', 'Nunito', ui-rounded, system-ui, sans-serif);
+  --hand: 'INFM' 55, 'BNCE' 22;
+  --hand-calm: 'INFM' 25, 'BNCE' 0;
+  --hand-sign: 'INFM' 100, 'BNCE' 40;
+  /* Board N1: text 17, lede 20, h2 34 → 50, the hero 44 → 76. */
+  --text: 1.0625rem;
+  --text-lg: clamp(1.0625rem, 0.95rem + 0.45vw, 1.25rem);
+  --h3: clamp(1.375rem, 1.2rem + 0.6vw, 1.625rem);
+  --h2: clamp(2.125rem, 1.4rem + 2.4vw, 3.125rem);
+  --h1: clamp(2.75rem, 1.6rem + 4vw, 4.75rem);
+  --content: 62.5rem;
+  --gutter: clamp(1.125rem, 4vw, 3rem);
+  --space: clamp(3.375rem, 2rem + 4vw, 5.5rem);
+  --radius: 0.75rem;
+  --radius-card: 1.5rem;
+  /* Eight-value blob corners. */
+  --blob-1: 30px 18px 34px 14px / 18px 32px 16px 28px;
+  --blob-2: 18px 30px 16px 26px / 28px 14px 30px 18px;
+  --blob-3: 36px 24px 26px 32px / 22px 36px 24px 30px;
+  --blob-sm: 12px 16px 10px 15px / 15px 10px 16px 12px;
+  --blob-pill: 30px 24px 28px 22px / 24px 30px 22px 28px;
+  /* The sticker's offset shadow, the grain's share of the band's ink, the tear's depth. */
+  --off: 3px;
+  --grain: 0.05;
+  --tear: 16px;
+  /*
+    The hand-cut shapes, as inline SVG data URIs used as masks (black is
+    drawn): the seven pen outlines, the doodles CSS draws (a kicker's loop, a
+    link's arrow, Donate's heart, a check, an error's exclamation, the FAQ's
+    plus and minus, the pen circle round a donut, a search's glass), the
+    highlighter swipe and the underline, the wavy rule, the paper grain
+    (feTurbulence), the two torn edges and the hero's torn sheet.
+  */
+  --np-edge-card: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'%3E%3Cpath d='M33.0 3.6C37.6 3.7 51.4 3.9 60.6 4.3C69.8 4.6 79.0 5.2 88.2 5.4C97.4 5.7 106.6 5.6 115.8 5.7C125.0 5.9 134.2 6.2 143.4 6.1C152.6 6.1 161.8 5.7 171.0 5.6C180.2 5.5 189.4 5.5 198.6 5.6C207.8 5.6 217.0 5.9 226.2 5.8C235.4 5.6 244.6 5.0 253.7 4.8C262.9 4.6 272.1 4.5 281.3 4.5C290.5 4.4 299.7 4.5 308.9 4.5C318.1 4.4 327.3 4.3 336.5 4.3C345.7 4.3 355.6 3.0 364.1 4.5C372.7 6.1 382.6 8.1 387.9 13.7C393.2 19.3 394.6 29.5 395.9 38.2C397.2 46.9 395.7 56.6 395.7 65.8C395.8 75.0 396.0 84.2 396.1 93.4C396.2 102.6 396.3 111.8 396.4 121.0C396.5 130.2 396.5 139.4 396.6 148.6C396.8 157.8 397.1 167.0 397.3 176.2C397.5 185.4 397.5 194.6 397.6 203.7C397.8 212.9 398.1 222.1 398.2 231.3C398.2 240.5 399.1 249.8 398.1 258.9C397.0 268.0 397.0 279.4 391.8 285.9C386.7 292.5 375.7 296.1 367.0 298.1C358.3 300.1 348.6 298.2 339.4 298.1C330.2 298.1 321.0 297.9 311.8 297.9C302.6 297.8 293.4 297.6 284.2 297.6C275.0 297.6 265.8 297.9 256.6 298.0C247.4 298.1 238.2 298.0 229.0 297.9C219.8 297.9 210.6 297.8 201.4 297.8C192.2 297.7 183.0 297.7 173.8 297.6C164.6 297.6 155.4 297.4 146.3 297.4C137.1 297.3 127.9 297.3 118.7 297.3C109.5 297.3 100.3 297.4 91.1 297.4C81.9 297.4 72.7 297.2 63.5 297.3C54.3 297.4 44.7 299.5 35.9 297.9C27.0 296.4 16.1 294.0 10.3 288.0C4.6 282.0 3.0 270.8 1.5 261.8C0.0 252.9 1.6 243.4 1.5 234.2C1.4 225.0 0.9 215.8 0.8 206.6C0.6 197.4 0.5 188.2 0.6 179.0C0.6 169.8 1.0 160.6 1.0 151.4C1.1 142.2 1.0 133.0 0.9 123.8C0.8 114.6 0.5 105.4 0.6 96.3C0.7 87.1 1.2 77.9 1.4 68.7C1.6 59.5 0.4 50.0 1.7 41.1C3.0 32.1 3.7 20.8 9.1 14.8C14.4 8.7 24.9 6.2 33.6 4.8C42.3 3.4 51.9 5.8 61.0 6.4C70.1 7.0 83.7 8.2 88.2 8.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-card2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'%3E%3Cpath d='M29.0 2.8C33.6 2.6 47.5 2.2 56.7 2.1C66.0 2.0 75.2 2.1 84.5 2.0C93.7 1.9 103.0 1.7 112.2 1.7C121.5 1.7 130.7 2.0 139.9 2.1C149.2 2.1 158.4 2.2 167.7 2.1C176.9 2.0 186.2 1.6 195.4 1.5C204.7 1.5 213.9 1.7 223.2 1.7C232.4 1.6 241.6 1.5 250.9 1.4C260.1 1.2 269.4 0.9 278.6 0.9C287.9 0.8 297.1 0.8 306.4 0.8C315.6 0.8 324.9 0.9 334.1 0.7C343.3 0.6 352.5 -1.2 361.8 -0.1C371.2 1.0 383.6 1.4 390.0 7.1C396.3 12.9 398.3 25.3 399.8 34.5C401.4 43.7 399.5 53.0 399.4 62.2C399.3 71.5 399.4 80.7 399.1 89.9C398.9 99.2 398.3 108.4 398.1 117.7C397.9 126.9 398.0 136.2 397.9 145.4C397.8 154.7 397.3 163.9 397.2 173.2C397.1 182.4 397.3 191.6 397.3 200.9C397.3 210.1 397.5 219.4 397.5 228.6C397.5 237.9 398.0 247.2 397.5 256.4C397.0 265.6 398.9 276.9 394.4 283.9C390.0 291.0 379.5 296.0 371.0 298.5C362.5 301.0 352.5 299.0 343.3 299.0C334.0 299.1 324.8 299.1 315.5 299.1C306.3 299.0 297.0 298.9 287.8 298.8C278.5 298.8 269.3 298.8 260.1 298.6C250.8 298.4 241.6 298.0 232.3 297.7C223.1 297.4 213.8 297.2 204.6 297.0C195.3 296.8 186.1 296.5 176.8 296.3C167.6 296.2 158.4 296.2 149.1 296.0C139.9 295.7 130.6 295.1 121.4 294.8C112.1 294.5 102.9 294.3 93.6 294.1C84.4 293.9 75.1 293.8 65.9 293.6C56.7 293.5 46.7 294.2 38.2 293.2C29.6 292.2 19.8 292.3 14.6 287.7C9.3 283.0 8.2 273.8 6.9 265.5C5.7 257.2 6.8 247.0 6.9 237.8C6.9 228.5 7.2 219.3 7.3 210.1C7.3 200.8 7.2 191.6 7.1 182.3C7.0 173.1 7.0 163.8 6.9 154.6C6.7 145.3 6.6 136.1 6.3 126.8C6.1 117.6 5.6 108.4 5.3 99.1C5.0 89.9 4.9 80.6 4.7 71.4C4.5 62.1 3.8 52.7 4.1 43.6C4.4 34.5 2.4 23.3 6.6 16.7C10.9 10.1 21.2 6.2 29.6 4.2C38.0 2.1 48.0 4.4 57.1 4.6C66.3 4.8 79.9 5.5 84.5 5.6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-wide: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 200' preserveAspectRatio='none'%3E%3Cpath d='M37.0 3.4C45.0 3.3 69.2 2.9 85.3 2.8C101.4 2.7 117.5 2.6 133.6 2.6C149.7 2.6 165.8 2.8 181.9 2.7C197.9 2.7 214.0 2.4 230.1 2.3C246.2 2.2 262.3 2.2 278.4 2.2C294.5 2.1 310.6 2.2 326.7 2.1C342.8 2.1 358.9 1.7 375.0 1.7C391.1 1.8 407.2 2.3 423.3 2.4C439.4 2.5 455.5 2.6 471.6 2.5C487.6 2.5 503.7 2.0 519.8 2.0C535.9 2.0 552.0 2.3 568.1 2.4C584.2 2.4 600.3 2.5 616.4 2.4C632.5 2.4 648.6 2.3 664.7 2.2C680.8 2.2 696.9 2.2 713.0 2.0C729.1 1.9 745.2 1.5 761.3 1.5C777.4 1.5 793.4 1.9 809.5 1.9C825.6 2.0 841.7 2.0 857.8 2.0C873.9 2.0 890.0 1.9 906.1 1.9C922.2 2.0 939.6 -1.3 954.4 2.3C969.2 5.9 987.6 11.9 994.7 23.5C1001.8 35.0 996.6 55.5 996.8 71.6C997.1 87.6 996.3 103.8 996.0 119.8C995.7 135.9 1000.5 155.3 995.0 167.9C989.5 180.5 976.4 190.9 963.0 195.5C949.6 200.1 930.8 195.5 914.7 195.4C898.6 195.3 882.5 194.8 866.4 194.8C850.3 194.8 834.2 195.2 818.1 195.4C802.1 195.5 786.0 195.6 769.9 195.7C753.8 195.8 737.7 195.9 721.6 195.9C705.5 195.9 689.4 195.8 673.3 195.9C657.2 196.0 641.1 196.4 625.0 196.6C608.9 196.7 592.8 196.7 576.7 196.7C560.6 196.7 544.5 196.5 528.4 196.5C512.4 196.5 496.3 196.9 480.2 196.9C464.1 196.9 448.0 196.7 431.9 196.7C415.8 196.6 399.7 196.6 383.6 196.6C367.5 196.7 351.4 196.8 335.3 196.9C319.2 197.0 303.1 196.9 287.0 197.0C270.9 197.0 254.8 197.0 238.7 197.1C222.6 197.1 206.6 197.2 190.5 197.3C174.4 197.3 158.3 197.4 142.2 197.4C126.1 197.4 110.0 197.5 93.9 197.5C77.8 197.5 60.3 200.9 45.6 197.4C30.9 193.9 12.6 188.0 5.5 176.5C-1.6 165.0 3.3 144.5 3.0 128.4C2.6 112.4 3.2 96.2 3.3 80.2C3.5 64.1 -1.9 44.6 3.8 32.0C9.5 19.3 24.0 9.0 37.6 4.5C51.2 -0.1 69.7 4.6 85.7 4.8C101.7 5.0 125.6 5.4 133.6 5.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-wide2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 160' preserveAspectRatio='none'%3E%3Cpath d='M33.0 1.8C40.8 1.9 64.2 2.0 79.8 2.0C95.3 2.1 110.9 1.9 126.5 1.9C142.1 1.9 157.7 2.0 173.3 1.9C188.9 1.9 204.5 1.7 220.0 1.6C235.6 1.6 251.2 1.7 266.8 1.6C282.4 1.6 298.0 1.6 313.6 1.5C329.1 1.4 344.7 1.3 360.3 1.1C375.9 1.0 391.5 0.5 407.1 0.4C422.7 0.4 438.3 0.8 453.8 0.8C469.4 0.9 485.0 0.6 500.6 0.6C516.2 0.7 531.8 0.9 547.4 1.1C563.0 1.4 578.5 2.0 594.1 2.3C609.7 2.5 625.3 2.2 640.9 2.5C656.5 2.8 672.1 3.7 687.6 4.0C703.2 4.3 718.8 4.0 734.4 4.1C750.0 4.3 765.6 4.5 781.2 4.8C796.8 5.0 812.3 5.5 827.9 5.6C843.5 5.7 859.1 5.4 874.7 5.3C890.3 5.2 905.9 5.1 921.4 5.2C937.0 5.2 955.8 0.6 968.1 5.4C980.4 10.1 990.9 21.3 995.4 33.8C1000.0 46.4 995.2 65.0 995.3 80.6C995.5 96.2 1000.9 114.8 996.2 127.4C991.5 139.9 979.7 151.3 967.0 156.1C954.3 160.9 935.8 156.4 920.2 156.3C904.7 156.2 889.1 155.6 873.5 155.5C857.9 155.3 842.3 155.5 826.7 155.5C811.1 155.6 795.5 155.7 780.0 155.7C764.4 155.7 748.8 155.7 733.2 155.7C717.6 155.6 702.0 155.4 686.4 155.4C670.9 155.5 655.3 156.0 639.7 156.2C624.1 156.4 608.5 156.5 592.9 156.5C577.3 156.5 561.7 156.4 546.2 156.4C530.6 156.4 515.0 156.4 499.4 156.6C483.8 156.7 468.2 157.1 452.6 157.2C437.0 157.3 421.5 157.1 405.9 157.1C390.3 157.2 374.7 157.4 359.1 157.4C343.5 157.5 327.9 157.4 312.4 157.3C296.8 157.3 281.2 157.4 265.6 157.3C250.0 157.3 234.4 157.1 218.8 157.1C203.2 157.1 187.7 157.2 172.1 157.3C156.5 157.4 140.9 157.6 125.3 157.7C109.7 157.8 94.1 158.0 78.6 158.1C63.0 158.1 44.6 163.3 31.8 158.0C18.9 152.6 6.7 139.3 1.7 126.2C-3.3 113.1 1.8 95.0 1.8 79.4C1.8 63.8 -3.7 45.3 1.6 32.6C6.9 19.9 20.5 7.8 33.6 3.1C46.7 -1.6 64.7 4.0 80.2 4.4C95.6 4.7 118.8 5.1 126.5 5.3' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-tall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' preserveAspectRatio='none'%3E%3Cpath d='M33.0 5.5C37.7 5.6 52.0 6.1 61.4 6.2C70.9 6.3 80.4 6.2 89.9 5.9C99.3 5.7 108.8 5.1 118.3 4.8C127.8 4.6 137.2 4.5 146.7 4.4C156.2 4.2 165.7 4.2 175.1 4.0C184.6 3.7 194.1 3.0 203.6 2.8C213.0 2.6 222.5 2.7 232.0 2.5C241.5 2.3 251.0 0.6 260.4 1.7C269.8 2.8 281.7 3.5 288.2 9.2C294.6 15.0 297.2 26.9 299.0 36.1C300.9 45.4 299.1 55.1 299.2 64.6C299.3 74.0 299.6 83.5 299.7 93.0C299.8 102.5 299.9 112.0 299.9 121.4C299.9 130.9 299.7 140.4 299.7 149.9C299.7 159.3 299.9 168.8 299.9 178.3C300.0 187.8 300.2 197.2 300.1 206.7C299.9 216.2 299.3 225.7 299.1 235.1C298.9 244.6 299.0 254.1 298.9 263.6C298.8 273.0 298.4 282.5 298.3 292.0C298.2 301.5 298.4 310.9 298.3 320.4C298.2 329.9 297.8 339.4 297.6 348.8C297.4 358.3 298.3 368.0 297.2 377.3C296.2 386.5 296.3 397.8 291.2 404.4C286.2 411.1 275.8 415.1 267.0 417.2C258.2 419.4 248.0 417.3 238.6 417.3C229.1 417.3 219.6 417.2 210.1 417.3C200.7 417.4 191.2 417.8 181.7 417.8C172.2 417.9 162.8 417.6 153.3 417.5C143.8 417.5 134.3 417.6 124.9 417.7C115.4 417.8 105.9 418.1 96.4 418.0C87.0 417.9 77.5 417.3 68.0 417.1C58.5 416.8 48.6 417.9 39.6 416.5C30.6 415.1 19.7 413.9 13.8 408.5C7.9 403.1 5.8 392.7 4.3 383.9C2.7 375.0 4.4 364.9 4.6 355.4C4.8 346.0 5.3 336.5 5.4 327.0C5.5 317.5 5.2 308.0 5.1 298.6C5.0 289.1 5.0 279.6 4.9 270.1C4.8 260.7 4.7 251.2 4.6 241.7C4.5 232.2 4.4 222.8 4.3 213.3C4.1 203.8 3.9 194.3 3.8 184.9C3.8 175.4 3.9 165.9 3.9 156.4C3.8 147.0 3.3 137.5 3.3 128.0C3.4 118.5 4.0 109.1 4.2 99.6C4.4 90.1 4.3 80.6 4.4 71.2C4.5 61.7 3.8 51.8 4.8 42.7C5.9 33.7 5.7 22.8 10.5 16.8C15.3 10.9 25.1 8.2 33.6 6.8C42.1 5.4 52.5 8.1 61.8 8.6C71.2 9.0 85.2 9.2 89.9 9.3' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-sq: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300' preserveAspectRatio='none'%3E%3Cpath d='M37.0 2.8C40.9 2.9 52.5 3.2 60.3 3.5C68.0 3.7 75.8 4.0 83.6 4.2C91.3 4.3 99.1 4.3 106.9 4.4C114.6 4.4 122.4 4.5 130.1 4.6C137.9 4.7 145.7 4.9 153.4 5.0C161.2 5.1 168.9 5.1 176.7 5.2C184.5 5.2 192.2 5.4 200.0 5.4C207.7 5.4 215.5 5.2 223.3 5.2C231.0 5.2 238.9 5.3 246.6 5.4C254.2 5.4 262.6 3.6 269.4 5.5C276.3 7.5 283.4 11.7 287.6 16.9C291.8 22.2 293.4 29.8 294.6 37.0C295.9 44.2 295.1 52.5 295.0 60.3C295.0 68.0 294.5 75.8 294.5 83.6C294.5 91.3 294.9 99.1 295.0 106.9C295.1 114.6 294.9 122.4 294.9 130.1C295.0 137.9 295.3 145.7 295.5 153.4C295.7 161.2 295.9 168.9 296.0 176.7C296.2 184.5 296.2 192.2 296.5 200.0C296.7 207.7 297.4 215.5 297.7 223.3C298.0 231.0 298.1 238.7 298.1 246.6C298.2 254.4 300.2 262.8 298.2 270.2C296.1 277.6 291.7 286.1 285.8 290.9C280.0 295.8 270.7 297.8 263.0 299.2C255.3 300.5 247.5 299.4 239.7 299.3C232.0 299.2 224.2 298.8 216.4 298.7C208.7 298.6 200.9 298.6 193.1 298.6C185.4 298.6 177.6 298.6 169.9 298.5C162.1 298.5 154.3 298.4 146.6 298.3C138.8 298.1 131.1 297.7 123.3 297.5C115.5 297.3 107.8 297.2 100.0 297.1C92.3 297.1 84.5 297.3 76.7 297.3C69.0 297.3 61.2 297.3 53.4 297.2C45.7 297.1 37.4 298.7 30.1 296.7C22.9 294.7 14.7 290.6 10.0 285.0C5.4 279.4 3.3 270.6 2.1 263.0C0.8 255.4 2.5 247.5 2.5 239.7C2.5 232.0 2.1 224.2 2.0 216.4C2.0 208.7 2.0 200.9 2.0 193.1C2.0 185.4 2.0 177.6 2.0 169.9C2.0 162.1 2.1 154.3 2.0 146.6C2.0 138.8 1.7 131.1 1.7 123.3C1.7 115.5 1.9 107.8 1.8 100.0C1.8 92.3 1.4 84.5 1.4 76.7C1.3 69.0 1.3 61.2 1.5 53.4C1.6 45.6 0.2 37.2 2.4 30.0C4.7 22.7 9.2 14.4 15.0 10.1C20.9 5.8 30.0 4.8 37.6 4.1C45.2 3.4 53.0 5.2 60.7 5.8C68.3 6.4 79.8 7.3 83.6 7.6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-edge-band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 420' preserveAspectRatio='none'%3E%3Cpath d='M43.0 3.9C52.5 4.0 81.2 4.6 100.2 4.7C119.3 4.9 138.4 4.8 157.5 4.8C176.6 4.8 195.6 4.8 214.7 4.7C233.8 4.6 252.9 4.3 271.9 4.2C291.0 4.2 310.1 4.4 329.2 4.4C348.3 4.3 367.3 4.1 386.4 3.9C405.5 3.7 424.6 3.3 443.7 3.2C462.7 3.1 481.8 3.4 500.9 3.3C520.0 3.2 539.0 2.7 558.1 2.6C577.2 2.4 596.3 2.6 615.4 2.4C634.4 2.2 653.5 1.6 672.6 1.5C691.7 1.4 710.8 2.0 729.8 2.0C748.9 1.9 768.0 1.3 787.1 1.2C806.1 1.2 825.2 1.6 844.3 1.6C863.4 1.7 882.5 1.4 901.5 1.5C920.6 1.5 942.6 -4.4 958.8 1.8C975.0 8.1 992.1 23.2 998.8 39.0C1005.4 54.8 998.6 77.3 998.6 96.4C998.7 115.5 998.8 134.6 999.0 153.7C999.2 172.7 999.7 191.8 999.8 210.9C999.9 230.0 999.8 249.0 999.8 268.1C999.8 287.2 999.9 306.2 999.8 325.4C999.7 344.5 1006.5 367.2 999.3 383.0C992.2 398.8 973.6 414.1 957.0 420.2C940.4 426.3 918.8 419.8 899.8 419.6C880.7 419.4 861.6 419.2 842.5 419.0C823.4 418.8 804.4 418.5 785.3 418.3C766.2 418.1 747.1 418.2 728.1 417.9C709.0 417.6 689.9 416.8 670.8 416.5C651.7 416.3 632.7 416.3 613.6 416.2C594.5 416.1 575.4 416.3 556.3 416.2C537.3 416.1 518.2 415.9 499.1 415.8C480.0 415.7 461.0 415.6 441.9 415.6C422.8 415.5 403.7 415.6 384.6 415.5C365.6 415.5 346.5 415.4 327.4 415.3C308.3 415.3 289.2 415.4 270.2 415.4C251.1 415.4 232.0 415.2 212.9 415.2C193.9 415.3 174.8 415.7 155.7 415.7C136.6 415.7 117.5 415.2 98.5 415.1C79.4 415.0 56.9 420.8 41.3 415.0C25.7 409.3 11.1 395.9 5.0 380.6C-1.1 365.4 4.9 342.6 4.8 323.6C4.7 304.5 4.4 285.4 4.3 266.3C4.2 247.3 4.1 228.2 4.1 209.1C4.2 190.0 4.5 171.0 4.5 151.9C4.5 132.8 4.3 113.7 4.3 94.6C4.2 75.6 -2.5 52.4 4.1 37.5C10.7 22.6 27.5 10.4 43.6 5.4C59.7 0.4 81.7 6.9 100.6 7.4C119.6 8.0 148.0 8.5 157.5 8.7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-d-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 40.6C17.5 36.4 10.8 31.2 7.6 24.6C5 19.2 6.6 12.6 12.2 10.8C17.3 9.2 21.6 12.4 23.9 16.8C25.9 12.2 30.4 8.8 35.6 10.2C41.4 11.8 43.3 18.6 40.6 24C37.4 30.6 30.6 35.8 24.6 40.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-loop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M4 31C10 31.5 16 28 19 22.5C21.5 17.5 19.5 11.5 15 12C10.5 12.5 11 19.5 15.5 24C20.5 29 29 30 35.5 27C40 25 42.5 21.5 44 17.5' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M6 35C12 27 18 21 26 19.5C31 18.6 36 18.8 41 19.6M33.5 12.5C36.5 15.3 39 17.4 41.6 19.4C38.6 21.3 36.1 23.6 33.8 26.4' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7.5 26C11 28.6 14.6 32.6 18.2 38.2C22.6 28.6 29.8 18.2 41.5 8.5' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-exclaim: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.6 6.5C24 14.2 23.6 21.8 23.8 29.5M23.9 39.3L24.1 39.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.2 9.6C24 19.4 24 29 24.2 38.6M9.6 24.2C19.2 23.8 29 23.8 38.6 24.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-minus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M9.6 24.2C19.2 23.8 29 23.8 38.6 24.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M2.5 25C6.5 17 10.5 17 14 24.5C17.5 32 21.5 32 25 24.5C28.5 17 32.5 17 36 24.5C39 31 42.5 31 45.5 25' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.2 5.8C25.6 10.3 27 14.3 28.7 18.4C33.3 18.5 37.7 18.8 42.2 19.4C38.6 22.2 35 25 31.4 27.4C32.8 31.8 34 36.1 35.2 40.6C31.5 37.8 27.7 35.3 23.8 32.8C20 35.4 16.2 38.1 12.6 40.8C13.8 36.3 15.2 31.9 16.9 27.5C13.2 25.1 9.5 22.3 5.9 19.6C10.5 19 15 18.6 19.6 18.4C21 14.3 22.5 10.1 24.6 6.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M20.4 8.6C13.6 8.4 8.8 13.6 9 20C9.2 26.4 14.4 31.2 20.8 30.8C27 30.4 31.6 25.2 31.2 19C30.8 13 25.8 8.6 19.6 9M28.6 28.6C32 32 35.6 35.6 39.4 39.4' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-sparkle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 6.4C24.8 17.6 28.4 22.2 40.4 24C28.6 25.8 25 30.2 24 41.6C23 30.2 19.4 25.8 7.6 24C19.4 22.2 23 17.6 24 6.4Z' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-swipe: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M3 12C40 6 120 4 196 7C199 15 198 24 195 33C130 37 60 38 6 35C2 28 1 19 3 12Z' fill='black'/%3E%3C/svg%3E");
+  --np-under: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 24' preserveAspectRatio='none'%3E%3Cpath d='M4 15C40 9 86 7 128 8.5C152 9.4 175 11 196 13.5M30 20C70 17 120 16.5 168 18' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 14' preserveAspectRatio='none'%3E%3Cpath d='M0 7C6 1 10 1 12 7C14 13 18 13 24 7C30 1 34 1 36 7C38 13 42 13 48 7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-grain-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 3.4 -1.45'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url%28%23n%29'/%3E%3C/svg%3E");
+  --np-tear-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='18' viewBox='0 0 240 18' preserveAspectRatio='none'%3E%3Cpath d='M0 18 L0.0 9.0 L6.3 4.0 L14.8 2.9 L22.6 6.8 L27.0 8.6 L31.2 7.6 L35.7 3.2 L42.7 12.7 L47.6 4.9 L56.0 14.3 L64.0 7.2 L74.8 2.6 L84.8 5.8 L89.9 3.5 L96.0 12.6 L101.3 9.6 L109.8 6.8 L117.6 2.8 L122.0 4.7 L130.8 7.6 L137.0 9.6 L144.1 5.9 L153.7 11.1 L159.4 9.5 L167.1 13.4 L176.2 5.7 L187.1 3.5 L194.0 11.8 L199.0 8.4 L203.3 10.7 L212.7 9.4 L222.8 6.1 L231.7 9.7 L240.0 9.0 L240 18Z' fill='black'/%3E%3C/svg%3E");
+  --np-tear-mask-2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='18' viewBox='0 0 240 18' preserveAspectRatio='none'%3E%3Cpath d='M0 18 L0.0 9.0 L8.7 12.2 L16.4 8.6 L23.1 15.0 L29.2 3.9 L35.0 5.4 L41.3 5.5 L46.0 6.2 L52.2 9.4 L57.6 2.9 L63.0 9.1 L69.8 11.5 L79.4 7.4 L84.1 11.5 L93.4 7.1 L102.0 5.9 L112.4 12.8 L121.9 14.4 L127.6 9.1 L136.7 12.4 L143.4 3.8 L151.8 3.4 L160.7 2.1 L167.9 8.2 L172.7 8.2 L180.2 6.8 L190.5 13.3 L200.8 5.2 L204.9 6.9 L209.7 11.2 L215.6 3.7 L221.6 7.2 L230.7 8.0 L240.0 9.0 L240 18Z' fill='black'/%3E%3C/svg%3E");
+  --np-hero-sheet: polygon(0.00% 2.1px,2.50% 4.9px,5.00% 3.3px,7.50% 5.4px,10.00% 5.6px,12.50% 0.6px,15.00% 0.1px,17.50% 7.5px,20.00% 2.3px,22.50% 2.1px,25.00% 9.0px,27.50% 4.2px,30.00% 7.5px,32.50% 4.3px,35.00% 5.8px,37.50% 1.4px,40.00% 5.7px,42.50% 7.8px,45.00% 4.7px,47.50% 6.7px,50.00% 6.0px,52.50% 0.6px,55.00% 6.8px,57.50% 5.3px,60.00% 2.7px,62.50% 0.3px,65.00% 7.8px,67.50% 4.3px,70.00% 6.5px,72.50% 7.9px,75.00% 6.4px,77.50% 8.3px,80.00% 3.6px,82.50% 7.2px,85.00% 4.0px,87.50% 8.4px,90.00% 7.9px,92.50% 0.9px,95.00% 1.2px,97.50% 2.0px,100.00% 8.7px,100.00% calc(100% - 3.9px),97.50% calc(100% - 5.6px),95.00% calc(100% - 2.7px),92.50% calc(100% - 4.6px),90.00% calc(100% - 3.5px),87.50% calc(100% - 3.2px),85.00% calc(100% - 5.3px),82.50% calc(100% - 5.3px),80.00% calc(100% - 8.1px),77.50% calc(100% - 6.1px),75.00% calc(100% - 8.4px),72.50% calc(100% - 7.7px),70.00% calc(100% - 8.9px),67.50% calc(100% - 6.0px),65.00% calc(100% - 1.5px),62.50% calc(100% - 7.7px),60.00% calc(100% - 8.7px),57.50% calc(100% - 8.1px),55.00% calc(100% - 5.1px),52.50% calc(100% - 6.4px),50.00% calc(100% - 1.9px),47.50% calc(100% - 7.5px),45.00% calc(100% - 5.2px),42.50% calc(100% - 2.6px),40.00% calc(100% - 0.6px),37.50% calc(100% - 7.7px),35.00% calc(100% - 8.9px),32.50% calc(100% - 0.8px),30.00% calc(100% - 7.2px),27.50% calc(100% - 3.7px),25.00% calc(100% - 1.4px),22.50% calc(100% - 2.6px),20.00% calc(100% - 6.9px),17.50% calc(100% - 7.9px),15.00% calc(100% - 0.4px),12.50% calc(100% - 5.5px),10.00% calc(100% - 0.4px),7.50% calc(100% - 6.5px),5.00% calc(100% - 3.0px),2.50% calc(100% - 7.9px),0.00% calc(100% - 8.8px));
+  --np-d-circle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' preserveAspectRatio='none'%3E%3Cpath d='M31 8.6C21 6.8 9.8 11.4 7 20.4C4.4 29 11.6 38.6 23.2 39.6C33.6 40.5 42.4 34 42.2 24.4C42 15.8 34.6 9.6 25.4 9.2C20.4 9 15.6 10.6 12.4 13.4' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-d-calendar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M8.8 12.8C19 12.2 29.2 12.4 39.4 12.8C39.8 22 39.8 31 39.4 40.2C29.2 40.8 19 40.6 9 40.2C8.4 31 8.4 22 8.8 12.8ZM9 20.4C19 20 29 20.2 39.2 20.6M17 7.6C17.2 10.4 17.2 13 17 15.8M31 7.6C31.2 10.4 31.2 13 31 15.8M17.4 28.6L17.6 28.8M24.2 28.4L24.4 28.6M31 28.6L31.2 28.8M17.4 34.2L17.6 34.4' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-mail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7 13.8C18.4 13.2 29.8 13.2 41.2 13.6C41.4 21 41.4 28.2 41 35.4C29.8 36 18.6 36 7.4 35.6C6.8 28.4 6.8 21 7 13.8ZM7.8 15C13.4 19.4 18.6 23.6 24 27.2C29.6 23.4 35 19.2 40.4 14.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-gift: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M9.2 19.4C19 18.8 29 19 38.8 19.6C39.2 22.2 39.2 24.6 38.8 27C29 27.4 19 27.4 9.2 27C8.8 24.4 8.8 22 9.2 19.4ZM11.4 27.2C11.2 31.8 11.4 36.4 11.8 41C19.8 41.4 28 41.4 36 41C36.4 36.4 36.6 31.8 36.4 27.2M24 19.4C24.2 26.6 24 33.8 24.2 41M24 19.2C20.4 12.4 13.4 12.6 14.6 16.6C15.6 19.4 20.4 19.6 23.8 19.2C27.6 19.6 32.4 19.4 33.4 16.6C34.6 12.6 27.6 12.4 24 19.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-people: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M17.4 20.6C12.8 20.6 13 12.2 17.6 12.2C22 12.2 22.2 20.6 17.6 20.6M7.4 36.4C7.6 29.4 12 26 17.4 26C22.8 26 27 29.4 27.4 36.2M32 19C28.6 19 28.6 12.8 32.2 12.8C35.8 12.8 35.6 19 32.2 19M30.6 24.2C36.4 23.6 40.6 27.6 40.8 33.4' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-clip: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M30.6 13.6L17.6 28C14.8 31.2 18.8 35.2 22 32.2L36.2 17C40.6 12.2 34.4 6.2 29.6 10.8L14.4 26.8C9.4 32.4 17 40.4 22.6 35L33.4 23.8' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M23.8 7.2C14.2 7.4 7.4 14.8 7.6 24.4C7.8 33.8 15.4 40.8 24.6 40.6C33.8 40.4 40.8 33 40.4 23.6C40 14.4 32.8 7.4 23 7.6M24.2 14.4C24 17.8 24 21.4 24.2 24.6C26.6 26.2 29 27.6 31.6 28.8' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-pin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 42.4C17 33.6 11.2 26.4 11.4 18.8C11.6 11.2 17.2 6.2 24.2 6.4C31.2 6.6 36.8 11.6 36.6 19C36.4 26.6 30.8 33.4 24.4 42M24.6 14C20.6 13.8 19.4 20.8 23.8 21.8C28.6 22.6 29.2 14.6 24.2 14.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-sprout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 42C24.2 35 23.6 29 24 22.5M24 27C17 27.3 11.3 22.6 10.4 14.6C18.4 13.8 23.4 18.4 24 26.6M24.2 22.4C25.4 14.6 31.2 10.2 38.8 10.8C38.4 18.8 32.4 23 24.4 22.6M11.5 42.2C19.5 41 28.5 41.2 37 42' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M11.6 11.4C19.6 19.6 27.8 28 36.2 36.4M36.6 11.6C28.4 19.8 20 28.2 11.4 36.4' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* What each band derives from its own tokens: the pen, the soft field, the highlighter and the two tapes. */
+body,
+.bg-section,
+.site-header,
+.site-footer,
+.on-photo {
+  --edge: color-mix(in srgb, var(--ink) 82%, var(--line-strong));
+  --soft: color-mix(in srgb, var(--button-2) 13%, var(--surface));
+  --hi: color-mix(in srgb, var(--button) 40%, transparent);
+  --tape: color-mix(in srgb, var(--button) 52%, transparent);
+  --tape-2: color-mix(in srgb, var(--button-2) 40%, transparent);
+}
+
+body {
+  font-size: var(--text);
+  line-height: 1.6;
+}
+
+/* The page's own paper grain, behind everything. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--band-plain-ink);
+  opacity: var(--grain);
+  -webkit-mask: var(--np-grain-mask) 0 0 / 180px 180px;
+  mask: var(--np-grain-mask) 0 0 / 180px 180px;
+  pointer-events: none;
+}
+
+@keyframes np-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+  Every rule below sits under :is(body, #main), which matches every element
+  (each is inside <body>) and counts as an id: the kit's components carry
+  Astro-scoped styles (a class plus a data-astro-cid attribute, or more),
+  which a plain class rule here would lose to whatever its order. The prefix
+  lifts every restyle above them evenly, so the rules below still settle
+  among themselves by their own specificity and order.
+*/
+:is(body, #main) {
+  /* ── Type ── */
+
+  h1,
+  h2,
+  h3,
+  .brand-name {
+    font-variation-settings: var(--hand);
+    letter-spacing: -0.012em;
+  }
+  h1,
+  h2 {
+    font-weight: 800;
+    line-height: 1.04;
+  }
+  h3 {
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  .lede {
+    font-size: var(--text-lg);
+    line-height: 1.55;
+  }
+  /* The kicker: mixed case in the display face, after a small loop doodle in the accent. */
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(1.0625rem, 1rem + 0.25vw, 1.25rem);
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-transform: none;
+  }
+  .kicker::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 1.25em;
+    height: 1.25em;
+    background: currentColor;
+    -webkit-mask: var(--np-d-loop) center / contain no-repeat;
+    mask: var(--np-d-loop) center / contain no-repeat;
+  }
+  .section-head {
+    margin-bottom: clamp(1.625rem, 1rem + 1.5vw, 2.25rem);
+  }
+  .section-head > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  /* A section head's "more" link: the display face in the link colour, with the arrow doodle. */
+  .section-head-more a,
+  .door-more,
+  .np-calendar,
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .section-head-more a {
+    font-size: 1.0625rem;
+  }
+  .section-head-more a::after {
+    content: '';
+    width: 1.6em;
+    height: 1.6em;
+    background: currentColor;
+    -webkit-mask: var(--np-d-arrow) center / contain no-repeat;
+    mask: var(--np-d-arrow) center / contain no-repeat;
+  }
+  .section-head-more a:hover,
+  .text-link:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+  /* A chip: a soft blob label. */
+  .chip {
+    gap: 0.375rem;
+    padding: 0.375rem 0.6875rem;
+    border-radius: var(--blob-sm);
+    background: var(--soft);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .chip-accent {
+    background: color-mix(in srgb, var(--button) 22%, var(--surface));
+    color: var(--ink);
+  }
+  .chip-wash {
+    background: var(--soft);
+    color: var(--ink);
+  }
+  .chip .dd {
+    width: 1.125em;
+    height: 1.125em;
+  }
+
+  /* ── Doodles ── */
+
+  .np-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+  .dd {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    overflow: visible;
+  }
+  /* A doodle icon on the soft field (a program, a door). */
+  .np-icon {
+    display: grid;
+    place-items: center;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: var(--blob-3);
+    background: var(--soft);
+    color: var(--link);
+  }
+  .np-icon .dd {
+    width: 2.75rem;
+    height: 2.75rem;
+    stroke-width: 2.8;
+  }
+
+  /* ── The marked word ── */
+
+  .np-mark {
+    position: relative;
+    z-index: 0;
+    display: inline-block;
+    white-space: nowrap;
+  }
+  .np-mark > svg {
+    position: absolute;
+    z-index: -1;
+    color: var(--accent);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: max(3px, 0.065em);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .np-mark-u {
+    left: -3%;
+    bottom: -0.16em;
+    width: 106%;
+    height: 0.34em;
+  }
+  .np-mark-c {
+    display: none;
+    left: -9%;
+    top: -14%;
+    width: 118%;
+    height: 128%;
+  }
+  /* A page-opening Hero circles its word; every other heading underlines it. */
+  main .layout-main > .bg-section[data-type='Hero']:first-child h1 .np-mark-c {
+    display: block;
+  }
+  main .layout-main > .bg-section[data-type='Hero']:first-child h1 .np-mark-u {
+    display: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .np-mark > svg {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 0;
+    }
+    .np-mark[data-np-wait] > svg {
+      stroke-dashoffset: 1;
+    }
+    .np-mark[data-np-draw] > svg {
+      animation: np-draw 0.6s ease-out both;
+    }
+  }
+
+  /* ── Paper grain: every band, the header, the strip and the footer (the page's is outside, above) ── */
+
+
+  .bg-section,
+  .site-header,
+  .site-footer {
+    position: relative;
+    isolation: isolate;
+  }
+  .bg-section::before,
+  .site-header::before,
+  .site-footer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--ink);
+    opacity: var(--grain);
+    -webkit-mask: var(--np-grain-mask) 0 0 / 180px 180px;
+    mask: var(--np-grain-mask) 0 0 / 180px 180px;
+    pointer-events: none;
+  }
+  .site-header {
+    border-bottom: 0;
+  }
+
+  /*
+    ── Torn edges ──
+    A full-width band whose ground differs from the band above it tears up
+    into it: its own ground, through a torn mask, over the last 16px of the
+    band above (::after), with a rim of its ink at 28% two pixels higher (its
+    inner box's ::before, placed against the band). Every other band tears
+    with the second mask, so neighbours never tear alike. The Hero never
+    tears; the first band above the footer tears when the page's last band is
+    another ground; the footer always tears into whatever is above it.
+  */
+  :is(
+      .layout-main > .bg-band-plain + .bg-bleed-full:not(.bg-band-plain),
+      .layout-main > .bg-band-tint + .bg-bleed-full:not(.bg-band-tint),
+      .layout-main > .bg-band-panel + .bg-bleed-full:not(.bg-band-panel),
+      .layout-main > .bg-band-wash + .bg-bleed-full:not(.bg-band-wash),
+      .layout-main > .bg-band-contrast + .bg-bleed-full:not(.bg-band-contrast)
+    ):not([data-type='Hero']),
+  main:has(.layout-main > .bg-band-plain:last-child) + #above-the-footer > .bg-area:first-child > .bg-section:first-child:not(.bg-band-plain),
+  main:has(.layout-main > .bg-band-tint:last-child) + #above-the-footer > .bg-area:first-child > .bg-section:first-child:not(.bg-band-tint),
+  main:has(.layout-main > .bg-band-panel:last-child) + #above-the-footer > .bg-area:first-child > .bg-section:first-child:not(.bg-band-panel),
+  main:has(.layout-main > .bg-band-wash:last-child) + #above-the-footer > .bg-area:first-child > .bg-section:first-child:not(.bg-band-wash),
+  main:has(.layout-main > .bg-band-contrast:last-child) + #above-the-footer > .bg-area:first-child > .bg-section:first-child:not(.bg-band-contrast),
+  .site-footer {
+    --np-tear-content: '';
+  }
+  .bg-section .bg-section {
+    --np-tear-content: none;
+  }
+  .bg-section,
+  .site-footer {
+    --np-tear-shape: var(--np-tear-mask);
+  }
+  .layout-main > .bg-section:nth-child(even),
+  .site-footer {
+    --np-tear-shape: var(--np-tear-mask-2);
+  }
+  .bg-section::after,
+  .site-footer::after,
+  .bg-section > .bg-section-inner::before,
+  .site-footer > .site-footer-inner::before {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: var(--tear);
+    -webkit-mask: var(--np-tear-shape) repeat-x 0 0 / 240px 100%;
+    mask: var(--np-tear-shape) repeat-x 0 0 / 240px 100%;
+    pointer-events: none;
+  }
+  /* The torn ground and its rim draw only on a band the list above marks (--np-tear-content). */
+  .bg-section::after,
+  .site-footer::after {
+    content: var(--np-tear-content, none);
+    z-index: 2;
+    top: calc(1px - var(--tear));
+    background: var(--bg-band-background);
+  }
+  .bg-section > .bg-section-inner::before,
+  .site-footer > .site-footer-inner::before {
+    content: var(--np-tear-content, none);
+    z-index: 1;
+    top: calc(-1px - var(--tear));
+    background: color-mix(in srgb, var(--ink) 28%, transparent);
+  }
+
+  /* ── The header: the wordmark, the menu with the current page underlined, Donate the sticker ── */
+
+  /* The kit's mark is the party's; this template's wordmark is the name, hand-lettered, the rest of it in the body face. */
+  .site-header .brand-mark,
+  .site-footer .brand-mark {
+    display: none;
+  }
+  .brand-name {
+    font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+    font-weight: 800;
+  }
+  .brand-rest {
+    margin-top: 0.1875rem;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .header-bar-menu > ul > li > a,
+  .header-bar-menu > ul > li > span,
+  .header-bar-menu summary {
+    position: relative;
+    padding: 0.625rem 0.6875rem;
+    border-radius: var(--blob-sm);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .header-bar-menu > ul > li > a:hover,
+  .header-bar-menu summary:hover,
+  .header-bar-menu details[open] > summary,
+  .header-bar-menu a[aria-current='page'],
+  .header-bar-menu .menu-group-current > summary {
+    background: transparent;
+    color: var(--ink);
+  }
+  /* The current page and the hovered link: the underline doodle in the accent. */
+  .header-bar-menu > ul > li > a::after {
+    content: '';
+    position: absolute;
+    left: 0.375rem;
+    right: 0.375rem;
+    bottom: 0;
+    height: 0.625rem;
+    background: var(--accent);
+    -webkit-mask: var(--np-under) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-under) 0 0 / 100% 100% no-repeat;
+    opacity: 0;
+  }
+  .header-bar-menu > ul > li > a[aria-current='page']::after,
+  .header-bar-menu > ul > li > a:hover::after {
+    opacity: 1;
+  }
+  .header-bar-menu details > ul,
+  .header-sheet-panel {
+    border-radius: var(--blob-1);
+  }
+  .header-bar-menu details > ul {
+    border: 2px solid var(--edge);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+  }
+  .header-sheet-panel {
+    border-radius: 0 0 var(--blob-1);
+    border-bottom: 2px solid var(--edge);
+  }
+  .header-sheet > summary {
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-sm);
+  }
+  .header-sheet-panel nav > ul > li {
+    border-bottom: 2px dotted var(--line-strong);
+  }
+  .header-sheet-panel nav > ul > li > a,
+  .header-sheet-panel nav > ul > li > span {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-variation-settings: var(--hand);
+  }
+  /* Under the bar width the menu's summary is the menu doodle alone; its word stays for screen readers (designer's call 22). */
+  .site-header .header-sheet > summary {
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+  }
+  .site-header .header-sheet > summary > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .site-header .header-sheet > summary::before {
+    display: block;
+  }
+  .site-header .header-sheet[open] > summary::before {
+    display: block;
+    width: 1.375rem;
+    height: 1.375rem;
+    border: 0;
+    background: currentColor;
+    -webkit-mask: var(--np-d-plus) center / contain no-repeat;
+    mask: var(--np-d-plus) center / contain no-repeat;
+    transform: rotate(45deg);
+  }
+  /* The sheet does not repeat Donate: the header row above it keeps it (designer's call 7). */
+  .site-header .header-sheet-button {
+    display: none;
+  }
+  .site-header:has(.header-sheet[open]) .header-button {
+    display: inline-flex;
+  }
+  .mode-toggle {
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-sm);
+  }
+
+  /* ── Stickers: every button ── */
+
+  .button {
+    --stk: var(--button-2);
+    --stk-ink: var(--button-2-ink);
+    --rot: -1deg;
+    position: relative;
+    min-height: 3.25rem;
+    padding: 0.55em 1.25em 0.5em;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-pill);
+    background: var(--stk);
+    color: var(--stk-ink);
+    box-shadow:
+      inset 0 0 0 2px var(--bg-band-background),
+      var(--off) var(--off) 0 0 var(--ink);
+    transform: rotate(var(--rot));
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .button + .button,
+  .actions > .button:nth-of-type(2n) {
+    --rot: 0.8deg;
+  }
+  .button:hover {
+    text-decoration: none;
+  }
+  .button:active {
+    transform: rotate(var(--rot)) translate(2px, 2px);
+    box-shadow:
+      inset 0 0 0 2px var(--bg-band-background),
+      1px 1px 0 0 var(--ink);
+  }
+  .button:focus-visible {
+    outline: 3px dashed var(--accent);
+    outline-offset: 5px;
+    border-radius: var(--blob-pill);
+  }
+  .button-small {
+    min-height: 2.75rem;
+    padding: 0.5em 1.05em 0.45em;
+    font-size: 1rem;
+  }
+  /* The outline sticker. */
+  .button-quiet,
+  .button.button-quiet {
+    --stk: transparent;
+    --stk-ink: var(--ink);
+    border-color: var(--ink);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+  }
+  .button-quiet:active {
+    box-shadow: 1px 1px 0 0 var(--ink);
+  }
+  /* Donate: the accent sticker with the heart, the header's (and BackGold's donate frames draw their own). */
+  .site-header .header-button {
+    --stk: var(--button);
+    --stk-ink: var(--button-ink);
+    gap: 0.4em;
+  }
+  .site-header .header-button::before {
+    content: '';
+    width: 1.25em;
+    height: 1.25em;
+    background: currentColor;
+    -webkit-mask: var(--np-d-heart) center / contain no-repeat;
+    mask: var(--np-d-heart) center / contain no-repeat;
+  }
+  /*
+    On /donate (aria-current, the kit's) and on a page that carries QuickDonate
+    the header's Donate is the outline sticker with a dashed border: the page's
+    own form is its one accent.
+  */
+  .site-header .header-button[aria-current='page'],
+  .site-header:has(~ main [data-type='QuickDonate']) .header-button {
+    --stk: transparent;
+    --stk-ink: var(--ink);
+    border-style: dashed;
+    box-shadow: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .button {
+      transition:
+        transform 0.12s ease-out,
+        box-shadow 0.12s ease-out;
+    }
+    .button:hover {
+      transform: rotate(var(--rot)) translate(-1px, -1px);
+      box-shadow:
+        inset 0 0 0 2px var(--bg-band-background),
+        calc(var(--off) + 1px) calc(var(--off) + 1px) 0 0 var(--ink);
+    }
+    .button-quiet:hover {
+      box-shadow: calc(var(--off) + 1px) calc(var(--off) + 1px) 0 0 var(--ink);
+    }
+    .site-header .header-button[aria-current='page']:hover,
+    .site-header:has(~ main [data-type='QuickDonate']) .header-button:hover {
+      box-shadow: none;
+    }
+  }
+  .actions {
+    gap: 1rem;
+    margin-top: 1.875rem;
+  }
+
+  /*
+    ── Pen outlines: cards ──
+    The fill is the band's surface in blob corners; the pen line is ::before,
+    the band's --edge through one of the seven outline masks, 3px out of
+    register. Neighbours take different corners and flip their outline.
+  */
+  .np-card,
+  .bg-section .issue-card,
+  .bg-section .stat,
+  .bg-section .sv-package,
+  .bg-section .ms-tier,
+  .bg-section .quote,
+  .bg-section .person,
+  .bg-section .card,
+  .bg-section .story-card,
+  .bg-section .spotlight-words-only .spotlight-words,
+  .bg-section .faq-question,
+  .bg-section .post-lead,
+  .bg-section .module-card,
+  .listing .post-lead,
+  .listing .card {
+    --np-edge: var(--np-edge-card);
+    position: relative;
+    border: 0;
+    border-radius: var(--blob-1);
+    background: var(--surface);
+    box-shadow: none;
+    overflow: visible;
+  }
+  :is(.np-card, .issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card):nth-child(3n + 2) {
+    --np-edge: var(--np-edge-card2);
+    border-radius: var(--blob-2);
+  }
+  :is(.np-card, .issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card):nth-child(3n) {
+    border-radius: var(--blob-3);
+  }
+  .np-card::before,
+  .bg-section .issue-card::before,
+  .bg-section .stat::before,
+  .bg-section .sv-package::before,
+  .bg-section .ms-tier::before,
+  .bg-section .quote::before,
+  .bg-section .person::before,
+  .bg-section .card::before,
+  .bg-section .story-card::before,
+  .bg-section .spotlight-words-only .spotlight-words::before,
+  .bg-section .faq-question::before,
+  .bg-section .post-lead::before,
+  .bg-section .module-card::before,
+  .listing .post-lead::before,
+  .listing .card::before {
+    content: '';
+    position: absolute;
+    inset: -3px -4px -4px -3px;
+    z-index: 1;
+    background: var(--edge);
+    -webkit-mask: var(--np-edge) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-edge) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  :is(.np-card, .issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead):nth-child(4n + 2)::before {
+    transform: scaleX(-1);
+  }
+  :is(.np-card, .issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead):nth-child(4n + 3)::before {
+    transform: scaleY(-1);
+  }
+  :is(.np-card, .issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead):nth-child(4n)::before {
+    transform: scale(-1, -1);
+  }
+  /* Wide things (a shift row, a question, the lead story, a form) take the wide outlines; tall ones the tall. */
+  .np-shift,
+  .bg-section .faq-question,
+  .bg-section .post-lead,
+  .listing .post-lead {
+    --np-edge: var(--np-edge-wide);
+  }
+  .np-shift:nth-child(even),
+  .bg-section .faq-question:nth-child(even) {
+    --np-edge: var(--np-edge-wide2);
+  }
+  .bg-section .module-card,
+  .bg-section .ms-tier,
+  .bg-section .person {
+    --np-edge: var(--np-edge-tall);
+  }
+  .bg-section .stat {
+    --np-edge: var(--np-edge-sq);
+  }
+  /* Firefox does not keep a stretched mask's stroke at 2px: a plain 2px blob border instead. */
+  @supports (-moz-appearance: none) {
+    .np-card,
+    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card),
+    .listing :is(.post-lead, .card) {
+      border: 2px solid var(--edge);
+    }
+    .np-card::before,
+    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card)::before,
+    .listing :is(.post-lead, .card)::before {
+      content: none;
+    }
+  }
+
+  /* Tape: a torn-ended strip of the accent at 52% (the primary at 40% where it says so), on pinned notes and photos. */
+  .bg-section .stat::after,
+  .overlap-frame::after,
+  .split-photo::after,
+  .spotlight-media::after,
+  .cta-photo-frame::after,
+  .bg-section .quote::after,
+  .post-lead::after {
+    content: '';
+    position: absolute;
+    z-index: 4;
+    top: -0.8125rem;
+    left: calc(50% - 3rem);
+    width: 6rem;
+    height: 1.625rem;
+    background: var(--tape);
+    transform: rotate(-3deg);
+    clip-path: polygon(0 8%, 4% 0, 9% 10%, 14% 0, 86% 0, 91% 9%, 96% 0, 100% 10%, 100% 90%, 95% 100%, 90% 91%, 85% 100%, 14% 100%, 9% 92%, 4% 100%, 0 90%);
+    pointer-events: none;
+  }
+  .bg-section .stat:nth-child(2)::after,
+  .bg-section .quote:nth-child(2)::after {
+    background: var(--tape-2);
+  }
+  /* At a photo's corner. */
+  .split-photo::after,
+  .spotlight-media::after,
+  .post-lead::after {
+    top: 0.25rem;
+    left: auto;
+    right: -1.5rem;
+    transform: rotate(36deg);
+  }
+  @media (max-width: 47.99rem) {
+    .split-photo::after,
+    .spotlight-media::after,
+    .post-lead::after {
+      right: -0.5rem;
+    }
+  }
+
+  /* Photos: on a paper mount in a pen frame, tilted about a degree. */
+  .split-photo,
+  .spotlight-media {
+    position: relative;
+    padding: 0.6875rem;
+    border-radius: var(--blob-2);
+    background: var(--surface);
+    box-shadow: 0 0 0 2px var(--ink);
+    transform: rotate(-1.2deg);
+  }
+  .split-image,
+  .spotlight-photo {
+    border-radius: var(--blob-sm);
+  }
+  .photo-caption,
+  .overlap-frame .overlap-caption,
+  .cta-photo-caption {
+    border-radius: var(--blob-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* ── Hero ── */
+
+  .bg-section.hero-overlap {
+    padding-top: 0;
+    --overlap-rise: clamp(3.5rem, 1rem + 12vw, 13.75rem);
+  }
+  .hero-overlap .overlap-frame {
+    position: relative;
+    margin-inline: calc(-1 * var(--gutter));
+  }
+  @media (min-width: 66rem) {
+    .hero-overlap .overlap-frame {
+      margin-inline: calc((100vw - var(--content)) / -2);
+    }
+  }
+  .hero-overlap .overlap-image {
+    aspect-ratio: auto;
+    height: clamp(15.625rem, 8rem + 25vw, 31.25rem);
+    border-radius: 0;
+  }
+  .hero-overlap .overlap-frame::after {
+    display: none;
+  }
+  /* The words on a torn sheet of the contrast band, taped at two corners, a little off square. */
+  .bg-section .overlap-panel {
+    --bg-band-background: var(--band-contrast);
+    --ink: var(--band-contrast-ink);
+    --muted: var(--band-contrast-muted);
+    --accent: var(--band-contrast-accent);
+    --link: var(--band-contrast-link);
+    --button: var(--band-contrast-button);
+    --button-ink: var(--band-contrast-button-ink);
+    --button-2: var(--band-contrast-button-2);
+    --button-2-ink: var(--band-contrast-button-2-ink);
+    --surface: var(--band-contrast-surface);
+    --line: var(--band-contrast-line);
+    --line-strong: var(--band-contrast-line-strong);
+    max-width: 53.75rem;
+    padding: clamp(2.5rem, 1.5rem + 3vw, 3.625rem) clamp(1.25rem, 0.5rem + 4vw, 4rem) clamp(2.5rem, 1.5rem + 3vw, 3.75rem);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    box-shadow: none;
+    isolation: isolate;
+  }
+  .bg-section .overlap-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(color-mix(in srgb, var(--ink) 5%, transparent), color-mix(in srgb, var(--ink) 5%, transparent)),
+      var(--bg-band-background);
+    clip-path: var(--np-hero-sheet);
+    transform: rotate(-0.8deg);
+  }
+  /* Taped at two corners: the accent's tape at the left, the primary's at the right. */
+  .bg-section .overlap-panel::after {
+    content: '';
+    position: absolute;
+    top: -0.5rem;
+    left: 3.5rem;
+    right: 3.75rem;
+    height: 1.625rem;
+    background:
+      linear-gradient(var(--tape), var(--tape)) 0 0 / 6rem 100% no-repeat,
+      linear-gradient(var(--tape-2), var(--tape-2)) 100% 0 / 6rem 100% no-repeat;
+    transform: rotate(-1.5deg);
+  }
+  .hero-overlap-photo .overlap-frame + .overlap-panel {
+    margin-top: calc(-1 * var(--overlap-rise));
+  }
+  .overlap-headline,
+  .statement-headline,
+  .split-headline {
+    font-size: var(--h1);
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.012em;
+  }
+  .overlap-lede,
+  .statement-lede,
+  .split-lede {
+    max-width: 33em;
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .hero-statement .statement {
+    position: relative;
+  }
+  /* Hero · statement: words only, with a star doodle in the margin. */
+  .hero-statement .statement::after {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 6%;
+    width: 3.375rem;
+    height: 3.375rem;
+    background: var(--accent);
+    -webkit-mask: var(--np-d-star) center / contain no-repeat;
+    mask: var(--np-d-star) center / contain no-repeat;
+    transform: rotate(12deg);
+  }
+  .bg-section.hero-statement {
+    padding-block: clamp(3.25rem, 2rem + 4vw, 5.75rem) clamp(3.125rem, 2rem + 3.5vw, 5.25rem);
+  }
+
+  /* ── StatCards · row: pinned notes, the figure hand-lettered on a highlighter swipe ── */
+
+  .bg-section .stat-list {
+    gap: clamp(1.5rem, 1rem + 1.5vw, 1.875rem);
+    margin-top: 2rem;
+  }
+  .bg-section .stat {
+    padding: 2.125rem 1.75rem 1.75rem;
+    border-radius: var(--blob-1);
+    background: var(--surface);
+  }
+  .bg-section .stat:nth-child(3n + 1) {
+    transform: rotate(-1.3deg);
+  }
+  .bg-section .stat:nth-child(3n + 2) {
+    transform: rotate(0.9deg);
+  }
+  .bg-section .stat:nth-child(3n) {
+    transform: rotate(-0.5deg);
+  }
+  .bg-section .stat-value,
+  .np-figure {
+    position: relative;
+    z-index: 0;
+    display: inline-block;
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(3.25rem, 2rem + 3.5vw, 4.875rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+  .bg-section .stat-value::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: -4%;
+    bottom: 0.04em;
+    width: 108%;
+    height: 0.5em;
+    background: var(--hi);
+    -webkit-mask: var(--np-swipe) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-swipe) 0 0 / 100% 100% no-repeat;
+  }
+  .bg-section .stat-accent {
+    color: var(--ink);
+  }
+  .bg-section .stat-label {
+    margin-top: 0.875rem;
+    color: var(--ink);
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+  .bg-section .stat-note {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: 0.9375rem;
+  }
+
+  /* ── Issues · cards (programs) and the template's cards ── */
+
+  .np-cards {
+    display: grid;
+    gap: clamp(1.5rem, 1rem + 1.2vw, 1.75rem);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .bg-section .issue-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 1.75rem;
+  }
+  .issue-card > *,
+  .np-card > * {
+    position: relative;
+    z-index: 2;
+    margin: 0;
+  }
+  .issue-card .np-icon {
+    margin-bottom: 1.125rem;
+  }
+  .np-when {
+    margin-bottom: 0.75rem;
+  }
+  .issue-title {
+    margin: 0.25rem 0 0.5rem;
+    font-size: var(--h3);
+  }
+  .issue-body {
+    color: var(--muted);
+    font-size: 1rem;
+  }
+
+  /* ── EventsList · shifts ── */
+
+  .np-weeks {
+    display: grid;
+    gap: 1.875rem;
+  }
+  .np-week-head {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin: 0 0 0.875rem;
+    font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.5rem);
+  }
+  .np-week-head small {
+    color: var(--muted);
+    font-family: var(--font);
+    font-variation-settings: normal;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .np-rule {
+    flex: 1;
+    min-width: 2rem;
+    height: 0.875rem;
+    background: var(--line-strong);
+    -webkit-mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+  }
+  .np-shift-list {
+    display: grid;
+    gap: 1.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-shift {
+    display: grid;
+    grid-template-columns: 5.75rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.625rem;
+    padding: 1.25rem 1.625rem 1.25rem 1.25rem;
+    border-radius: var(--blob-pill);
+  }
+  /* The date as a torn-off calendar page. */
+  .np-tile {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    width: 5.375rem;
+    overflow: hidden;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-sm);
+    background: var(--surface);
+    box-shadow: 3px 3px 0 0 var(--ink);
+    text-align: center;
+    transform: rotate(-2deg);
+  }
+  .np-tile-month {
+    justify-self: stretch;
+    padding: 0.375rem 0 0.3125rem;
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .np-tile b {
+    padding: 0.5rem 0 0.125rem;
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .np-tile-weekday {
+    padding-bottom: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .np-shift-body > * {
+    margin: 0;
+  }
+  .np-shift-title {
+    margin: 0.5rem 0 0.375rem;
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  }
+  .np-shift-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .np-shift-title a:hover {
+    text-decoration: underline;
+  }
+  .np-shift-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 1.125rem;
+    color: var(--muted);
+    font-size: 0.9375rem;
+  }
+  .np-shift-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .np-shift-meta .dd {
+    width: 1.1875rem;
+    height: 1.1875rem;
+    color: var(--link);
+    stroke-width: 3.6;
+  }
+  .np-spots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 0.625rem;
+    font-size: 0.90625rem;
+    font-weight: 800;
+  }
+  .np-spots:not(:has(.np-live:not(:empty), .np-closed)) {
+    display: none;
+  }
+  .np-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .np-dots:empty,
+  .np-live:empty {
+    display: none;
+  }
+  .np-dots i {
+    width: 0.9375rem;
+    height: 0.9375rem;
+    border: 2px solid var(--ink);
+    border-radius: 50% 45% 52% 48% / 48% 54% 46% 50%;
+    background: var(--button-2);
+  }
+  .np-dots i.np-open {
+    border-style: dashed;
+    background: transparent;
+  }
+  .np-closed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--accent);
+  }
+  .np-closed .dd {
+    width: 1.125rem;
+    height: 1.125rem;
+    stroke-width: 4;
+  }
+  .np-shift-go {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.625rem;
+  }
+  .np-calendar {
+    color: var(--muted);
+    font-size: 0.90625rem;
+  }
+  .np-calendar .dd {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  .np-invite {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    padding: 1.625rem 1.875rem;
+    border: 2.5px dashed var(--edge);
+    border-radius: var(--blob-2);
+    color: var(--muted);
+  }
+  .np-invite .dd {
+    width: 3rem;
+    height: 3rem;
+    color: var(--accent);
+    stroke-width: 3;
+  }
+
+  /* ── Stories · spotlight ── */
+
+  .bg-section .spotlight {
+    align-items: center;
+    gap: clamp(1.875rem, 1rem + 3vw, 3.5rem);
+  }
+  .spotlight-title {
+    font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.375rem);
+  }
+  .spotlight-summary {
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .bg-section .spotlight-words-only .spotlight-words {
+    border-radius: var(--blob-1);
+  }
+  /* A story without a photo: the soft field of the brand with a doodle on it, its label hand-lettered, never a grey box. */
+  .bg-section .story-card {
+    border-radius: var(--blob-2);
+  }
+  .bg-section .story-frame-label {
+    position: relative;
+    display: grid;
+    place-items: center;
+    gap: 0.5rem;
+    background: var(--soft);
+    border-bottom: 0;
+  }
+  .bg-section .story-frame-label::before {
+    content: '';
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--link);
+    -webkit-mask: var(--np-d-sparkle) center / contain no-repeat;
+    mask: var(--np-d-sparkle) center / contain no-repeat;
+  }
+  .bg-section .story-big-label {
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+    line-height: 1.1;
+    text-align: center;
+    overflow-wrap: normal;
+  }
+  .spotlight-more-ruled {
+    position: relative;
+    border-top: 0;
+    padding-top: 2.5rem;
+  }
+  /* The rule between the lead and the list: the pen squiggle in the accent, then the brand's three colours as confetti. */
+  .spotlight-more-ruled::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.25rem;
+    background:
+      radial-gradient(circle at center, var(--bg-brand-primary) 0 0.375rem, var(--ink) 0.375rem 0.45rem, transparent 0.45rem) calc(50% - 1.5rem) 50% / 1rem 1rem no-repeat,
+      radial-gradient(circle at center, var(--bg-brand-secondary) 0 0.375rem, var(--ink) 0.375rem 0.45rem, transparent 0.45rem) 50% 50% / 1rem 1rem no-repeat,
+      radial-gradient(circle at center, var(--bg-brand-accent) 0 0.375rem, var(--ink) 0.375rem 0.45rem, transparent 0.45rem) calc(50% + 1.5rem) 50% / 1rem 1rem no-repeat;
+  }
+  .spotlight-more-ruled::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.25rem;
+    background: var(--accent);
+    -webkit-mask:
+      linear-gradient(90deg, var(--ink) calc(50% - 2.75rem), transparent 0 calc(50% + 2.75rem), var(--ink) 0),
+      var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    -webkit-mask-composite: source-in;
+    mask:
+      linear-gradient(90deg, var(--ink) calc(50% - 2.75rem), transparent 0 calc(50% + 2.75rem), var(--ink) 0),
+      var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    mask-composite: intersect;
+  }
+
+  /* ── Cta · photo: the photo, its inner edge torn, beside the words ── */
+
+  .bg-section.cta-photo,
+  .layout-main > .bg-section.cta-photo {
+    padding: 0;
+    overflow: visible;
+  }
+  .cta-photo .bg-section-inner {
+    max-width: none;
+  }
+  .cta-photo .cta-photo-grid {
+    gap: 0;
+    align-items: stretch;
+  }
+  .cta-photo .cta-photo-frame {
+    position: relative;
+    min-height: 13.75rem;
+    border-radius: 0;
+    clip-path: polygon(0 0, 100% 0, 97.5% 6%, 99.4% 13%, 97% 21%, 99% 30%, 97.6% 39%, 99.6% 48%, 97.2% 57%, 99.2% 66%, 97.4% 75%, 99.5% 84%, 97.6% 92%, 99% 100%, 0 100%);
+  }
+  .cta-photo .cta-photo-frame::after {
+    display: none;
+  }
+  .cta-photo .cta-photo-image {
+    border-radius: 0;
+  }
+  .cta-photo .cta-photo-words {
+    padding: clamp(2.5rem, 1.5rem + 4vw, 4.75rem) clamp(1.125rem, 0.5rem + 4vw, 4rem) clamp(3.25rem, 2rem + 4vw, 4.75rem) clamp(1.125rem, 0.5rem + 3vw, 3.5rem);
+  }
+
+  /* ── The sign-up band (SignupCapture · band) and BackGold's frames ── */
+
+  .bg-section .module-card,
+  .bg-section.signup .module {
+    padding: clamp(1rem, 0.5rem + 1.5vw, 1.875rem);
+    border-radius: var(--blob-1);
+    background: var(--surface);
+  }
+  .bg-section.signup .module {
+    position: relative;
+  }
+  .bg-section.signup .module::before {
+    content: '';
+    position: absolute;
+    inset: -3px -4px -4px -3px;
+    background: var(--edge);
+    -webkit-mask: var(--np-edge-card) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-edge-card) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  @supports (-moz-appearance: none) {
+    .bg-section.signup .module {
+      border: 2px solid var(--edge);
+    }
+    .bg-section.signup .module::before {
+      content: none;
+    }
+  }
+  .signup-words h2 {
+    font-size: clamp(1.875rem, 1.3rem + 1.8vw, 2.625rem);
+  }
+
+  /* ── The footer: the brand's ground, torn into whatever is above it ── */
+
+  .site-footer {
+    margin-top: var(--tear);
+  }
+  .site-footer .brand-rest {
+    color: var(--muted);
+  }
+  .footer-heading {
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .footer-column a {
+    font-size: 1.0625rem;
+  }
+  .social a {
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--blob-sm);
+  }
+  .footer-row {
+    position: relative;
+    border-top: 0;
+  }
+  .footer-row::before {
+    content: '';
+    position: absolute;
+    top: -0.625rem;
+    left: 0;
+    right: 0;
+    height: 0.875rem;
+    background: var(--line-strong);
+    -webkit-mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+  }
+
+  /* ── The top banner (Cta · strip) on the brand's ground ── */
+
+  .bg-section.cta-strip .strip {
+    font-size: 0.96875rem;
+  }
+  .bg-section.cta-strip .strip-words b {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+  }
+  .bg-section.cta-strip .strip-links a {
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  /* ── About · letter: the reading in the body face, a hand-lettered drop cap and signature ── */
+
+  .bg-section .letter-body {
+    max-width: 36em;
+    font-family: var(--font);
+    font-variation-settings: normal;
+    font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+    line-height: 1.72;
+  }
+  .letter-body > p:first-child::first-letter {
+    float: left;
+    margin: 0.5rem 0.625rem 0 0;
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 4.5rem;
+    font-weight: 800;
+    line-height: 0.8;
+  }
+  .letter-signature {
+    margin-top: 1.875rem;
+    color: var(--link);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-variation-settings: var(--hand-sign);
+    font-size: clamp(2.125rem, 1.6rem + 1.4vw, 2.625rem);
+    font-weight: 500;
+    line-height: 1;
+  }
+  .letter-role {
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .letter-image,
+  .letter-tile {
+    border-radius: var(--blob-2);
+    transform: rotate(-1.2deg);
+    box-shadow: 0 0 0 0.6875rem var(--surface), 0 0 0 calc(0.6875rem + 2px) var(--ink);
+  }
+  .bg-section .letter .letter-tile {
+    background: var(--soft);
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+  }
+
+  /* ── TeamGrid: people as cards, their initials hand-lettered on the soft field; open roles as a dashed invitation ── */
+
+  .bg-section .person {
+    padding: 1.25rem;
+  }
+  .bg-section .person > * {
+    position: relative;
+    z-index: 2;
+  }
+  .person-photo,
+  .person-initials {
+    border-radius: var(--blob-3);
+  }
+  .person-initials {
+    background: var(--soft);
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+  }
+  .staff-list li {
+    border-bottom: 2px dotted var(--line-strong);
+  }
+  .open-roles {
+    position: relative;
+    margin-top: 2.5rem;
+    padding: 1.5rem;
+    border: 2.5px dashed var(--edge);
+    border-radius: var(--blob-2);
+  }
+  .open-roles h3::before {
+    content: '';
+    display: inline-block;
+    width: 1.5em;
+    height: 1.5em;
+    margin-right: 0.375rem;
+    vertical-align: -0.35em;
+    background: var(--accent);
+    -webkit-mask: var(--np-d-star) center / contain no-repeat;
+    mask: var(--np-d-star) center / contain no-repeat;
+  }
+  .open-roles .staff-list li:last-child {
+    border-bottom: 0;
+  }
+
+  /* ── Financials · donut: hatched wedges in a pen circle, every figure the organization's ── */
+
+  .bg-section .donut-figures {
+    --financials-1: var(--button-2);
+    --financials-2: var(--button);
+    --financials-3: var(--ink);
+    --financials-4: var(--link);
+    --financials-5: var(--muted);
+    --financials-6: color-mix(in srgb, var(--button-2) 50%, var(--surface));
+    --financials-7: color-mix(in srgb, var(--button) 50%, var(--surface));
+    --financials-8: color-mix(in srgb, var(--ink) 50%, var(--surface));
+  }
+  .bg-section .donut {
+    background:
+      repeating-linear-gradient(45deg, transparent 0 0.3125rem, var(--bg-band-background) 0.3125rem 0.5rem),
+      var(--ring);
+  }
+  .bg-section .donut::before {
+    content: '';
+    position: absolute;
+    inset: -19%;
+    z-index: 1;
+    background: var(--ink);
+    -webkit-mask: var(--np-d-circle) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-d-circle) 0 0 / 100% 100% no-repeat;
+  }
+  .bg-section .donut::after {
+    box-shadow: 0 0 0 2px var(--ink);
+  }
+  .bg-section .legend-item {
+    border-bottom: 2px dotted var(--line-strong);
+  }
+  .bg-section .legend-swatch {
+    width: 1.875rem;
+    height: 1.875rem;
+    margin-top: 0;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-sm);
+    background-image: repeating-linear-gradient(45deg, transparent 0 0.25rem, var(--bg-band-background) 0.25rem 0.375rem) !important;
+  }
+  .bg-section .legend-item {
+    grid-template-columns: 1.875rem minmax(0, 1fr) auto;
+  }
+  .bg-section .legend-share,
+  .bg-section .legend-amount {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+  }
+
+  /* ── Services · programs (this template's) and · packages (featured is not drawn) ── */
+
+  .np-programs {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  }
+  .np-program {
+    display: flex;
+    flex-direction: column;
+    padding: clamp(1.375rem, 1rem + 1vw, 1.875rem);
+  }
+  .np-program-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .np-price {
+    margin-left: auto;
+  }
+  .np-program-name {
+    margin: 1rem 0 0.5rem;
+    font-size: clamp(1.5625rem, 1.3rem + 0.8vw, 1.875rem);
+  }
+  .np-program-summary {
+    color: var(--muted);
+    font-size: 1.03125rem;
+  }
+  .np-facts {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1.25rem 0 0;
+    font-size: 0.96875rem;
+  }
+  .np-facts > div {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.875rem;
+  }
+  .np-facts dt {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 800;
+  }
+  .np-facts dt .dd,
+  .np-includes .dd {
+    width: 1.1875rem;
+    height: 1.1875rem;
+    color: var(--link);
+    stroke-width: 3.6;
+  }
+  .np-facts dd {
+    margin: 0;
+    color: var(--muted);
+  }
+  .np-includes {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: 0.96875rem;
+  }
+  .np-includes li {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .np-program-action {
+    margin-top: auto !important;
+    padding-top: 1.5rem;
+  }
+  .bg-section .sv-featured {
+    display: none;
+  }
+  .bg-section .sv-package .button:not(.button-quiet) {
+    --stk: transparent;
+    --stk-ink: var(--ink);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+  }
+
+  /* ── Pathways · doors: arched like doors, a knob in the accent ── */
+
+  .np-doors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-doors .door {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 2.75rem 1.75rem 1.875rem;
+    border: 2.5px solid var(--edge);
+    border-radius: 160px 150px 18px 22px / 120px 130px 16px 20px;
+    background: var(--surface);
+    text-align: center;
+  }
+  .np-doors .door:nth-child(even) {
+    border-radius: 150px 165px 22px 16px / 130px 118px 20px 18px;
+  }
+  .np-doors .door > * {
+    margin: 0;
+  }
+  .np-doors .door-title {
+    font-size: clamp(1.625rem, 1.3rem + 1vw, 1.875rem);
+  }
+  .np-doors .door-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  /* The whole door is the link. */
+  .np-doors .door-title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .np-doors .door-title a:focus-visible {
+    outline: none;
+  }
+  .np-doors .door:has(a:focus-visible) {
+    outline: 3px dashed var(--accent);
+    outline-offset: 5px;
+  }
+  .np-doors .door-summary {
+    color: var(--muted);
+  }
+  .np-doors .door-outcome {
+    font-size: 0.96875rem;
+  }
+  .np-doors .door-more {
+    margin-top: auto;
+  }
+  .np-doors .door-more .dd {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+  .np-knob {
+    position: absolute;
+    right: 0.75rem;
+    top: 58%;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    background: var(--button);
+  }
+
+  /* ── Faq: questions on hand-cut cards, topics as sticker chips, the closing call on the contrast band ── */
+
+  .bg-section .faq-questions {
+    display: grid;
+    gap: 0.875rem;
+  }
+  .bg-section .faq-question {
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--blob-pill);
+  }
+  .bg-section .faq-question > * {
+    position: relative;
+    z-index: 2;
+  }
+  .bg-section .faq-question summary {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: clamp(1.125rem, 1rem + 0.4vw, 1.25rem);
+    font-weight: 700;
+  }
+  .bg-section .faq-answer {
+    margin-top: 0.625rem;
+    color: var(--muted);
+  }
+  .faq-group-name {
+    font-size: clamp(1.375rem, 1.2rem + 0.5vw, 1.625rem);
+  }
+  .bg-section .faq-nav button,
+  .bg-section .agenda-tabs a,
+  .listing .list-filter a {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.9375rem;
+    border: 2px solid var(--edge);
+    border-radius: var(--blob-pill);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .bg-section .faq-nav button[aria-pressed='true'],
+  .bg-section .bg-section-inner .agenda-tabs li a[aria-current='page'],
+  .listing .list-filter a[aria-current='page'] {
+    border-color: var(--ink);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
+  .bg-section .faq-nav {
+    align-items: flex-start;
+  }
+  .bg-section .faq-nav button {
+    width: auto;
+  }
+  .bg-section .faq-contact {
+    padding: 1.375rem 1.75rem;
+    border-radius: var(--blob-1);
+    background: var(--band-contrast);
+    color: var(--band-contrast-ink);
+    --ink: var(--band-contrast-ink);
+    --bg-band-background: var(--band-contrast);
+    --button-2: var(--band-contrast-button-2);
+    --button-2-ink: var(--band-contrast-button-2-ink);
+  }
+
+  /* ── Issues · steps: numbered on primary stickers, an arrow doodle on to the next ── */
+
+  .bg-section .steps {
+    gap: clamp(1.5rem, 1rem + 1.5vw, 1.875rem);
+  }
+  .bg-section .step {
+    position: relative;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .bg-section .step-label {
+    display: inline-grid;
+    place-items: center;
+    min-width: 4.125rem;
+    height: 4.125rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-3);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    box-shadow: 3px 3px 0 0 var(--ink);
+    transform: rotate(-4deg);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .bg-section .step-title {
+    margin: 1.25rem 0 0.5rem;
+  }
+  .bg-section .step-body {
+    color: var(--muted);
+  }
+  @media (min-width: 48rem) {
+    .bg-section .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 0.75rem;
+      right: 0;
+      width: 3.5rem;
+      height: 3.5rem;
+      background: var(--accent);
+      -webkit-mask: var(--np-d-arrow) center / contain no-repeat;
+      mask: var(--np-d-arrow) center / contain no-repeat;
+    }
+  }
+
+  /* ── EventsList · agenda: months hand-lettered over a squiggle, the day hand-lettered ── */
+
+  .agenda-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.875rem;
+    font-size: clamp(1.875rem, 1.4rem + 1.4vw, 2.375rem);
+  }
+  .agenda-count {
+    color: var(--muted);
+    font-family: var(--font);
+    font-variation-settings: normal;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .bg-section .event-row {
+    border: 0;
+    border-bottom: 2px dotted var(--line-strong);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .event-day b {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(2rem, 1.6rem + 1vw, 2.5rem);
+    font-weight: 800;
+  }
+  .bg-section .event-day small {
+    color: var(--accent);
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .event-title {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.375rem);
+  }
+  .event-live {
+    color: var(--link);
+    font-weight: 800;
+  }
+  .page-header h1 {
+    font-size: var(--h1);
+  }
+
+  /* ── The sidebar: each item a hand-cut card; a call to action on the contrast band ── */
+
+  .rail .bg-section {
+    border: 2px solid var(--edge);
+    border-radius: var(--blob-1);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+  }
+  .rail .bg-section.cta {
+    border-color: var(--ink);
+  }
+
+  /* ── Donate · story and Membership · tiers: no card filled ── */
+
+  .bg-section.donate .module-card,
+  .bg-section .module-card {
+    border-radius: var(--blob-1);
+  }
+  .bg-section .ms-tier {
+    padding: 1.875rem 1.75rem;
+  }
+  .bg-section .ms-tier > * {
+    position: relative;
+    z-index: 2;
+  }
+  .bg-section .ms-tier-featured,
+  .bg-section .sv-package-featured {
+    --button-2: var(--surface);
+    --button-2-ink: var(--ink);
+    transform: none;
+  }
+  .bg-section .ms-tier-name {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .bg-section .ms-tier-name {
+    font-variation-settings: var(--hand);
+  }
+  .bg-section .ms-tier-price {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+  }
+  .bg-section .ms-tier .button {
+    --stk: transparent;
+    --stk-ink: var(--ink);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+  }
+  .bg-section .ms-tiers-note {
+    display: flex;
+    gap: 0.625rem;
+    margin-top: 1.625rem;
+    max-width: 52em;
+    color: var(--muted);
+    font-size: 0.96875rem;
+  }
+
+  /* ── Progress · bar: a marker swipe in a pen trough ── */
+
+  .bg-section .meter {
+    position: relative;
+    height: 2.875rem;
+    overflow: visible;
+    border: 2.2px solid var(--ink);
+    border-radius: 28px 22px 26px 20px / 20px 26px 22px 28px;
+    background: var(--surface);
+  }
+  .bg-section .meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--button);
+    -webkit-mask: var(--np-swipe) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-swipe) 0 0 / 100% 100% no-repeat;
+  }
+  .bg-section .progress-raised {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(2.125rem, 1.6rem + 1.6vw, 2.875rem);
+  }
+
+  /* ── QuoteStrip · row: sticky notes on the soft field, taped and tilted ── */
+
+  .bg-section .quote {
+    padding: 2.125rem 1.75rem 1.625rem;
+    background: var(--soft);
+  }
+  .bg-section .quote:nth-child(3n + 1) {
+    transform: rotate(-1.2deg);
+  }
+  .bg-section .quote:nth-child(3n + 2) {
+    transform: rotate(1deg);
+  }
+  .bg-section .quote blockquote {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: clamp(1.1875rem, 1rem + 0.5vw, 1.375rem);
+    font-weight: 600;
+  }
+  .bg-section .quote-initials {
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-3);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+  }
+
+  /* ── The post list and a post ── */
+
+  .post-lead-title,
+  .post-row-title,
+  .card-title {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+  }
+  .listing .post-lead {
+    padding: 1rem;
+  }
+  .listing .post-lead > * {
+    position: relative;
+    z-index: 2;
+  }
+  .post-lead-image,
+  .listing .card-image {
+    border-radius: var(--blob-sm);
+  }
+  .post-row {
+    border-bottom: 2px dotted var(--line-strong);
+  }
+  .post-avatar,
+  .author-avatar {
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-3);
+    background: var(--soft);
+    color: var(--link);
+    font-family: var(--font-display);
+  }
+  /* Reading stays in the body face (the article, the letter, the event's description). */
+  .entry-article .entry-body,
+  .entry-issue .entry-body {
+    font-family: var(--font);
+    font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.15625rem);
+    line-height: 1.75;
+  }
+  .entry-header h1 {
+    font-size: clamp(2.5rem, 1.6rem + 2.6vw, 3.75rem);
+  }
+  .entry-cover {
+    border-radius: var(--blob-sm);
+    box-shadow: 0 0 0 0.6875rem var(--surface), 0 0 0 calc(0.6875rem + 2px) var(--ink);
+    transform: rotate(-1deg);
+  }
+  /* Every blockquote in a post is a sticker: the primary fill, the pen border, the hard offset. */
+  .prose blockquote {
+    margin: 2.5rem 0;
+    padding: 2.125rem 2.25rem 1.875rem;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-1);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    box-shadow: 4px 4px 0 0 var(--ink);
+    transform: rotate(-1.2deg);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: clamp(1.4375rem, 1.1rem + 1vw, 1.875rem);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .prose blockquote p {
+    color: inherit;
+  }
+  .entry-article .entry-body > p:first-child::first-letter {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    color: var(--link);
+  }
+
+  /* ── About · left (the office and hours) and the map ── */
+
+  .about-left-words .prose strong,
+  .about-left-words .prose b {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+  }
+  .bg-section[data-type='Map'] path {
+    stroke: var(--ink);
+    stroke-width: 2.2px;
+    stroke-linejoin: round;
+  }
+
+  /*
+    ── Errors: the exclamation doodle and a sentence in the band's accent ──
+    (BackGold's frames draw their own forms; this is for the template's own
+    notices, the kit's `.error` and `[role='alert']` lines.)
+  */
+  .bg-section :is(.error, [role='alert']) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .bg-section :is(.error, [role='alert'])::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    background: currentColor;
+    -webkit-mask: var(--np-d-exclaim) center / contain no-repeat;
+    mask: var(--np-d-exclaim) center / contain no-repeat;
+  }
+
+  /* ── A phone ── */
+
+  @media (max-width: 47.99rem) {
+    .np-shift {
+      grid-template-columns: 4.5rem minmax(0, 1fr);
+      gap: 1rem;
+      padding: 1.125rem 1rem;
+    }
+    .np-tile {
+      width: 4.375rem;
+    }
+    .np-tile b {
+      font-size: 2rem;
+    }
+    .np-shift-go {
+      grid-column: 1 / -1;
+      align-items: stretch;
+    }
+    .np-shift-go .button {
+      width: 100%;
+    }
+    .np-shift-go .np-calendar {
+      align-self: center;
+    }
+    .hero-statement .statement::after {
+      top: -1.5rem;
+      right: 0;
+      width: 2.375rem;
+      height: 2.375rem;
+    }
+    .bg-section .overlap-panel {
+      margin-inline: -0.375rem;
+    }
+    .bg-section .overlap-panel::after {
+      left: 1.25rem;
+      right: 1.25rem;
+    }
+    .cta-photo .cta-photo-frame {
+      clip-path: polygon(0 0, 100% 0, 100% 94%, 90% 98%, 80% 94.5%, 70% 99%, 60% 95%, 50% 98.6%, 40% 94.6%, 30% 98.4%, 20% 95%, 10% 98.8%, 0 95%);
+    }
+    .button {
+      font-size: 1.0625rem;
+      white-space: normal;
+    }
+    .site-header .header-button {
+      min-height: 2.5rem;
+      padding: 0.4em 0.75em 0.35em;
+      font-size: 0.90625rem;
+      white-space: nowrap;
+    }
+    .np-week-head {
+      flex-wrap: wrap;
+    }
+  }
+
+  /* ── Pressed: after the hover above, so a press sinks the sticker whatever the motion setting ── */
+
+  .button:active {
+    transform: rotate(var(--rot)) translate(2px, 2px);
+    box-shadow:
+      inset 0 0 0 2px var(--bg-band-background),
+      1px 1px 0 0 var(--ink);
+  }
+  .button-quiet:active,
+  .button.button-quiet:active {
+    box-shadow: 1px 1px 0 0 var(--ink);
+  }
+
+  /*
+    ── BackGold's module cards (a form, the donation form, an event's RSVP) ──
+    A hand-cut card wherever the kit draws one: the pen outline, no blurred
+    shadow, no hairline; a form card carries tape, an event's RSVP card the
+    paperclip.
+  */
+  .module-card {
+    position: relative;
+    border: 0;
+    border-radius: var(--blob-1);
+    background: var(--surface);
+    box-shadow: none;
+  }
+  .module-card::before {
+    content: '';
+    position: absolute;
+    inset: -3px -4px -4px -3px;
+    z-index: 1;
+    background: var(--edge);
+    -webkit-mask: var(--np-edge-tall) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-edge-tall) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  .form-module .module-card::after {
+    content: '';
+    position: absolute;
+    z-index: 4;
+    top: -0.8125rem;
+    left: calc(50% - 3rem);
+    width: 6rem;
+    height: 1.625rem;
+    background: var(--tape);
+    transform: rotate(-3deg);
+    clip-path: polygon(0 8%, 4% 0, 9% 10%, 14% 0, 86% 0, 91% 9%, 96% 0, 100% 10%, 100% 90%, 95% 100%, 90% 91%, 85% 100%, 14% 100%, 9% 92%, 4% 100%, 0 90%);
+  }
+  .event-grid .module-card::after {
+    content: '';
+    position: absolute;
+    z-index: 4;
+    top: -1.125rem;
+    right: 1.375rem;
+    width: 1.875rem;
+    height: 3rem;
+    background: var(--ink);
+    transform: rotate(8deg);
+    -webkit-mask: var(--np-d-clip) center / contain no-repeat;
+    mask: var(--np-d-clip) center / contain no-repeat;
+  }
+  @supports (-moz-appearance: none) {
+    .module-card {
+      border: 2px solid var(--edge);
+    }
+    .module-card::before {
+      content: none;
+    }
+  }
+
+  /* ── A post's byline and author box: initials on the primary, the box hand-cut ── */
+
+  .byline-avatar,
+  .author-box-avatar,
+  .post-avatar {
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-3);
+    background: var(--button-2);
+    color: var(--button-2-ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-weight: 800;
+  }
+  img.byline-avatar,
+  img.author-box-avatar {
+    background: var(--soft);
+  }
+  .author-box {
+    position: relative;
+    border: 0;
+    border-radius: var(--blob-1);
+    background: var(--surface);
+    box-shadow: none;
+  }
+  .author-box::before {
+    content: '';
+    position: absolute;
+    inset: -3px -4px -4px -3px;
+    background: var(--edge);
+    -webkit-mask: var(--np-edge-wide) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-edge-wide) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  .author-box-role {
+    color: var(--accent);
+  }
+  @supports (-moz-appearance: none) {
+    .author-box {
+      border: 2px solid var(--edge);
+    }
+    .author-box::before {
+      content: none;
+    }
+  }
+
+  /* ── TeamGrid · grid (this template's): people as cards, open roles as dashed invitations ── */
+
+  .np-team-group + .np-team-group {
+    margin-top: 2.5rem;
+  }
+  .np-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin: 0 0 1.125rem;
+    font-size: clamp(1.375rem, 1.2rem + 0.5vw, 1.625rem);
+  }
+  .np-group-head .np-rule {
+    flex: 1;
+  }
+  .np-people {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-person {
+    padding: 1.25rem;
+  }
+  .np-person-photo {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+    margin-bottom: 0.875rem;
+    border-radius: var(--blob-3);
+    object-fit: cover;
+  }
+  .np-person-initials {
+    background: var(--soft);
+    color: var(--link);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 3.375rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .np-person-name {
+    margin: 0;
+    font-size: 1.3125rem;
+  }
+  .np-person-name a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .np-person-role,
+  .np-person-bio {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+  }
+  .np-open-role {
+    padding: 1.5rem;
+    border: 2.5px dashed var(--edge);
+    border-radius: var(--blob-2);
+  }
+  .np-open-role > .dd {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+    stroke-width: 3;
+  }
+  .np-open-role .np-person-name a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+
+  /* ── Stories · spotlight (this template's) ── */
+
+  .np-lead {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(1.875rem, 1rem + 3vw, 3.5rem);
+  }
+  .np-lead-photo {
+    position: relative;
+    padding: 0.6875rem;
+    border-radius: var(--blob-2);
+    background: var(--surface);
+    box-shadow: 0 0 0 2px var(--ink);
+    transform: rotate(-1.2deg);
+  }
+  .np-lead-photo img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--blob-sm);
+  }
+  .np-lead-photo::after {
+    content: '';
+    position: absolute;
+    z-index: 4;
+    top: 0.25rem;
+    left: -1.5rem;
+    width: 6rem;
+    height: 1.625rem;
+    background: var(--tape);
+    transform: rotate(-36deg);
+    clip-path: polygon(0 8%, 4% 0, 9% 10%, 14% 0, 86% 0, 91% 9%, 96% 0, 100% 10%, 100% 90%, 95% 100%, 90% 91%, 85% 100%, 14% 100%, 9% 92%, 4% 100%, 0 90%);
+  }
+  /* A place with no photo: the soft field of the brand with a doodle, never grey. */
+  .np-field {
+    display: grid;
+    place-items: center;
+    background: var(--soft);
+    color: var(--link);
+  }
+  .np-lead-photo.np-field {
+    aspect-ratio: 4 / 3;
+    background: var(--soft);
+  }
+  .np-field .dd {
+    width: 4rem;
+    height: 4rem;
+    stroke-width: 2.6;
+  }
+  .np-lead-words > * {
+    margin: 0;
+  }
+  .np-lead-title {
+    margin: 0.875rem 0;
+    font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.375rem);
+  }
+  .np-lead-summary {
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .np-lead-chips,
+  .np-small-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.125rem;
+  }
+  .np-small-chips {
+    margin: 0 0 0.5rem;
+  }
+  .chip-outline {
+    border: 1.5px solid var(--edge);
+    background: transparent;
+  }
+  .np-lead .actions {
+    margin-top: 1.625rem;
+  }
+  /* The rule between the lead and the list: the pen squiggle in the accent either side of the brand's three colors as confetti (a swoosh, a ring, a triangle), each outlined in the ink. */
+  .np-divider {
+    position: relative;
+    height: 1.875rem;
+    margin: 3.25rem 0 1.875rem;
+  }
+  .np-divider::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    -webkit-mask:
+      linear-gradient(90deg, var(--ink) calc(50% - 3.25rem), transparent 0 calc(50% + 3.25rem), var(--ink) 0),
+      var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    -webkit-mask-composite: source-in;
+    mask:
+      linear-gradient(90deg, var(--ink) calc(50% - 3.25rem), transparent 0 calc(50% + 3.25rem), var(--ink) 0),
+      var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    mask-composite: intersect;
+  }
+  .np-confetti {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5.5rem;
+    height: 1.875rem;
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(ellipse 0.75rem 0.3rem at center, var(--bg-brand-primary) 0 70%, var(--ink) 71% 100%, transparent 100%) 0.125rem 50% / 1.625rem 1rem no-repeat,
+      radial-gradient(circle at center, transparent 0 0.3rem, var(--ink) 0.3rem 0.4rem, var(--bg-brand-secondary) 0.4rem 0.58rem, var(--ink) 0.58rem 0.68rem, transparent 0.68rem) 50% 50% / 1.5rem 1.5rem no-repeat,
+      conic-gradient(from 150deg at 50% 0%, var(--bg-brand-accent) 0 60deg, transparent 0) calc(100% - 0.25rem) 55% / 1.375rem 1.25rem no-repeat;
+  }
+  .np-small-stories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-small-story {
+    display: grid;
+    grid-template-columns: 8.25rem minmax(0, 1fr);
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.125rem;
+    border-radius: var(--blob-pill);
+  }
+  .np-small-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--blob-sm);
+    object-fit: cover;
+  }
+  .np-small-photo.np-field .dd {
+    width: 2.875rem;
+    height: 2.875rem;
+  }
+  .np-small-title {
+    margin: 0 0 0.375rem;
+    font-size: 1.3125rem;
+    line-height: 1.15;
+  }
+  .np-small-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .np-small-body {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+  }
+
+  /* ── FormBlock · wide (this template's): the intro column beside the form card ── */
+
+  @media (min-width: 48rem) {
+    .np-form-intro > .bg-section-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+      gap: clamp(2rem, 1rem + 3vw, 3.5rem);
+      align-items: start;
+    }
+  }
+  .np-form-words h2 {
+    font-size: clamp(2rem, 1.4rem + 1.8vw, 2.75rem);
+  }
+
+  /* ── The menu sheet: the links hand-lettered with the arrow doodle, no rules ── */
+
+  .header-sheet-panel nav > ul > li {
+    border-bottom: 0;
+  }
+  .header-sheet-panel nav > ul > li > a::after {
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0;
+    border: 0;
+    background: var(--accent);
+    transform: none;
+    -webkit-mask: var(--np-d-arrow) center / contain no-repeat;
+    mask: var(--np-d-arrow) center / contain no-repeat;
+  }
+  .header-sheet-panel nav > ul > li > a {
+    padding: 0.75rem 0.125rem;
+    font-size: 1.875rem;
+  }
+
+  /* ── The phone header: the wordmark, Donate, then the switch and the menu ── */
+
+  @media (max-width: 55.99rem) {
+    .site-header .brand {
+      order: 0;
+    }
+    .site-header .header-button {
+      order: 1;
+    }
+    .site-header .mode-toggle {
+      order: 2;
+    }
+    .site-header .header-sheet {
+      order: 3;
+    }
+  }
+
+  /* ── The wordmark: the organization's name on one line, hand-lettered at 26px ── */
+
+  .brand-words {
+    display: block;
+  }
+  .brand-name,
+  .brand-rest {
+    display: inline;
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 1.625rem;
+    font-weight: 800;
+    letter-spacing: -0.012em;
+    line-height: 1.05;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .brand-name::after {
+    content: ' ';
+  }
+  .brand-rest {
+    margin: 0;
+  }
+  @media (max-width: 55.99rem) {
+    .site-header .brand-name,
+    .site-header .brand-rest {
+      font-size: 1.125rem;
+    }
+  }
+  @media (max-width: 23.75rem) {
+    .site-header .brand-name,
+    .site-header .brand-rest {
+      font-size: 1rem;
+    }
+  }
+  @media (max-width: 21.875rem) {
+    .site-header .brand-rest {
+      display: inline;
+    }
+  }
+
+  /* ── A page with no Hero: its page header is the quiet title; the first section's heading leads ── */
+
+  .layout-main > .page-header:has(+ .bg-section) {
+    padding-bottom: 0;
+  }
+  .layout-main > .page-header:has(+ .bg-section) h1 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--accent);
+    font-size: clamp(1.0625rem, 1rem + 0.25vw, 1.25rem);
+    font-weight: 600;
+  }
+  .layout-main > .page-header:has(+ .bg-section) h1::before {
+    content: '';
+    width: 1.25em;
+    height: 1.25em;
+    background: currentColor;
+    -webkit-mask: var(--np-d-calendar) center / contain no-repeat;
+    mask: var(--np-d-calendar) center / contain no-repeat;
+  }
+  .layout-main > .page-header:has(+ .bg-section) + .bg-section {
+    padding-top: 1rem;
+  }
+
+  /* ── About · left with no photo: the soft field with the pin doodle beside the words ── */
+
+  @media (min-width: 48rem) {
+    .bg-section .about-left:not(.about-left-photo) {
+      position: relative;
+      grid-template-columns: 18.75rem minmax(0, 1fr);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: start;
+    }
+    .bg-section .about-left:not(.about-left-photo)::before {
+      content: '';
+      aspect-ratio: 1;
+      border-radius: var(--blob-2);
+      background: var(--soft);
+      transform: rotate(-1.2deg);
+    }
+    .bg-section .about-left:not(.about-left-photo)::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 18.75rem;
+      aspect-ratio: 1;
+      background: var(--link);
+      -webkit-mask: var(--np-d-pin) center / 5rem 5rem no-repeat;
+      mask: var(--np-d-pin) center / 5rem 5rem no-repeat;
+    }
+  }
+
+  /* ── Contrast: the closing line on a shift reads in the band's ink ── */
+
+  .np-closed {
+    color: var(--ink);
+  }
+  .np-closed .dd {
+    color: var(--accent);
+  }
+
+  /* ── The FAQ: plus and minus doodles; the closing call on its band outline ── */
+
+  .bg-section .faq-question summary::after {
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: 0;
+    border: 0;
+    background: var(--link);
+    transform: none;
+    -webkit-mask: var(--np-d-plus) center / contain no-repeat;
+    mask: var(--np-d-plus) center / contain no-repeat;
+  }
+  .bg-section .faq-question[open] summary::after {
+    margin: 0;
+    transform: none;
+    -webkit-mask-image: var(--np-d-minus);
+    mask-image: var(--np-d-minus);
+  }
+  .bg-section .faq-nav button {
+    border-radius: var(--blob-pill);
+  }
+
+  /* ── Issues · steps: the numeral alone on the sticker; "Step 1" stays for screen readers ── */
+
+  .bg-section .steps {
+    counter-reset: np-step;
+  }
+  .bg-section .step-label {
+    counter-increment: np-step;
+    font-size: 0;
+  }
+  .bg-section .step-label::before {
+    content: counter(np-step);
+    font-size: 2.375rem;
+  }
+
+  /* ── EventsList · agenda: the clock and the pin before a row's time and place ── */
+
+  .bg-section .event-meta > span:not(.event-live):nth-child(-n + 2) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .bg-section .event-meta > span:not(.event-live):nth-child(-n + 2)::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    background: var(--link);
+    -webkit-mask: var(--np-d-clock) center / contain no-repeat;
+    mask: var(--np-d-clock) center / contain no-repeat;
+  }
+  .bg-section .event-meta > span:not(.event-live):nth-child(2)::before {
+    -webkit-mask-image: var(--np-d-pin);
+    mask-image: var(--np-d-pin);
+  }
+
+  /* ── A kicker's doodle by what the section is for ── */
+
+  [data-type='StatCards'] .kicker::before,
+  [data-type='Services'] .kicker::before,
+  .open-roles .kicker::before {
+    -webkit-mask-image: var(--np-d-star);
+    mask-image: var(--np-d-star);
+  }
+  [data-type='Issues'] .kicker::before,
+  [data-type='Pathways'] .kicker::before {
+    -webkit-mask-image: var(--np-d-sparkle);
+    mask-image: var(--np-d-sparkle);
+  }
+  [data-type='EventsList'] .kicker::before,
+  [data-type='Event'] .kicker::before {
+    -webkit-mask-image: var(--np-d-calendar);
+    mask-image: var(--np-d-calendar);
+  }
+  [data-type='Stories'] .kicker::before,
+  [data-type='Cta'] .kicker::before,
+  [data-type='Donate'] .kicker::before,
+  [data-type='Membership'] .kicker::before {
+    -webkit-mask-image: var(--np-d-heart);
+    mask-image: var(--np-d-heart);
+  }
+  [data-type='Financials'] .kicker::before {
+    -webkit-mask-image: var(--np-d-gift);
+    mask-image: var(--np-d-gift);
+  }
+  [data-type='Faq'] .kicker::before {
+    -webkit-mask-image: var(--np-d-exclaim);
+    mask-image: var(--np-d-exclaim);
+  }
+  [data-type='SignupCapture'] .kicker::before,
+  [data-type='FormBlock'] .kicker::before {
+    -webkit-mask-image: var(--np-d-mail);
+    mask-image: var(--np-d-mail);
+  }
+  [data-type='TeamGrid'] .kicker::before,
+  [data-type='QuoteStrip'] .kicker::before {
+    -webkit-mask-image: var(--np-d-people);
+    mask-image: var(--np-d-people);
+  }
+  [data-type='Services'][data-variant='programs'] .kicker::before,
+  [data-type='CaseStudies'] .kicker::before {
+    -webkit-mask-image: var(--np-d-sprout);
+    mask-image: var(--np-d-sprout);
+  }
+
+  /* ── The top banner's dot: the brand's three colors as confetti ── */
+
+  .bg-section.cta-strip .strip-dot {
+    width: 3.25rem;
+    height: 1rem;
+    border-radius: 0;
+    background:
+      radial-gradient(circle at center, var(--bg-brand-accent) 0 0.3rem, var(--ink) 0.3rem 0.38rem, transparent 0.38rem) 0 50% / 1rem 1rem no-repeat,
+      radial-gradient(circle at center, var(--bg-brand-secondary) 0 0.3rem, var(--ink) 0.3rem 0.38rem, transparent 0.38rem) 50% 50% / 1rem 1rem no-repeat,
+      radial-gradient(circle at center, var(--bg-brand-primary) 0 0.3rem, var(--ink) 0.3rem 0.38rem, transparent 0.38rem) 100% 50% / 1rem 1rem no-repeat;
+  }
+
+  /* ── The FAQ's closing call: the band outline ── */
+
+  .bg-section .faq-contact {
+    position: relative;
+  }
+  .bg-section .faq-contact::before {
+    content: '';
+    position: absolute;
+    inset: -3px -4px -4px -3px;
+    background: var(--band-contrast-ink);
+    opacity: 0.6;
+    -webkit-mask: var(--np-edge-band) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-edge-band) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  @media (max-width: 47.99rem) {
+    .np-lead {
+      grid-template-columns: 1fr;
+    }
+    .np-small-story {
+      grid-template-columns: 5.75rem minmax(0, 1fr);
+      gap: 0.875rem;
+      padding: 0.875rem;
+    }
+    .np-people {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .np-person {
+      padding: 0.875rem;
+    }
+    .np-open-role {
+      grid-column: 1 / -1;
+    }
+  }
+}

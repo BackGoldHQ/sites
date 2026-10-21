@@ -1,0 +1,25 @@
+---
+// A section under its running head: the layout (the default slot) is drawn
+// first, and the head is set over it only when the layout drew something, so
+// a section with nothing to show (an empty list, a module with no frame)
+// leaves no head behind. The head stands in a band of its own, on the
+// section's ground (`band`) and grid.
+import RunningHead from '../RunningHead.astro'
+
+interface Props {
+  kicker: string | null
+  title: string | null
+  band: string
+}
+
+const { kicker, title, band } = Astro.props
+const drawn = Astro.slots.has('default') ? await Astro.slots.render('default') : ''
+---
+{drawn.trim() !== '' && (
+  <>
+    <div class={`u-rh-band u-rh-${band}`}>
+      <RunningHead kicker={kicker} title={title} />
+    </div>
+    <Fragment set:html={drawn} />
+  </>
+)}

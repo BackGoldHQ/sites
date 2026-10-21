@@ -1,0 +1,27 @@
+---
+// A category on a line (board U3's Context band): every record in it as a
+// tick at its date, this one marked, the first and last months named.
+import type { ArchiveDoc } from '../../lib/archive/record'
+import { shortDay } from '../../lib/archive/format'
+
+interface Props {
+  docs: ArchiveDoc[]
+  current: ArchiveDoc
+}
+
+const { docs, current } = Astro.props
+const dated = docs.filter((d) => d.date).sort((a, b) => a.date!.localeCompare(b.date!))
+const t = (d: string) => new Date(`${d}T00:00:00Z`).getTime()
+const lo = dated.length ? t(dated[0]!.date!) : 0
+const hi = dated.length ? t(dated.at(-1)!.date!) : 1
+const x = (d: string) => (hi === lo ? 300 : 10 + ((t(d) - lo) / (hi - lo)) * 580)
+---
+{dated.length > 1 && (
+  <svg viewBox="0 0 600 64" role="img" aria-label={`${dated.length} records from ${shortDay(dated[0]!.date)} to ${shortDay(dated.at(-1)!.date)}, this one marked`} style="width:100%;height:auto;display:block;margin-top:0.5rem">
+    <line x1="10" x2="590" y1="30" y2="30" stroke="#616161" stroke-width="1" />
+    {dated.map((d) => (d.id === current.id ? null : <line x1={x(d.date!)} x2={x(d.date!)} y1="22" y2="38" stroke="#949494" stroke-width="1" />))}
+    {current.date && <rect x={x(current.date) - 5} y="18" width="10" height="24" fill="#fff" />}
+    <text x="10" y="58" fill="#737373" font-size="11" font-family="monospace">{shortDay(dated[0]!.date)}</text>
+    <text x="590" y="58" fill="#737373" font-size="11" font-family="monospace" text-anchor="end">{shortDay(dated.at(-1)!.date)}</text>
+  </svg>
+)}

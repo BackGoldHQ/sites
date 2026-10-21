@@ -1,0 +1,52 @@
+---
+// The search field and the kind chips (board U2): a plain GET form to
+// /archive that works with scripts off, the 28px field with her
+// placeholder, the parse of the query as dashed chips, and a chip per kind
+// with its count. The island (Island.astro) takes the field over when
+// scripts run.
+import type { ArchiveType } from '../../lib/archive/index'
+import { hrefOf, type SearchParams } from '../../lib/archive/search'
+import { parseChips, parseQuery } from '../../lib/archive/query'
+import type { ArchiveKindKey } from '../../lib/archive/kinds'
+
+interface Props {
+  params: SearchParams
+  types: ArchiveType[]
+  /** The count beside each kind's chip. */
+  counts: Record<ArchiveKindKey, number>
+  /** The count beside All. */
+  total: number
+}
+
+const { params, types, counts, total } = Astro.props
+const chips = parseChips(parseQuery(params.q))
+const present = types.filter((t) => t.present)
+---
+<form class="ar-search" action="/archive" method="get" role="search" data-ar-search>
+  <label class="visually-hidden" for="ar-q">Search the archive</label>
+  <div class="ar-field">
+    <span aria-hidden="true">/</span>
+    <input id="ar-q" name="q" type="search" value={params.q} placeholder="Try: AP, HVAC, superintendent, $68 million…" autocomplete="off" maxlength="200" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ar-live-list" data-ar-input />
+    <button class="ar-btn" type="submit">Search</button>
+  </div>
+  {params.kind && <input type="hidden" name="kind" value={params.kind} />}
+  {params.sort !== 'relevance' && <input type="hidden" name="sort" value={params.sort} />}
+  <div class="ar-live" hidden data-ar-live></div>
+  <p class="visually-hidden" role="status" aria-live="polite" data-ar-status></p>
+  <p class="ar-meta ar-hint">Press / to search · words, "a phrase", CH(LOCAL), $68 million, pay:90000-125000, february 2026</p>
+  {chips.length > 0 && (
+    <p class="ar-chips" aria-label="Read as">
+      {chips.map((c) => <span class="ar-chip ar-chip-parse">{c}</span>)}
+    </p>
+  )}
+  {present.length > 0 && (
+    <nav class="ar-chips" aria-label="Kinds">
+      <a class="ar-chip" href={hrefOf(params, { kind: null, page: 1 })} aria-current={params.kind === null ? 'true' : undefined}>All <small>{total}</small></a>
+      {present.map((t) => (
+        <a class="ar-chip" href={hrefOf(params, { kind: t.key, page: 1 })} aria-current={params.kind === t.key ? 'true' : undefined}>
+          {t.plural} <small>{counts[t.key]}</small>
+        </a>
+      ))}
+    </nav>
+  )}
+</form>

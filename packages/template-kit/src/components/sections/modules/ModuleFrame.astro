@@ -9,7 +9,9 @@
 // (FRAME_FONTS), read from `Astro.locals.template`; where that is unset (a
 // frame drawn outside PageSections: an area, an event's page), Public Sans,
 // as it is for a template that names none. An unknown value is never sent:
-// the api drops a look with a malformed `font` as a whole. The
+// the api drops a look with a malformed `font` as a whole. The corners are
+// the template's `frameRadius` (a whole number of pixels, 0 to 40, the embed look's bounds), else 12,
+// read the same way. The
 // site credits BackGold once, as "Powered by BackGold" in the footer's bottom
 // row, never per module.
 //
@@ -58,9 +60,11 @@ const brand = bg.setup === null ? bg.site.brand : null
 const theme = bg.setup === null ? bg.site.theme : null
 const appearance = bg.setup === null ? appearanceOf(bg.site.style) : 'auto'
 /** The faces BackGold's embed look accepts (the api's EMBED_LOOK_FONTS). */
-const FRAME_FONTS = ['public-sans', 'inter', 'system-sans', 'system-serif']
+const FRAME_FONTS = ['public-sans', 'inter', 'system-sans', 'system-serif', 'ubuntu-sans-mono', 'jetbrains-mono']
 const frameFont = Astro.locals.template?.frameFont
 const font = frameFont && FRAME_FONTS.includes(frameFont) ? frameFont : 'public-sans'
+const frameRadius = Astro.locals.template?.frameRadius
+const radius = typeof frameRadius === 'number' && Number.isInteger(frameRadius) && frameRadius >= 0 && frameRadius <= 40 ? frameRadius : 12
 const band: SectionBand = card ? 'panel' : SECTION_BANDS.includes(sectionBand as SectionBand) ? (sectionBand as SectionBand) : 'plain'
 
 /** The module's address with the look query (and a Donate frame's donate names), or as sent when it is not one we can read. */
@@ -75,7 +79,7 @@ function framed(iframe: string | null): string | null {
   if (isDonateFrame(type)) withDonateQuery(url, Astro.url.searchParams)
   url.searchParams.set('layout', layout)
   for (const [key, value] of Object.entries(moduleLook(brand, band, appearance, theme))) url.searchParams.set(key, value)
-  url.searchParams.set('radius', '12')
+  url.searchParams.set('radius', String(radius))
   url.searchParams.set('font', font)
   return url.toString()
 }

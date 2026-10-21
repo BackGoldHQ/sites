@@ -1,0 +1,21 @@
+---
+// The archive's copy buttons ([data-ar-copy]: the citation, the page's
+// address). They copy with the clipboard and say so; they stay hidden until
+// this script runs, so a page with scripts off shows no dead button.
+---
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-ar-copy]')) {
+    button.hidden = false
+    const label = button.textContent ?? ''
+    button.addEventListener('click', async () => {
+      const value = button.dataset.arCopy === 'url' ? location.href : (button.dataset.arCopy ?? '')
+      try {
+        await navigator.clipboard.writeText(value)
+        button.textContent = 'Copied'
+      } catch {
+        button.textContent = 'Select and copy'
+      }
+      setTimeout(() => (button.textContent = label), 2000)
+    })
+  }
+</script>

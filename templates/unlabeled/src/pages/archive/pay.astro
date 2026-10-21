@@ -1,0 +1,113 @@
+---
+// /archive/pay (board U5, frame 2): the unit note in the headline's
+// shadow, a histogram of the reported values in white bars (the values
+// under $1,000 in their own hatched bin past a break in the axis), the
+// district offices, and the table: by office then last name by default,
+// sortable by four keys (office, name, value, row), searchable. No ranking
+// view: no highest-paid list, chart or callout.
+import Site from '@backgold/template-kit/layouts/Site.astro'
+import template from '../../template'
+import ArchiveFrame from '../../components/archive/ArchiveFrame.astro'
+import { loadArchive, sourceOf } from '../../lib/archive/index'
+import { histogram, PAY_SORTS, payRows, sortPay, SMALL_VALUE, type PaySort } from '../../lib/archive/pay'
+import { REST, searcherFor } from '../../lib/archive/search'
+import { countBy } from '../../lib/archive/views'
+import { formatUsd } from '../../lib/archive/query'
+import { plural } from '../../lib/archive/format'
+
+const source = sourceOf(Astro.locals)
+if (!source) return new Response(null, { status: 503 })
+const data = await loadArchive(source)
+const search = Astro.url.searchParams
+const q = (search.get('q') ?? '').trim().slice(0, 200)
+const sortParam = search.get('sort')
+const sort: PaySort = (PAY_SORTS as readonly string[]).includes(sortParam ?? '') ? (sortParam as PaySort) : 'office'
+const openOffice = search.get('office')
+if (q || sortParam || openOffice) Astro.response.headers.set('Cache-Control', 'no-store')
+
+const all = payRows(data.docs)
+const matched = q ? new Set(searcherFor(data).matching({ ...REST, q, kind: 'pay_record' }).map((d) => d.id)) : null
+const rows = sortPay(matched ? all.filter((r) => matched.has(r.doc.id)) : all, sort)
+const bins = histogram(all)
+const most = Math.max(1, ...bins.filter((b) => !b.small).map((b) => b.count))
+const offices = countBy(all.map((r) => r.office))
+const byOffice = offices.map((o) => ({ ...o, rows: rows.filter((r) => r.office === o.value) })).filter((o) => o.rows.length > 0)
+const small = all.filter((r) => r.value !== null && r.value < SMALL_VALUE).length
+const unit = all.find((r) => r.doc.fields.unit_note)?.doc.fields.unit_note
+const href = (change: Record<string, string | null>) => {
+  const p = new URLSearchParams()
+  const next = { q: q || null, sort: sort === 'office' ? null : sort, ...change }
+  for (const [k, v] of Object.entries(next)) if (v) p.set(k, v)
+  const s = p.toString()
+  return s ? `/archive/pay?${s}` : '/archive/pay'
+}
+const LABEL: Record<PaySort, string> = { office: 'Office', name: 'Name', value: 'Value', row: 'Row' }
+---
+<Site template={template} title="Pay · Archive" description="The BISD pay workbook's rows, as the archive reproduces them." canonicalPath="/archive/pay" page={null}>
+  <ArchiveFrame crumbs={[{ label: 'Pay' }]}>
+    <header class="ar-entry" style="margin-top:1.25rem">
+      <p class="ar-meta">Pay // /archive/pay · {plural(all.length, 'pay record')} · {plural(offices.length, 'district office')}</p>
+      <h1>Administrative pay records.</h1>
+      <div class="ar-unit" style="margin-top:1rem" role="note">
+        <b>! Unit not defined.</b> {typeof unit === 'string' ? unit : 'Every value here reproduces the workbook field EMP_ASGN_PAY_HIST_A_NRML_PAY; the workbook does not say whether a value is annual, hourly or another pay unit.'} These are reported values, not salaries. Names and titles are as the workbook gives them; they are public record.
+      </div>
+    </header>
+    {all.length === 0 ? (
+      <p class="ar-faint" style="margin-top:1.5rem">The archive has no pay records published yet.</p>
+    ) : (
+      <>
+        <section style="margin-top:1.5rem" aria-label="Reported values">
+          <p class="ar-label">// Reported values · {plural(all.length, 'row')} · count per range</p>
+          <div class="ar-histogram" role="img" aria-label={bins.map((b) => `${b.label}: ${b.count}`).join('; ')}>
+            {bins.map((b) => (
+              <div data-small={b.small ? '' : undefined}>
+                <span>{b.count}</span>
+                <span class="ar-col" style={`height:${b.small ? 100 * Math.min(1, b.count / most) : Math.round((b.count / most) * 100)}%`} />
+              </div>
+            ))}
+          </div>
+          <div class="ar-bins" aria-hidden="true">{bins.map((b) => <span>{b.label}</span>)}</div>
+          {small > 0 && <p class="ar-meta ar-hint">{plural(small, 'row')} report values under $1,000 (hatched, past a break in the axis); the workbook gives no unit for any row.</p>}
+        </section>
+
+        <section style="margin-top:1.5rem" aria-label="District offices">
+          <p class="ar-label">// By district office · {plural(offices.length, 'term')}</p>
+          <p class="ar-chips">{offices.map((o) => <a class="ar-chip" href={`${href({ sort: null, office: o.value })}#office`}>{o.value} <small>{o.count}</small></a>)}</p>
+        </section>
+
+        <form method="get" action="/archive/pay" class="ar-search" role="search" id="office">
+          <label class="visually-hidden" for="ar-pay-q">Search the pay records</label>
+          <div class="ar-field">
+            <span aria-hidden="true">/</span>
+            <input id="ar-pay-q" name="q" type="search" value={q} placeholder={`Search ${all.length} rows: a name, a title, an office, a value…`} />
+            {sort !== 'office' && <input type="hidden" name="sort" value={sort} />}
+            <button class="ar-btn" type="submit">Search</button>
+          </div>
+        </form>
+        <nav class="ar-chips" aria-label="Sort by">
+          <span class="ar-meta" style="align-self:center">Sort by</span>
+          {PAY_SORTS.map((s) => <a class="ar-chip" href={href({ sort: s === 'office' ? null : s })} aria-current={sort === s ? 'true' : undefined}>{LABEL[s]}</a>)}
+          <span class="ar-meta" style="align-self:center">· no ranking view</span>
+        </nav>
+        {q && <p class="ar-meta ar-hint">{plural(rows.length, 'row')} for ‘{q}’ · <a href={href({ q: null })}>Clear</a></p>}
+
+        {sort === 'office' ? (
+          byOffice.map((o, i) => (
+            <details class="ar-group" open={openOffice ? o.value === openOffice : i === 0 || q !== ''} style="margin-top:1rem">
+              <summary class="ar-meta" style="cursor:pointer"><strong>{o.value}</strong> · {plural(o.rows.length, 'row')}</summary>
+              <table class="ar-table">
+                <thead><tr><th>Name</th><th>Title</th><th>Reported value</th><th>Source</th></tr></thead>
+                <tbody>{o.rows.map((r) => <tr><td><a href={r.doc.url}>{r.person}</a></td><td>{r.position}</td><td class="ar-num">{r.display ?? (r.value !== null ? formatUsd(r.value) : '—')}</td><td class="ar-meta">{r.row !== null ? `Row ${r.row}` : ''}</td></tr>)}</tbody>
+              </table>
+            </details>
+          ))
+        ) : (
+          <table class="ar-table" style="margin-top:1rem">
+            <thead><tr><th>Name</th><th>Title · office</th><th>Reported value</th><th>Source</th></tr></thead>
+            <tbody>{rows.map((r) => <tr><td><a href={r.doc.url}>{r.person}</a></td><td>{r.position} · <span class="ar-muted">{r.office}</span></td><td class="ar-num">{r.display ?? (r.value !== null ? formatUsd(r.value) : '—')}</td><td class="ar-meta">{r.row !== null ? `Row ${r.row}` : ''}</td></tr>)}</tbody>
+          </table>
+        )}
+      </>
+    )}
+  </ArchiveFrame>
+</Site>

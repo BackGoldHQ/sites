@@ -1,0 +1,13 @@
+---
+// A summary or field text with the search's hit set as a white block: the
+// window around the first hit (search.ts contextOf), else the text whole.
+import type { Context } from '../../lib/archive/search'
+
+interface Props {
+  text: string
+  context: Context | null
+}
+
+const { text, context } = Astro.props
+---
+{context ? <>{context.before}<mark>{context.hit}</mark>{context.after}</> : text}

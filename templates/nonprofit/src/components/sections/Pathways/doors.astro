@@ -1,0 +1,53 @@
+---
+// Pathways · doors as this template draws them (board N3, "Which door is
+// yours?"): the kit's centred head, then a card per pathway shaped like a
+// door, with an arched top and a knob, the row's `icon` as a doodle on the
+// soft field over its title (iconOf; none when the row names no icon), who
+// it is for, "Leave with:" and its outcome, and `programsLabel` with the
+// arrow doodle at its foot. The whole card is one link to the pathway's
+// address, named by its title; a pathway with none is a card with no link.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Head from '@backgold/template-kit/components/sections/Pathways/Head.astro'
+import { pathwaysOf } from '@backgold/template-kit/components/sections/Pathways/pathways.ts'
+import { rows } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+import { iconOf } from '../../../lib/doodles.ts'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const pathways = pathwaysOf(section)
+// The rows pathwaysOf keeps (those with a title, in order), for their icons.
+const icons = rows(section)
+  .filter((row) => text(row.title)?.trim())
+  .map((row) => iconOf(row.icon))
+const programsLabel = text(section.copy.programsLabel)
+---
+{(pathways.length > 0 || heading) && (
+  <Band section={section} class="pathways pathways-doors">
+    <Head kicker={text(section.copy.kicker)} heading={heading} body={section.copy.body} />
+    {pathways.length > 0 && (
+      <ul class="doors np-doors" role="list">
+        {pathways.map((p, i) => {
+          const icon = icons[i] ?? null
+          return (
+            <li class:list={['door', p.link && 'door-linked']}>
+              {icon && <span class="np-icon"><Doodle name={icon} /></span>}
+              <h3 class="door-title">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.title}</a> : p.title}</h3>
+              {p.summary && <p class="door-summary">{p.summary}</p>}
+              {p.outcome && <p class="door-outcome"><b>Leave with:</b> {p.outcome}</p>}
+              {p.link && programsLabel && <p class="door-more">{programsLabel}<Doodle name="arrow" /></p>}
+              <span class="np-knob" aria-hidden="true"></span>
+            </li>
+          )
+        })}
+      </ul>
+    )}
+  </Band>
+)}

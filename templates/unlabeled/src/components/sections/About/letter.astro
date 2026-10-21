@@ -1,0 +1,116 @@
+---
+// About · Letter, Unlabeled's (board U1, section 4: the manifesto). The
+// chapter mark first, on a band of its own between the band before and this
+// one: the skull and horns on a strong rule, this band's section mark beside
+// it. Then the band, opened by its running head (the kicker), and set as a
+// dossier page: a side column at the left, "// Filed under" over the
+// credential rows the organization wrote for it (their labels, a link where a
+// row has one) and the read time counted from the letter's words; the letter
+// at the right, its heading large, the role line under it in capitals ("But
+// she's welcome, too."), the body; then the closing line (`signature`) set
+// huge across the whole grid under a strong rule. A side column with no rows
+// keeps only the read time. Unsigned: no name is drawn.
+import type { ComponentProps } from 'astro/types'
+import type Default from '@backgold/template-kit/components/sections/About/index.astro'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { credentialsOf } from '@backgold/template-kit/components/sections/About/credentials.ts'
+import { text } from '@backgold/template-kit/lib/format'
+import Mark from '../../Mark.astro'
+import RunningHead from '../../RunningHead.astro'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const role = text(section.copy.role)
+const closing = text(section.copy.signature)
+const filed = credentialsOf(section).credentials
+/** Minutes to read the letter at 200 words a minute, at least one. */
+const words = (text(section.copy.body) ?? '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
+const minutes = Math.max(1, Math.round(words / 200))
+---
+<div class="u-chapter-band" aria-hidden="true">
+  <div class="u-chapter">
+    <Mark kind="skull" />
+    <span class="u-chapter-mark">{kicker}</span>
+  </div>
+</div>
+<Band section={section} class="u-letter">
+  <RunningHead kicker={kicker} title={heading} class="u-rh-inline" />
+  <div class="u-letter-grid">
+    <aside class="u-letter-side">
+      <p class="u-meta u-slash">Filed under</p>
+      <ul role="list">
+        {filed.map((row) => <li>{row.link ? <a href={row.link.href} rel={row.link.rel}>{row.label}</a> : row.label}</li>)}
+        <li>Read time · {minutes} min</li>
+      </ul>
+    </aside>
+    <div class="u-letter-words">
+      {heading && <h2 class="u-letter-heading">{heading}</h2>}
+      {role && <p class="u-letter-role">{role}</p>}
+      <Prose value={section.copy.body} class="u-letter-body" />
+    </div>
+  </div>
+  {closing && <p class="u-letter-closing">{closing}</p>}
+</Band>
+
+<style>
+  .u-letter-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .u-letter-side ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+    text-transform: uppercase;
+  }
+  .u-letter-side .u-meta {
+    margin: 0;
+    color: var(--ink);
+  }
+  .u-letter-heading {
+    margin: 0;
+    font-size: var(--u-d1);
+    line-height: 0.95;
+  }
+  .u-letter-role {
+    margin: 0.75rem 0 1.75rem;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: var(--u-d4);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .u-letter-words :global(.u-letter-body) {
+    max-width: 40rem;
+    font-size: var(--text-lg);
+    line-height: 1.65;
+  }
+  .u-letter-closing {
+    margin: clamp(2rem, 1.5rem + 2vw, 3rem) 0 0;
+    padding-top: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
+    border-top: 1px solid var(--line-strong);
+    font-family: var(--font-display);
+    font-size: var(--u-d1);
+    font-weight: 500;
+    line-height: 0.95;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  @media (min-width: 60rem) {
+    .u-letter-grid {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+      gap: 2rem;
+    }
+  }
+</style>
