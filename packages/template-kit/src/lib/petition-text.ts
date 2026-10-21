@@ -1,12 +1,11 @@
-// What a Petition section carries of its petition's own words, as the
-// Content API sends them: the text (the editor's restricted HTML, sanitized
-// here), the asks (the section's rows that are not stat tiles) and the legal
-// note (the section's `goalNote`). Null when BackGold sends no text: the
-// layout then draws nothing more and the frame keeps its text whole. The
-// Unlabeled and nonprofit Petition layouts draw these beside the frame.
+// A Petition section's petition text, as the Content API sends it on the
+// section's `data.petition.text_html` (the editor's restricted HTML), sanitized
+// here. Null when BackGold sends no text: the layout then draws nothing more
+// and the frame keeps its text whole. The Unlabeled and nonprofit Petition
+// layouts draw it beside the sheet; the asks are the page's Issues band's and
+// the legal note is the frame's, so neither is read here.
 import type { Section } from '@backgold/content'
 import { sanitizeRichText } from '@backgold/astro/server'
-import { rows } from './section'
 import { text } from './format'
 
 // TODO(the platform MR from backgold branch task/petition-text-left):
@@ -22,20 +21,9 @@ interface SectionPetition {
   goal: number | null
 }
 
-interface PetitionWords {
-  html: string
-  asks: { title: string; body: string | null }[]
-  legal: string | null
-}
-
-export function petitionWords(section: Section): PetitionWords | null {
+export function petitionText(section: Section): string | null {
   const petition = (section.data as { petition?: Partial<SectionPetition> } | undefined)?.petition
   const raw = text(petition?.text_html)
   const html = raw ? sanitizeRichText(raw).trim() : ''
-  if (!html) return null
-  const asks = rows(section)
-    .filter((row) => row.group === undefined || row.group === 'asks')
-    .map((row) => ({ title: text(row.title), body: text(row.body) }))
-    .filter((ask): ask is { title: string; body: string | null } => ask.title !== null)
-  return { html, asks, legal: text(section.copy.goalNote) }
+  return html || null
 }

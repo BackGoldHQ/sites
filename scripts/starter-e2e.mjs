@@ -3175,14 +3175,18 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
         const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}${extra}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
         if (type === 'Petition') {
-          // The petition's words beside the sheet (and the frame told to collapse its copy), or neither.
-          const drawn = markup.includes('data-petition-text')
-          const words = [decode(KITCHEN_PETITION.text_html.replace(/<[^>]*>/g, '')), 'Freeze the levy', 'Vote in public', 'This petition asks for a public vote and nothing else.']
+          // The petition's text after the sheet (and the frame told to collapse
+          // its copy), or neither. The asks are the page's Issues band's and the
+          // legal note the frame's: the page draws neither.
+          const at = markup.indexOf('data-petition-text')
+          const prose = decode(KITCHEN_PETITION.text_html.replace(/<[^>]*>/g, ''))
           if (DRAWS_PETITION_TEXT) {
-            const missing = words.filter((w) => !text.includes(w))
-            if (!drawn || missing.length) failures.push(`Petition: expected the petition's text, asks and legal note beside the sheet (missing ${JSON.stringify(missing)})`)
-            if (UNLABELED && !/What you(’|')re signing/.test(text)) failures.push('Petition: expected the "What you’re signing" running line')
-          } else if (drawn || /[?&;]text=/.test(frames[0] ?? '')) {
+            if (at === -1 || !text.includes(prose)) failures.push("Petition: expected the petition's text beside the sheet")
+            if (at !== -1 && markup.indexOf('<iframe') > at) failures.push('Petition: expected the sheet before the text in the page, so a phone reads the heading, the sheet, then the text')
+            if (!/What you(’|')re signing/i.test(text)) failures.push('Petition: expected the "What you’re signing" line over the text')
+            const repeated = ['Vote in public', 'This petition asks for a public vote and nothing else.'].filter((w) => text.includes(w))
+            if (repeated.length) failures.push(`Petition: draws the asks or the legal note on the page (${JSON.stringify(repeated)})`)
+          } else if (at !== -1 || /[?&;]text=/.test(frames[0] ?? '')) {
             failures.push('Petition: draws the petition text or sends text= on a template that does not')
           }
         }
@@ -4247,7 +4251,7 @@ function petitionDriveFixture(fixture) {
  * every starter page at its slug (home at `/`), its sections as the Content
  * API sends them (BackGold's frames as the fixture's stand-in frame, the
  * fixture's upcoming events in the events lists, her own petition sheet with
- * its asks and its petition's text, no typed ticker rows: the
+ * its petition's text, no typed ticker rows: the
  * live feed is BackGold's), the early-voting strip in Top banner on every page
  * but Donate and the newsletter band Above the footer, the starter's menus,
  * and her brand: white, black and white, no saved theme (so the template's
@@ -4277,7 +4281,7 @@ function unlabeledFixture(fixture) {
   const fill = (pageId, page = null) => (s) => {
     const section = { ...structuredClone(s), options: s.options ?? {} }
     if (FRAMED.has(s.type)) {
-      // Her own sheet (`none`) gets its asks and the petition, the text the
+      // Her own sheet (`none`) keeps its rows and gets the petition, the text the
       // page's Hero states (unlabeledPetition); the kit's layouts get no rows.
       if (s.type === 'Petition' && s.variant === 'none') section.data = { ...s.data, petition: unlabeledPetition(page, s) }
       else if (s.type === 'Petition') delete section.data

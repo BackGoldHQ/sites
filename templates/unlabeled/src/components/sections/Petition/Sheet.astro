@@ -9,14 +9,18 @@
 // goal and the note under it (her legal note goes in that note). The site
 // never draws the live count itself: the Content API sends it only inside
 // the frame, and a figure BackGold fills in live is left out here
-// (literalStat). When BackGold sends the petition's text (petitionWords), the
-// left column draws it under the heading as her mono prose: the
-// `// What you're signing` running line, the text, the asks as numbered
-// steps (board U6's steps) and the legal note; the frame is then asked to
-// collapse its own copy of the text (`text=collapsed`). Without the text the
-// column is the heading and the figures and the frame keeps its text. Every layout is anchored at `petition` when the section
-// names no anchor, as a hosted BackGold page's Petition is, so "Sign the
-// petition ↓" lands on it.
+// (literalStat). When BackGold sends the petition's text (petitionText), it
+// is drawn as her mono prose under a `// What you're signing` running line,
+// and the frame is asked to collapse its own copy (`text=collapsed`). The
+// asks are the page's Issues band's and the legal note is the frame's, so
+// neither is drawn here. The page holds the head (kicker, heading, figures),
+// the sheet, then the text: on a wide screen the head and the text stack at
+// the left with the sheet beside them; on a phone the sheet comes right
+// under the heading, so the count and the form are above the fold, and the
+// text follows it, in the same order for the eye and the keyboard. Without
+// the text the column is the head and the frame keeps its text. Every layout
+// is anchored at `petition` when the section names no anchor, as a hosted
+// BackGold page's Petition is, so "Sign the petition ↓" lands on it.
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
@@ -25,7 +29,7 @@ import PetitionMap from '@backgold/template-kit/components/sections/Petition/map
 import PetitionCoverage from '@backgold/template-kit/components/sections/Petition/coverage.astro'
 import { rows } from '@backgold/template-kit/lib/section'
 import { literalStat, text } from '@backgold/template-kit/lib/format'
-import { petitionWords } from '@backgold/template-kit/lib/petition-text'
+import { petitionText } from '@backgold/template-kit/lib/petition-text'
 
 interface Props {
   section: Section
@@ -42,35 +46,17 @@ const figures = rows(section)
   .filter((row) => row.group === 'tile')
   .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note) }))
   .filter((figure): figure is { value: string; label: string | null; note: string | null } => figure.value !== null)
-const words = petitionWords(section)
-const params: Record<string, string> = words ? { text: 'collapsed' } : {}
+const petition = petitionText(section)
+const params: Record<string, string> = petition ? { text: 'collapsed' } : {}
 ---
 {Kit ? (
   <Kit section={anchored} variant={variant} />
 ) : (
   <Band section={anchored} class="u-petition">
-    <div class="u-petition-grid">
+    <div class:list={['u-petition-grid', petition && 'u-petition-has-text']}>
       <div class="u-petition-words">
         {kicker && <p class="kicker">{kicker}</p>}
         {heading && <h2 class="u-petition-heading">{heading}</h2>}
-        {words && (
-          <div class="u-petition-text" data-petition-text>
-            <p class="u-meta u-slash u-petition-line">What you’re signing</p>
-            <div class="prose u-petition-prose" set:html={words.html} />
-            {words.asks.length > 0 && (
-              <ol class="u-petition-steps">
-                {words.asks.map((ask, i) => (
-                  <li>
-                    <span class="u-petition-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                    <h3>{ask.title}</h3>
-                    {ask.body && <p>{ask.body}</p>}
-                  </li>
-                ))}
-              </ol>
-            )}
-            {words.legal && <p class="u-meta u-petition-legal">{words.legal}</p>}
-          </div>
-        )}
         {figures.length > 0 && (
           <dl class="u-petition-figures">
             {figures.map((figure) => (
@@ -83,7 +69,13 @@ const params: Record<string, string> = words ? { text: 'collapsed' } : {}
           </dl>
         )}
       </div>
-      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="none" card title={heading ?? 'Sign the petition'} height="40rem" params={params} />
+      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="none" card title={heading ?? 'Sign the petition'} height="40rem" params={params} class="u-petition-sheet" />
+      {petition && (
+        <div class="u-petition-text" data-petition-text>
+          <p class="u-meta u-slash u-petition-line">What you’re signing</p>
+          <div class="prose u-petition-prose" set:html={petition} />
+        </div>
+      )}
     </div>
   </Band>
 )}
@@ -124,7 +116,7 @@ const params: Record<string, string> = words ? { text: 'collapsed' } : {}
     font-size: var(--text-sm);
   }
   .u-petition-text {
-    margin-top: 2rem;
+    min-width: 0;
   }
   .u-petition-line {
     margin: 0 0 1rem;
@@ -141,52 +133,24 @@ const params: Record<string, string> = words ? { text: 'collapsed' } : {}
   .u-petition-prose :global(p) {
     margin: 0 0 1em;
   }
-  .u-petition-steps {
-    margin: 1.75rem 0 0;
-    padding: 0;
-    list-style: none;
-    border-top: 1px solid var(--line-strong);
-  }
-  .u-petition-steps li {
-    padding: 1rem 0 1.125rem;
-    border-bottom: 1px solid var(--line);
-  }
-  .u-petition-no {
-    display: block;
-    margin-bottom: 0.625rem;
-    font-family: var(--font-display);
-    font-size: 3rem;
-    font-weight: 500;
-    line-height: 0.9;
-    letter-spacing: -0.03em;
-    font-variant-numeric: tabular-nums;
-  }
-  .u-petition-steps h3 {
-    margin: 0 0 0.5rem;
-    font-family: var(--font-display);
-    font-size: var(--u-d4);
-    font-weight: 500;
-    line-height: 1.05;
-    text-transform: uppercase;
-  }
-  .u-petition-steps p {
-    margin: 0;
-    color: var(--muted);
-    font-size: var(--text-sm);
-    line-height: 1.6;
-  }
-  .u-petition-legal {
-    margin: 1.25rem 0 0;
-    max-width: 40em;
-    color: var(--muted);
-    letter-spacing: 0.06em;
-    line-height: 1.6;
-    text-transform: none;
-  }
   @media (min-width: 60rem) {
     .u-petition-grid {
       grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
       gap: 3rem;
+    }
+    .u-petition-has-text {
+      grid-template-areas: 'words sheet' 'text sheet';
+      grid-template-rows: auto 1fr;
+      row-gap: 2rem;
+    }
+    .u-petition-has-text .u-petition-words {
+      grid-area: words;
+    }
+    .u-petition-has-text :global(.u-petition-sheet) {
+      grid-area: sheet;
+    }
+    .u-petition-has-text .u-petition-text {
+      grid-area: text;
     }
   }
 </style>
