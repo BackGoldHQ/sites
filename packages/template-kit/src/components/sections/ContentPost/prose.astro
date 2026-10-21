@@ -1,0 +1,80 @@
+---
+// ContentPost · Prose: the whole piece in the page, as BackGold's hosted
+// renderer draws a ContentPost (it draws the piece as prose for every
+// layout). The section's heading as a kicker, the title (linking to the
+// piece's page on this site, as the Card layout links it, and left out when
+// the section's `showTitle` option is off), its date when `showDate` is on,
+// then the body: the bake's render of the entry (headings, lists, links,
+// pictures and paragraphs), reduced to the entry editor's allowlist again
+// before the page emits it (lesson.ts bodyOf), at the site's reading measure.
+// The candidate template draws this by default, so a site that moves to it
+// keeps every article it wrote in place (an about page, a position paper, a
+// survey's answers) instead of a card to a page it never had. With no piece
+// baked, or a piece with no body, the section draws nothing, as the Card
+// layout does.
+import type { ComponentProps } from 'astro/types'
+import type Default from './index.astro'
+import { blogBaseOf } from '@backgold/astro/server'
+import Band from '../Band.astro'
+import { bodyOf } from './lesson'
+import { basePath } from '../../../lib/entries'
+import { rows } from '../../../lib/section'
+import { formatDay, text } from '../../../lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const body = bodyOf(section.copy.postHtml)
+const [row] = rows(section)
+const title = text(row?.title)
+const slug = text(row?.slug)
+const bg = Astro.locals.backgold
+const showTitle = section.options?.showTitle !== false
+const showDate = section.options?.showDate === true
+const base =
+  showTitle && slug && /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(slug) && bg.setup === null
+    ? blogBaseOf((await bg.client.types()).types)
+    : null
+const href = base ? `${basePath(base)}/${slug}` : null
+const date = text(row?.date)
+const day = showDate ? formatDay(date) : null
+---
+{body && (
+  <Band section={section} class="featured featured-prose">
+    {heading && <p class="kicker">{heading}</p>}
+    {showTitle && title && <h2 class="featured-title">{href ? <a href={href}>{title}</a> : title}</h2>}
+    {day && date && <p class="fine"><time datetime={date}>{day}</time></p>}
+    <div class="prose cp-body" set:html={body} />
+  </Band>
+)}
+
+<style>
+  /* The body reads under its title at the site's measure; a title-less piece starts at the band's top. */
+  .cp-body {
+    margin-top: 1.25rem;
+  }
+  .featured-prose > .kicker + .featured-title {
+    margin-top: 0.5rem;
+  }
+  .featured-prose > .fine {
+    margin-top: 0.375rem;
+  }
+  .cp-body > :global(:first-child) {
+    margin-top: 0;
+  }
+  .cp-body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  /* The body's own headings sit under the section's title (h2). */
+  .cp-body :global(h2) {
+    font-size: calc(var(--h2) * 0.7);
+  }
+  .cp-body :global(h3) {
+    font-size: var(--text-lg);
+  }
+  .cp-body :global(img) {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
