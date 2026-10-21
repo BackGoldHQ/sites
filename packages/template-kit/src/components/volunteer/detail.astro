@@ -1,0 +1,247 @@
+---
+// `/volunteer/<slug>`, one shift's own page (the kit's 'volunteer:detail'),
+// laid out like an event's (components/EventPage.astro). At the left: a
+// breadcrumb back to Volunteer and the shift's month, the title as the
+// page's one <h1>, its facts (the day, and the time span in the
+// organization's zone named as a reader knows it, "6:00 PM to 8:00 PM
+// Central Time"; the place with a maps link; "Part of" the public event it
+// belongs to, linking to the event's page; the spots as dots beside the
+// counts in words, read again after load by ShiftLive), and the organizer's
+// notes as plain paragraphs. At the right (under it on a phone), BackGold's
+// sign-up card for the shift on a raised card (ModuleFrame, layout `card`,
+// so the site's look, the template's `frameRadius`, `frameColors` and frame
+// skin apply), whose fields, consent and every write stay BackGold's. When
+// the api sends no frame for the shift (an api older than the frame), the
+// card holds the counts and one button to the shift's sign-up page on
+// BackGold (its `signup_url`) instead, by the shift's state: never a blank.
+import ModuleFrame from '../sections/modules/ModuleFrame.astro'
+import ShiftLive from './ShiftLive.astro'
+import type { VolunteerDetailProps } from './props'
+import { VOLUNTEER_PATH, mapLinkOf, shiftView, signupEmbedOf } from '../../lib/shifts'
+import { formatWhen, zoneName } from '../../lib/format'
+import { safeHref } from '@backgold/astro/server'
+
+type Props = VolunteerDetailProps
+
+const { shift, partOf } = Astro.props
+const view = shiftView(shift)
+const zone = zoneName(shift.timezone)
+
+/** formatWhen's "Saturday, November 1, 2026 at 6:00 PM" as its day and its time ("6:00 PM CDT" without a zone name). */
+function split(value: string | null): { day: string; time: string | null } | null {
+  const full = formatWhen(value, shift.timezone, zone === null)
+  if (!full) return null
+  const at = full.lastIndexOf(' at ')
+  return at < 0 ? { day: full, time: null } : { day: full.slice(0, at), time: full.slice(at + 4) }
+}
+const start = split(shift.starts_at)
+const end = split(shift.ends_at)
+// "6:00 PM to 8:00 PM Central Time" on one day; the end's own day when it ends on another.
+const span = start?.time && end?.time ? (end.day === start.day ? `${start.time} to ${end.time}` : `${start.time} to ${end.day}, ${end.time}`) : (start?.time ?? null)
+const time = span && zone ? `${span} ${zone}` : span
+const map = mapLinkOf(view.place)
+const notes = (shift.notes ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+const embed = signupEmbedOf(shift)
+const signup = embed ? null : safeHref(shift.signup_url)
+/** The fallback card's button, by the shift's state. */
+const FALLBACK: Record<typeof view.state, string> = {
+  open: 'Sign up for this shift',
+  waitlist: 'Join the waitlist',
+  full: 'See the shift',
+  closed: 'See the shift',
+}
+---
+<div class="shift-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href={VOLUNTEER_PATH}>Volunteer</a>
+    {view.when && <><span aria-hidden="true"> › </span><span>{view.when.month}</span></>}
+  </nav>
+  <div class="shift-grid">
+    <div class="shift-words">
+      <p class="shift-chips">
+        <span class="chip chip-accent">Volunteer shift</span>
+        {(view.state === 'full' || view.state === 'waitlist') && <span class="chip chip-wash">Full</span>}
+        {view.state === 'closed' && <span class="chip chip-wash">Closed</span>}
+      </p>
+      <h1>{shift.title}</h1>
+      <ul class="shift-facts" role="list">
+        {start && (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+            <div>
+              <time datetime={shift.starts_at}><b>{start.day}</b></time>
+              {time && <span>{time}</span>}
+            </div>
+          </li>
+        )}
+        {view.place && (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+            <div>
+              <b>{view.place}</b>
+              {map && <span><a href={map} rel="noopener">Open in maps</a></span>}
+            </div>
+          </li>
+        )}
+        {partOf && (
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" /></svg>
+            <div><span>Part of <a href={partOf.href}>{partOf.label}</a></span></div>
+          </li>
+        )}
+        <li class="shift-live-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" /></svg>
+          <div>
+            {view.dots.length > 0 && (
+              <span class="sh-dots" aria-hidden="true" data-bg-shift-dots={view.id}>
+                {view.dots.map((taken) => <i data-taken={taken ? '' : undefined}></i>)}
+              </span>
+            )}
+            <b class="shift-live" data-bg-shift={view.id} data-going={view.signedUp} data-capacity={view.capacity ?? undefined}>{view.words}</b>
+          </div>
+        </li>
+      </ul>
+      {notes.length > 0 && (
+        <div class="shift-notes">
+          <h2>What to know</h2>
+          <div class="prose">{notes.map((p) => <p>{p}</p>)}</div>
+        </div>
+      )}
+    </div>
+    {embed ? (
+      <ModuleFrame embed={embed} band="plain" type="Shift" layout="card" card title={`Sign up: ${shift.title}`} height="34rem" class="shift-signup" />
+    ) : (
+      <div class="module module-card shift-signup shift-signup-link" data-module="Shift">
+        <h2>Sign up</h2>
+        {view.words && <p class="shift-signup-count">{view.words}</p>}
+        {signup && (
+          <a class:list={['button', view.action.quiet && 'button-quiet']} href={signup} rel={/^https?:/i.test(signup) ? 'noopener' : undefined} data-bg-shift-action={view.id} data-state={view.state}>
+            <span data-bg-shift-label>{FALLBACK[view.state]}</span><span class="visually-hidden">: {shift.title}</span>
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+  <ShiftLive />
+</div>
+
+<style>
+  .shift-page {
+    max-width: var(--content);
+    margin: 0 auto;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2.25rem) var(--gutter) var(--space);
+  }
+  .shift-page .crumbs {
+    margin-bottom: 1.125rem;
+  }
+  .shift-grid {
+    display: grid;
+    gap: 1.75rem;
+    align-items: start;
+  }
+  .shift-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .shift-words h1 {
+    margin: 0.875rem 0 1rem;
+    font-size: clamp(2.25rem, 1.6rem + 2.2vw, 3.25rem);
+    line-height: 1.04;
+    font-weight: 800;
+  }
+  .shift-facts {
+    display: grid;
+    gap: 0.875rem;
+    margin: 1.375rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .shift-facts li {
+    display: grid;
+    grid-template-columns: 1.75rem 1fr;
+    gap: 0.625rem;
+  }
+  .shift-facts svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .shift-facts b {
+    display: block;
+  }
+  .shift-facts span {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .shift-facts a {
+    color: var(--link);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .shift-live-row div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+  }
+  /* No counts to say (no capacity, no one yet): no row. */
+  .shift-live-row:has(.shift-live:empty) {
+    display: none;
+  }
+  .sh-dots {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    max-width: 14rem;
+  }
+  .sh-dots :global(i) {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+    border-radius: 50%;
+  }
+  .sh-dots :global(i[data-taken]) {
+    border: 1.5px solid var(--button);
+    background: var(--button);
+  }
+  .shift-notes {
+    margin-top: 2rem;
+  }
+  .shift-notes h2 {
+    margin: 0 0 0.5rem;
+    font-size: var(--h3);
+  }
+  /* The card the frame would sit on (ModuleFrame's module-card), holding the link instead. */
+  .shift-signup-link {
+    display: grid;
+    gap: 0.875rem;
+    justify-items: start;
+    padding: clamp(1.25rem, 1rem + 0.8vw, 1.75rem);
+    border: 1px solid var(--band-panel-line);
+    border-radius: var(--radius-card);
+    background: var(--band-panel);
+    color: var(--band-panel-ink);
+    box-shadow: var(--shadow);
+  }
+  .shift-signup-link h2 {
+    margin: 0;
+    font-size: var(--h3);
+  }
+  .shift-signup-count {
+    margin: 0;
+    font-weight: 700;
+  }
+  @media (min-width: 56rem) {
+    .shift-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+</style>

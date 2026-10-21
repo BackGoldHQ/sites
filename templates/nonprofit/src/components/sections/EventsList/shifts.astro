@@ -4,21 +4,23 @@
 // torn-off calendar page (the month on the primary, the day hand-lettered,
 // the weekday), the title, the time and the place beside the clock and pin
 // doodles, the spots, and at the right the row's one button to the shift's
-// signup card on BackGold (its `signup_url`, /volunteer/<slug>): "Sign up
-// for this shift" while it is open, "Full · join the waitlist" once only the
+// page on this site (/volunteer/<slug>, the kit's, which frames BackGold's
+// sign-up card): "Sign up for this shift" while it is open, "Full · join the waitlist" once only the
 // waitlist is, "Full" and "Closed" as the outline sticker. A shift that
 // belongs to a public event this section lists says so ("Part of" the
 // event, linking to its page).
 //
 // The shifts are the organization's, from the Content API's GET /shifts (the
-// next `max` of them, or the first page). An api that does not serve it yet,
+// next `max` of them, or the first page), or the ones the page passes as
+// `shifts` (the volunteer list, which read them all). An api that does not serve it yet,
 // a site still being set up, or one with no open shift draws the section's
 // events instead, as events: the kit's button ("RSVP", "Get tickets",
 // "Details" once closed) and "Add to calendar".
 //
 // The counts are live, never only the cached page's: each row's slot carries
 // the counts the page was built with (`data-going`, `data-capacity`), and
-// after the page loads the shifts' are read again from GET /shifts/live (the
+// after the page loads the shifts' are read again from GET /shifts/live, 50
+// at a time (the
 // events' from the kit's LiveCounts, GET /events/live), which also moves a
 // shift's button to its current state. Where a row has a capacity the script
 // words the counts ("6 of 10 filled · 4 spots left", "Full"; for an event "6
@@ -36,7 +38,6 @@
 // the head stands over the section's empty-events line as a dashed
 // invitation; with neither rows nor a heading nothing is drawn.
 import type { Section, ShiftsListRow } from '@backgold/content'
-import { safeHref } from '@backgold/astro/server'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
 import LiveCounts from '@backgold/template-kit/components/sections/EventsList/LiveCounts.astro'
@@ -44,11 +45,14 @@ import { eventsOf, monthName, whenOf, type When } from '@backgold/template-kit/c
 import { links, linkOf, type Link } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 import { firstLiveScript, liveSource } from '@backgold/template-kit/lib/live'
+import { shiftPath } from '@backgold/template-kit/lib/shifts'
 import Doodle from '../../Doodle.astro'
 
 interface Props {
   section: Section
   variant?: string
+  /** The shifts to list, already read (the volunteer list's); left out, the section reads them. */
+  shifts?: ShiftsListRow[]
 }
 
 /** One row as this layout draws it, a shift's or an event's. */
@@ -64,7 +68,7 @@ interface Row {
   place: string | null
   /** An event's type chip; a shift has none. */
   type: string | null
-  /** The title's link: an event's page; a shift's signup card. */
+  /** The title's link: an event's page; a shift's page. */
   link: Link | null
   /** The event a shift is part of, on this site. */
   partOf: Link | null
@@ -79,7 +83,7 @@ interface Row {
   capacity: number | null
 }
 
-const { section } = Astro.props
+const { section, shifts: given } = Astro.props
 const heading = text(section.copy.heading)
 const invitation = text(section.copy.eventsEmptyCta)
 const max = typeof section.options?.max === 'number' ? section.options.max : null
@@ -88,6 +92,7 @@ const bg = Astro.locals.backgold
 
 /** The organization's open shifts, or null when the api does not serve them (an older api, a site being set up, a failed read). */
 async function openShifts(): Promise<ShiftsListRow[] | null> {
+  if (given) return given
   if (bg.setup !== null) return null
   try {
     return (await bg.client.shifts({ limit: Math.min(Math.max(max ?? 50, 1), 50) })).shifts
@@ -117,7 +122,7 @@ const shiftRow = (shift: ShiftsListRow): Row => {
   const when = whenOf(shift.starts_at, shift.timezone)
   const end = whenOf(shift.ends_at, shift.timezone)
   const sameDay = when && end && when.year === end.year && when.monthIndex === end.monthIndex && when.day === end.day
-  const signup = safeHref(shift.signup_url)
+  const page = shiftPath(shift.slug)
   const action = SHIFT_ACTION[shift.state] ?? SHIFT_ACTION.closed
   return {
     kind: 'shift',
@@ -128,9 +133,9 @@ const shiftRow = (shift: ShiftsListRow): Row => {
     time: when?.clock && sameDay && end?.time ? `${when.clock} to ${end.time}` : (when?.time ?? null),
     place: shift.location,
     type: null,
-    link: signup ? linkOf(shift.title, signup) : null,
+    link: linkOf(shift.title, page),
     partOf: partOf(shift),
-    action: signup ? linkOf(action.label, signup) : null,
+    action: linkOf(action.label, page),
     quiet: action.quiet,
     closed: shift.state === 'closed',
     calendar: null,
@@ -340,25 +345,27 @@ const SHIFT_LABELS = JSON.stringify(Object.fromEntries(Object.entries(SHIFT_ACTI
             var headers = { Accept: 'application/json' }
             var apiKey = root.getAttribute('data-np-shifts-key')
             if (apiKey) headers.Authorization = 'Bearer ' + apiKey
-            fetch(api + '?ids=' + ids.slice(0, 50).map(encodeURIComponent).join(','), { headers: headers })
-              .then(function (res) {
-                return res.ok ? res.json() : null
-              })
-              .then(function (body) {
-                var live = body && Array.isArray(body.shifts) ? body.shifts : []
-                for (var l = 0; l < live.length; l++) {
-                  var one = live[l]
-                  if (!one || typeof one.id !== 'string' || typeof one.signed_up !== 'number') continue
-                  var slot = root.querySelector('[data-np-shift="' + one.id.replace(/"/g, '') + '"]')
-                  if (slot) slot.setAttribute('data-going', String(one.signed_up))
-                  var button = root.querySelector('[data-np-shift-action="' + one.id.replace(/"/g, '') + '"]')
-                  if (button && labels[one.state]) {
-                    button.querySelector('[data-np-label]').textContent = labels[one.state]
-                    button.classList.toggle('button-quiet', one.state === 'full' || one.state === 'closed')
+            for (var start = 0; start < ids.length; start += 50) {
+              fetch(api + '?ids=' + ids.slice(start, start + 50).map(encodeURIComponent).join(','), { headers: headers })
+                .then(function (res) {
+                  return res.ok ? res.json() : null
+                })
+                .then(function (body) {
+                  var live = body && Array.isArray(body.shifts) ? body.shifts : []
+                  for (var l = 0; l < live.length; l++) {
+                    var one = live[l]
+                    if (!one || typeof one.id !== 'string' || typeof one.signed_up !== 'number') continue
+                    var slot = root.querySelector('[data-np-shift="' + one.id.replace(/"/g, '') + '"]')
+                    if (slot) slot.setAttribute('data-going', String(one.signed_up))
+                    var button = root.querySelector('[data-np-shift-action="' + one.id.replace(/"/g, '') + '"]')
+                    if (button && labels[one.state]) {
+                      button.querySelector('[data-np-label]').textContent = labels[one.state]
+                      button.classList.toggle('button-quiet', one.state === 'full' || one.state === 'closed')
+                    }
                   }
-                }
-              })
-              .catch(function () {})
+                })
+                .catch(function () {})
+            }
           })(document.currentScript.closest('[data-np-shifts]'))
         </script>
       </div>

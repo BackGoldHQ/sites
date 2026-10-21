@@ -2487,8 +2487,8 @@ body::before {
   /*
     ── BackGold's module cards (a form, the donation form, an event's RSVP) ──
     A hand-cut card wherever the kit draws one: the pen outline, no blurred
-    shadow, no hairline; a form card carries tape, an event's RSVP card the
-    paperclip.
+    shadow, no hairline; a form card carries tape, an event's RSVP card and
+    a shift's sign-up card the paperclip.
   */
   .module-card {
     position: relative;
@@ -2519,7 +2519,8 @@ body::before {
     transform: rotate(-3deg);
     clip-path: polygon(0 8%, 4% 0, 9% 10%, 14% 0, 86% 0, 91% 9%, 96% 0, 100% 10%, 100% 90%, 95% 100%, 90% 91%, 85% 100%, 14% 100%, 9% 92%, 4% 100%, 0 90%);
   }
-  .event-grid .module-card::after {
+  .event-grid .module-card::after,
+  .shift-grid .module-card::after {
     content: '';
     position: absolute;
     z-index: 4;

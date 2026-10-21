@@ -1,8 +1,9 @@
 /*
   BackGold's frames in the nonprofit template's look (boards N4 the volunteer
-  form, N6 the RSVP, N7 Donate, N10 the contact form, and the newsletter
-  band): the frame skin, served at /_backgold/frame.css (src/frame/css.ts,
-  which puts the faces' @font-face rules ahead of it) and linked by a frame
+  form, N6 the RSVP, N7 Donate, N10 the contact form, the newsletter band,
+  and a shift's sign-up card on /volunteer/<slug>): the frame skin, served
+  at /_backgold/frame.css (src/frame/css.ts, which puts the faces'
+  @font-face rules ahead of it) and linked by a frame
   last in its <head> when the site asks (TemplateConfig `frameSkin`) and
   BackGold honours it. The contract is the platform's docs/FRAME-SKINS.md:
   every rule sits under html[data-bg-look], targets only its `bg-fr-*`
@@ -19,10 +20,12 @@
     accent, dashed.
   - Choices are chips; the picked one is the primary sticker.
   - The main call is a sticker: a 2px ink border, the hard 3px offset,
-    tilted 1deg; a form's and a sign-up's carry the mail doodle; Donate's
+    tilted 1deg; a form's, a sign-up's and a shift's carry the mail doodle; Donate's
     keeps the site's main colour (`--bg-look-button`), every other frame's
     the second (`--bg-look-button-2`). Other buttons are outline stickers.
     A disabled button reads as disabled: flat, faded, no offset.
+  - A shift's spots: the count hand-lettered, the meter a pen-outlined pill
+    filled in the second colour, as far as the spots taken.
   - Items, signer cards and a petition's sheet are hand-cut cards; a card
     the frame draws inside the site's card is no card of its own.
   - The message line's failure is the exclamation doodle and the sentence
@@ -169,7 +172,7 @@ html[data-bg-look] [data-bg-fr='donate'] .bg-fr-submit {
   background: var(--bg-look-button);
   color: var(--bg-look-button-ink);
 }
-html[data-bg-look] :is([data-bg-fr='form'], [data-bg-fr='signup']) .bg-fr-submit::before {
+html[data-bg-look] :is([data-bg-fr='form'], [data-bg-fr='signup'], [data-bg-fr='shift']) .bg-fr-submit::before {
   content: '';
   flex: 0 0 auto;
   width: 1.25em;
@@ -216,6 +219,25 @@ html[data-bg-look] .bg-fr :is(.bg-fr-submit, .bg-fr-secondary)[disabled] {
       inset 0 0 0 2px var(--bg-look-surface),
       calc(var(--np-off) + 1px) calc(var(--np-off) + 1px) 0 0 var(--bg-look-ink);
   }
+}
+
+/* ── A shift's spots: the count hand-lettered, the meter a pen-outlined pill ── */
+
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-count {
+  color: var(--bg-look-ink);
+  font-size: 1.125rem;
+}
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-progress {
+  height: 14px;
+  overflow: hidden;
+  border: 2px solid var(--bg-look-ink);
+  border-radius: var(--np-blob-pill);
+  background: var(--bg-look-surface);
+}
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-progress > * {
+  height: 100%;
+  border-radius: 0;
+  background: var(--bg-look-button-2);
 }
 
 /* ── Cards: the site draws the frame's card; inside it, items and signers are hand-cut ── */

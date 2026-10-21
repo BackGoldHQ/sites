@@ -1031,6 +1031,51 @@ function calendarMonthOf(date) {
   return { year: part('year'), monthIndex: part('month') - 1, day: part('day') }
 }
 
+/**
+ * The organization's open volunteer shifts as GET /shifts lists them, days
+ * from the run: one that belongs to the door-knock event, with notes; one
+ * full with a waitlist; and one with no sign-up frame beside it, as an api
+ * older than the frame sends its rows (its page links to `signup_url`
+ * instead). The frames are the fixture's stand-in (shiftStubFrame).
+ */
+function fixtureShifts() {
+  const at = (days, hour) => {
+    const d = new Date()
+    d.setUTCHours(hour, 0, 0, 0)
+    d.setUTCDate(d.getUTCDate() + days)
+    return d.toISOString()
+  }
+  const row = (slug, title, days, hour, extra) => ({
+    id: `shf_${slug.replaceAll('-', '_')}`,
+    slug,
+    title,
+    starts_at: at(days, hour),
+    ends_at: at(days, hour + 3),
+    timezone: 'America/Denver',
+    location: null,
+    notes: null,
+    capacity: null,
+    signed_up: 0,
+    waitlisted: 0,
+    state: 'open',
+    subject: { kind: 'standalone', slug: null },
+    signup_url: `https://pinevalleyliberty.org/volunteer/${slug}`,
+    signup_embed: { iframe: `https://api.backgold.com/embed/shift/pine-valley/${slug}` },
+    ...extra,
+  })
+  return [
+    row('north-precinct-doors', 'Door-knock the north precinct', 3, 16, {
+      location: 'Alder Grange Hall',
+      notes: 'Bring water and good shoes.\n\nFirst-timers walk with a captain.',
+      capacity: 12,
+      signed_up: 5,
+      subject: { kind: 'event', slug: 'door-knock' },
+    }),
+    row('phone-bank-night', 'Phone bank night', 5, 1, { location: 'Harlow Civic Hall', capacity: 8, signed_up: 8, waitlisted: 3, state: 'waitlist' }),
+    row('market-table', 'Table at the farmers market', 11, 15, { location: 'Fenwick square', signed_up: 2, signup_embed: undefined }),
+  ]
+}
+
 function fixtureData(ex, kitchenSections) {
   const legal = ex.SiteResponse.legal
   // The example site stores the contract's footer (columns); a site on the
@@ -1662,6 +1707,7 @@ function fixtureData(ex, kitchenSections) {
     types,
     geo,
     events: { upcoming, calendar, types: eventTypes, live },
+    shifts: fixtureShifts(),
     menus: {
       primary: {
         ...ex.MenuResponse,
@@ -1748,6 +1794,8 @@ function fixtureData(ex, kitchenSections) {
 const UPLOADS = /https:\/\/api\.backgold\.com\/api\/(?:media-files|lp-assets|content-pages)\//g
 // Geometry files in the fixture's sections live on api.backgold.com too; the fixture serves them itself.
 const GEO_FILES = /https:\/\/api\.backgold\.com\/lp-runtime\//g
+// A shift's sign-up frame lives on the api; the fixture serves a stand-in (shiftStubFrame).
+const SHIFT_FRAMES = /https:\/\/api\.backgold\.com\/embed\/shift\//g
 
 /** A stand-in for an uploaded image: a logo mark for the logo, a landscape for anything else. */
 // ── The Map section's geometry, served at /lp-runtime/<sha-256>.json as the api serves it ──
@@ -1861,7 +1909,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     const send = (status, body, extra = {}) => {
       res.writeHead(status, { ...headers, ...extra })
       // Uploaded files in the examples live on api.backgold.com; the fixture serves stand-ins.
-      res.end(body === undefined ? undefined : JSON.stringify(body).replace(UPLOADS, `${state.origin}/media/`).replace(GEO_FILES, `${state.origin}/lp-runtime/`))
+      res.end(body === undefined ? undefined : JSON.stringify(body).replace(UPLOADS, `${state.origin}/media/`).replace(GEO_FILES, `${state.origin}/lp-runtime/`).replace(SHIFT_FRAMES, `${state.origin}/embed/shift/`))
     }
     // --serve: after editing and rebuilding the copy, POST here and then to the
     // Worker's /api/backgold/revalidate so the edge cache moves to a new version.
@@ -1888,6 +1936,10 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     }
     const auth = req.headers.authorization ?? ''
     const key = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+    if (url.pathname.startsWith('/embed/shift/')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      return res.end(shiftStubFrame(url.search))
+    }
     // ── petition-drive (begin) ──
     if ((PETITION_DRIVE || UNLABELED) && url.pathname.startsWith('/embed/petition/')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
@@ -2147,6 +2199,11 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         }
         break
       }
+      case 'areas':
+        // GET /areas?holds=: the areas of a route with no BackGold page (the volunteer pages); holds names at least one module.
+        if (parts.length !== 1 || !url.searchParams.get('holds')) return send(400, { error: 'holds names at least one module', code: 'BAD_HOLDS' })
+        body = { areas: data.entryAreas }
+        break
       case 'terms':
         body = data.terms[parts[1]]
         break
@@ -4362,6 +4419,111 @@ async function driveLook() {
 
 // ── petition-drive (end) ─────────────────────────────────────────────────────
 
+// ── The volunteer pages (--template party and --template nonprofit) ─────────
+//
+// The kit draws /volunteer and /volunteer/<slug> from GET /shifts: the list
+// grouped by week (the nonprofit in its own shifts look), each shift's page
+// with its facts and BackGold's sign-up card framed in the site's look, a
+// button to `signup_url` for a row with no frame, and the 404 for a slug the
+// feed does not list.
+
+/**
+ * A stand-in for BackGold's shift sign-up frame (`/embed/shift/<org>/<slug>`):
+ * the frame-skin contract's parts for a shift (the count, the spots meter,
+ * the fields, the legal line, the main call) under `data-bg-fr="shift"`,
+ * the stylesheet a `skin` names linked last, and its height reported to
+ * the page as the api's frames report it.
+ */
+function shiftStubFrame(search) {
+  const params = new URLSearchParams(search)
+  let skin = ''
+  try {
+    const origin = new URL(params.get('skin') ?? '').origin
+    if (/^https?:\/\//.test(origin)) skin = `<link rel="stylesheet" href="${origin}/_backgold/frame.css" data-bg-frame-skin>`
+  } catch {}
+  const layout = params.get('layout') === 'inline' ? 'inline' : 'card'
+  const radius = Number(params.get('radius') ?? 12)
+  const css =
+    'html,body{margin:0;background:transparent;font:15px/1.5 system-ui,sans-serif;color:#16191f}' +
+    `.bg-fr{display:grid;gap:12px;padding:4px}.bg-fr-field{display:grid;gap:4px}.bg-fr-input{box-sizing:border-box;width:100%;min-height:44px;padding:8px 12px;border:1px solid #8a8f98;border-radius:${radius}px;font:inherit}` +
+    '.bg-fr-progress{height:8px;border-radius:99px;background:#e6e2da}.bg-fr-progress>span{display:block;height:100%;border-radius:inherit;background:#1f3a5f}' +
+    `.bg-fr-submit{min-height:48px;border:0;border-radius:${radius}px;background:#1f3a5f;color:#fff;font:600 16px/1 system-ui,sans-serif}.bg-fr-fine{margin:0;color:#5b6170;font-size:12px}.bg-fr-count{margin:0;font-weight:700}`
+  const field = (label, type) => `<div class="bg-fr-field"><label class="bg-fr-label">${label}<span class="bg-fr-req"> *</span><input class="bg-fr-input" type="${type}" required></label></div>`
+  const script = "function h(){parent.postMessage({type:'givegold:resize',height:document.querySelector('.bg-fr').offsetHeight+8},'*')}addEventListener('load',h);h()"
+  return (
+    `<!doctype html><html lang="en" data-bg-look data-bg-look-layout="${layout}"><head><meta charset="utf-8"><title>Sign up (fixture stand-in)</title><style>${css}</style>${skin}</head>` +
+    `<body><form class="bg-fr" data-bg-fr="shift" data-shift-stub onsubmit="return false">` +
+    '<p class="bg-fr-count">5 of 12 filled</p><div class="bg-fr-progress"><span style="width:42%"></span></div>' +
+    field('Name', 'text') +
+    field('Email', 'email') +
+    '<p class="bg-fr-fine">The e2e fixture&rsquo;s stand-in for BackGold&rsquo;s sign-up card.</p>' +
+    '<button class="bg-fr-submit" type="submit">Sign up for this shift</button>' +
+    `</form><script>${script}</script></body></html>`
+  )
+}
+
+/** The volunteer pages, on the organization the fixture serves (the nonprofit's shifts on --template nonprofit). */
+async function checkVolunteer(origin, fixture) {
+  log('\nVolunteer: /volunteer lists the open shifts; each shift has its page with the sign-up card framed')
+  const shifts = fixture.data.shifts
+  // The pages' markup without Astro's scoped-style attributes.
+  const read = async (res) => (await res.text()).replace(/ data-astro-cid-[a-z0-9]+(="[^"]*")?/g, '')
+  let res = await get(origin, '/volunteer')
+  let html = await read(res)
+  check(res.status === 200 && tags(html, 'h1').length === 1, `/volunteer is 200 with one <h1> (got ${res.status})`)
+  check(shifts.every((s) => html.includes(`href="/volunteer/${s.slug}"`)), '/volunteer lists every open shift, each linking to its page on the site')
+  check(html.includes('data-bg-area="above_footer"') && html.indexOf('data-bg-area="above_footer"') > html.indexOf('</main>'), "/volunteer carries the areas a page holding events has (Above the footer under the main column)")
+  check(/(data-bg-shifts-api|data-np-shifts-live)="[^"]*\/api\/content\/v1\/shifts\/live"/.test(html), "/volunteer reads the shifts' live counts from /shifts/live")
+  if (NONPROFIT) {
+    check(
+      (html.match(/class="np-shift np-card"/g) ?? []).length === shifts.length && (html.match(/class="np-week-head"/g) ?? []).length >= 2 && html.includes('>Closed<') && /<h1[^>]*>Volunteer<\/h1>/.test(html) && /<h2[^>]*>Pick a shift, bring a <span class="np-mark">/.test(html),
+      "the nonprofit's /volunteer is its own shifts look under the quiet title: every shift a hand-cut row, grouped by week, the head's word marked",
+    )
+  } else {
+    const [first, full] = shifts
+    check(
+      (html.match(/class="sh-row"/g) ?? []).length === shifts.length && /<h2 class="vl-week-head"[^>]*><span class="vl-week-name">Week of [A-Z][a-z]{2} \d{1,2}<\/span>/.test(html),
+      "the kit's /volunteer draws a row per shift under each week's head",
+    )
+    check(
+      html.includes('5 of 12 filled · 7 spots left') && (html.match(new RegExp(`data-bg-shift-dots="${first.id}"[^>]*>(<i[^>]*></i>)+`))?.[0].match(/<i/g) ?? []).length === 12 && html.includes('>Join the waitlist<') && html.includes(`data-bg-shift-action="${full.id}"`),
+      'each row has its spots as dots and words, and its button by its state (Join the waitlist on a full shift with a waitlist)',
+    )
+  }
+  const framed = shifts.find((s) => s.signup_embed)
+  res = await get(origin, `/volunteer/${framed.slug}`)
+  html = await read(res)
+  const frame = tags(html, 'iframe').find((t) => t.includes('/embed/shift/')) ?? ''
+  check(res.status === 200 && new RegExp(`<h1[^>]*>${framed.title}</h1>`).test(html) && tags(html, 'h1').length === 1, `a shift's page is 200 with its title as the one <h1> (got ${res.status})`)
+  check(
+    new RegExp(`src="${fixture.origin.replace(/[.]/g, '\\.')}/embed/shift/[a-z-]+/${framed.slug}\\?layout=card${FRAME_TAIL}"`).test(frame) && /data-module="Shift"/.test(html),
+    `the shift's page frames its sign-up card in the site's look, layout card (${frame})`,
+  )
+  check(html.includes('href="/volunteer"') && /data-bg-shift="[^"]+"/.test(html) && html.includes('data-bg-area="above_footer"'), "the shift's page leads back to Volunteer, carries its live counts' slot and the areas")
+  if (PARTY) {
+    check(html.includes('Part of <a href="/events/door-knock">Door-knock Saturday in Alder County</a>'), 'a shift that belongs to a public event says Part of it, by its title, linking to its page')
+    check(html.includes('<p>Bring water and good shoes.</p>') && html.includes('<p>First-timers walk with a captain.</p>'), "the organizer's notes are the page's paragraphs")
+    check(/href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&amp;query=Alder%20Grange%20Hall"/.test(html), 'the place links to a maps search')
+  }
+  const bare = shifts.find((s) => !s.signup_embed)
+  res = await get(origin, `/volunteer/${bare.slug}`)
+  html = await read(res)
+  check(
+    res.status === 200 && !html.includes('/embed/shift/') && html.includes(`href="${bare.signup_url}"`) && /data-module="Shift"/.test(html),
+    "a shift whose row carries no frame (an older api) links to its signup_url from the card, never a blank",
+  )
+  res = await get(origin, '/volunteer/no-such-shift')
+  html = await read(res)
+  check(res.status === 404 && html.includes('Page not found') && tags(html, 'h1').length === 1, `a slug the feed does not list is the 404 (got ${res.status})`)
+  if (NONPROFIT) {
+    res = await get(origin, '/_backgold/frame.css')
+    const skin = await res.text()
+    check(skin.includes(":is([data-bg-fr='form'], [data-bg-fr='signup'], [data-bg-fr='shift']) .bg-fr-submit::before") && skin.includes("[data-bg-fr='shift'] .bg-fr-progress"), "the frame skin draws a shift's card: the mail doodle on its submit, its spots meter")
+  }
+  res = await get(fixture.origin, `/embed/shift/pine-valley/${framed.slug}?layout=card`)
+  check(res.status === 200 && (await res.text()).includes('data-bg-fr="shift"'), "the fixture's stand-in frame answers at /embed/shift/")
+}
+
 // ── The nonprofit template (--template nonprofit) ────────────────────────────
 //
 // Its starter pages (templates/nonprofit/template.json) as the fixture serves
@@ -4410,7 +4572,9 @@ function nonprofitShifts() {
       waitlisted: seatsLeft === 0 && !extra.registration_closed ? 2 : 0,
       state: extra.registration_closed ? 'closed' : seatsLeft === 0 ? 'waitlist' : 'open',
       subject: { kind: 'standalone', slug: null },
-      signup_url: `/volunteer/shift-${i + 1}`,
+      signup_url: `https://kettle.example.org/volunteer/shift-${i + 1}`,
+      // The api's sign-up frame beside each, but the last: an older api's row.
+      ...(i < 4 ? { signup_embed: { iframe: `https://api.backgold.com/embed/shift/kettle/shift-${i + 1}` } } : {}),
     }),
   })
   return [
@@ -5554,6 +5718,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
     // ── petition-drive (end) ──
     if (CANDIDATE) await checkCandidateLook(configured.origin, chrome, fixture)
     if (NONPROFIT) await checkNonprofit(configured.origin)
+    if (PARTY || NONPROFIT) await checkVolunteer(configured.origin, fixture)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

@@ -1,0 +1,90 @@
+---
+// The volunteer pages' live counts: a shift's "6 of 10 filled · 4 spots
+// left" and its state are never only the cached page's. Each volunteer
+// layout places this once; it writes the script the first time on a page,
+// when the site has a live route to ask (src/lib/live.ts, the shifts' feed:
+// first-party the same-origin path with no key, with a site key the api's
+// address and the publishable key). After the document is parsed the script
+// reads `GET /shifts/live?ids=` for every `data-bg-shift` slot on the page
+// (50 at a time) and, for each shift the answer names: writes its counts
+// into its slots as words (lib/shifts.ts countWords' words), redraws its
+// dots (`data-bg-shift-dots`, one per spot up to 24, `data-taken` on each
+// one taken), and moves its buttons (`data-bg-shift-action`) to its state's
+// words, quiet when there is nothing to sign up for. A shift the answer
+// leaves out, or a failed read, keeps what the page was built with, as it
+// does with scripts off.
+import { liveSource } from '../../lib/live'
+import { MOST_DOTS, SHIFT_ACTION_LABELS, firstShiftScript } from '../../lib/shifts'
+
+const bg = Astro.locals.backgold
+const source = firstShiftScript(Astro.request) ? await liveSource(bg.setup === null && bg.firstParty, 'shifts') : null
+---
+{source && (
+  <script is:inline data-bg-shifts-api={source.url} data-bg-shifts-key={source.key ?? undefined} data-bg-shifts-labels={SHIFT_ACTION_LABELS} data-bg-shifts-most={String(MOST_DOTS)}>
+    (function (script) {
+      var api = script.getAttribute('data-bg-shifts-api')
+      var key = script.getAttribute('data-bg-shifts-key')
+      var labels = JSON.parse(script.getAttribute('data-bg-shifts-labels') || '{}')
+      var most = Number(script.getAttribute('data-bg-shifts-most'))
+      var words = function (going, capacity) {
+        if (capacity > 0) {
+          var left = capacity - going
+          return going + ' of ' + capacity + ' filled · ' + (left > 0 ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full')
+        }
+        return going > 0 ? going + ' signed up' : ''
+      }
+      var each = function (selector, id, fn) {
+        var found = document.querySelectorAll(selector)
+        for (var i = 0; i < found.length; i++) if (found[i].getAttribute(selector.slice(1, -1)) === id) fn(found[i])
+      }
+      var fill = function () {
+        var slots = document.querySelectorAll('[data-bg-shift]')
+        var ids = []
+        for (var i = 0; i < slots.length; i++) {
+          var id = slots[i].getAttribute('data-bg-shift')
+          if (id && ids.indexOf(id) < 0) ids.push(id)
+        }
+        for (var start = 0; start < ids.length; start += 50) {
+          var headers = { Accept: 'application/json' }
+          if (key) headers.Authorization = 'Bearer ' + key
+          fetch(api + '?ids=' + ids.slice(start, start + 50).map(encodeURIComponent).join(','), { headers: headers })
+            .then(function (res) {
+              return res.ok ? res.json() : null
+            })
+            .then(function (body) {
+              var live = body && Array.isArray(body.shifts) ? body.shifts : []
+              for (var l = 0; l < live.length; l++) {
+                var one = live[l]
+                if (!one || typeof one.id !== 'string' || typeof one.signed_up !== 'number' || !isFinite(one.signed_up)) continue
+                var going = Math.max(0, one.signed_up)
+                each('[data-bg-shift]', one.id, function (slot) {
+                  var capacity = Number(slot.getAttribute('data-capacity'))
+                  slot.setAttribute('data-going', String(going))
+                  slot.textContent = words(going, capacity)
+                  each('[data-bg-shift-dots]', one.id, function (dots) {
+                    dots.textContent = ''
+                    if (!(capacity > 0) || capacity > most) return
+                    for (var d = 0; d < capacity; d++) {
+                      var dot = document.createElement('i')
+                      if (d < going) dot.setAttribute('data-taken', '')
+                      dots.appendChild(dot)
+                    }
+                  })
+                })
+                if (!labels[one.state]) continue
+                each('[data-bg-shift-action]', one.id, function (button) {
+                  var label = button.querySelector('[data-bg-shift-label]')
+                  if (label) label.textContent = labels[one.state]
+                  button.classList.toggle('button-quiet', one.state === 'full' || one.state === 'closed')
+                  button.setAttribute('data-state', one.state)
+                })
+              }
+            })
+            .catch(function () {})
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill)
+      else fill()
+    })(document.currentScript)
+  </script>
+)}
