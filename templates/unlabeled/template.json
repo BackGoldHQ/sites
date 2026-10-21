@@ -912,22 +912,6 @@
             "links": []
           },
           {
-            "id": "Progress-donate",
-            "type": "Progress",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "bar",
-            "copy": {
-              "kicker": "This month",
-              "heading": ""
-            },
-            "media": {},
-            "links": [],
-            "options": {
-              "anchorId": "this-month"
-            }
-          },
-          {
             "id": "Issues-donate",
             "type": "Issues",
             "band": "plain",

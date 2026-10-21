@@ -108,7 +108,7 @@ keeps its own pages and gains the links it lacks):
 | `petition-drive` (Flock Blockers) | Petition · Map, Cta · Banner, EventsList · Compact |
 | `bisd-students-lets-be-real` | Hero · Statement, PollBlock · Card, FormBlock · Card |
 | `nisd-prop-a-2026` | Hero · Statement, PlatformPlanks · Longread, Faq · Accordion, Cta · Banner |
-| `donate` | Donate · Story, Progress · Bar, Issues · Cards (other ways in) |
+| `donate` | Donate · Story, Issues · Cards (other ways in); Progress · Bar is hers to add once a campaign exists (a starter cannot name one) |
 | `newsletters` | Collection · List of newsletter issues |
 | `submit-documents` | Hero · Statement, FormBlock · Card (BackGold's form with a `pdf` field). The archive and `/records` show their Submit documents door only when this page exists. |
 | `contact` | Hero · Statement, FormBlock · Wide |

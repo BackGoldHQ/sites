@@ -365,7 +365,7 @@
                   "title": "Saturday market",
                   "body": "Free groceries you pick yourself, laid out like a market, not handed out like a line. Bring a bag.",
                   "note": "Saturdays, 9 to noon",
-                  "icon": "basket"
+                  "icon": "leaf"
                 },
                 {
                   "title": "Homework club",
@@ -377,7 +377,7 @@
                   "title": "Tool library",
                   "body": "Borrow a drill, a ladder or a wheelbarrow with a library card. Bring it back when the job is done.",
                   "note": "Wednesday evenings and Saturdays",
-                  "icon": "wrench"
+                  "icon": "briefcase"
                 }
               ]
             }

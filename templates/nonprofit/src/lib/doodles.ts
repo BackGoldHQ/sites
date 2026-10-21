@@ -58,6 +58,13 @@ const MARKERS = {
 } as const
 
 const ALIASES: Record<string, DoodleName> = {
+  // The platform's own icon keys (packages/site icon-paths.ts), as an operator picks them in BackGold.
+  leaf: 'sprout',
+  briefcase: 'wrench',
+  home: 'house',
+  users: 'people',
+  globe: 'pin',
+  'dollar-sign': 'gift',
   food: 'basket',
   market: 'basket',
   pantry: 'basket',
