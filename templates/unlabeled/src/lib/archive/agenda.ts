@@ -35,7 +35,8 @@ function romanValue(numeral: string): number {
 /**
  * The outline: each line that is only an item number (or a number and its
  * title) opens an item, and its title runs on until a blank line or the
- * next item. The outline's top numerals run in order (I, II, III…), so a
+ * next item, or a long line in capitals after a title in mixed case (the
+ * heading of the item's attached page). The outline's top numerals run in order (I, II, III…), so a
  * numbered line inside an attached document (a contract's own "IV.", "V.")
  * is not an agenda item: an item counts only under the current top numeral
  * or the one after it. An item number seen again later (the agenda repeats
@@ -57,6 +58,8 @@ export function agendaOutline(text: string): AgendaItem[] {
     for (let j = i + 1; j < lines.length && words.join(' ').length < 240; j++) {
       const next = lines[j]!.trim()
       if (!next || ITEM.test(lines[j]!)) break
+      // A long line in capitals after a title in mixed case is the item's own page heading, not its title.
+      if (words.some((w) => /[a-z]/.test(w)) && !/[a-z]/.test(next) && (next.match(/[A-Z]/g) ?? []).length >= 12) break
       words.push(next)
     }
     const title = words.join(' ').replace(/\s*\[[^\]]*\]?\s*$/, '').replace(/\s+/g, ' ').trim()

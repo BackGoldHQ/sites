@@ -58,6 +58,9 @@ const sections = outline
     items: outline.filter((i) => i.depth === 3 && i.number.startsWith(`${section.number}.`)).map((item) => ({ item, records: onItems.filter((d) => itemOf(d) === item.number) })),
   }))
   .filter((s) => s.items.length > 0)
+// Sections with no record on any item are folded into one line (board U4).
+const shown = sections.filter((s) => s.items.some((i) => i.records.length > 0))
+const folded = sections.filter((s) => !shown.includes(s))
 const cited = agendaText ? [...new Set(onItems.flatMap((d) => linesCiting(agendaText, itemOf(d)!)))].sort((a, b) => a - b) : []
 const p = doc.date ? dayParts(doc.date) : null
 const noMinutes = !httpUrl(f.minutes_link) && !minutesDoc
@@ -116,9 +119,10 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     <h2 id="ar-spine">Every decision with its vote</h2>
     {decisions.length === 0 && <p class="ar-faint" style="margin-top:1rem">The archive files no decision from this meeting.</p>}
     {decisions.length > 0 && sections.length === 0 && <p class="ar-faint" style="margin-top:1rem">{agendaTextUrl ? (agendaText ? 'The agenda’s text names no numbered items.' : 'The agenda’s text could not be read just now, so the decisions are listed by mark.') : 'The archive has no agenda text for this meeting, so the decisions are listed by mark.'}</p>}
-    {sections.length > 0 && (
+    {folded.length > 0 && <p class="ar-faint ar-meta" style="margin-top:1rem">{folded.map((f) => `${f.section.number} (${f.section.title.toLowerCase()})`).join(', ')}: no record in the archive on {folded.length === 1 ? 'its items' : 'their items'}, folded.</p>}
+    {shown.length > 0 && (
       <ol class="ar-spine" style="margin-top:1rem">
-        {sections.map(({ section, items }) => (
+        {shown.map(({ section, items }) => (
           <li>
             <p class="ar-meta"><strong>{section.number} · {section.title}</strong> · {plural(items.reduce((n, i) => n + i.records.length, 0), 'record')} on {plural(items.length, 'item')}</p>
             <ol>
@@ -144,7 +148,7 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     )}
     {unplaced.length > 0 && (
       <div style="margin-top:1.25rem">
-        {sections.length > 0 && <p class="ar-label">No item cited · {plural(unplaced.length, 'record')}</p>}
+        {shown.length > 0 && <p class="ar-label">No item cited · {plural(unplaced.length, 'record')}</p>}
         <ul class="ar-rows">
           {unplaced.map((d) => (
             <li>

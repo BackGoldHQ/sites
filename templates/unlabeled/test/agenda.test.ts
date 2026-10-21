@@ -20,12 +20,16 @@ const AGENDA = [
   'ITEM NUMBER/TITLE: II.E.8. Approve Rankings',
   'III.',
   'CLOSED SESSION',
+  'III.A.',
+  'Approve an Order Authorizing Refunding Bonds',
+  'ORDER AUTHORIZING THE ISSUANCE',
 ].join('\n')
 
 describe('the agenda outline', () => {
   it('reads the numbered items in order, titles run on, attachments left out', () => {
     const outline = agendaOutline(AGENDA)
-    expect(outline.map((i) => i.number)).toEqual(['I', 'II', 'II.E', 'II.E.8', 'III'])
+    expect(outline.map((i) => i.number)).toEqual(['I', 'II', 'II.E', 'II.E.8', 'III', 'III.A'])
+    expect(outline.find((i) => i.number === 'III.A')?.title).toBe('Approve an Order Authorizing Refunding Bonds')
     expect(outline.find((i) => i.number === 'II.E.8')).toMatchObject({ line: 8, depth: 3, title: 'Approve Rankings and Contract for HVAC Replacement Project (CSP 26.16)' })
   })
 
