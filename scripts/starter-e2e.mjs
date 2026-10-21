@@ -4563,9 +4563,16 @@ async function checkNonprofit(origin) {
   res = await get(origin, '/_backgold/frame.css')
   const frameCss = await res.text()
   check(
-    res.status === 200 && (res.headers.get('content-type') ?? '').startsWith('text/css') && res.headers.get('access-control-allow-origin') === '*' && frameCss.includes(':root[data-bg-look]'),
-    "/_backgold/frame.css serves the frames' stylesheet to any origin",
+    res.status === 200 &&
+      (res.headers.get('content-type') ?? '').startsWith('text/css') &&
+      res.headers.get('access-control-allow-origin') === '*' &&
+      !/same-(origin|site)/.test(res.headers.get('cross-origin-resource-policy') ?? '') &&
+      frameCss.includes('html[data-bg-look] .bg-fr .bg-fr-submit') &&
+      !/@import/.test(frameCss),
+    "/_backgold/frame.css serves the frames' skin (FRAME-SKINS.md's parts, nothing imported from another host) to any origin",
   )
+  res = await get(origin, '/_backgold/fonts/s/nunito/v32/not-a-font.css')
+  check(res.status === 404, `/_backgold/fonts/ answers only a font file's path (got ${res.status})`)
 }
 
 // ── The candidate template (--template candidate) ────────────────────────────

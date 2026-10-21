@@ -57,7 +57,7 @@ Every word is starter copy for the organization to replace. Figures are
 | `src/components/sections/` | This template's own layouts (below). |
 | `src/components/entries/post/` | Its own post list and post (below). |
 | `src/lib/list-label.ts` | The post list's name from the header menu ("Stories"). |
-| `src/lib/frame-colors.ts`, `src/styles/frame.css`, `src/frame-css.ts` | BackGold's frames in the look (below). |
+| `src/lib/frame-colors.ts`, `src/styles/frame.css`, `src/frame/` | BackGold's frames in the look (below). |
 | `src/components/Doodle.astro` | One doodle from the sprite, `<svg class="dd"><use href="#d-…"/></svg>`. |
 | `src/lib/doodles.ts` | The doodle set: 9 marks and 24 icons (48-unit strokes, round caps), the marker strokes for a marked word, `iconOf` (a row's `icon` → its doodle) and the sprite. |
 | `src/lib/marked.ts`, `src/middleware.ts` | The marked word and the sprite (below). |
@@ -100,17 +100,25 @@ Two things make the frame itself belong there:
   ink 82% over it, the hairline the ink at 30%), so a field's edge reads on
   the white card. The band's own lines are a quiet rule (Kettle Commons'
   tint: `#e8c87a` on `#fffdf7`), and a field bordered in one vanishes.
-- **Its stylesheet** (`frameSkin`, `src/styles/frame.css`, served at
-  `/_backgold/frame.css` by `src/frame-css.ts`, an injected route since
-  Astro routes no page under `_`): labels, chips and buttons hand-lettered,
-  fields with the pen edge on blob corners, choices as chips, every call a
-  sticker (the send button with the mail doodle; Donate's give button the
-  accent), errors as the exclamation doodle in the accent. The kit asks a
-  frame to load it with the embed look's `skin` (the site's https origin);
-  BackGold honors that once the platform's frame skins land, and until then
-  the frames draw BackGold's own shapes in the colours above. The stylesheet
-  reads only the look's colours (`--bg-look-*`) and repeats the template's
-  shapes and faces, since a frame cannot read the page's variables.
+- **Its skin** (`frameSkin`, `src/styles/frame.css`, served at
+  `/_backgold/frame.css` by `src/frame/css.ts`, an injected route since
+  Astro routes no page under `_`): written to the platform's frame-skin
+  contract (`docs/FRAME-SKINS.md` in the platform repository): every rule
+  under `html[data-bg-look]`, only the `bg-fr-*` parts, their states and the
+  `--bg-look-*` colours (fields edged in `--bg-look-field-edge`). Labels,
+  card heads, choices and buttons hand-lettered; fields with the edge on
+  blob corners; choices as chips; the main call a sticker (a form's and a
+  sign-up's with the mail doodle; Donate's in the site's main colour); other
+  buttons outline stickers; failures as the exclamation doodle in the
+  accent. Nothing in it hides or covers a required field, consent, a legal
+  line, the message line or the main call. The faces load from the site
+  itself: the stylesheet opens with Shantell Sans' and Nunito's `@font-face`
+  rules (latin and latin-ext), their files at `/_backgold/fonts/<file>`
+  (`src/frame/font.ts`, read from Google Fonts' file host, with
+  `Access-Control-Allow-Origin: *`), since a skinned frame admits fonts from
+  the site's origin only. The kit asks a frame for the skin with `skin=<the
+  site's https origin>`; BackGold may refuse it silently, and then the frame
+  wears the colours above alone, which read on their own.
 
 ## The marked word (this template's convention)
 
