@@ -1,8 +1,9 @@
-import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-P3LWNM2C.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-M4T5UZWC.js';
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-EGK3J6R5.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-UVWZGL4W.js';
 import { z } from 'zod';
 
-var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive", "academy"];
+var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive", "academy", "nonprofit", "unlabeled"];
+var HIDDEN_SITE_TEMPLATE_AUDIENCE = "hidden";
 var name = z.string().trim().min(1).max(120);
 var layoutName = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/);
 var slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$|^$/, "a page slug (lower case, words joined by -; empty for home)");
@@ -183,4 +184,4 @@ var siteTemplateManifestSchema = z.object({
   })
 });
 
-export { SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, siteTemplateManifestSchema };
+export { HIDDEN_SITE_TEMPLATE_AUDIENCE, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, siteTemplateManifestSchema };

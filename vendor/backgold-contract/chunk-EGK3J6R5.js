@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-M4T5UZWC.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-UVWZGL4W.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -59,7 +59,8 @@ var SECTION_LAYOUTS = {
   // each issue's plan behind a control.
   Issues: ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"],
   // wall: the political sections (2026-10-13), a wall of up to eight figures.
-  StatCards: ["row", "ribbon", "feature", "wall"],
+  // archive: the Unlabeled template (2026-10-21), the archive door with live holdings counts.
+  StatCards: ["row", "ribbon", "feature", "wall", "archive"],
   Cta: ["card", "banner", "strip", "photo"],
   // logos, carousel and wall: the services sections (2026-10-14), testimonials.
   QuoteStrip: ["row", "single", "ticker", "logos", "carousel", "wall"],
@@ -83,7 +84,8 @@ var SECTION_LAYOUTS = {
   Financials: ["bars", "donut", "table"],
   // The services sections (2026-10-14): drawn by templates only, like the
   // political sections.
-  Services: ["packages", "list", "compare"],
+  // programs: the nonprofit template (2026-10-21), each program as who, when, where, how to start.
+  Services: ["packages", "list", "compare", "programs"],
   CaseStudies: ["featured", "grid", "beforeafter"],
   Resources: ["library", "featured", "band"],
   Pathways: ["doors", "tabs", "quiz"],
@@ -1193,13 +1195,16 @@ var CONTENT_API_BLOCKS = {
   // type the bake lists, `duration_minutes` its length, `location_kind` where
   // it happens (BOOKING_LOCATION_TYPES), `price_cents` what it costs (0 free,
   // null when the type names no price) and `url` the type's public booking
-  // page, where the time is picked. No rows when the org offers none. The
-  // section never draws a slot picker or a form.
+  // page, where the time is picked. No rows when the org offers none. With
+  // `inlineSlots` on, the hosted section also draws one link's open times
+  // (each a link to that time on the booking page); `slotsLink` names that
+  // link by slug, blank for the first. The booking itself is always made on the booking
+  // page; the section draws no form.
   Booking: {
     role: "data",
     copy: ["kicker", "heading", "body", "pickLabel"],
     variant: "layout",
-    options: ["anchorId"],
+    options: ["inlineSlots", "slotsLink", "anchorId"],
     data: {
       source: "booking",
       lists: [

@@ -1192,6 +1192,7 @@ site (`site`, `pages`, `types`, `events`, `authors`, `redirects`, `sitemap`,
 | `allEntries(type, { term?, limit?, preview? })` | `GET /entries/{type}`, every page, as an async iterator of entries | yields nothing |
 | `entry(type, slug, { preview? })` | `GET /entries/{type}/{slug}` | `null` |
 | `events({ type?, cursor?, limit? })` | `GET /events`, the upcoming public events, one page | throws |
+| `shifts({ cursor?, limit? })` | `GET /shifts`, the open volunteer shifts, one page | throws |
 | `terms(taxonomy)` | `GET /terms/{taxonomy}` | `null` |
 | `authors()` | `GET /authors` | throws |
 | `author(slug)` | `GET /authors/{slug}` | `null` |

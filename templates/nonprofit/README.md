@@ -69,7 +69,7 @@ Every word is starter copy for the organization to replace. Figures are
 | Layout | What it draws |
 | --- | --- |
 | `Services:programs` | Proposed (not yet in the contract's catalogue): an even grid of program cards, each with the row's `icon` as a doodle, its price as a chip in the operator's words ("Free"), its name and summary, its first three `includes` as For, When and Where, and its button as an outline sticker. `featured` is never drawn: no program looks recommended over another. |
-| `EventsList:shifts` | The section's events as hand-drawn rows: a torn-off calendar page for the date, the type as a chip, the time and place beside doodles, the event's own button as the kit words it ("RSVP", or "Get tickets", or "Details" once closed), Add to calendar. The seats are drawn as dots (taken filled, open dashed) beside the live words, from the `data-going` and `data-capacity` the kit's LiveCounts writes; without scripts the row keeps its button and draws neither. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. The rows are events and say so: BackGold's volunteer shifts have their own sign-up at `/volunteer/<slug>`, and the layout lists them once the Content API serves `GET /shifts` (`TODO(shifts feed)` in the file). |
+| `EventsList:shifts` | The organization's open volunteer shifts (the Content API's `GET /shifts`) as hand-drawn rows: a torn-off calendar page for the date, the time span and place beside doodles, "Part of" the event a shift belongs to, the spots as dots (taken filled, open dashed) beside the words ("6 of 10 filled · 4 spots left"), and the button to the shift's signup card on BackGold (`/volunteer/<slug>`): "Sign up for this shift", "Full · join the waitlist", or "Full" and "Closed" in the outline. The counts and the button are read again from `GET /shifts/live` after the page loads. An api with no shift feed, or an organization with no open shift, draws the section's events instead, with their own button ("RSVP", "Get tickets", "Details") and Add to calendar. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. |
 | `Issues:cards` (and `Issues`) | The kit's cards with the row's `icon` as a doodle and its `note` as a chip with the clock. |
 | `Pathways:doors` (and `Pathways`) | Each pathway as a door, arched with a knob, its `icon` as a doodle; the whole card is the link. |
 | `Hero:split` | The kit's split hero with the section's kicker over the headline (the kit's leaves it out). |
@@ -190,8 +190,8 @@ What the boards draw that this template does not, and why:
 - **The 404 page offers "Read the news"**: the kit's not-found words.
 - **The hero's hand-lettered aside** ("two hours, no experience needed", N1):
   Hero · overlap has no field for it, and the template adds no copy of its own.
-- **Volunteer shifts are not listed yet** (N1, N4, N5): the rows are events
-  with their RSVP until the Content API serves `GET /shifts` (above).
+- **Events · agenda does not list volunteer shifts** (N5): it is the kit's
+  layout over the events; the shifts are on Get involved and home.
 - **Financials · donut**: every wedge carries the same hatch angle (a conic
   gradient cannot vary its pattern per slice; the colors differ) and the
   hole has no hand-lettered label (the template adds no copy).

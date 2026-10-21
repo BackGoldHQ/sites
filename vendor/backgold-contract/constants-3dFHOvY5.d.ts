@@ -1,3 +1,16 @@
+/**
+ * A public shift's signup state as the Content API reports it (GET /shifts,
+ * GET /shifts/live). `open`: there is room, or no capacity. `full`: at
+ * capacity with nobody waiting yet, so a signup joins the waitlist.
+ * `waitlist`: at capacity with people already waiting; a signup joins the
+ * back of the line. `closed`: the floor is closed or the shift is over, so the
+ * signup card takes no one.
+ */
+declare const SHIFT_PUBLIC_STATES: readonly ["open", "full", "waitlist", "closed"];
+type ShiftPublicState = (typeof SHIFT_PUBLIC_STATES)[number];
+/** What a public shift belongs to, as the Content API names it: a public event (by its slug), or nothing it lists. */
+declare const SHIFT_PUBLIC_SUBJECT_KINDS: readonly ["event", "standalone"];
+type ShiftPublicSubjectKind = (typeof SHIFT_PUBLIC_SUBJECT_KINDS)[number];
 declare const SITE_NAV_ITEM_TYPES: readonly ["page", "section", "external", "campaign_forms", "group", "entry", "term", "blog", "content_list", "donate", "events", "store"];
 type SiteNavItemType = (typeof SITE_NAV_ITEM_TYPES)[number];
 declare const SITE_NAV_SHOWS_ON: readonly ["every_page", "only_pages", "except_pages", "donation_pages"];
@@ -37,4 +50,4 @@ type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
 declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "run", "privacy", "sms-terms"];
 type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
 
-export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type SiteSectionKind as e, type SiteSectionRole as f, type SiteMode as g, type SiteApiKeyKind as h, type ContentWebhookEvent as i, SITE_KEY_PREFIXES as j, type SitePageModuleKind as k, type BuiltInContentTypeKey as l, type ContentTypeIcon as m, type BuiltInTaxonomyKey as n, type ContentReferenceTarget as o };
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type SiteSectionKind as e, type SiteSectionRole as f, type ShiftPublicState as g, type ShiftPublicSubjectKind as h, type SiteMode as i, type SiteApiKeyKind as j, type ContentWebhookEvent as k, SITE_KEY_PREFIXES as l, type SitePageModuleKind as m, type BuiltInContentTypeKey as n, type ContentTypeIcon as o, type BuiltInTaxonomyKey as p, type ContentReferenceTarget as q };
