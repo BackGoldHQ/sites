@@ -54,11 +54,51 @@ export function carriesDonateQuery(page: URLSearchParams): boolean {
   return false
 }
 
-/** Whether a page with these sections and areas draws a Donate frame anywhere. */
-export function drawsDonateFrame(sections: Section[], areas: Areas | null): boolean {
-  if (sections.some((s) => isDonateFrame(s.type))) return true
+/** Whether a page with these sections and areas draws a frame of a type `draws` names anywhere. */
+function drawsFrame(sections: Section[], areas: Areas | null, draws: (type: string) => boolean): boolean {
+  if (sections.some((s) => draws(s.type))) return true
   for (const items of Object.values(areas ?? {})) {
-    for (const item of items) if (item.sections.some((s) => isDonateFrame(s.type))) return true
+    for (const item of items) if (item.sections.some((s) => draws(s.type))) return true
   }
   return false
+}
+
+/** Whether a page with these sections and areas draws a Donate frame anywhere. */
+export function drawsDonateFrame(sections: Section[], areas: Areas | null): boolean {
+  return drawsFrame(sections, areas, isDonateFrame)
+}
+
+// ── A form frame's share of the page's address ──────────────────────────────
+//
+// A link to a page's form may name the choice it opens on: a site's open
+// roles link to `/volunteer?pick=Phone%20Banker`, and the form's first
+// Choose-one field offering that value takes it (BackGold's FormBlock frame
+// reads `pick` off its own address). The frame copies the page's `pick`
+// as it copies the donate names, and a page that draws a form frame says it
+// reads the name (READS_QUERY_HEADER) the same way.
+
+const FORM_FRAME_TYPES = new Set(['FormBlock'])
+const PICK_NAME = 'pick'
+/** The value of the page's READS_QUERY_HEADER when it draws a form frame. */
+export const FORM_READS_QUERY = PICK_NAME
+
+/** Whether a frame of this module type takes the page's `pick`. */
+export function isFormFrame(type: string): boolean {
+  return FORM_FRAME_TYPES.has(type)
+}
+
+/** The frame's address with the page's `pick` added, when the page carries one the address does not. */
+export function withPickQuery(frame: URL, page: URLSearchParams): void {
+  const pick = page.get(PICK_NAME)
+  if (pick && !frame.searchParams.has(PICK_NAME)) frame.searchParams.set(PICK_NAME, pick)
+}
+
+/** Whether the page's address carries a `pick` with a value. */
+export function carriesPickQuery(page: URLSearchParams): boolean {
+  return !!page.get(PICK_NAME)
+}
+
+/** Whether a page with these sections and areas draws a form frame anywhere. */
+export function drawsFormFrame(sections: Section[], areas: Areas | null): boolean {
+  return drawsFrame(sections, areas, isFormFrame)
 }
