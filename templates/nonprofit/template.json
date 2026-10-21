@@ -428,16 +428,16 @@
               {
                 "label": "Read the story",
                 "target": {
-                  "kind": "page",
-                  "slug": "news"
+                  "kind": "surface",
+                  "path": "/news"
                 },
                 "url": "/news"
               },
               {
                 "label": "All stories",
                 "target": {
-                  "kind": "page",
-                  "slug": "news"
+                  "kind": "surface",
+                  "path": "/news"
                 },
                 "url": "/news"
               }
@@ -523,7 +523,7 @@
             "copy": {
               "heading": "A letter from our director",
               "body": "Write to the people who will read this page: why the organization exists, what a good week looks like, and what you hope a visitor does next.\n\nKeep it short and in your own voice. A letter reads best at three or four paragraphs.",
-              "signature": "Your director’s name",
+              "signature": "Your director\u2019s name",
               "role": "Director"
             },
             "media": {},
@@ -739,7 +739,7 @@
             "copy": {
               "kicker": "Questions",
               "heading": "Things people *ask* us",
-              "contactHeading": "Didn’t find it? Write to us. A person answers."
+              "contactHeading": "Didn\u2019t find it? Write to us. A person answers."
             },
             "media": {},
             "links": [
@@ -828,7 +828,7 @@
             "variant": "wide",
             "copy": {
               "kicker": "Not sure where you fit?",
-              "heading": "Tell us, and we’ll find you a *spot*",
+              "heading": "Tell us, and we\u2019ll find you a *spot*",
               "body": "Say who reads these and how soon they write back. A person, not a robot."
             },
             "media": {},
@@ -882,7 +882,7 @@
             "variant": "agenda",
             "copy": {
               "kicker": "Come by",
-              "heading": "What’s *coming* up",
+              "heading": "What\u2019s *coming* up",
               "eventsEmptyCta": "Nothing is on the calendar this month. Write to us if you would like to host something."
             },
             "media": {},
@@ -1208,7 +1208,7 @@
             "variant": "band",
             "copy": {
               "kicker": "The newsletter",
-              "heading": "One email a month: good news, open shifts, *what’s growing*.",
+              "heading": "One email a month: good news, open shifts, *what\u2019s growing*.",
               "lede": "Written by volunteers. Nothing in between."
             },
             "media": {},

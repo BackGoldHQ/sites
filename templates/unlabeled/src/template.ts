@@ -52,6 +52,8 @@ export default defineTemplate({
   menuLinks: [
     { label: 'Archive', href: '/archive', group: 'BISD', match: 'prefix', also: ARCHIVE_BASES },
     { label: 'The archive', href: '/archive', menu: 'footer', group: 'The record', match: 'prefix', also: ARCHIVE_BASES },
+    { label: 'BISD: Public info', href: '/records', group: 'BISD', match: 'prefix' },
+    { label: 'BISD: Public info', href: '/records', menu: 'footer', group: 'The record', match: 'prefix' },
     { label: 'Request a record', href: '/records#request-a-record', menu: 'footer', group: 'The record' },
   ],
 })

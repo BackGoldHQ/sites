@@ -5,6 +5,7 @@
   "version": 1,
   "variants": {
     "Hero": [
+      "centered",
       "statement",
       "cover"
     ],
@@ -17,9 +18,11 @@
       "steps"
     ],
     "About": [
+      "right",
       "letter"
     ],
     "EventsList": [
+      "list",
       "compact",
       "agenda"
     ],
@@ -27,15 +30,17 @@
       "detail"
     ],
     "Cta": [
+      "card",
       "strip",
       "banner"
     ],
     "SignupCapture": [
+      "card",
       "band"
     ],
     "FormBlock": [
-      "wide",
-      "card"
+      "card",
+      "wide"
     ],
     "PollBlock": [
       "card"
@@ -50,21 +55,25 @@
       "archive"
     ],
     "ShareKit": [
+      "cards",
       "strip"
     ],
     "Donate": [
+      "form",
       "story"
     ],
     "Progress": [
       "bar"
     ],
     "PlatformPlanks": [
+      "numbered",
       "longread"
     ],
     "Faq": [
       "accordion"
     ],
     "Collection": [
+      "cards",
       "list"
     ]
   },
@@ -204,9 +213,9 @@
             "variant": "letter",
             "copy": {
               "kicker": "Who we are",
-              "heading": "This ain’t your grandma’s nonprofit",
-              "role": "But she’s welcome, too.",
-              "body": "Unlabeled is for Texans tired of being told who they are before anyone hears them. From the outlaws to the rule followers, everybody’s got a place here.\n\nWe listen past the labels, ask hard questions, and make room for honest conversations about the things people actually live with: schools, property taxes, jobs, roads, health care, and the future we’re handing our kids.\n\nWe’re not here to tell you what to think or who to vote for. We’re here to put people and policy ahead of party talking points. Texas works better when neighbors can talk honestly, disagree respectfully, and still move forward.\n\nThis is powered by people willing to give a damn. Follow us, show up, share your perspective, and help build a Texas conversation that puts listening first.",
+              "heading": "This ain\u2019t your grandma\u2019s nonprofit",
+              "role": "But she\u2019s welcome, too.",
+              "body": "Unlabeled is for Texans tired of being told who they are before anyone hears them. From the outlaws to the rule followers, everybody\u2019s got a place here.\n\nWe listen past the labels, ask hard questions, and make room for honest conversations about the things people actually live with: schools, property taxes, jobs, roads, health care, and the future we\u2019re handing our kids.\n\nWe\u2019re not here to tell you what to think or who to vote for. We\u2019re here to put people and policy ahead of party talking points. Texas works better when neighbors can talk honestly, disagree respectfully, and still move forward.\n\nThis is powered by people willing to give a damn. Follow us, show up, share your perspective, and help build a Texas conversation that puts listening first.",
               "signature": "Leave the labels to the rest of the country. Just bring yourself."
             },
             "media": {},
@@ -314,7 +323,7 @@
             "bleed": "full",
             "variant": "statement",
             "copy": {
-              "kicker": "What’s on",
+              "kicker": "What\u2019s on",
               "headline": "Upcoming events",
               "subheadline": "Forums, town halls, board meetings worth sitting in on, and the days that count. Show up."
             },
@@ -360,7 +369,7 @@
             "bleed": "full",
             "variant": "statement",
             "copy": {
-              "kicker": "Early voting · Jefferson County · Oct. 19–30, 2026",
+              "kicker": "Early voting \u00b7 Jefferson County \u00b7 Oct. 19\u201330, 2026",
               "headline": "Help us prove your vote counts",
               "subheadline": "Check-in at your polling location, we will PROVE to you that your vote was counted!"
             },
@@ -401,7 +410,7 @@
                 },
                 {
                   "label": "Early voting",
-                  "value": "19–30",
+                  "value": "19\u201330",
                   "note": "October 2026",
                   "accent": false
                 },
@@ -452,13 +461,13 @@
             "copy": {
               "kicker": "BISD students want answers",
               "headline": "Where is Big Lando?",
-              "subheadline": "Greg Landry, AKA “Big Lando,” was removed from class on October 16 and did not return to campus on October 19. His removal and failure to return have students and families very concerned, and they are asking BISD for the fullest lawful explanation of what happened and what comes next.",
+              "subheadline": "Greg Landry, AKA \u201cBig Lando,\u201d was removed from class on October 16 and did not return to campus on October 19. His removal and failure to return have students and families very concerned, and they are asking BISD for the fullest lawful explanation of what happened and what comes next.",
               "ctaText": "Sign the petition"
             },
             "media": {},
             "links": [
               {
-                "label": "Sign the petition ↓",
+                "label": "Sign the petition \u2193",
                 "target": {
                   "kind": "section",
                   "slug": "bisd-where-is-big-lando",
@@ -516,7 +525,7 @@
               "kicker": "Put your name on it",
               "heading": "Sign the petition",
               "goalNote": "This petition asks for the fullest explanation allowed by law and does not request confidential personnel information.",
-              "volunteerPrompt": "I’d also like to help."
+              "volunteerPrompt": "I\u2019d also like to help."
             },
             "media": {},
             "links": [],
@@ -615,7 +624,7 @@
               "heading": "Add your name: put it on the record",
               "addressedTo": "Your city council, its oversight committees, and the agencies that answer to them.",
               "goalNote": "Goal set for the next public hearing.",
-              "volunteerPrompt": "I’d also like to help."
+              "volunteerPrompt": "I\u2019d also like to help."
             },
             "media": {},
             "links": [],
@@ -633,7 +642,7 @@
               "items": [
                 {
                   "title": "Publish a full inventory.",
-                  "body": "Everything in operation — what it is, who runs it, and what it costs — in a public dataset, updated on a regular schedule."
+                  "body": "Everything in operation \u2014 what it is, who runs it, and what it costs \u2014 in a public dataset, updated on a regular schedule."
                 },
                 {
                   "title": "Require a public vote",
@@ -645,7 +654,7 @@
                 },
                 {
                   "title": "Publish an independent audit",
-                  "body": "every year — who accessed what, under what authority, and whether it was justified."
+                  "body": "every year \u2014 who accessed what, under what authority, and whether it was justified."
                 },
                 {
                   "group": "tile",
@@ -676,7 +685,7 @@
             "variant": "banner",
             "copy": {
               "eyebrow": "Put it on the record",
-              "heading": "They did it quietly. We’re doing it in the open.",
+              "heading": "They did it quietly. We\u2019re doing it in the open.",
               "body": "Every entry on that map is there because a neighbor added it. The public record we build together is the reason the next decision will have to be made in daylight.",
               "volunteerButtonText": "Sign the petition"
             },
@@ -726,7 +735,7 @@
       },
       {
         "slug": "bisd-students-lets-be-real",
-        "title": "BISD students: let’s be real",
+        "title": "BISD students: let\u2019s be real",
         "sections": [
           {
             "id": "Hero-poll",
@@ -736,8 +745,8 @@
             "variant": "statement",
             "copy": {
               "kicker": "BISD students",
-              "headline": "BISD students: let’s be real",
-              "subheadline": "You’re the ones in the classrooms. Tell us what it’s actually like."
+              "headline": "BISD students: let\u2019s be real",
+              "subheadline": "You\u2019re the ones in the classrooms. Tell us what it\u2019s actually like."
             },
             "media": {},
             "links": []
@@ -749,7 +758,7 @@
             "bleed": "full",
             "variant": "card",
             "copy": {
-              "heading": "BISD students: let’s be real"
+              "heading": "BISD students: let\u2019s be real"
             },
             "media": {},
             "links": []
@@ -781,7 +790,7 @@
             "copy": {
               "kicker": "Nederland ISD",
               "headline": "NISD: Prop A explained",
-              "subheadline": "A neutral, source-linked reader on Nederland ISD’s 2026 Proposition A: ballot language, funding context, salary records, and research notes."
+              "subheadline": "A neutral, source-linked reader on Nederland ISD\u2019s 2026 Proposition A: ballot language, funding context, salary records, and research notes."
             },
             "media": {},
             "links": []
@@ -806,7 +815,7 @@
               "items": [
                 {
                   "title": "What voters are deciding",
-                  "ethos": "Proposition A asks voters whether to ratify Nederland ISD’s 2026 ad valorem tax rate. It is a Voter-Approval Tax Rate Election for the district’s Maintenance & Operations budget. It is not a bond and does not authorize new debt.",
+                  "ethos": "Proposition A asks voters whether to ratify Nederland ISD\u2019s 2026 ad valorem tax rate. It is a Voter-Approval Tax Rate Election for the district\u2019s Maintenance & Operations budget. It is not a bond and does not authorize new debt.",
                   "planks": [
                     {
                       "headline": "Proposed total tax rate",
@@ -842,12 +851,12 @@
               "items": [
                 {
                   "question": "Election dates and estimated tax impact",
-                  "answer": "Registration deadline: October 5, 2026. Early voting: October 19–30. Election Day: November 3, 2026, 7 a.m.–7 p.m.",
+                  "answer": "Registration deadline: October 5, 2026. Early voting: October 19\u201330. Election Day: November 3, 2026, 7 a.m.\u20137 p.m.",
                   "topic": ""
                 },
                 {
                   "question": "Primary sources",
-                  "answer": "Link the district’s order of election, its adopted budget and its tax rate notice here, each to the original.",
+                  "answer": "Link the district\u2019s order of election, its adopted budget and its tax rate notice here, each to the original.",
                   "topic": ""
                 },
                 {
@@ -866,8 +875,8 @@
             "variant": "banner",
             "copy": {
               "eyebrow": "Read it yourself",
-              "heading": "Don’t take our word for it.",
-              "body": "Every number on this page links back to the district’s own documents. Read them, then vote however you see fit.",
+              "heading": "Don\u2019t take our word for it.",
+              "body": "Every number on this page links back to the district\u2019s own documents. Read them, then vote however you see fit.",
               "volunteerButtonText": "Upcoming events"
             },
             "media": {},
@@ -1126,18 +1135,6 @@
               "children": []
             },
             {
-              "label": "BISD: Public info",
-              "kind": "content_list",
-              "target": {
-                "type_key": "information_request"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
               "label": "BISD: Newsletter",
               "kind": "page",
               "target": {
@@ -1267,18 +1264,6 @@
           "header_button": false,
           "children": [
             {
-              "label": "BISD: Public info",
-              "kind": "content_list",
-              "target": {
-                "type_key": "information_request"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
               "label": "Submit documents",
               "kind": "page",
               "target": {
@@ -1352,14 +1337,14 @@
             "bleed": "full",
             "variant": "strip",
             "copy": {
-              "heading": "Early voting — Jefferson County — Oct. 19–30, 2026",
+              "heading": "Early voting \u2014 Jefferson County \u2014 Oct. 19\u201330, 2026",
               "body": "// Check in at your polling location",
-              "donateButtonText": "Proof: your vote counts →"
+              "donateButtonText": "Proof: your vote counts \u2192"
             },
             "media": {},
             "links": [
               {
-                "label": "Proof: your vote counts →",
+                "label": "Proof: your vote counts \u2192",
                 "target": {
                   "kind": "page",
                   "slug": "proof-your-vote-counts"
