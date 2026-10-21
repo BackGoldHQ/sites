@@ -2,9 +2,10 @@
 // The kit's Astro integration, which a template's astro.config.mjs adds as
 // `templateKit({ template: './src/template.ts' })`:
 //
-// - the routes: /preview, /backgold-setup, the 404 and every other address
-//   (/[...path]) are the kit's own pages (src/routes), in that order, so a
-//   template has no src/pages of its own;
+// - the routes: /preview, /backgold-setup, the 404, the volunteer shifts
+//   (/volunteer and /volunteer/<slug>) and every other address (/[...path])
+//   are the kit's own pages (src/routes), in that order, so a template has
+//   no src/pages of its own;
 // - the template: those pages import `virtual:backgold-template`, which
 //   resolves to the file the `template` option names (the template's config,
 //   src/template.ts in the kit's terms; a path relative to the project root);
@@ -48,6 +49,8 @@ export function templateKit(options) {
         injectRoute({ pattern: '/preview', entrypoint: route('preview.astro'), prerender: false })
         injectRoute({ pattern: '/backgold-setup', entrypoint: route('setup.astro'), prerender: false })
         injectRoute({ pattern: '/404', entrypoint: route('not-found.astro'), prerender: false })
+        injectRoute({ pattern: '/volunteer', entrypoint: route('volunteer.astro'), prerender: false })
+        injectRoute({ pattern: '/volunteer/[slug]', entrypoint: route('volunteer-shift.astro'), prerender: false })
         injectRoute({ pattern: '/[...path]', entrypoint: route('catch-all.astro'), prerender: false })
       },
     },

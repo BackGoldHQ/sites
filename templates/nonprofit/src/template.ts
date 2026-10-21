@@ -5,7 +5,9 @@
 // kicker; TeamGrid · grid as cards with open roles as invitations; Stories ·
 // spotlight with its soft field and wide rows; FormBlock · wide with an intro
 // column), the kit's entry layouts with its own post list and post (boards
-// N8 and N9, the search beside the list's head), its faces and its
+// N8 and N9, the search beside the list's head) and its own volunteer list
+// (/volunteer, its shifts look; a shift's page is the kit's, on its
+// hand-cut card), its faces and its
 // light-first look, and BackGold's frames in it (the colours they are sent,
 // src/lib/frame-colors.ts, and the stylesheet they load, src/styles/frame.css).
 // The hand-drawn look itself is src/styles/template.css; the doodle sprite
@@ -23,6 +25,7 @@ import manifest from '../template.json'
 import { frameColors } from './lib/frame-colors.ts'
 import PostArticle from './components/entries/post/article.astro'
 import PostList from './components/entries/post/list.astro'
+import VolunteerList from './components/volunteer/list.astro'
 import EventsListShifts from './components/sections/EventsList/shifts.astro'
 import FormBlockWide from './components/sections/FormBlock/wide.astro'
 import HeroSplit from './components/sections/Hero/split.astro'
@@ -50,7 +53,7 @@ export default defineTemplate({
     TeamGrid: TeamGridGrid,
     'TeamGrid:grid': TeamGridGrid,
   },
-  entries: { ...kitEntries, 'post:article': PostArticle, 'post:list': PostList },
+  entries: { ...kitEntries, 'post:article': PostArticle, 'post:list': PostList, 'volunteer:list': VolunteerList },
   newsSearch: 'head',
   fonts: {
     heading: 'Shantell+Sans:ital,wght,BNCE,INFM@0,300..800,-100..100,0..100;1,300..800,-100..100,0..100',

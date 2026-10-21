@@ -1,0 +1,38 @@
+---
+// `/volunteer` as this template draws it (its 'volunteer:list'): the quiet
+// page title ("Volunteer", the calendar doodle beside it, as on any page
+// with no Hero), then the open shifts in this template's EventsList · shifts
+// look, the same layout Get involved draws, given the shifts the route
+// already read: its head ("Open shifts, week by week", the word marked),
+// hand-cut rows grouped by week under the hand-lettered "Week of …" and the
+// squiggle rule, the torn-off calendar tile, the spot dots, the sticker
+// button to each shift's page. With no open shift the head stands over the
+// dashed invitation, with the organization's name.
+import type { Section } from '@backgold/content'
+import type { VolunteerListProps } from '@backgold/template-kit/components/volunteer/props.ts'
+import EventsListShifts from '../sections/EventsList/shifts.astro'
+
+type Props = VolunteerListProps
+
+const { shifts, siteName } = Astro.props
+/** The section the shifts layout draws: a plain band with its own head under the page's quiet title. */
+const section: Section = {
+  id: 'volunteer-shifts',
+  type: 'EventsList',
+  band: 'plain',
+  bleed: 'full',
+  variant: 'shifts',
+  copy: {
+    kicker: 'Open shifts',
+    heading: 'Pick a shift, bring a *friend*',
+    eventsEmptyCta: `${siteName} has no open volunteer shifts right now. New ones show here as soon as they are posted.`,
+  },
+  media: {},
+  links: [],
+  options: {},
+}
+---
+<header class="page-header">
+  <h1>Volunteer</h1>
+</header>
+<EventsListShifts section={section} shifts={shifts} />
