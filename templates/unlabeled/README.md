@@ -16,8 +16,8 @@ gallery offers it. Staff point her site at it with the template switch.
 
 | File | What it is |
 | --- | --- |
-| `template.json` | The manifest: the layouts the site uses (U-cat's table, default first), Top banner and Above the footer, the kit's entry layouts, the `bar` header and `columns` footer, and the starter (below). |
-| `src/template.ts` | The config for the kit: the kit's sections with her three layouts and the archive's sections added, her faces, `defaultAppearance: 'dark'`, `frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`. |
+| `template.json` | The manifest: the layouts the site uses (U-cat's table, default first; StatCards also lists `archive`, the archive's home door), Top banner and Above the footer, the kit's entry layouts, the `bar` header and `columns` footer, and the starter (below). |
+| `src/template.ts` | The config for the kit: the kit's sections with her three layouts and the archive's sections added, her faces, `defaultAppearance: 'dark'`, `frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`, and ARCHIVE as a menu link of the template's own (`menuLinks`). |
 | `src/styles/template.css` | Her look: her colours pinned on every band, the type scale, the grid, running heads and folios, buttons, the header, the footer, the photo treatment, every kit band restyled. |
 | `src/components/sections/Hero/cover.astro` | Hero · Cover: the headline as a cap stack, one sentence a line on its own black slab, over the photo through the halftone screen. |
 | `src/components/sections/MovementTicker/index.astro` | The ticker: one line under the header, "Live //", BackGold's live feed when the api sends it, else her typed figures running at a reading pace, still under reduced motion. |
@@ -113,14 +113,14 @@ but Donate; *The newsletter*, a SignupCapture · Band Above the footer on every
 page.
 
 Menus: HOME · EVENTS · VOTE ▾ · BISD ▾ · NEDERLAND ISD · PETITION ▾, with
-DONATE as the header button; the footer's three groups. ARCHIVE (top level,
-and first in the BISD group) is not a starter link: `/archive` is this
-template's own route, and a menu link can name a page, a list or an https
-address but not a template's route, so an absolute link would point at the
-wrong host on staging. The template is to draw ARCHIVE itself, which needs a
-hook in the kit's header (pending); a nav kind for a template's own routes is
-a platform ask. Her other pages (I voted, the BISD petition, Texas THC and the
-forms not in the menu) are hers already and are not starter pages.
+DONATE as the header button; the footer's three groups. ARCHIVE is not a
+menu link in BackGold: `/archive` is this template's own route, which no menu
+link kind can name (a nav kind for a template's routes is a platform ask), so
+the template adds it itself (`menuLinks` in `src/template.ts`, drawn by the
+kit's header): last at the top level, after PETITION, and first in the BISD
+group, in the bar and the phone sheet, current on `/archive`. Her other pages
+(I voted, the BISD petition, Texas THC and the forms not in the menu) are
+hers already and are not starter pages.
 
 Copy is hers where her site has it, and written in her register where it
 does not (the board copy decks mark which). Nobody on her team is named. The
@@ -202,8 +202,6 @@ glab variable set UNLABELED_PRODUCTION_KV_ID <id> --masked --protected -R backgo
 - **BackGold's frames follow her saved theme in BackGold**, through the kit's
   `moduleLook`, not this file: white ink, black ground, her hairline; their
   muted grey and button ink are the kit's derivation from that theme.
-- **ARCHIVE in the header menu** waits on a kit hook for a template's own
-  menu links (above).
 - **Photos at upload**: the halftone and greyscale are drawn at render time;
   the full dot screen only where the template draws the photo's box (the
   cover). Other images are greyscaled and contrasted.

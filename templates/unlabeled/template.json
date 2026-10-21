@@ -46,7 +46,8 @@
       "coverage"
     ],
     "StatCards": [
-      "row"
+      "row",
+      "archive"
     ],
     "ShareKit": [
       "strip"

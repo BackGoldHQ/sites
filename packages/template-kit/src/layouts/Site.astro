@@ -125,7 +125,38 @@ const { sections } = template
 const [primary, footer, utility] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility')])
 const pathname = Astro.url.pathname
 const headerItems = primary?.items ?? []
-const headerNodes = menuOf(headerItems, pathname, page)
+/**
+ * The template's own menu links (`menuLinks`, routes it draws itself) merged
+ * into the header menu: at the top level, last unless `position` is `first`,
+ * and, when `group` names a group of the menu (by its label, case aside),
+ * first inside that group as well. Each is current on its own address, as
+ * menuOf marks a link. A template with none gets the menu as BackGold sends
+ * it.
+ */
+function withTemplateLinks(nodes: MenuNode[]): MenuNode[] {
+  const own = template.menuLinks ?? []
+  if (own.length === 0) return nodes
+  const here = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const nodeOf = (link: (typeof own)[number]): MenuNode | null => {
+    const href = safeHref(link.href)
+    if (!href || !link.label.trim()) return null
+    const path = href.length > 1 ? href.replace(/\/+$/, '') : href
+    return { label: link.label, kind: 'page', href, rel: relFor(href), current: href.startsWith('/') && path === here, children: [] }
+  }
+  const place = (list: MenuNode[], node: MenuNode, position: 'first' | 'last' | undefined) => (position === 'first' ? [node, ...list] : [...list, node])
+  let out = nodes
+  for (const link of own) {
+    const node = nodeOf(link)
+    if (!node) continue
+    if (link.group) {
+      const label = link.group.trim().toLowerCase()
+      out = out.map((group) => (group.children.length > 0 && group.label.trim().toLowerCase() === label ? { ...group, children: [node, ...group.children] } : group))
+    }
+    out = place(out, node, link.position)
+  }
+  return out
+}
+const headerNodes = withTemplateLinks(menuOf(headerItems, pathname, page))
 const footerNodes = menuOf(footer?.items ?? [], pathname, page)
 const bottomRow = menuOf(utility?.items ?? [], pathname, page).flatMap((node) => [node, ...node.children]).filter((node) => node.href)
 const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []

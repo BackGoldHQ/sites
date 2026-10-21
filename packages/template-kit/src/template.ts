@@ -67,6 +67,16 @@ export interface TemplateConfig {
    */
   frameRadius?: number
   /**
+   * Links a template adds to the header menu for routes it draws itself (an
+   * archive at `/archive`), which no menu link in BackGold can name: each at
+   * the menu's top level, last unless `position` is `first`, and, when
+   * `group` names a group of the header menu by its label, first inside that
+   * group too; in the bar and in the phone sheet alike, marked
+   * current on its own address (layouts/Site.astro). Left out, nothing
+   * changes.
+   */
+  menuLinks?: Array<{ label: string; href: string; group?: string; position?: 'first' | 'last' }>
+  /**
    * Where the news list draws its search box: at the end of the filter row,
    * beside the chips (`filter`, board A4, the default), or beside the list's
    * head, on its subhead's line (`head`, board C10); on a narrow screen it

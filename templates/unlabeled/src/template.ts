@@ -53,4 +53,8 @@ export default defineTemplate({
   // with square corners (decision 2).
   frameFont: 'ubuntu-sans-mono',
   frameRadius: 0,
+  // The archive is this template's own route, which no menu link in BackGold
+  // can name: ARCHIVE at the end of the header menu (after PETITION, as the
+  // boards draw it) and first in the BISD group.
+  menuLinks: [{ label: 'Archive', href: '/archive', group: 'BISD' }],
 })
