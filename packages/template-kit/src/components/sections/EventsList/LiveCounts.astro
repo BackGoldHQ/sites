@@ -9,7 +9,8 @@
 // After the document is parsed, the script gathers every `data-bg-live` slot
 // on the page, asks `GET /events/live?ids=` for their ids (50 at a time) and
 // writes each event's counts into its slots as text: "N going" when anyone
-// is going, "N seats left" when the event has a capacity, joined by " · ".
+// is going, "N seats left" ("Full" at none) when the event has a capacity,
+// joined by " · ".
 // Each slot it fills also carries the numbers, for a layout that draws them
 // (the nonprofit template's spot dots): `data-going`, and `data-capacity`
 // (going plus seats left) when the event has a capacity. An event the
@@ -30,7 +31,7 @@ const source = firstLiveScript(Astro.request) ? await liveSource(Astro.locals.ba
       var words = function (event) {
         var parts = []
         if (typeof event.going === 'number' && isFinite(event.going) && event.going > 0) parts.push(count(event.going, 'going', 'going'))
-        if (typeof event.seats_left === 'number' && isFinite(event.seats_left) && event.seats_left >= 0) parts.push(count(event.seats_left, 'seat left', 'seats left'))
+        if (typeof event.seats_left === 'number' && isFinite(event.seats_left) && event.seats_left >= 0) parts.push(event.seats_left === 0 ? 'Full' : count(event.seats_left, 'seat left', 'seats left'))
         return parts.join(' · ')
       }
       var fill = function () {

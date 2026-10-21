@@ -135,24 +135,32 @@ export function sharedTerm(body: Body): string | null {
 export function teamOf(section: Section): Team {
   const all = rows(section)
   const group = (name: string) => all.filter((row) => row.group === name).map(person)
-  const seated = bodiesOf(section).flatMap((body) =>
-    body.seats.map((s) => ({
-      staff: body.name === 'Staff',
-      person: {
-        name: s.name,
-        role: s.seat,
-        dept: s.name ? null : body.name,
-        bio: s.bio,
-        blurb: null,
-        photo: s.photo,
-        link: s.link,
-      },
-    })),
-  )
+  const exec = group('exec')
+  const staffRows = group('staff')
+  // The same people can come twice: as the exec and staff groups and again as
+  // seats (the roster sends a team member with no seat under a Staff body).
+  // The groups win; a seat whose person they already name is left out.
+  const listed = new Set([...exec, ...staffRows].map((p) => p.name).filter(Boolean))
+  const seated = bodiesOf(section)
+    .flatMap((body) =>
+      body.seats.map((s) => ({
+        staff: body.name === 'Staff',
+        person: {
+          name: s.name,
+          role: s.seat,
+          dept: s.name ? null : body.name,
+          bio: s.bio,
+          blurb: null,
+          photo: s.photo,
+          link: s.link,
+        },
+      })),
+    )
+    .filter((s) => !(s.person.name && listed.has(s.person.name)))
   const openRoles = group('open').filter((p) => p.role)
   return {
-    leaders: [...group('exec'), ...seated.filter((s) => s.person.name && !s.staff).map((s) => s.person)].filter((p) => p.name),
-    staff: [...group('staff'), ...seated.filter((s) => s.person.name && s.staff).map((s) => s.person)].filter((p) => p.name),
+    leaders: [...exec, ...seated.filter((s) => s.person.name && !s.staff).map((s) => s.person)].filter((p) => p.name),
+    staff: [...staffRows, ...seated.filter((s) => s.person.name && s.staff).map((s) => s.person)].filter((p) => p.name),
     open: [...openRoles, ...seated.filter((s) => !s.person.name).map((s) => ({ ...s.person, role: s.person.role ?? 'Open seat' }))],
     openRoles,
     interest: links(section)[0] ?? null,

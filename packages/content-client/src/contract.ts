@@ -32,6 +32,7 @@ import type {
   PagesResponse,
   RedirectsResponse,
   SectionsResponse,
+  ShiftsResponse,
   SiteMenuKey,
   SiteResponse,
   SitemapResponse,
@@ -92,6 +93,11 @@ export type {
   SectionLinkTarget,
   SectionMedia,
   SectionsResponse,
+  ShiftLiveCounts,
+  ShiftsListRow,
+  ShiftsLiveResponse,
+  ShiftsResponse,
+  ShiftSubject,
   SiteArea,
   SiteMenuKey,
   SiteResponse,
@@ -243,6 +249,13 @@ export interface EventsOptions {
   limit?: number
 }
 
+export interface ShiftsOptions {
+  /** The `next_cursor` of the previous page. */
+  cursor?: string
+  /** 1–50; the api's default (20) when omitted. */
+  limit?: number
+}
+
 export interface ReadOptions extends VisitorOptions {
   /** Read the draft (`?preview=1`; needs a secret key; never cached). */
   preview?: boolean
@@ -301,6 +314,15 @@ export interface BackgoldContent {
    * cached 30 seconds and never by version, so not through `raw`).
    */
   events(opts?: EventsOptions): Promise<EventsResponse>
+  /**
+   * `GET /shifts`: the organization's open volunteer shifts, soonest first,
+   * one page at a time, each with its counts and signup state and its
+   * `signup_url` (BackGold's signup card). Cached and versioned like every
+   * published read. The counts move between publishes: read
+   * `GET /shifts/live?ids=` yourself (cached 30 seconds and never by
+   * version, so not through `raw`), as for events.
+   */
+  shifts(opts?: ShiftsOptions): Promise<ShiftsResponse>
   /** `GET /terms/:taxonomy`; null for an unknown taxonomy. */
   terms(taxonomy: string): Promise<TermsResponse | null>
   /** `GET /authors`. */

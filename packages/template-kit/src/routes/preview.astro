@@ -44,6 +44,8 @@ const sidebar = areaEntriesOf(areas, 'sidebar').length > 0
 // A page that opens with a Hero puts it over both columns, as the live route does.
 const heroOverSplit = sidebar && 'page' in draft && leadsWithHero(draft.sections)
 const EntryLayout = 'entry' in draft ? entryLayoutFor(template, draft.entry.type) : null
+// The frames and the leading Hero read the template from here (ModuleFrame, LeadingHero).
+Astro.locals.template = template
 ---
 <Site template={template} title={`Preview: ${title}`} canonicalPath={result.path} noindex page={menuPage} areas={areas}>
   <PreviewBar />

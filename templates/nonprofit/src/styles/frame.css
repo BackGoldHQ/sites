@@ -1,0 +1,263 @@
+/*
+  BackGold's frames in the nonprofit template's look (boards N4 the volunteer
+  form, N6 the RSVP, N7 Donate, N10 the contact form, and the newsletter
+  band): the frame skin, served at /_backgold/frame.css (src/frame/css.ts,
+  which puts the faces' @font-face rules ahead of it) and linked by a frame
+  last in its <head> when the site asks (TemplateConfig `frameSkin`) and
+  BackGold honours it. The contract is the platform's docs/FRAME-SKINS.md:
+  every rule sits under html[data-bg-look], targets only its `bg-fr-*`
+  parts, its states and the `--bg-look-*` variables, and draws the
+  organization's colours from those variables, light and dark alike. The
+  shapes and faces below are the template's own (template.css keeps the
+  originals; a frame cannot read the page's variables).
+
+  - Faces: labels, card heads, titles, counts, choices and buttons in
+    Shantell Sans; what a visitor reads and types in Nunito.
+  - Fields and choice tiles: a 2px edge in `--bg-look-field-edge` (3:1
+    against the surface) on blob corners; focus is the ink with a hard
+    offset and a dashed accent ring; a field that fails is edged in the
+    accent, dashed.
+  - Choices are chips; the picked one is the primary sticker.
+  - The main call is a sticker: a 2px ink border, the hard 3px offset,
+    tilted 1deg; a form's and a sign-up's carry the mail doodle; Donate's
+    keeps the site's main colour (`--bg-look-button`), every other frame's
+    the second (`--bg-look-button-2`). Other buttons are outline stickers.
+    A disabled button reads as disabled: flat, faded, no offset.
+  - Items, signer cards and a petition's sheet are hand-cut cards; a card
+    the frame draws inside the site's card is no card of its own.
+  - The message line's failure is the exclamation doodle and the sentence
+    in the accent, never red.
+  - Motion only under prefers-reduced-motion: no-preference: a sticker
+    lifts 1px.
+
+  Nothing here hides, shrinks or covers a required field, a consent row, a
+  legal line, the message line or the main call, or writes copy.
+*/
+
+html[data-bg-look] {
+  --np-font: 'Nunito', var(--bg-look-font, ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --np-display: 'Shantell Sans', 'Nunito', var(--bg-look-font, ui-rounded, system-ui, sans-serif);
+  --np-hand: 'INFM' 55, 'BNCE' 22;
+  --np-hand-calm: 'INFM' 25, 'BNCE' 0;
+  --np-edge: var(--bg-look-field-edge, var(--bg-look-line-strong));
+  --np-blob-1: 30px 18px 34px 14px / 18px 32px 16px 28px;
+  --np-blob-sm: 12px 16px 10px 15px / 15px 10px 16px 12px;
+  --np-blob-pill: 30px 24px 28px 22px / 24px 30px 22px 28px;
+  --np-off: 3px;
+  --np-d-mail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7 13.8C18.4 13.2 29.8 13.2 41.2 13.6C41.4 21 41.4 28.2 41 35.4C29.8 36 18.6 36 7.4 35.6C6.8 28.4 6.8 21 7 13.8ZM7.8 15C13.4 19.4 18.6 23.6 24 27.2C29.6 23.4 35 19.2 40.4 14.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-exclaim: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.6 6.5C24 14.2 23.6 21.8 23.8 29.5M23.9 39.3L24.1 39.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* ── Faces ── */
+
+html[data-bg-look] .bg-fr {
+  font-family: var(--np-font);
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-label, .bg-fr-card-head, .bg-fr-title, .bg-fr-legend, .bg-fr-progress) {
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-label {
+  font-size: 1rem;
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-card-head, .bg-fr-title) {
+  font-variation-settings: var(--np-hand);
+  font-weight: 800;
+}
+html[data-bg-look] .bg-fr .bg-fr-req {
+  color: var(--bg-look-accent);
+}
+html[data-bg-look] .bg-fr .bg-fr-help {
+  color: var(--bg-look-muted);
+}
+html[data-bg-look] .bg-fr .bg-fr-fine {
+  color: var(--bg-look-muted);
+  font-family: var(--np-font);
+}
+html[data-bg-look] .bg-fr .bg-fr-count {
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand);
+  font-weight: 800;
+}
+
+/* ── Fields: the edge on blob corners ── */
+
+html[data-bg-look] .bg-fr .bg-fr-input {
+  min-height: 48px;
+  border: 2px solid var(--np-edge);
+  border-radius: var(--np-blob-sm);
+  background: var(--bg-look-surface);
+  color: var(--bg-look-ink);
+  font-family: var(--np-font);
+  font-size: 1rem;
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-input::placeholder {
+  color: var(--bg-look-muted);
+  opacity: 1;
+}
+html[data-bg-look] .bg-fr .bg-fr-input:focus {
+  border-color: var(--bg-look-ink);
+  box-shadow: 2px 2px 0 0 var(--bg-look-ink);
+  outline: 3px dashed var(--bg-look-accent);
+  outline-offset: 3px;
+}
+html[data-bg-look] .bg-fr .bg-fr-input:is([aria-invalid='true'], :user-invalid) {
+  border-color: var(--bg-look-accent);
+  border-style: dashed;
+}
+html[data-bg-look] .bg-fr .bg-fr-input[disabled] {
+  border-style: dotted;
+  opacity: 0.6;
+}
+
+/* ── Choices: chips, the picked one the primary sticker ── */
+
+html[data-bg-look] .bg-fr .bg-fr-choice {
+  border: 2px solid var(--np-edge);
+  border-radius: var(--np-blob-pill);
+  background: var(--bg-look-surface);
+  color: var(--bg-look-ink);
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-choice:is([aria-pressed='true'], :checked, :has(input:checked)) {
+  border-color: var(--bg-look-ink);
+  background: var(--bg-look-button-2);
+  color: var(--bg-look-button-2-ink);
+  box-shadow: 2px 2px 0 0 var(--bg-look-ink);
+}
+html[data-bg-look] .bg-fr .bg-fr-choice:focus-visible,
+html[data-bg-look] .bg-fr .bg-fr-choice:has(input:focus-visible) {
+  outline: 3px dashed var(--bg-look-accent);
+  outline-offset: 3px;
+}
+html[data-bg-look] .bg-fr .bg-fr-check input {
+  accent-color: var(--bg-look-button-2);
+}
+
+/* ── Buttons: stickers ── */
+
+html[data-bg-look] .bg-fr .bg-fr-submit {
+  --np-rot: -1deg;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  min-height: 50px;
+  border: 2px solid var(--bg-look-ink);
+  border-radius: var(--np-blob-pill);
+  background: var(--bg-look-button-2);
+  color: var(--bg-look-button-2-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--bg-look-surface),
+    var(--np-off) var(--np-off) 0 0 var(--bg-look-ink);
+  transform: rotate(var(--np-rot));
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  text-transform: none;
+}
+/* Donate's give button is the site's main colour: the page's one accent. */
+html[data-bg-look] [data-bg-fr='donate'] .bg-fr-submit {
+  background: var(--bg-look-button);
+  color: var(--bg-look-button-ink);
+}
+html[data-bg-look] :is([data-bg-fr='form'], [data-bg-fr='signup']) .bg-fr-submit::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.25em;
+  height: 1.25em;
+  background: currentColor;
+  -webkit-mask: var(--np-d-mail) center / contain no-repeat;
+  mask: var(--np-d-mail) center / contain no-repeat;
+}
+html[data-bg-look] .bg-fr .bg-fr-secondary {
+  --np-rot: 0.8deg;
+  border: 2px solid var(--bg-look-ink);
+  border-radius: var(--np-blob-pill);
+  background: transparent;
+  color: var(--bg-look-ink);
+  box-shadow: 2px 2px 0 0 var(--bg-look-ink);
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+  text-transform: none;
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-submit, .bg-fr-secondary):focus-visible {
+  outline: 3px dashed var(--bg-look-accent);
+  outline-offset: 5px;
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-submit, .bg-fr-secondary):not([disabled]):active {
+  transform: rotate(var(--np-rot, 0deg)) translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--bg-look-ink);
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-submit, .bg-fr-secondary)[disabled] {
+  box-shadow: none;
+  opacity: 0.55;
+  transform: none;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-bg-look] .bg-fr :is(.bg-fr-submit, .bg-fr-secondary) {
+    transition:
+      transform 0.12s ease-out,
+      box-shadow 0.12s ease-out;
+  }
+  html[data-bg-look] .bg-fr .bg-fr-submit:not([disabled]):hover {
+    transform: rotate(var(--np-rot)) translate(-1px, -1px);
+    box-shadow:
+      inset 0 0 0 2px var(--bg-look-surface),
+      calc(var(--np-off) + 1px) calc(var(--np-off) + 1px) 0 0 var(--bg-look-ink);
+  }
+}
+
+/* ── Cards: the site draws the frame's card; inside it, items and signers are hand-cut ── */
+
+html[data-bg-look] .bg-fr .bg-fr-card {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr :is(.bg-fr-item, .bg-fr-signer, .bg-fr-sheet) {
+  border: 2px solid var(--np-edge);
+  border-radius: var(--np-blob-1);
+  background: var(--bg-look-surface);
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-done {
+  font-family: var(--np-font);
+}
+html[data-bg-look] .bg-fr .bg-fr-done :is(h1, h2, h3) {
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand);
+  font-weight: 800;
+}
+
+/* ── The message line: a failure is the exclamation doodle and the sentence in the accent ── */
+
+html[data-bg-look] .bg-fr .bg-fr-error[data-tone='error'] {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--bg-look-accent);
+  font-weight: 800;
+}
+html[data-bg-look] .bg-fr .bg-fr-error[data-tone='error'][hidden] {
+  display: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-error[data-tone='error']::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: currentColor;
+  -webkit-mask: var(--np-d-exclaim) center / contain no-repeat;
+  mask: var(--np-d-exclaim) center / contain no-repeat;
+}

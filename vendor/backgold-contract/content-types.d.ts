@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { l as BuiltInContentTypeKey, m as ContentTypeIcon, n as BuiltInTaxonomyKey, C as ContentFieldKind, o as ContentReferenceTarget } from './constants-BgQMMyNq.js';
+import { n as BuiltInContentTypeKey, o as ContentTypeIcon, p as BuiltInTaxonomyKey, C as ContentFieldKind, q as ContentReferenceTarget } from './constants-3dFHOvY5.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
@@ -72,7 +72,7 @@ interface BuiltInContentType {
 /**
  * The built-in types a new org is given (lib/content-types.ts
  * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party), 0453
- * (newsletter) and 0547 (course) seeded the same rows for the orgs that existed then, with one
+ * (newsletter) and 0552 (course) seeded the same rows for the orgs that existed then, with one
  * difference: the post row's url_base — the org's blog base — was `blog`
  * (BLOG_URL_BASE_LEGACY) there and is `news` for a new org.
  */
@@ -270,6 +270,7 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
+        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -279,7 +280,6 @@ declare const contentTypeCreateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodDefault<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -294,6 +294,7 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
+        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -303,7 +304,6 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -321,8 +321,8 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        short_text: "short_text";
         long_text: "long_text";
+        short_text: "short_text";
         rich_text: "rich_text";
         image: "image";
         pdf: "pdf";
