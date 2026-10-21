@@ -1,0 +1,22 @@
+---
+// A band's running head (U-cat §3), as a dossier sets one: the section mark
+// and the band's kicker at the left (`§ 02 // What we do`), its heading in
+// the centre, the folio at the right in white, over a hairline, in the meta
+// face. The section mark and the folio count the page's running heads
+// (a CSS counter in src/styles/template.css), so they read in page order.
+// With neither a kicker nor a heading the left reads the mark alone.
+interface Props {
+  kicker?: string | null
+  title?: string | null
+  class?: string
+}
+
+const { kicker = null, title = null, class: className } = Astro.props
+const left = kicker ?? title
+const centre = kicker ? title : null
+---
+<div class:list={['u-running-head', className]} aria-hidden="true">
+  <span class="u-rh-left">{left && <span class="u-rh-words">{left}</span>}</span>
+  <span class="u-rh-centre">{centre}</span>
+  <span class="u-rh-folio"></span>
+</div>

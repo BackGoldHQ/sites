@@ -1,0 +1,44 @@
+---
+// Every archive page's frame (boards U2–U5, U10): the running head with
+// its trail, the page itself, and the three disclaimers in a band above
+// the footer, small, in the meta face, never collapsed.
+import './archive.css'
+import { ARCHIVE_DISCLAIMERS, ARCHIVE_PROVENANCE } from '../../lib/archive/disclaimers'
+
+interface Props {
+  /** The trail after "Read it yourself. // BISD public data archive", each with its link when it has a page. */
+  crumbs?: Array<{ label: string; href?: string }>
+}
+
+const { crumbs = [] } = Astro.props
+---
+<div class="ar">
+  <div class="ar-wrap">
+    <nav class="ar-head ar-meta" aria-label="Archive">
+      <p class="ar-crumbs">
+        <strong>Read it yourself.</strong> // <a href="/archive">BISD public data archive</a>
+        {crumbs.map((c) => (
+          <>
+            {' › '}
+            {c.href ? <a href={c.href}>{c.label}</a> : <span aria-current="page">{c.label}</span>}
+          </>
+        ))}
+      </p>
+      <p>Source-linked public records reader · Originals preserved without alteration</p>
+    </nav>
+    <slot />
+  </div>
+  <aside class="ar-disclaimers" aria-labelledby="ar-disclaimers-head">
+    <div class="ar-wrap">
+      <p class="ar-meta" id="ar-disclaimers-head">// Read this first · {ARCHIVE_PROVENANCE}</p>
+      <ol>
+        {ARCHIVE_DISCLAIMERS.map((d, i) => (
+          <li>
+            <b>{String(i + 1).padStart(2, '0')} {d.heading}</b>
+            {d.text}
+          </li>
+        ))}
+      </ol>
+    </div>
+  </aside>
+</div>

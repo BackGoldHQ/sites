@@ -1,0 +1,101 @@
+---
+// Hero, 'split' layout as this template draws it (board N3): the kit's
+// layout (board A2-about-platform, section 1) with the section's kicker over
+// the headline, which the kit's leaves out. The kit's comment, as it holds:
+// the headline,
+// the line under it and the buttons on the left, the photo on the right;
+// on a phone the photo follows the words, its alt text `copy.imageAlt` and
+// its caption (`copy.caption`) a chip at its lower left. Without a photo the
+// words take the full width, with no caption. The page-opening Hero's headline is the page's <h1>
+// (`level={1}`); any other Hero's is an <h2>. A Hero with its signup form on
+// carries an `embed`: BackGold's own form, framed under the buttons.
+import type { ComponentProps } from 'astro/types'
+import { Embed } from '@backgold/astro/components'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
+import { heroPhoto, links } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+
+type Props = ComponentProps<typeof Default>
+
+const { section, level = 2 } = Astro.props
+const Heading = level === 1 ? 'h1' : 'h2'
+const kicker = text(section.copy.kicker)
+const headline = text(section.copy.headline)
+const subheadline = text(section.copy.subheadline)
+const caption = text(section.copy.caption)
+const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const buttons = links(section)
+---
+<Band section={section} class="hero-split-layout">
+  <div class:list={['split', picture && 'split-with-photo']}>
+    <div class="split-words">
+      {kicker && <p class="kicker">{kicker}</p>}
+      {headline && <Heading class="split-headline">{headline}</Heading>}
+      {subheadline && <p class="split-lede">{subheadline}</p>}
+      {buttons.length > 0 && (
+        <p class="actions">
+          {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+        </p>
+      )}
+      {section.embed && <Embed embed={section.embed} title="Sign up" />}
+    </div>
+    {picture && (
+      <div class="split-photo">
+        <img
+          class="split-image"
+          src={picture.url}
+          alt={picture.alt}
+          loading={level === 1 ? 'eager' : 'lazy'}
+          fetchpriority={level === 1 ? 'high' : undefined}
+          decoding="async"
+        />
+        {caption && <p class="photo-caption">{caption}</p>}
+      </div>
+    )}
+  </div>
+</Band>
+
+<style>
+  .split {
+    display: grid;
+    gap: 2rem;
+  }
+  .split-headline {
+    font-size: clamp(2.5rem, 1.7rem + 2.6vw, 3.75rem);
+    font-weight: 800;
+    line-height: 1.02;
+    max-width: 16em;
+    margin: 0;
+  }
+  .split-lede {
+    font-size: var(--text-lg);
+    color: var(--muted);
+    max-width: 34em;
+    margin: 1.25rem 0 0;
+  }
+  .split-words .actions {
+    margin-top: 1.75rem;
+  }
+  .split-words > :global(.bg-embed) {
+    margin-top: 1.5rem;
+  }
+  .split-photo {
+    position: relative;
+    min-width: 0;
+  }
+  .split-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 4.3;
+    object-fit: cover;
+    border-radius: calc(var(--radius) * 2);
+  }
+  @media (min-width: 48rem) {
+    .split-with-photo {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: clamp(2.5rem, 4vw, 3.5rem);
+      align-items: center;
+    }
+  }
+</style>

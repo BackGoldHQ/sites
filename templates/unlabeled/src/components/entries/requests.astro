@@ -1,0 +1,98 @@
+---
+// /records, her records requests as a ledger (board U10, frame 1): newest
+// first, each with its publish date, status as a shape (Fulfilled solid,
+// Waiting on a response dashed, Denied struck through), requested and
+// responded dates where she filled them, requested from, the summary, the
+// records provided, the response PDF; the counts by status; Submit
+// documents where her site has that page; and Request a record as a
+// numbered how-to.
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import RunningHead from '../archive/RunningHead.astro'
+import { loadArchive, sourceOf } from '../../lib/archive/index'
+import { fileUrl, str } from '../../lib/archive/record'
+import { dayParts, shortDay } from '../../lib/archive/format'
+
+type Props = ListLayoutProps
+
+const STATUSES = ['Fulfilled', 'Waiting on a response', 'Denied'] as const
+
+const { type, term } = Astro.props
+const base = type === 'blog' ? 'records' : (type.url_base ?? 'records')
+const source = sourceOf(Astro.locals)
+const data = source ? await loadArchive(source) : null
+const docs = data?.docs ?? []
+const all = docs.filter((d) => d.kind === 'information_request')
+const rows = (term ? all.filter((d) => d.campuses.includes(term.term.label) || d.category === term.term.label) : all).sort((a, b) => (b.publishAt ?? '').localeCompare(a.publishAt ?? ''))
+const count = (s: string) => all.filter((d) => str(d.fields.status) === s).length
+const bg = Astro.locals.backgold
+const pages = bg.setup === null ? ((await bg.client.pages().catch(() => null))?.pages ?? []) : []
+const submit = pages.find((p) => p.slug === 'submit-documents') ?? null
+const nonBusinessDays = docs.find((d) => d.kind === 'board_decision' && d.mark === 'GOV-D08') ?? null
+const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
+---
+<ArchiveFrame crumbs={[{ label: type === 'blog' ? 'Records requests' : type.plural_label }]}>
+  <header class="ar-entry">
+    <RunningHead mark={`Records requests // /${base}`} title="BISD public information requests" folio="Q / 01" />
+    <h1>{type === 'blog' ? 'Records requests' : type.plural_label}</h1>
+    <p class="ar-lede">Every public information request the team has filed, newest first, with what came back. The archive’s search covers every one.</p>
+  </header>
+  <div class="ar-holdings">
+    <a href="#ledger"><b class="u-numeral">{all.length}</b><span class="ar-meta">Published</span></a>
+    {STATUSES.map((s) => <a href="#ledger"><b class="u-numeral">{count(s)}</b><span class="ar-meta">{s}</span></a>)}
+  </div>
+  <p class="ar-chips" aria-label="Status key">{STATUSES.map((s) => <span class="ar-status" data-status={s}>{s}</span>)}</p>
+
+  <ul class="ar-rows ar-ledger" id="ledger" style="margin-top:1.5rem">
+    {rows.map((d) => {
+      const f = d.fields
+      const pdf = fileUrl(f.response_document)
+      const requested = str(f.requested_on)
+      const responded = str(f.responded_on)
+      const published = d.publishAt ? dayParts(d.publishAt.slice(0, 10)) : null
+      const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((x) => x.trim()).filter(Boolean)
+      return (
+        <li>
+          <div>
+            {published && <p class="ar-ledger-date"><b>{published.month} {published.day}</b><span class="ar-meta">{published.year} · published</span></p>}
+            {str(f.status) && <p style="margin-top:0.5rem"><span class="ar-status" data-status={str(f.status)}>{str(f.status)}</span></p>}
+          </div>
+          <div class="ar-row-body">
+            <p><span class="ar-kind">REQ</span> <span class="ar-meta">{[str(f.requested_from), requested && `Requested ${day(requested)}`, responded && `Responded ${day(responded)}`].filter(Boolean).join(' · ')}</span></p>
+            <h3 class="ar-row-title"><a href={d.url}>{d.title}</a></h3>
+            {d.summary && <p class="ar-row-summary">{d.summary}</p>}
+            <p class="ar-row-links">{pdf && <a href={pdf} rel="noopener">Response PDF ↓</a>}<a href={d.url}>The request →</a></p>
+          </div>
+          <div>
+            <p class="ar-label">// Records provided</p>
+            {provided.length > 0 ? <ul class="ar-list-plain">{provided.map((x) => <li class="ar-row-cite" style="display:block">{x}</li>)}</ul> : <p class="ar-faint">—</p>}
+          </div>
+        </li>
+      )
+    })}
+  </ul>
+  {rows.length === 0 && <p class="ar-faint" style="margin-top:1.5rem">No records request is published yet.</p>}
+
+  {submit && (
+    <section class="ar-band u-grid" aria-labelledby="ar-submit">
+      <RunningHead mark="§ Submit" title="Submit BISD or HISD documents" folio="Q / 02" />
+      <h2 id="ar-submit">Got documents? Submit BISD or HISD documents</h2>
+      <p class="ar-lede">Got something back from a request? A board packet, a spreadsheet, a letter? Send it in. Originals stay as they are; we add the source and put it on the record.</p>
+      <p style="margin-top:1rem"><a class="ar-btn" href={submit.url}>Submit documents</a></p>
+    </section>
+  )}
+
+  <span class="u-horns ar-horns" aria-hidden="true" />
+  <section class="ar-band u-grid" id="request-a-record" aria-labelledby="ar-request">
+    <RunningHead mark="§ Request a record" title="How to ask BISD for public information" folio="Q / 03" />
+    <h2 id="ar-request">Not here yet? Request a record.</h2>
+    <p class="ar-lede">Anybody can ask. It takes a few lines in writing. Here’s how, start to finish.</p>
+    <ol class="ar-steps">
+      <li><div><h3>Put it in writing</h3><p class="ar-muted">Email or mail your request to BISD’s public information officer. A request has to be in writing. You don’t have to say why you want it.</p></div></li>
+      <li><div><h3>Ask for records, not answers</h3><p class="ar-muted">Name the documents, the dates and the office: “all paid invoices to Carter &amp; Company from January 1 through September 23, 2026.” They have to hand over what exists; they don’t have to write you an explanation.</p></div></li>
+      <li><div><h3>Mind the clock</h3><p class="ar-muted">BISD has to produce the records promptly. If it can’t within 10 business days, it has to tell you in writing when it will. If it wants to hold something back, it has to ask the Texas Attorney General within 10 business days.{nonBusinessDays && <> The board designated extra non-business days for those deadlines: <a href={nonBusinessDays.url}>{nonBusinessDays.mark}, {shortDay(nonBusinessDays.date)} →</a></>}</p></div></li>
+      <li><div><h3>Expect an estimate</h3><p class="ar-muted">If copies will cost more than $40, they have to send you an itemized estimate first. You can narrow the request or ask to inspect the records instead.</p></div></li>
+      <li><div><h3>Send us what comes back</h3><p class="ar-muted">{submit ? <><a href={submit.url}>Submit documents</a>. </> : 'Send it to the team. '}The team reads it, adds it to the ledger and to the archive with its source, and says what it shows in plain words.</p></div></li>
+    </ol>
+  </section>
+</ArchiveFrame>

@@ -1,0 +1,51 @@
+---
+// The meetings as a horizontal strip (boards U2, U4), all of them across
+// a desktop page; where they do not fit the strip scrolls and starts at
+// this page's meeting (inverted) or the newest. Each column is one board
+// meeting, its date, a bar for the decisions that reference it (— for
+// none), and its A / M / R marks (agenda, minutes, resolutions on BoardBook).
+import type { MeetingMark } from '../../lib/archive/views'
+import { dayParts } from '../../lib/archive/format'
+
+interface Props {
+  marks: MeetingMark[]
+  /** The meeting this page is, drawn outlined. */
+  current?: string | null
+}
+
+const { marks, current = null } = Astro.props
+const most = Math.max(1, ...marks.map((m) => m.decisions))
+---
+{marks.length > 0 && (
+  <>
+    <ul class="ar-strip">
+      {marks.map((m) => {
+        const p = dayParts(m.doc.date!)
+        const docs = [m.agenda ? 'agenda' : null, m.minutes ? 'minutes' : null, m.resolutions ? 'resolutions' : null].filter(Boolean)
+        return (
+          <li>
+            <a href={m.doc.url} aria-current={m.doc.slug === current ? 'page' : undefined}>
+              <span class="ar-faint">{p.year}</span>
+              <span>{p.month}</span>
+              <b>{p.day}</b>
+              <span class="ar-bar" style={`height:${m.decisions ? Math.max(8, Math.round((m.decisions / most) * 100)) : 0}%`} />
+              <span>{m.decisions || '—'}<span class="visually-hidden"> {m.decisions === 1 ? 'decision' : 'decisions'}</span></span>
+              <span class="ar-marks">
+                <span aria-hidden="true" data-on={m.agenda ? '' : undefined}>A</span><span aria-hidden="true" data-on={m.minutes ? '' : undefined}>M</span><span aria-hidden="true" data-on={m.resolutions ? '' : undefined}>R</span>
+                <span class="visually-hidden">{docs.length ? `On BoardBook: ${docs.join(', ')}` : 'Nothing on BoardBook'}</span>
+              </span>
+            </a>
+          </li>
+        )
+      })}
+    </ul>
+    <p class="ar-meta ar-hint">A Agenda on BoardBook · M Minutes on BoardBook · R Resolutions on BoardBook · Bar = decisions referencing the meeting · — = none filed</p>
+  </>
+)}
+<script>
+  // A strip wider than its box starts scrolled to this page's meeting, else the newest.
+  for (const strip of document.querySelectorAll<HTMLElement>('.ar-strip')) {
+    const at = strip.querySelector<HTMLElement>('[aria-current="page"]')?.parentElement ?? strip.lastElementChild
+    if (at instanceof HTMLElement && at.offsetLeft + at.offsetWidth > strip.clientWidth) strip.scrollLeft = at.offsetLeft + at.offsetWidth - strip.clientWidth + 8
+  }
+</script>

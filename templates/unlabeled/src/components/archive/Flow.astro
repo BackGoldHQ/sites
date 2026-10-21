@@ -1,0 +1,104 @@
+---
+// A flow (boards U3, U5): what comes in on the left, the hub in the
+// middle, what goes out on the right, every band as tall as its figure on
+// one scale for the whole drawing, so a side that is larger shows as
+// larger. Labels sit outside the bands: the left side's to its left, the
+// right side's to its right, each side headed In or Out. White is the hub,
+// grey hatching the bands.
+import { formatUsd } from '../../lib/archive/query'
+
+interface Side {
+  label: string
+  value: number
+  href?: string
+}
+
+interface Props {
+  /** Over the drawing: what it is and whether it balances. */
+  caption: string
+  hub: string
+  left: Side[]
+  right: Side[]
+  /** Ids in one page must differ. */
+  id: string
+}
+
+const { caption, hub, left, right, id } = Astro.props
+const W = 1000
+const H = 300
+const GAP = 6
+const LX = 330
+const HX = 490
+const RX = 650
+const sumL = left.reduce((n, s) => n + s.value, 0)
+const sumR = right.reduce((n, s) => n + s.value, 0)
+const scale = (H - GAP * Math.max(left.length, right.length, 1)) / Math.max(sumL, sumR, 1)
+const column = (side: Side[]) => {
+  let y = 0
+  return side.map((s) => {
+    const h = Math.max(2, s.value * scale)
+    const at = { side: s, y, h }
+    y += h + GAP
+    return at
+  })
+}
+const L = column(left)
+const R = column(right)
+const hubH = Math.max(sumL, sumR) * scale
+const band = (x0: number, a0: number, a1: number, x1: number, b0: number, b1: number) => {
+  const mid = (x0 + x1) / 2
+  return `M${x0},${a0} C${mid},${a0} ${mid},${b0} ${x1},${b0} L${x1},${b1} C${mid},${b1} ${mid},${a1} ${x0},${a1} Z`
+}
+let hy = 0
+const inPaths = L.map((b) => {
+  const th = b.side.value * scale
+  const d = band(LX + 20, b.y, b.y + b.h, HX, hy, hy + th)
+  hy += th
+  return d
+})
+hy = 0
+const outPaths = R.map((b) => {
+  const th = b.side.value * scale
+  const d = band(HX + 20, hy, hy + th, RX, b.y, b.y + b.h)
+  hy += th
+  return d
+})
+// Labels stay beside their bands, pushed down so none overlaps the one above.
+const labelYs = (col: typeof L) => {
+  let floor = -Infinity
+  return col.map((b) => {
+    const y = Math.max(b.y + Math.min(b.h, 24) / 2 + 4, floor + 14)
+    floor = y
+    return y
+  })
+}
+const ly = labelYs(L)
+const ry = labelYs(R)
+const bottom = Math.max(H, ...ly, ...ry) + 30
+const short = (s: string) => (s.length > 44 ? `${s.slice(0, 43)}…` : s)
+/** A side's label and figure in the room beside its column (about 46 characters at this size). */
+const tag = (s: Side) => {
+  const figure = formatUsd(s.value)
+  const room = 46 - figure.length - 3
+  return `${s.label.length > room ? `${s.label.slice(0, room - 1)}…` : s.label} · ${figure}`
+}
+---
+<div class="ar-flow">
+  <p class="ar-meta" style="margin-bottom:0.5rem">// {caption}</p>
+  <svg viewBox={`0 -24 ${W} ${bottom + 24}`} role="img" aria-label={`${caption}. In: ${left.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}. Out: ${right.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}.`}>
+    <defs>
+      <pattern id={id} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="2" height="6" fill="#616161" />
+      </pattern>
+    </defs>
+    {left.length > 0 && <text x={LX + 20} y="-8" fill="#949494" font-size="11" font-family="monospace" text-anchor="end">IN · {formatUsd(sumL)}</text>}
+    {right.length > 0 && <text x={RX} y="-8" fill="#949494" font-size="11" font-family="monospace">OUT · {formatUsd(sumR)}</text>}
+    {[...inPaths, ...outPaths].map((d) => <path d={d} fill={`url(#${id})`} stroke="#616161" stroke-width="0.5" />)}
+    <rect x={HX} y="0" width="20" height={hubH} fill="#fff" />
+    <text x={HX + 10} y={hubH + 18} fill="#fff" font-size="11" font-family="monospace" text-anchor="middle">{short(hub)}</text>
+    {L.map((b) => <rect x={LX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
+    {R.map((b) => <rect x={RX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
+    {L.map((b, i) => <text x={LX - 8} y={ly[i]} fill="#fff" font-size="11" font-family="monospace" text-anchor="end">{tag(b.side)}</text>)}
+    {R.map((b, i) => <text x={RX + 28} y={ry[i]} fill="#fff" font-size="11" font-family="monospace">{tag(b.side)}</text>)}
+  </svg>
+</div>

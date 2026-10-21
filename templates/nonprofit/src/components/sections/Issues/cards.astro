@@ -1,0 +1,53 @@
+---
+// Issues · cards as this template draws them (board N1, "Three doors, always
+// open"): the section head (with the section's one link beside it as a text
+// link, as the kit's cards draw it), the lead, then a hand-cut card per row:
+// the row's `icon` as a doodle on the soft field (iconOf; a row with no icon
+// draws none), its `note` as a chip with the clock doodle (when it runs), its
+// title and its line. A section with more than one link draws them under the
+// cards as stickers, the first the primary. Rows with neither a title nor a
+// body are left out, as every Issues layout leaves them.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { links, rows } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+import { iconOf } from '../../../lib/doodles.ts'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const issues = rows(section).filter((row) => text(row.title) || text(row.body))
+const ctas = links(section)
+const headLink = ctas.length === 1
+---
+<Band section={section} class="issues">
+  <SectionHead kicker={text(section.copy.kicker)} heading={text(section.copy.heading)} more={headLink ? ctas : []} />
+  <Prose value={section.copy.lead} class="lede" />
+  {issues.length > 0 && (
+    <ul class="issue-cards np-cards" role="list">
+      {issues.map((issue) => {
+        const icon = iconOf(issue.icon)
+        const note = text(issue.note)?.trim()
+        return (
+          <li class="issue-card np-card">
+            {icon && <span class="np-icon"><Doodle name={icon} /></span>}
+            {note && <p class="np-when"><span class="chip"><Doodle name="clock" />{note}</span></p>}
+            {text(issue.title) && <h3 class="issue-title">{text(issue.title)}</h3>}
+            <Prose value={issue.body} class="issue-body" />
+          </li>
+        )
+      })}
+    </ul>
+  )}
+  {!headLink && ctas.length > 0 && (
+    <p class="actions">
+      {ctas.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+    </p>
+  )}
+</Band>
