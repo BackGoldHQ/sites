@@ -1,14 +1,16 @@
 ---
 // One lesson (board D3), for both layouts. The breadcrumb, then:
-//   the player  the browser's own <video> (preload="metadata", the cover as
-//               its poster) over the api's Range-served file: the 1080p copy,
-//               which the script below trades for the 720p one on a viewport
-//               768px wide or narrower, before it plays; the original until
-//               the copies are ready, and always behind the fallback link.
-//               For a visitor it picks up at the place they stopped ("Picks
-//               up at 1:12, where you stopped."). Locked: the teaser, the
-//               cover under a lock and the lock's word, the length still on
-//               it.
+//   the player  an uploaded file in the browser's own <video>
+//               (preload="metadata", the cover as its poster) over the api's
+//               Range-served file: the 1080p copy, which the script below
+//               trades for the 720p one on a viewport 768px wide or narrower,
+//               before it plays; the original until the copies are ready, and
+//               always behind the fallback link. An imported YouTube or Vimeo
+//               video in that player's own frame (YouTube's privacy-enhanced
+//               embed). For a visitor it picks up at the place they stopped
+//               ("Picks up at 1:12, where you stopped."): the file by seeking,
+//               YouTube by its `start`. Locked: the teaser, the cover under a
+//               lock and the lock's word, the length still on it.
 //   the head    "Lesson 5: Decide what you want", "Lesson 5 of 12 in
 //               <course> · 4:50".
 //   the door    a locked lesson's (Door.astro), and "The notes for this
@@ -18,7 +20,11 @@
 //               Academy marks it for you."; once done, "Completed" and Mark
 //               as not done. The script below sends both through fetch and
 //               swaps them in place, saves the place on pause and every 15
-//               seconds of play, and marks the lesson at the video's end.
+//               seconds of play, and marks the lesson at the video's end: the
+//               file through the <video> events, YouTube through its player
+//               API (loaded only for a visitor on a YouTube lesson). Vimeo's
+//               player says nothing back, so a Vimeo lesson is marked by the
+//               button alone and the "watch to the end" line is left off.
 //               Without the script the forms post and the page comes back.
 //   the notes   the lesson's body under "Notes".
 //   Previous and Next, then the course's rail (Rail.astro).
@@ -48,7 +54,17 @@ const Sub = lead ? 'h2' : 'h3'
 const length = clockOf(view.seconds)
 const resume = view.resumeAt !== null ? clockOf(view.resumeAt) : null
 const tracks = view.visitor !== null && !view.locked
-const narrow = view.video?.sources?.['720'] ?? null
+const file = view.video?.kind === 'file' ? view.video : null
+const embed = view.video?.kind === 'embed' ? view.video : null
+const narrow = file?.sources?.['720'] ?? null
+// YouTube: no related videos from elsewhere, the player API for a visitor's progress, the saved place as `start`.
+const embedSrc = !embed
+  ? null
+  : embed.provider === 'youtube'
+    ? `${embed.src}?rel=0${tracks ? `&enablejsapi=1&origin=${encodeURIComponent(Astro.url.origin)}` : ''}${view.resumeAt !== null ? `&start=${Math.floor(view.resumeAt)}` : ''}`
+    : `${embed.src}?dnt=1`
+// The player reports the end of the video, so the Academy can mark it: the file's, or YouTube's.
+const marksAtEnd = file !== null || embed?.provider === 'youtube'
 // The body's headings move under the notes' own heading: h2 becomes the level below "Notes".
 const shift = lead ? 1 : 2
 const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: string) => `<${slash}h${Math.min(Number(level) + shift, 6)}>`) ?? null
@@ -64,20 +80,31 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
   <Crumbs steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.courseTitle, href: view.courseHref }, { label: `Lesson ${view.n}`, href: null }]} />
   <div class="ls-grid">
     <div class="ls-main">
-      {view.video && (
+      {file && (
         <div class="ls-frame">
           <video
-            src={view.video.sources?.['1080'] ?? view.video.src}
-            poster={view.video.poster ?? undefined}
+            src={file.sources?.['1080'] ?? file.src}
+            poster={file.poster ?? undefined}
             data-src-720={narrow ?? undefined}
-            data-src-1080={view.video.sources?.['1080'] ?? undefined}
-            data-src-original={view.video.src}
+            data-src-1080={file.sources?.['1080'] ?? undefined}
+            data-src-original={file.src}
             controls
             playsinline
             preload="metadata"
           >
-            <a href={view.video.src}>Watch the video</a>
+            <a href={file.src}>Watch the video</a>
           </video>
+        </div>
+      )}
+      {embed && embedSrc && (
+        <div class="ls-frame">
+          <iframe
+            src={embedSrc}
+            title={view.name}
+            data-provider={embed.provider}
+            allow="encrypted-media; picture-in-picture; fullscreen"
+            allowfullscreen
+          ></iframe>
         </div>
       )}
       {view.locked && (
@@ -110,7 +137,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
             <input type="hidden" name="completed" value="true" />
             <input type="hidden" name="return" value={view.path} />
             <button class="button" type="submit">Mark complete</button>
-            <p class="fine">Or watch to the end and the Academy marks it for you.</p>
+            {marksAtEnd && <p class="fine">Or watch to the end and the Academy marks it for you.</p>}
           </form>
           <form method="post" action={VISITOR_PROGRESS_PATH} data-complete="false" hidden={!view.completed}>
             <input type="hidden" name="course" value={view.courseSlug} />
@@ -159,6 +186,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
       ;(function (root) {
         if (!root) return
         var video = root.querySelector('video')
+        var tube = root.querySelector('iframe[data-provider="youtube"]')
         var resume = Number(root.getAttribute('data-resume')) || 0
         // The resume listener is on before the copy below loads, so the saved place applies to it.
         if (video && resume > 0) {
@@ -208,29 +236,70 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
               })
           })
         }
-        if (!video) return
-        var last = 0
-        var save = function (keep) {
-          var at = Math.floor(video.currentTime)
-          last = Date.now()
-          if (at > 0 && !video.ended) send({ position_seconds: at }, keep).catch(function () {})
-        }
-        video.addEventListener('play', function () {
-          last = Date.now()
-        })
-        video.addEventListener('timeupdate', function () {
-          if (!video.paused && Date.now() - last >= 15000) save(false)
-        })
-        video.addEventListener('pause', function () {
-          if (!video.ended) save(true)
-        })
-        video.addEventListener('ended', function () {
+        var finish = function () {
           send({ completed: true })
             .then(function (res) {
               if (res.ok) show(true)
             })
             .catch(function () {})
-        })
+        }
+        if (video) {
+          var last = 0
+          var save = function (keep) {
+            var at = Math.floor(video.currentTime)
+            last = Date.now()
+            if (at > 0 && !video.ended) send({ position_seconds: at }, keep).catch(function () {})
+          }
+          video.addEventListener('play', function () {
+            last = Date.now()
+          })
+          video.addEventListener('timeupdate', function () {
+            if (!video.paused && Date.now() - last >= 15000) save(false)
+          })
+          video.addEventListener('pause', function () {
+            if (!video.ended) save(true)
+          })
+          video.addEventListener('ended', finish)
+          return
+        }
+        if (!tube) return
+        // YouTube's player API (enablejsapi=1 on the frame): the place on pause and every 15 seconds of play, the lesson at the end.
+        var player = null
+        var timer = null
+        var saveTube = function (keep) {
+          if (!player || typeof player.getCurrentTime !== 'function') return
+          var at = Math.floor(player.getCurrentTime())
+          if (at > 0) send({ position_seconds: at }, keep).catch(function () {})
+        }
+        var onState = function (event) {
+          var YT = window.YT
+          if (!YT) return
+          if (timer) {
+            clearInterval(timer)
+            timer = null
+          }
+          if (event.data === YT.PlayerState.PLAYING) timer = setInterval(function () { saveTube(false) }, 15000)
+          else if (event.data === YT.PlayerState.PAUSED) saveTube(true)
+          else if (event.data === YT.PlayerState.ENDED) finish()
+        }
+        var start = function () {
+          player = new window.YT.Player(tube, { events: { onStateChange: onState } })
+        }
+        if (window.YT && window.YT.Player) {
+          start()
+        } else {
+          var queue = (window.__bgYouTubeReady = window.__bgYouTubeReady || [])
+          queue.push(start)
+          if (queue.length === 1) {
+            window.onYouTubeIframeAPIReady = function () {
+              for (var q = 0; q < queue.length; q++) queue[q]()
+            }
+            var tag = document.createElement('script')
+            tag.src = 'https://www.youtube.com/iframe_api'
+            tag.async = true
+            document.head.appendChild(tag)
+          }
+        }
       })(document.currentScript.closest('.ls'))
     </script>
   )}
@@ -258,6 +327,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     background: color-mix(in srgb, var(--ink) 88%, var(--surface));
   }
   .ls-frame video,
+  .ls-frame iframe,
   .ls-frame img {
     display: block;
     width: 100%;
@@ -265,7 +335,8 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     border: 0;
     object-fit: cover;
   }
-  .ls-frame video {
+  .ls-frame video,
+  .ls-frame iframe {
     object-fit: contain;
     background: #000;
   }

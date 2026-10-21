@@ -18,6 +18,7 @@
 import type { Section } from '@backgold/content'
 import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '@backgold/contract/content-api'
 import { renderMarkdown, safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
+import { playerOf } from '../../../lib/entries'
 import { countAndLength, inSentence, lessonSignInTitle, lockWordOf } from '../../../lib/academy'
 import { listOf, text } from '../../../lib/format'
 import { academyReads } from '../../../lib/visitor'
@@ -47,6 +48,10 @@ export interface Neighbor {
   href: string | null
 }
 
+export type LessonVideo =
+  | { kind: 'file'; src: string; poster: string | null; sources: { '720': string | null; '1080': string | null } | null }
+  | { kind: 'embed'; src: string; provider: 'youtube' | 'vimeo' }
+
 export interface LessonView {
   courseSlug: string
   slug: string
@@ -59,11 +64,15 @@ export interface LessonView {
   coursesHref: string | null
   /**
    * The video, for a reader who may watch it; null when locked or not up yet.
-   * `sources` are its copies: 720p for a narrow viewport, 1080p for a wide one;
-   * the original at `src` is the fallback and the download link. Null until the
-   * copies are ready; a size the source was too small for is null.
+   * A `file` is the org's own upload, played in the browser's player:
+   * `sources` are its copies, 720p for a narrow viewport, 1080p for a wide
+   * one; the original at `src` is the fallback and the download link, and
+   * `sources` is null until the copies are ready (a size the source was too
+   * small for is null). An `embed` is a YouTube or Vimeo address (an imported
+   * video, lib/entries.ts playerOf) played in that player at `src`;
+   * `provider` says which, since only YouTube's player reports its progress.
    */
-  video: { src: string; poster: string | null; sources: { '720': string | null; '1080': string | null } | null } | null
+  video: LessonVideo | null
   /** The cover, for the locked teaser. */
   cover: string | null
   locked: boolean
@@ -147,6 +156,7 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
   const cover = lesson.hero ? safeSrc(lesson.hero.url) : null
   const copies = locked ? null : lesson.renditions
   const sources = copies ? { '720': safeSrc(copies['720']), '1080': safeSrc(copies['1080']) } : null
+  const player = src ? playerOf(src) : null
   const completed = visitor !== null && row?.completed === true
   const position = visitor && !completed ? (row?.position_seconds ?? null) : null
   const free = lessons.flatMap((l, i) => (l.access === 'public' ? [String(i + 1)] : []))
@@ -161,7 +171,11 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
     courseTitle: course.title,
     courseHref: safeHref(course.url),
     coursesHref: safeHref(course.url.replace(/\/[^/]+\/?$/, '')),
-    video: src ? { src, poster: cover, sources: sources && (sources['720'] || sources['1080']) ? sources : null } : null,
+    video: !src
+      ? null
+      : player
+        ? { kind: 'embed', src: player, provider: player.includes('vimeo.com') ? 'vimeo' : 'youtube' }
+        : { kind: 'file', src, poster: cover, sources: sources && (sources['720'] || sources['1080']) ? sources : null },
     cover,
     locked,
     lockWord: locked && lock ? lockWordOf(lock) : null,
