@@ -213,6 +213,41 @@
             "links": [],
             "options": {
               "anchorId": "who-we-are"
+            },
+            "data": {
+              "source": "credentials",
+              "items": [
+                {
+                  "kind": "credential",
+                  "label": "Nonpartisan to the bone",
+                  "detail": "",
+                  "year": "",
+                  "href": ""
+                },
+                {
+                  "kind": "credential",
+                  "label": "Texas, all of it",
+                  "detail": "",
+                  "year": "",
+                  "href": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "StatCards-archive-home",
+            "type": "StatCards",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "archive",
+            "copy": {
+              "heading": "Read it yourself.",
+              "body": "The BISD public data archive lives here now. Board meetings and decisions, the money, the pay records, the source documents. Find the record. Read the source."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "the-record"
             }
           },
           {
@@ -297,7 +332,16 @@
               "eventsEmptyCta": "Nothing on the calendar yet. Want Unlabeled in your town? Host a forum or a town hall and tell us when."
             },
             "media": {},
-            "links": [],
+            "links": [
+              {
+                "label": "Host Unlabeled",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ],
             "options": {
               "actions": "buttons",
               "anchorId": "the-calendar"
@@ -935,6 +979,38 @@
         ]
       },
       {
+        "slug": "submit-documents",
+        "title": "Submit documents",
+        "sections": [
+          {
+            "id": "Hero-submit",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "The record",
+              "headline": "Submit documents",
+              "subheadline": "Got a BISD or HISD record we should have? Send it here. Every file is read by the team before anything goes in the archive, and the original is kept as it came."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-submit",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "Send us the document"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
         "slug": "contact",
         "title": "Contact",
         "sections": [
@@ -1195,6 +1271,18 @@
               "kind": "content_list",
               "target": {
                 "type_key": "information_request"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Submit documents",
+              "kind": "page",
+              "target": {
+                "slug": "submit-documents"
               },
               "shows_on": {
                 "rule": "every_page"

@@ -387,6 +387,7 @@ a {
   archive's.
 */
 .bg-section,
+.u-rh-band,
 .u-grid {
   --u-grid: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px calc(100% / 12));
   background-image: var(--u-grid), linear-gradient(var(--line), var(--line));
@@ -401,6 +402,7 @@ a {
 /* Below 760px the grid drops to four columns (U11). */
 @media (max-width: 47.49rem) {
   .bg-section,
+  .u-rh-band,
   .u-grid {
     --u-grid: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px calc(100% / 4));
   }
@@ -417,25 +419,24 @@ a {
 }
 
 /*
-  The running head (U-cat §3): every band in the page opens with its section
-  mark and slug at the left (`§ 02 // what-we-do`, the band's anchor when it
-  has one) over a hairline, and its folio at the right in white, in the meta
-  face. `.u-running-head` draws the same row in markup (left, centre and
-  folio spans) where a page has words for the centre title.
+  The running head (U-cat §3, RunningHead.astro): every section opens with
+  its section mark and its kicker at the left (`§ 02 // What we do`), its
+  heading in the centre and its folio at the right in white, over a hairline,
+  in the meta face. The mark and the folio count the page's running heads.
+  Filed.astro sets it in a band of its own over the section's (`.u-rh-band`),
+  on the same ground and grid; a layout that draws its own sets it inline.
+  It is hidden in an area and when the layout after it drew nothing.
 */
 main {
   counter-reset: u-folio;
 }
-main .bg-section {
-  counter-increment: u-folio;
-  --u-head-gap: clamp(1.25rem, 1rem + 1vw, 2rem);
-}
-main .bg-section::before,
 .u-running-head {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 1rem;
   max-width: var(--bg-content-width);
-  margin: 0 auto var(--u-head-gap, 1.5rem);
-  padding: 0 3rem 0.875rem 0;
+  margin: 0 auto var(--u-head-gap, clamp(1.25rem, 1rem + 1vw, 2rem));
+  padding-bottom: 0.875rem;
   border-bottom: 1px solid var(--line);
   color: var(--u-faint);
   font-family: var(--font-meta);
@@ -444,54 +445,70 @@ main .bg-section::before,
   line-height: 1.2;
   text-transform: uppercase;
 }
-main .bg-section::before {
+main .u-running-head {
+  counter-increment: u-folio;
+}
+.u-rh-left::before {
   content: '§ ' counter(u-folio, decimal-leading-zero);
 }
-main .bg-section[id]::before {
-  content: '§ ' counter(u-folio, decimal-leading-zero) ' // ' attr(id);
+.u-rh-words::before {
+  content: ' // ';
+  white-space: pre;
 }
-main .bg-section::after {
-  content: counter(u-folio, decimal-leading-zero);
-  position: absolute;
-  top: var(--u-folio-top, var(--space));
-  right: max(var(--gutter), 50% - var(--bg-content-width) / 2);
-  color: var(--ink);
-  font-family: var(--font-meta);
-  font-size: var(--u-meta-size);
-  letter-spacing: var(--u-meta-track);
-  line-height: 1.2;
-}
-.u-running-head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 1rem;
-  padding-right: 0;
-}
-.u-running-head > :nth-child(2) {
+.u-rh-centre {
   text-align: center;
 }
-.u-running-head > :last-child {
+.u-rh-folio {
   color: var(--ink);
   text-align: right;
 }
-/* The running head stands off the band's top: the band's own padding, never none. */
+.u-rh-folio::before {
+  content: counter(u-folio, decimal-leading-zero);
+}
+/* On a phone the centre title gives way: the mark and kicker, then the folio. */
+@media (max-width: 47.49rem) {
+  .u-running-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .u-rh-centre {
+    display: none;
+  }
+}
+/* The running head's own band: the section's ground and grid, the band's top padding, then the section under it. */
+.u-rh-band {
+  position: relative;
+  padding: var(--space) var(--gutter) 0;
+  border-top: 1px solid var(--line);
+  background-color: var(--page);
+}
+.u-rh-band.u-rh-tint,
+.u-rh-band.u-rh-wash {
+  background-color: var(--band-tint);
+}
+.u-rh-band.u-rh-contrast {
+  --ink: var(--band-contrast-ink);
+  --line: var(--band-contrast-line);
+  background-color: var(--band-contrast);
+  background-image: none;
+}
+.u-rh-band > .u-running-head {
+  margin-bottom: 0;
+}
+.u-rh-band + .bg-section,
+.u-rh-band + .ar {
+  border-top: 0 !important;
+  padding-top: var(--u-head-gap, clamp(1.25rem, 1rem + 1vw, 2rem)) !important;
+}
+.u-rh-band:not(:has(+ .bg-section, + .ar)),
+.bg-area .u-rh-band,
+.rail .u-rh-band {
+  display: none;
+}
+/* Bands that follow one another keep their own top padding, never none. */
 main .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
 main .bg-bleed-full.bg-band-tint + .bg-bleed-full.bg-band-tint,
 main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
   padding-top: var(--space);
-}
-/* Bands with no running head: the ticker (a line, not a band) and the strips. */
-main .bg-section[data-type='MovementTicker'],
-main .bg-section.cta-strip {
-  counter-increment: none;
-}
-main .bg-section[data-type='MovementTicker']::before,
-main .bg-section[data-type='MovementTicker']::after,
-main .bg-section.cta-strip::before,
-main .bg-section.cta-strip::after,
-.bg-area .bg-section::before,
-.bg-area .bg-section::after {
-  content: none;
 }
 /* A contained band is a box on the grid, square, edged with the strong rule. */
 .bg-bleed-contained:not(.bg-band-plain) {
@@ -501,60 +518,27 @@ main .bg-section.cta-strip::after,
 
 /*
   The chapter mark (U1 between the programs and the manifesto, U-cat §4): the
-  skull and horns on a strong rule between bands, the band's section mark
-  beside it. Drawn over the letter (About) on any page, as its running head,
-  and by `.u-chapter` in markup (src/components/Mark.astro holds the skull).
+  skull and horns on a strong rule between bands, the next band's section
+  mark and kicker beside it (`§ 03 — Who we are`). The letter
+  (About/letter.astro) opens with one; `.u-chapter` draws it anywhere, with
+  <Mark kind="skull" /> inside.
 */
-main .bg-section[data-type='About'] {
-  --u-skull: clamp(9rem, 7rem + 6vw, 13rem);
+.u-chapter-band {
+  padding: var(--space) var(--gutter) 0;
+  border-top: 1px solid var(--line);
+  background-color: var(--page);
 }
-/* The chapter mark carries the band's section mark; the folio waits for the next band. */
-main .bg-section[data-type='About']::after {
-  content: none;
-}
-main .bg-section[data-type='About']::before,
-main .bg-section[data-type='About'][id]::before {
-  content: '';
-  padding: calc(var(--u-skull) * 304 / 612 * 0.62) 0 0;
-  border: 0;
-  background:
-    linear-gradient(var(--line-strong), var(--line-strong)) left calc(var(--u-skull) * 304 / 612 * 0.62 + 0.6em) / calc(50% - var(--u-skull) / 2 - 1rem) 1px no-repeat,
-    linear-gradient(var(--line-strong), var(--line-strong)) right calc(var(--u-skull) * 304 / 612 * 0.62 + 0.6em) / calc(50% - var(--u-skull) / 2 - 1rem) 1px no-repeat;
-  height: calc(var(--u-skull) * 304 / 612);
-  margin-bottom: var(--u-head-gap);
-}
-main .bg-section[data-type='About'] > .bg-section-inner::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * (var(--u-skull) * 304 / 612 + var(--u-head-gap)));
-  left: 50%;
-  width: var(--u-skull);
-  aspect-ratio: 612 / 304;
-  transform: translateX(-50%);
-  background: var(--ink);
-  -webkit-mask: url('../assets/skull.svg') center / contain no-repeat;
-  mask: url('../assets/skull.svg') center / contain no-repeat;
-}
-main .bg-section[data-type='About'] > .bg-section-inner::after {
-  content: '§ ' counter(u-folio, decimal-leading-zero);
-  position: absolute;
-  top: calc(-1 * (var(--u-skull) * 304 / 612 * 0.38 + var(--u-head-gap)));
-  left: calc(50% + var(--u-skull) / 2 + 1.25rem);
-  padding: 0 0.75rem;
-  background: var(--page);
-  color: var(--u-faint);
-  font-family: var(--font-meta);
-  font-size: var(--u-meta-size);
-  letter-spacing: var(--u-meta-track);
-  line-height: 1.2;
-  text-transform: uppercase;
-  white-space: nowrap;
+.u-chapter-band + .bg-section {
+  border-top: 0;
 }
 .u-chapter {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  max-width: var(--bg-content-width);
+  margin: 0 auto;
   color: var(--ink);
 }
 .u-chapter::before,
@@ -564,9 +548,39 @@ main .bg-section[data-type='About'] > .bg-section-inner::after {
   background: var(--line-strong);
 }
 .u-chapter > svg {
-  width: clamp(9rem, 7rem + 6vw, 13rem);
+  grid-column: 2;
+  grid-row: 1;
+  width: clamp(8rem, 6rem + 6vw, 13rem);
   height: auto;
 }
+.u-chapter::after {
+  grid-column: 3;
+  grid-row: 1;
+}
+.u-chapter-mark {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  margin-left: 1rem;
+  padding: 0 0.75rem;
+  background: var(--page);
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+  white-space: nowrap;
+  counter-increment: u-folio;
+}
+.u-chapter-mark::before {
+  content: '§ ' counter(u-folio, decimal-leading-zero) ' — ';
+  white-space: pre;
+}
+/* The letter's running head counts with its chapter mark, not again. */
+.u-chapter-band + .bg-section .u-running-head {
+  counter-increment: none;
+}
+
 /* The horns alone, drawn out to a rule: a divider (U-cat §4). */
 .u-horns {
   display: block;
@@ -754,6 +768,15 @@ main img,
   letter-spacing: 0.04em;
   text-align: left;
 }
+/* On a phone the header reads the mark, DONATE, then MENU (U11). */
+@media (max-width: 55.99rem) {
+  .site-header .header-button {
+    order: 1;
+  }
+  .site-header .header-sheet {
+    order: 2;
+  }
+}
 /* Dark only (decision 8): no switch. */
 .mode-toggle {
   display: none !important;
@@ -857,7 +880,7 @@ main .bg-section.cta-strip .strip-links a:hover {
 
 /* Hero · Statement (U6–U8): the headline at D1, the lede in white under it. */
 .statement-headline {
-  font-size: var(--u-d1) !important;
+  font-size: var(--u-mega) !important;
   font-weight: 500 !important;
   line-height: 0.95 !important;
   max-width: 16em;
@@ -929,72 +952,6 @@ main .bg-section.cta-strip .strip-links a:hover {
   }
 }
 
-/* About · Letter (U1's manifesto): the heading at D1, the body in the text face, the closing line huge. */
-.bg-section[data-type='About'] .letter:not(.letter-with-photo) {
-  max-width: none;
-}
-/* On a wide screen the letter sits in the right two thirds of the grid and its closing line runs back out across all of it. */
-@media (min-width: 60rem) {
-  .bg-section[data-type='About'] .letter-words {
-    padding-left: calc(100% / 3);
-  }
-  .bg-section[data-type='About'] .letter-signature {
-    margin-left: -50% !important;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--line-strong);
-  }
-}
-.bg-section[data-type='About'] .letter-body {
-  max-width: 40rem;
-}
-.bg-section[data-type='About'] .letter-words h2 {
-  font-size: var(--u-d1);
-}
-.bg-section[data-type='About'] .letter-body {
-  font-family: var(--font) !important;
-  font-size: var(--text-lg) !important;
-  line-height: 1.65 !important;
-}
-.bg-section[data-type='About'] .letter-body p:first-child::first-letter {
-  float: none !important;
-  margin: 0 !important;
-  font: inherit !important;
-  color: inherit !important;
-}
-.bg-section[data-type='About'] .letter-signature {
-  font-family: var(--font-display) !important;
-  font-style: normal !important;
-  font-size: var(--u-d1) !important;
-  font-weight: 500;
-  line-height: 0.95;
-  color: var(--ink) !important;
-  text-transform: uppercase;
-}
-/* No photo: no tile in its place. The role line ("But she's welcome, too.") reads under the heading. */
-.bg-section[data-type='About'] .letter-tile {
-  display: none !important;
-}
-.bg-section[data-type='About'] .letter-with-photo:has(.letter-tile) {
-  grid-template-columns: 1fr !important;
-}
-.bg-section[data-type='About'] .letter-words {
-  display: flex;
-  flex-direction: column;
-}
-.bg-section[data-type='About'] .letter-words > h2 {
-  order: -1;
-}
-.bg-section[data-type='About'] .letter-words > .kicker {
-  order: -2;
-}
-.bg-section[data-type='About'] .letter-role {
-  order: -1;
-  margin: -0.25rem 0 1.5rem !important;
-  color: var(--muted) !important;
-  font-family: var(--font-display) !important;
-  font-size: var(--u-d4) !important;
-  letter-spacing: 0.04em !important;
-}
 /* StatCards · Row (U7): figures huge in capitals on one strong rule, labels in the meta face, cells split by hairlines. */
 .bg-section[data-type='StatCards'] .stat-list {
   gap: 0 !important;
@@ -1135,6 +1092,85 @@ main .bg-section.cta-strip .strip-links a:hover {
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+/*
+  Every label a kit layout sets in its own heavier weight, in hers: 500, in
+  the display face's capitals. Buttons, the agenda's tabs, the top banner's
+  words, an event's day, the share links, chips.
+*/
+.button,
+.agenda-tabs a,
+.strip-words b,
+.strip-links a,
+.event-day b,
+.event-day small,
+.compact-day b,
+.compact-day span,
+.donate-share a,
+.share-tile-network .chip,
+.event-closed,
+.event-live,
+.longread-planks a,
+.longread-share,
+.faq-question,
+.section-head-more a,
+.text-link,
+.brand-name,
+.skip-link,
+b,
+strong {
+  font-weight: 500 !important;
+}
+.faq-question,
+.event-day small {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+}
+.agenda-tabs a,
+.donate-share a,
+.event-closed {
+  border-radius: 0 !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.agenda-tabs a[aria-current='page'],
+.agenda-tabs a:hover,
+.donate-share a:hover {
+  background: var(--ink) !important;
+  color: var(--page) !important;
+}
+/* EventsList · Agenda (U8): the day at 64px, the month under it in the meta face. */
+@media (min-width: 40rem) {
+  .events-agenda .event-row {
+    grid-template-columns: 7rem minmax(0, 1fr) auto !important;
+  }
+}
+.events-agenda .event-day b {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 2rem + 2.5vw, 4rem) !important;
+  line-height: 0.95;
+}
+.events-agenda .event-row {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.events-agenda .event-row:hover {
+  background: var(--ink);
+  color: var(--page);
+  --ink: var(--page);
+  --muted: var(--page);
+  --link: var(--page);
+}
+/* Donate · Story (U9): her line as the headline, about 70px. */
+.bg-section[data-type='Donate'] .donate-story h2 {
+  font-size: clamp(2.5rem, 1.6rem + 3.2vw, 4.375rem) !important;
+  line-height: 0.95;
+}
+/* PlatformPlanks · Longread: its figure bars square. */
+.longread-bar {
+  border-radius: 0 !important;
 }
 
 /* ── Above the footer: the sign-up band in one line on the second surface ── */

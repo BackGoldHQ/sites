@@ -17,7 +17,11 @@ gallery offers it. Staff point her site at it with the template switch.
 | File | What it is |
 | --- | --- |
 | `template.json` | The manifest: the layouts the site uses (U-cat's table, default first; StatCards also lists `archive`, the archive's home door), Top banner and Above the footer, the kit's entry layouts, the `bar` header and `columns` footer, and the starter (below). |
-| `src/template.ts` | The config for the kit: the kit's sections with her three layouts and the archive's sections added, her faces, `defaultAppearance: 'dark'`, `frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`, and ARCHIVE as a menu link of the template's own (`menuLinks`). |
+| `src/template.ts` | The config for the kit: every section key filed under a running head (`Filed.astro`), her faces, `defaultAppearance: 'dark'`, `frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`, and her own menu links (`menuLinks`: ARCHIVE in the header and the footer, Request a record in the footer). |
+| `src/sections.ts` | Every section type and layout the template draws: the kit's, her own five and the archive's. |
+| `src/components/sections/Filed.astro`, `src/components/RunningHead.astro` | The running head every band opens with: `§ 02 // <kicker>`, the heading in the centre, the folio; in a band of its own over the section. |
+| `src/components/sections/About/letter.astro` | About · Letter: the chapter mark, then the letter as a dossier page (Filed under, read time, the heading, the role line in capitals, the body, the closing line across the grid). |
+| `src/components/sections/EventsList/agenda.astro`, `AgendaMonths.astro` | EventsList · Agenda: the kit's, its empty month carrying the section's first link as a button (Host Unlabeled). |
 | `src/styles/template.css` | Her look: her colours pinned on every band, the type scale, the grid, running heads and folios, buttons, the header, the footer, the photo treatment, every kit band restyled. |
 | `src/components/sections/Hero/cover.astro` | Hero · Cover: the headline as a cap stack, one sentence a line on its own black slab, over the photo through the halftone screen. |
 | `src/components/sections/MovementTicker/index.astro` | The ticker: one line under the header, "Live //", BackGold's live feed when the api sends it, else her typed figures running at a reading pace, still under reduced motion. |
@@ -70,7 +74,7 @@ The archive's components reuse these; they are defined in
 | Class | What it draws |
 | --- | --- |
 | `.u-grid` | The twelve hairline columns across the content width (four under 760px), as every band draws them. |
-| `.u-running-head` | A running head in markup: three spans, the section mark and slug at the left, a centre title, the folio at the right in white, over a hairline. Kit bands get theirs from CSS (`§ 02 // anchor` and the folio). |
+| `.u-running-head` | A running head: `<RunningHead kicker title />` (`src/components/RunningHead.astro`), the section mark and kicker at the left, the title in the centre, the folio at the right in white, over a hairline; the mark and folio count the page's running heads. Every section gets one from `Filed.astro`. |
 | `.u-meta` | The meta line: Office Code Pro, 11px, capitals, `.1em`. `.kicker` is the same with a `//` before it. |
 | `.u-slash` | Puts the `//` rule before its text. |
 | `.u-rule` | A row of `//////` run to the edge of its box, the rule between parts of a band. |
@@ -97,7 +101,7 @@ keeps its own pages and gains the links it lacks):
 
 | Page | Sections |
 | --- | --- |
-| Home (`""`) | Hero · Cover (*No red. No blue. Just Texans.*), MovementTicker, Issues · Cards (her four programs), About · Letter (the manifesto, unsigned; the chapter mark over it), EventsList · Compact, Cta · Strip (Donate) |
+| Home (`""`) | Hero · Cover (*No red. No blue. Just Texans.*), MovementTicker, Issues · Cards (her four programs), About · Letter (the manifesto, unsigned, filed under *Nonpartisan to the bone* and *Texas, all of it*; the chapter mark over it), StatCards · Archive (the archive's door, *Read it yourself.*, its live counts), EventsList · Compact, Cta · Strip (Donate) |
 | `events` | Hero · Statement, EventsList · Agenda |
 | `proof-your-vote-counts` | Hero · Statement, FormBlock · Wide, StatCards · Row, ShareKit · Strip |
 | `bisd-where-is-big-lando` | Hero · Statement, Issues · Numbered (the four asks), Petition (her legal note as the sheet's goal note, under the count), ShareKit · Strip, EventsList · Compact |
@@ -106,6 +110,7 @@ keeps its own pages and gains the links it lacks):
 | `nisd-prop-a-2026` | Hero · Statement, PlatformPlanks · Longread, Faq · Accordion, Cta · Banner |
 | `donate` | Donate · Story, Progress · Bar, Issues · Cards (other ways in) |
 | `newsletters` | Collection · List of newsletter issues |
+| `submit-documents` | Hero · Statement, FormBlock · Card (BackGold's form with a `pdf` field). The archive and `/records` show their Submit documents door only when this page exists. |
 | `contact` | Hero · Statement, FormBlock · Wide |
 
 Reusable sections: *Early voting*, a Cta · Strip in Top banner on every page
@@ -113,12 +118,16 @@ but Donate; *The newsletter*, a SignupCapture · Band Above the footer on every
 page.
 
 Menus: HOME · EVENTS · VOTE ▾ · BISD ▾ · NEDERLAND ISD · PETITION ▾, with
-DONATE as the header button; the footer's three groups. ARCHIVE is not a
+DONATE as the header button; the footer's three groups, *The record* holding
+BISD: Public info, Submit documents and Nederland ISD. ARCHIVE is not a
 menu link in BackGold: `/archive` is this template's own route, which no menu
 link kind can name (a nav kind for a template's routes is a platform ask), so
 the template adds it itself (`menuLinks` in `src/template.ts`, drawn by the
 kit's header): last at the top level, after PETITION, and first in the BISD
-group, in the bar and the phone sheet, current on `/archive`. Her other pages
+group, in the bar and the phone sheet, current on `/archive` and under it and
+on each record type's address (`/meetings`, `/decisions`, `/data`, `/pay`,
+`/sources`, `/records`). The footer's *The record* opens with The archive and
+Request a record (`/records#request-a-record`), the same way. Her other pages
 (I voted, the BISD petition, Texas THC and the forms not in the menu) are
 hers already and are not starter pages.
 
@@ -191,11 +200,16 @@ glab variable set UNLABELED_PRODUCTION_KV_ID <id> --masked --protected -R backgo
   her vector replaces all three files (keep `currentColor` and the
   `u-cut-around` / `u-cut-head` mask ids, which `Mark.astro` renumbers).
 - **The live ticker feed** (decision 7): the ticker draws BackGold's live
-  frame when the api sends one, else the figures typed for it; a starter
-  ticker with neither draws nothing.
-- **The petition's live count, huge.** The Content API sends a petition's
-  count only inside BackGold's frame, so the frame draws it; the site never
-  makes one up.
+  frame when the api sends one, else the figures typed for it. A starter
+  cannot carry ticker rows: the ticker's source (`movement`) is live, not one
+  a template's starter may type (the manifest schema's authored sources), so
+  a new site's ticker draws nothing until the feed or her own figures arrive.
+- **The petition's live count at 132px (U6)** is a platform/data follow-up:
+  the Content API sends a petition's count only inside BackGold's frame, so
+  the frame draws it; the site never makes one up.
+- **A Hearing event's door to the last board meeting (U8)** is a
+  platform/data follow-up: an event carries no link to the archive's
+  meetings, so the event page cannot name the last meeting on the record.
 - **The Petition · Map legend by shape** (operators told apart by marker
   shape for a look with no colour) is drawn inside the api's petition frame
   and lands in the platform, not here.

@@ -127,37 +127,48 @@ const pathname = Astro.url.pathname
 const headerItems = primary?.items ?? []
 /**
  * The template's own menu links (`menuLinks`, routes it draws itself) merged
- * into the header menu: at the top level, last unless `position` is `first`,
- * and, when `group` names a group of the menu (by its label, case aside),
- * first inside that group as well. Each is current on its own address, as
- * menuOf marks a link. A template with none gets the menu as BackGold sends
- * it.
+ * into the header and footer menus. In the header a link sits at the top
+ * level, last unless `position` is `first`, and, when `group` names a group
+ * of the menu (by its label, case aside), first inside that group as well. In
+ * the footer it sits first inside its group when that group exists, else at
+ * the top level. A link is current on its own address and on each of `also`,
+ * exactly (`match` 'exact', the default, as menuOf marks a link) or there
+ * and under it ('prefix'). A template with none gets the menus as BackGold
+ * sends them.
  */
-function withTemplateLinks(nodes: MenuNode[]): MenuNode[] {
-  const own = template.menuLinks ?? []
+const trimPath = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path)
+function withTemplateLinks(nodes: MenuNode[], menu: 'header' | 'footer'): MenuNode[] {
+  const own = (template.menuLinks ?? []).filter((link) => (link.menu ?? 'header') === menu)
   if (own.length === 0) return nodes
-  const here = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const here = trimPath(pathname)
   const nodeOf = (link: (typeof own)[number]): MenuNode | null => {
     const href = safeHref(link.href)
     if (!href || !link.label.trim()) return null
-    const path = href.length > 1 ? href.replace(/\/+$/, '') : href
-    return { label: link.label, kind: 'page', href, rel: relFor(href), current: href.startsWith('/') && path === here, children: [] }
+    const paths = [href, ...(link.also ?? [])].filter((p) => p.startsWith('/')).map((p) => trimPath(p.split(/[?#]/)[0]!))
+    const current = paths.some((p) => here === p || (link.match === 'prefix' && here.startsWith(p === '/' ? '/' : `${p}/`)))
+    return { label: link.label, kind: 'page', href, rel: relFor(href), current, children: [] }
   }
   const place = (list: MenuNode[], node: MenuNode, position: 'first' | 'last' | undefined) => (position === 'first' ? [node, ...list] : [...list, node])
+  const isGroup = (node: MenuNode, label: string) => node.children.length > 0 && node.label.trim().toLowerCase() === label
   let out = nodes
+  for (const link of [...own].reverse()) {
+    const node = nodeOf(link)
+    if (!node) continue
+    const label = link.group?.trim().toLowerCase()
+    const grouped = !!label && out.some((n) => isGroup(n, label))
+    if (grouped) out = out.map((group) => (isGroup(group, label!) ? { ...group, children: [node, ...group.children] } : group))
+  }
   for (const link of own) {
     const node = nodeOf(link)
     if (!node) continue
-    if (link.group) {
-      const label = link.group.trim().toLowerCase()
-      out = out.map((group) => (group.children.length > 0 && group.label.trim().toLowerCase() === label ? { ...group, children: [node, ...group.children] } : group))
-    }
-    out = place(out, node, link.position)
+    const label = link.group?.trim().toLowerCase()
+    const grouped = !!label && nodes.some((n) => isGroup(n, label))
+    if (menu === 'header' || !grouped) out = place(out, node, link.position)
   }
   return out
 }
-const headerNodes = withTemplateLinks(menuOf(headerItems, pathname, page))
-const footerNodes = menuOf(footer?.items ?? [], pathname, page)
+const headerNodes = withTemplateLinks(menuOf(headerItems, pathname, page), 'header')
+const footerNodes = withTemplateLinks(menuOf(footer?.items ?? [], pathname, page), 'footer')
 const bottomRow = menuOf(utility?.items ?? [], pathname, page).flatMap((node) => [node, ...node.children]).filter((node) => node.href)
 const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []
 const name = site.name ?? site.domain

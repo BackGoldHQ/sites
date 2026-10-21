@@ -1,0 +1,121 @@
+---
+// The agenda's rows, Unlabeled's (board U8; the kit's AgendaMonths with an
+// empty month that carries a door): the events grouped by month under the
+// month's name (44px capitals) and its count, each a row with the day, the
+// type, the time, the place and an empty live-counts slot (LiveCounts fills
+// it). A month between two listed months that has no event is drawn as an
+// invitation ("November is open.") with the section's empty-events line and
+// the section's first link as an outlined button ("Host Unlabeled"), never as
+// a blank. The rows are EventRows, the ones every events list shares;
+// `buttons` puts the event's button on each row, otherwise the title is the
+// link; `zoneless` leaves the zone's name off the times. With no events it
+// draws nothing.
+import EventRows from '@backgold/template-kit/components/sections/EventsList/EventRows.astro'
+import type { Link } from '@backgold/template-kit/lib/section'
+import { monthName, type EventRow } from '@backgold/template-kit/components/sections/EventsList/events.ts'
+
+interface Props {
+  events: EventRow[]
+  buttons: boolean
+  /** The section's empty-events line, for an empty month's invitation. */
+  invitation: string | null
+  zoneless?: boolean
+  /** The section's first link: the empty month's button. */
+  host?: Link | null
+}
+
+const { events, buttons, invitation, zoneless = false, host = null } = Astro.props
+
+interface Month {
+  label: string
+  /** The month's own name for its invitation, null for the undated group. */
+  name: string | null
+  events: EventRow[]
+}
+
+// Rows arrive soonest first. A month is year * 12 + month; every month from
+// the first listed to the last gets a group, so an empty one in between shows.
+// An event with no readable date goes last, under "Date to come".
+const dated = events.filter((e) => e.when)
+const undated = events.filter((e) => !e.when)
+const keyOf = (e: EventRow) => e.when!.year * 12 + e.when!.monthIndex
+const keys = dated.map(keyOf)
+const first = keys.length > 0 ? Math.min(...keys) : 0
+const last = keys.length > 0 ? Math.max(...keys) : -1
+const years = new Set(dated.map((e) => e.when!.year))
+const months: Month[] = []
+for (let key = first; key <= last; key++) {
+  const name = monthName(key % 12)
+  months.push({ label: years.size > 1 ? `${name} ${Math.floor(key / 12)}` : name, name, events: dated.filter((e) => keyOf(e) === key) })
+}
+if (undated.length > 0) months.push({ label: 'Date to come', name: null, events: undated })
+const count = (n: number) => (n === 1 ? '1 event' : `${n} events`)
+---
+{months.length > 0 && (
+  <div class="agenda">
+    {months.map((month) => (
+      <div class="agenda-month">
+        <h3 class="agenda-heading">
+          {month.label} <span class="agenda-count">{month.events.length > 0 ? count(month.events.length) : 'nothing yet'}</span>
+        </h3>
+        {month.events.length > 0 ? (
+          <EventRows events={month.events} buttons={buttons} level={4} zoneless={zoneless} />
+        ) : (
+          <p class="agenda-open">
+            <strong>{month.name} is open.</strong>
+            {invitation && <span> {invitation}</span>}
+            {host && <a class="button button-quiet button-small agenda-host" href={host.href} rel={host.rel}>{host.label}</a>}
+          </p>
+        )}
+      </div>
+    ))}
+  </div>
+)}
+
+<style>
+  .agenda {
+    margin-top: 1.5rem;
+  }
+  .agenda-month + .agenda-month {
+    margin-top: 2.25rem;
+  }
+  .agenda-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.875rem;
+    margin: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line-strong);
+    font-size: clamp(1.875rem, 1.5rem + 1.6vw, 2.75rem);
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .agenda-count {
+    color: var(--muted);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    font-weight: 400;
+    letter-spacing: var(--u-meta-track);
+  }
+  .agenda-open {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin: 0;
+    padding: 1.25rem;
+    border: 1px dashed var(--line-strong);
+    color: var(--muted);
+  }
+  .agenda-open strong {
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: var(--u-d4);
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .agenda-open span {
+    flex: 1 1 18rem;
+  }
+</style>

@@ -7,7 +7,8 @@
 // behind the words through the halftone screen (`.u-halftone`, two tones,
 // drawn at render time); its caption, when the section has one, sits at the
 // photo's upper right as a figure label ("Fig. 01 // A live candidate
-// forum"). Without a photo the stack sits on the page's ground. The
+// forum"). The band opens with its running head on black slabs, the site's
+// name at the left. Without a photo the stack sits on the page's ground. The
 // page-opening Hero's headline is the page's <h1>, any other's an <h2>; a
 // Hero with its sign-up form on carries BackGold's form, framed under the
 // buttons, as the kit's does.
@@ -17,6 +18,7 @@ import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
 import { heroPhoto, links } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
+import RunningHead from '../../RunningHead.astro'
 
 type Props = ComponentProps<typeof Default>
 
@@ -29,9 +31,12 @@ const caption = text(section.copy.caption)
 const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
 const buttons = links(section)
 /** One slab per sentence: the stack breaks after a full stop, a question or an exclamation. */
+const bg = Astro.locals.backgold
+const siteName = bg.setup === null ? (bg.site.name ?? bg.site.domain) : null
 const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line !== '') : []
 ---
 <Band section={section} class:list={['u-cover', picture && 'u-cover-photo']}>
+  <RunningHead kicker={siteName} title={null} class="u-rh-onphoto" />
   {picture && (
     <div class="u-cover-photo-box u-halftone" aria-hidden={picture.alt ? undefined : 'true'}>
       <img src={picture.url} alt={picture.alt} loading={level === 1 ? 'eager' : 'lazy'} fetchpriority={level === 1 ? 'high' : undefined} decoding="async" />
@@ -74,25 +79,23 @@ const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line 
   :global(.bg-section.u-cover) > :global(.bg-section-inner) {
     position: static;
   }
-  /* The running head and its folio sit on black slabs over the photo. */
-  :global(main .bg-section.u-cover-photo)::before,
-  :global(main .bg-section.u-cover-photo)::after {
+  /* The running head reads over the photo: its words on black slabs. */
+  :global(.u-cover .u-rh-onphoto) {
     position: relative;
     z-index: 1;
+    width: 100%;
+    border-bottom: 0;
+  }
+  :global(.u-cover-photo .u-rh-onphoto > *) {
+    justify-self: start;
+    padding: 0.375rem 0.625rem;
     background: var(--page);
   }
-  :global(main .bg-section.u-cover-photo)::before {
-    padding: 0.5rem 3rem 0.5rem 0.75rem;
+  :global(.u-cover-photo .u-rh-onphoto > .u-rh-folio) {
+    justify-self: end;
   }
-  :global(main .bg-section.u-cover-photo)::after {
-    position: absolute;
-    top: var(--space);
-    padding: 0.5rem 0.75rem;
-  }
-  :global(.bg-section.u-cover-photo) > :global(.bg-section-inner) {
-    display: flex;
-    flex-direction: column;
-    min-height: clamp(30rem, 22rem + 30vw, 46rem);
+  :global(.u-cover-photo .u-rh-onphoto > .u-rh-centre:empty) {
+    background: none;
   }
   .u-cover-photo-box {
     position: absolute;
