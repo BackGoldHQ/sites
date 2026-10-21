@@ -1,0 +1,1461 @@
+{
+  "key": "nonprofit",
+  "name": "Nonprofit",
+  "audience": "nonprofit",
+  "version": 1,
+  "variants": {
+    "Hero": [
+      "centered",
+      "cover",
+      "split",
+      "overlap",
+      "statement",
+      "donate",
+      "video",
+      "rotating"
+    ],
+    "About": [
+      "right",
+      "left",
+      "letter",
+      "portrait",
+      "books"
+    ],
+    "Issues": [
+      "cards",
+      "steps",
+      "numbered",
+      "rows",
+      "checklist",
+      "tabs",
+      "drawer"
+    ],
+    "StatCards": [
+      "row",
+      "ribbon",
+      "feature",
+      "wall"
+    ],
+    "Cta": [
+      "card",
+      "banner",
+      "strip",
+      "photo"
+    ],
+    "QuoteStrip": [
+      "row",
+      "single",
+      "ticker",
+      "logos",
+      "carousel",
+      "wall"
+    ],
+    "Map": [
+      "directory",
+      "map",
+      "bar"
+    ],
+    "MovementMap": [
+      "full"
+    ],
+    "VideoEmbed": [
+      "auto",
+      "landscape",
+      "portrait",
+      "square"
+    ],
+    "PdfEmbed": [
+      "short",
+      "medium",
+      "tall",
+      "card"
+    ],
+    "Progress": [
+      "bar",
+      "ring",
+      "compact",
+      "match"
+    ],
+    "Countdown": [
+      "banner"
+    ],
+    "Leaderboard": [
+      "table"
+    ],
+    "SocialFeed": [
+      "grid"
+    ],
+    "MovementTicker": [
+      "ticker"
+    ],
+    "EventsList": [
+      "list",
+      "cards",
+      "agenda",
+      "compact",
+      "calendar",
+      "shifts",
+      "week",
+      "cohorts",
+      "map"
+    ],
+    "Blog": [
+      "cards",
+      "list",
+      "feature"
+    ],
+    "Collection": [
+      "cards",
+      "list",
+      "compact",
+      "feature",
+      "library",
+      "shelves",
+      "outline"
+    ],
+    "ContentPost": [
+      "card",
+      "banner",
+      "player",
+      "theater"
+    ],
+    "PlatformPlanks": [
+      "numbered",
+      "columns",
+      "longread"
+    ],
+    "CandidateRoster": [
+      "cards",
+      "ballot",
+      "compact"
+    ],
+    "TeamGrid": [
+      "grid",
+      "board",
+      "list"
+    ],
+    "Donate": [
+      "form",
+      "story"
+    ],
+    "Petition": [
+      "none",
+      "image",
+      "map",
+      "coverage"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "SignupCapture": [
+      "card",
+      "band",
+      "inline"
+    ],
+    "Store": [
+      "grid",
+      "featured"
+    ],
+    "Event": [
+      "detail",
+      "card"
+    ],
+    "Calendar": [
+      "month",
+      "agenda"
+    ],
+    "PollBlock": [
+      "card"
+    ],
+    "SocialFrame": [
+      "ring"
+    ],
+    "Advocacy": [
+      "full",
+      "compact"
+    ],
+    "QuickDonate": [
+      "grid",
+      "hero",
+      "bar",
+      "jar",
+      "band",
+      "ladder"
+    ],
+    "VoterTools": [
+      "register",
+      "polling",
+      "dates"
+    ],
+    "SampleBallot": [
+      "slate",
+      "cards",
+      "measures"
+    ],
+    "Scorecard": [
+      "table",
+      "grades",
+      "promise"
+    ],
+    "Membership": [
+      "card",
+      "tiers",
+      "compare"
+    ],
+    "Faq": [
+      "accordion",
+      "topics",
+      "cards"
+    ],
+    "Comparison": [
+      "table",
+      "cards",
+      "spectrum"
+    ],
+    "Stories": [
+      "spotlight",
+      "cards",
+      "timeline"
+    ],
+    "ShareKit": [
+      "cards",
+      "strip",
+      "compact"
+    ],
+    "Financials": [
+      "bars",
+      "donut",
+      "table"
+    ],
+    "Services": [
+      "packages",
+      "list",
+      "compare"
+    ],
+    "CaseStudies": [
+      "featured",
+      "grid",
+      "beforeafter"
+    ],
+    "Resources": [
+      "library",
+      "featured",
+      "band"
+    ],
+    "Pathways": [
+      "doors",
+      "tabs",
+      "quiz"
+    ],
+    "Portfolio": [
+      "grid",
+      "featured",
+      "strip"
+    ],
+    "MediaKit": [
+      "kit",
+      "speaker",
+      "press"
+    ],
+    "Booking": [
+      "cards",
+      "list"
+    ]
+  },
+  "areas": {
+    "top_banner": "Above the header",
+    "sidebar": "Beside the page, under it on a phone",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": {
+      "entry": "article",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
+      "list": "list"
+    },
+    "video": {
+      "entry": "watch",
+      "list": "grid"
+    },
+    "newsletter": {
+      "entry": "issue",
+      "list": "list"
+    }
+  },
+  "chrome": {
+    "header": [
+      "bar",
+      "centered"
+    ],
+    "footer": [
+      "giving",
+      "columns",
+      "closing",
+      "compact"
+    ],
+    "takeoverBanner": true,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [
+      {
+        "slug": "",
+        "title": "Home",
+        "sections": [
+          {
+            "id": "Hero-home",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cover",
+            "copy": {
+              "headline": "More freedom. Fewer excuses.",
+              "subheadline": "Your party, in every county: we run candidates, we post every check we write, and we think you can run your own life.",
+              "ctaText": "Join the party"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Join the party",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          },
+          {
+            "id": "StatCards-home",
+            "type": "StatCards",
+            "band": "contrast",
+            "bleed": "contained",
+            "variant": "ribbon",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "stats",
+              "items": [
+                {
+                  "label": "county chapters, and counting",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": true
+                },
+                {
+                  "label": "candidates on the November ballot",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                },
+                {
+                  "label": "registered members",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                },
+                {
+                  "label": "on the ballot since",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "Issues-home",
+            "type": "Issues",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "numbered",
+            "copy": {
+              "kicker": "What we stand for",
+              "heading": "Three things we would change first",
+              "lead": ""
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "The whole platform",
+                "target": {
+                  "kind": "section",
+                  "slug": "about",
+                  "anchor": "platform"
+                },
+                "url": "/about#platform",
+                "style": "ghost"
+              }
+            ],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Keep what you earn",
+                  "body": "No new income tax bracket, and a vote of the people before any new levy."
+                },
+                {
+                  "title": "Open every ledger",
+                  "body": "Every check the state writes, online within a week, searchable by anyone."
+                },
+                {
+                  "title": "Let families choose",
+                  "body": "School funding follows the student, to any school that will teach them."
+                }
+              ]
+            }
+          },
+          {
+            "id": "EventsList-home",
+            "type": "EventsList",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "heading": "Where to find us this month",
+              "eventsEmptyCta": "Nothing is on the calendar yet. New events show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "max": 3
+            }
+          },
+          {
+            "id": "Blog-home",
+            "type": "Blog",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "feature",
+            "copy": {
+              "heading": "From the party"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "maxItems": 4
+            }
+          },
+          {
+            "id": "CandidateRoster-home",
+            "type": "CandidateRoster",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "compact",
+            "copy": {
+              "heading": "Our candidates",
+              "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Cta-home",
+            "type": "Cta",
+            "band": "contrast",
+            "bleed": "contained",
+            "variant": "photo",
+            "copy": {
+              "eyebrow": "Take part",
+              "heading": "This state does not need another party that asks permission.",
+              "body": "Members choose our candidates, write the platform and vote at convention. Volunteers do the rest.",
+              "donateButtonText": "Become a member",
+              "volunteerButtonText": "Volunteer"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Become a member",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              },
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "about",
+        "title": "About",
+        "sections": [
+          {
+            "id": "Hero-about",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "split",
+            "copy": {
+              "headline": "A party for people who would rather be left alone.",
+              "subheadline": "We run candidates in every corner of the state on one idea: you are the best judge of how to live your life.",
+              "ctaText": "Join the party"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Join the party",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          },
+          {
+            "id": "About-about",
+            "type": "About",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "letter",
+            "copy": {
+              "heading": "We are not here to manage you.",
+              "body": "Every two years someone promises to fix this state from the top down. We think it works better from the bottom up: families, neighbors, and county chapters that meet in libraries and grange halls and argue about the right things.\n\nWe are a small party with a long memory. We post every check we write. Our members pick our candidates and write our platform, and we keep showing up in every county, whether or not the cameras do."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "StatCards-about",
+            "type": "StatCards",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "row",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "stats",
+              "items": [
+                {
+                  "label": "the year the party was founded",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": true
+                },
+                {
+                  "label": "counties with a chapter that meets every month",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                },
+                {
+                  "label": "the year we started posting every check online",
+                  "value": "Your figure",
+                  "note": "",
+                  "accent": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "PlatformPlanks-about",
+            "type": "PlatformPlanks",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "longread",
+            "copy": {
+              "heading": "What we stand for"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "platform"
+            },
+            "data": {
+              "source": "platform",
+              "items": [
+                {
+                  "title": "Your money",
+                  "ethos": "What you earn is yours first. Government should have to make its case every year.",
+                  "planks": [
+                    {
+                      "headline": "No new income tax bracket",
+                      "plain": "The top state rate stays where it is, and a new bracket needs a vote of the people."
+                    },
+                    {
+                      "headline": "A levy needs a ballot",
+                      "plain": "No new levy without a vote in a general election, not a quiet special one."
+                    }
+                  ]
+                },
+                {
+                  "title": "Open government",
+                  "ethos": "If the state spends it, you can see it, within a week, without filing a request.",
+                  "planks": [
+                    {
+                      "headline": "Every check online",
+                      "plain": "A searchable ledger of every payment the state makes, updated weekly."
+                    },
+                    {
+                      "headline": "Meetings on the record",
+                      "plain": "Every public body streams and archives its meetings."
+                    }
+                  ]
+                },
+                {
+                  "title": "Education",
+                  "ethos": "Funding follows the student to any school that will teach them.",
+                  "planks": [
+                    {
+                      "headline": "Education savings accounts",
+                      "plain": "For every family, not a lottery for a few."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "QuoteStrip-about",
+            "type": "QuoteStrip",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "single",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "quotes",
+              "items": [
+                {
+                  "quote": "A line someone said or wrote about your party goes here, in their words.",
+                  "attribution": "Who said it, and where"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "leadership",
+        "title": "Leadership",
+        "sections": [
+          {
+            "id": "Hero-leadership",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "The people who answer the phone.",
+              "subheadline": "Our officers and state committee, elected by members at convention."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "TeamGrid-leadership",
+            "type": "TeamGrid",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "board",
+            "copy": {
+              "heading": "The state committee",
+              "teamOpenRolesIntro": "An open seat is an invitation. Any member in good standing can stand for it at convention.",
+              "interestButtonText": "Ask about running"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Ask about running",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ]
+          },
+          {
+            "id": "Cta-leadership",
+            "type": "Cta",
+            "band": "contrast",
+            "bleed": "full",
+            "variant": "banner",
+            "copy": {
+              "eyebrow": "Run with us",
+              "heading": "Thinking about running? Start with a conversation.",
+              "body": "Members choose our candidates. Tell us where you live and what you would run for.",
+              "donateButtonText": "Become a member",
+              "volunteerButtonText": "Talk to us"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Become a member",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              },
+              {
+                "label": "Talk to us",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "candidates",
+        "title": "Candidates",
+        "sections": [
+          {
+            "id": "Hero-candidates",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "On your ballot.",
+              "subheadline": "Members chose every one of them at convention. Find who is running where you live."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "CandidateRoster-candidates",
+            "type": "CandidateRoster",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "ballot",
+            "copy": {
+              "heading": "On your ballot",
+              "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "showFilters": true
+            }
+          }
+        ]
+      },
+      {
+        "slug": "news",
+        "title": "News",
+        "sections": [
+          {
+            "id": "Hero-news",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "News",
+              "headline": "From the party",
+              "subheadline": "Announcements, candidate news and the occasional argument, from the state committee and our county chapters."
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "events",
+        "title": "Events",
+        "sections": [
+          {
+            "id": "Hero-events",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "Show up.",
+              "subheadline": "Forums, door-knocks, new member nights and the odd dinner. Everything is open to the public unless it says members only."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "EventsList-events",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "calendar",
+            "copy": {
+              "heading": "On the calendar",
+              "eventsEmptyCta": "Hosting a chapter meeting, a forum or a holiday party? Tell us and we will put it here."
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "donate",
+        "title": "Donate",
+        "sections": [
+          {
+            "id": "Donate-donate",
+            "type": "Donate",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "story",
+            "copy": {
+              "heading": "Candidates in every county, paid for by people like you."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-donate",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "Other ways to give",
+              "heading": "Not today? There are other ways.",
+              "lead": ""
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Join the party",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join",
+                "style": "primary"
+              },
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact",
+                "style": "outline"
+              }
+            ],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Mail a check",
+                  "body": "Our mailing address is on the contact page."
+                },
+                {
+                  "title": "Become a member",
+                  "body": "Members choose our candidates and vote at convention."
+                },
+                {
+                  "title": "Give your time",
+                  "body": "Two hours a month on the phones or at the doors goes a long way."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "join",
+        "title": "Join",
+        "sections": [
+          {
+            "id": "Cta-join",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "eyebrow": "Membership",
+              "heading": "Make it official.",
+              "body": "Members choose our candidates, write our platform and vote at the state convention. Pick a membership on the next page.",
+              "donateButtonText": "Become a member"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Become a member",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "petition",
+        "title": "Petition",
+        "sections": [
+          {
+            "id": "Petition-petition",
+            "type": "Petition",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "coverage",
+            "copy": {
+              "heading": "Put every party on every ballot."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "About-petition",
+            "type": "About",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "right",
+            "copy": {
+              "heading": "A ballot with two names is a habit, not a choice.",
+              "body": "Say here what is wrong now and what you are asking for, in two or three short paragraphs.\n\nEvery name on this petition goes to the people who decide, with the signer's county beside it."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-petition",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "steps",
+            "copy": {
+              "kicker": "How it works",
+              "heading": "From your name to the ballot",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Sign",
+                  "body": "Add your name and county. It takes a minute."
+                },
+                {
+                  "title": "Share",
+                  "body": "Send it to three people in your county who would sign too."
+                },
+                {
+                  "title": "Show up",
+                  "body": "Come to the delivery, so the people who decide see who signed."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "contact",
+        "title": "Contact",
+        "sections": [
+          {
+            "id": "Hero-contact",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "headline": "Talk to a person.",
+              "subheadline": "Questions about the party, a candidate, or how to start a chapter. Someone on the state committee reads every message."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-contact",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Send us a message"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "About-contact",
+            "type": "About",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "left",
+            "copy": {
+              "heading": "The state office",
+              "body": "Your office's street address goes here, with the days someone is in.\n\nAdd your mailing address, your phone number and its hours, and an email address for the press."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Map-contact",
+            "type": "Map",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "map",
+            "copy": {
+              "heading": "Find your county chapter",
+              "litLabel": "Chapter meets monthly",
+              "darkLabel": "No chapter yet",
+              "charterCtaText": "Start a chapter"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Start a chapter",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "primary": [
+        {
+          "label": "Home",
+          "kind": "page",
+          "target": {
+            "slug": ""
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "About",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "About",
+              "kind": "page",
+              "target": {
+                "slug": "about"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Platform",
+              "kind": "section",
+              "target": {
+                "slug": "about",
+                "anchor": "platform"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Leadership",
+              "kind": "page",
+              "target": {
+                "slug": "leadership"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Candidates",
+              "kind": "page",
+              "target": {
+                "slug": "candidates"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "News",
+          "kind": "blog",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Events",
+          "kind": "page",
+          "target": {
+            "slug": "events"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Petition",
+          "kind": "page",
+          "target": {
+            "slug": "petition"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Contact",
+          "kind": "page",
+          "target": {
+            "slug": "contact"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Join",
+          "kind": "page",
+          "target": {
+            "slug": "join"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Donate",
+          "kind": "donate",
+          "target": {},
+          "shows_on": {
+            "rule": "donation_pages"
+          },
+          "header_button": true,
+          "children": []
+        }
+      ],
+      "footer": [
+        {
+          "label": "The party",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "About",
+              "kind": "page",
+              "target": {
+                "slug": "about"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Platform",
+              "kind": "section",
+              "target": {
+                "slug": "about",
+                "anchor": "platform"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Leadership",
+              "kind": "page",
+              "target": {
+                "slug": "leadership"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Candidates",
+              "kind": "page",
+              "target": {
+                "slug": "candidates"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Contact",
+              "kind": "page",
+              "target": {
+                "slug": "contact"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Take part",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Join",
+              "kind": "page",
+              "target": {
+                "slug": "join"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Events",
+              "kind": "page",
+              "target": {
+                "slug": "events"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Sign the petition",
+              "kind": "page",
+              "target": {
+                "slug": "petition"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Read",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "News",
+              "kind": "blog",
+              "target": {},
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Newsletter",
+              "kind": "content_list",
+              "target": {
+                "type_key": "newsletter"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    "sections": [
+      {
+        "key": "blog-sidebar",
+        "label": "Blog sidebar",
+        "kind": "sidebar",
+        "document": [
+          {
+            "id": "EventsList-blog-sidebar",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "compact",
+            "copy": {
+              "heading": "Coming up",
+              "eventsEmptyCta": "New events show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "max": 3
+            }
+          },
+          {
+            "id": "Cta-blog-sidebar",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "Make it official",
+              "body": "Members vote at convention, choose our candidates and keep the lights on.",
+              "donateButtonText": "Become a member"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Become a member",
+                "target": {
+                  "kind": "surface",
+                  "path": "/join"
+                },
+                "url": "/join"
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "sidebar",
+            "shows_on": "entry_types",
+            "content_types": [
+              "post"
+            ]
+          },
+          {
+            "area_key": "sidebar",
+            "shows_on": "type_lists",
+            "content_types": [
+              "post"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "join-the-newsletter",
+        "label": "Join the newsletter",
+        "kind": "pre_footer",
+        "document": [
+          {
+            "id": "SignupCapture-newsletter",
+            "type": "SignupCapture",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "One email a week. What happened, what is next, where to show up."
+            },
+            "media": {},
+            "links": []
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "above_footer",
+            "shows_on": "every_page"
+          }
+        ]
+      },
+      {
+        "key": "live-moment",
+        "label": "Live moment",
+        "kind": "announcement",
+        "document": [
+          {
+            "id": "Cta-live-moment",
+            "type": "Cta",
+            "band": "contrast",
+            "bleed": "full",
+            "variant": "strip",
+            "copy": {
+              "eyebrow": "Tonight",
+              "heading": "Watch the candidate forum live at 7",
+              "donateButtonText": "Watch live"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Watch live",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ]
+          }
+        ],
+        "rules": []
+      }
+    ]
+  }
+}

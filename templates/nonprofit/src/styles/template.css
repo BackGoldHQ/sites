@@ -1,0 +1,6 @@
+/*
+  What the party template draws differently from the kit's stylesheet
+  (@backgold/template-kit's src/styles/site.css and entries.css). Nothing:
+  the kit's values are the party's, boards A1, A12 and A13. A template that
+  restyles sets its own here; this file loads after the kit's on every page.
+*/

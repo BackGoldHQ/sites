@@ -172,6 +172,37 @@ importers:
         specifier: ^4.149.0
         version: 4.151.0(@types/node@24.19.2)
 
+  templates/nonprofit:
+    dependencies:
+      '@astrojs/cloudflare':
+        specifier: ^14.3.3
+        version: 14.3.4(@types/node@24.19.2)(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))(esbuild@0.28.2)(wrangler@4.151.0(@types/node@24.19.2))(yaml@2.9.1)
+      '@backgold/astro':
+        specifier: workspace:^
+        version: link:../../packages/astro-backgold
+      '@backgold/content':
+        specifier: workspace:^
+        version: link:../../packages/content-client
+      '@backgold/contract':
+        specifier: workspace:*
+        version: link:../../vendor/backgold-contract
+      '@backgold/template-kit':
+        specifier: workspace:^
+        version: link:../../packages/template-kit
+      astro:
+        specifier: ^7.3.5
+        version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+    devDependencies:
+      '@astrojs/check':
+        specifier: ^0.9.10
+        version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      wrangler:
+        specifier: ^4.149.0
+        version: 4.151.0(@types/node@24.19.2)
+
   templates/party:
     dependencies:
       '@astrojs/cloudflare':
@@ -204,6 +235,37 @@ importers:
         version: 4.151.0(@types/node@24.19.2)
 
   templates/petition-drive:
+    dependencies:
+      '@astrojs/cloudflare':
+        specifier: ^14.3.3
+        version: 14.3.4(@types/node@24.19.2)(astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))(esbuild@0.28.2)(wrangler@4.151.0(@types/node@24.19.2))(yaml@2.9.1)
+      '@backgold/astro':
+        specifier: workspace:^
+        version: link:../../packages/astro-backgold
+      '@backgold/content':
+        specifier: workspace:^
+        version: link:../../packages/content-client
+      '@backgold/contract':
+        specifier: workspace:*
+        version: link:../../vendor/backgold-contract
+      '@backgold/template-kit':
+        specifier: workspace:^
+        version: link:../../packages/template-kit
+      astro:
+        specifier: ^7.3.5
+        version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+    devDependencies:
+      '@astrojs/check':
+        specifier: ^0.9.10
+        version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      wrangler:
+        specifier: ^4.149.0
+        version: 4.151.0(@types/node@24.19.2)
+
+  templates/unlabeled:
     dependencies:
       '@astrojs/cloudflare':
         specifier: ^14.3.3

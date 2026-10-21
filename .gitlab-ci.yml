@@ -1,6 +1,6 @@
 # BackGold sites pipeline: the two public npm packages, the templates built on
-# them, and the four templates' deploys (party, candidate, petition-drive,
-# academy).
+# them, and the six templates' deploys (party, candidate, petition-drive,
+# academy, nonprofit, unlabeled).
 #
 # Each check job is path-filtered, so an MR that only touches the starter never
 # re-runs any template's e2e (the runners are shared with the platform's
@@ -394,6 +394,44 @@ academy:
         - pnpm-workspace.yaml
         - vendor/**/*
 
+
+nonprofit:
+  extends: .template-check
+  variables:
+    TEMPLATE: nonprofit
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/nonprofit/**/*
+        - packages/template-kit/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+
+
+unlabeled:
+  extends: .template-check
+  variables:
+    TEMPLATE: unlabeled
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - templates/unlabeled/**/*
+        - packages/template-kit/**/*
+        - scripts/starter-e2e.mjs
+        - packages/astro-backgold/**/*
+        - packages/content-client/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+
 # manifests = every templates/<dir>/template.json against
 # siteTemplateManifestSchema from the vendored contract slice, and each
 # manifest's key against its directory (scripts/check-manifests.mjs). The
@@ -731,6 +769,62 @@ deploy-academy-production:
     TEMPLATE: academy
     KV_VAR: ACADEMY_PRODUCTION_KV_ID
   resource_group: academy-production
+
+
+deploy-nonprofit-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: nonprofit
+    KV_VAR: NONPROFIT_STAGING_KV_ID
+  resource_group: nonprofit-staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+      changes:
+        - templates/nonprofit/**/*
+        - packages/**/*
+        - packages/template-kit/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+
+
+deploy-nonprofit-production:
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: nonprofit
+    KV_VAR: NONPROFIT_PRODUCTION_KV_ID
+  resource_group: nonprofit-production
+
+
+deploy-unlabeled-staging:
+  extends: .template-deploy-staging
+  variables:
+    TEMPLATE: unlabeled
+    KV_VAR: UNLABELED_STAGING_KV_ID
+  resource_group: unlabeled-staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CLOUDFLARE_API_TOKEN
+      changes:
+        - templates/unlabeled/**/*
+        - packages/**/*
+        - packages/template-kit/**/*
+        - vendor/**/*
+        - pnpm-lock.yaml
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && $CLOUDFLARE_API_TOKEN
+      when: manual
+      allow_failure: true
+
+
+deploy-unlabeled-production:
+  extends: .template-deploy-production
+  variables:
+    TEMPLATE: unlabeled
+    KV_VAR: UNLABELED_PRODUCTION_KV_ID
+  resource_group: unlabeled-production
 
 # =========================================================================
 # NPM — MANUAL ONLY. Publishes the two public packages to the npm registry,

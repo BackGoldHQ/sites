@@ -1,0 +1,604 @@
+{
+  "key": "unlabeled",
+  "name": "Unlabeled",
+  "audience": "hidden",
+  "version": 1,
+  "variants": {
+    "Hero": [
+      "centered",
+      "cover",
+      "split",
+      "overlap",
+      "statement",
+      "donate",
+      "video",
+      "rotating"
+    ],
+    "About": [
+      "right",
+      "left",
+      "letter",
+      "portrait",
+      "books"
+    ],
+    "Issues": [
+      "cards",
+      "steps",
+      "numbered",
+      "rows",
+      "checklist",
+      "tabs",
+      "drawer"
+    ],
+    "StatCards": [
+      "row",
+      "ribbon",
+      "feature",
+      "wall"
+    ],
+    "Cta": [
+      "card",
+      "banner",
+      "strip",
+      "photo"
+    ],
+    "QuoteStrip": [
+      "row",
+      "single",
+      "ticker",
+      "logos",
+      "carousel",
+      "wall"
+    ],
+    "Map": [
+      "directory",
+      "map",
+      "bar"
+    ],
+    "MovementMap": [
+      "full"
+    ],
+    "VideoEmbed": [
+      "auto",
+      "landscape",
+      "portrait",
+      "square"
+    ],
+    "PdfEmbed": [
+      "short",
+      "medium",
+      "tall",
+      "card"
+    ],
+    "Progress": [
+      "bar",
+      "ring",
+      "compact",
+      "match"
+    ],
+    "Countdown": [
+      "banner"
+    ],
+    "Leaderboard": [
+      "table"
+    ],
+    "SocialFeed": [
+      "grid"
+    ],
+    "MovementTicker": [
+      "ticker"
+    ],
+    "EventsList": [
+      "list",
+      "cards",
+      "agenda",
+      "compact",
+      "calendar",
+      "shifts",
+      "week",
+      "cohorts",
+      "map"
+    ],
+    "Blog": [
+      "cards",
+      "list",
+      "feature"
+    ],
+    "Collection": [
+      "cards",
+      "list",
+      "compact",
+      "feature",
+      "library",
+      "shelves",
+      "outline"
+    ],
+    "ContentPost": [
+      "card",
+      "banner",
+      "player",
+      "theater"
+    ],
+    "PlatformPlanks": [
+      "numbered",
+      "columns",
+      "longread"
+    ],
+    "CandidateRoster": [
+      "cards",
+      "ballot",
+      "compact"
+    ],
+    "TeamGrid": [
+      "grid",
+      "board",
+      "list"
+    ],
+    "Donate": [
+      "form",
+      "story"
+    ],
+    "Petition": [
+      "none",
+      "image",
+      "map",
+      "coverage"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "SignupCapture": [
+      "card",
+      "band",
+      "inline"
+    ],
+    "Store": [
+      "grid",
+      "featured"
+    ],
+    "Event": [
+      "detail",
+      "card"
+    ],
+    "Calendar": [
+      "month",
+      "agenda"
+    ],
+    "PollBlock": [
+      "card"
+    ],
+    "SocialFrame": [
+      "ring"
+    ],
+    "Advocacy": [
+      "full",
+      "compact"
+    ],
+    "QuickDonate": [
+      "grid",
+      "hero",
+      "bar",
+      "jar",
+      "band",
+      "ladder"
+    ],
+    "VoterTools": [
+      "register",
+      "polling",
+      "dates"
+    ],
+    "SampleBallot": [
+      "slate",
+      "cards",
+      "measures"
+    ],
+    "Scorecard": [
+      "table",
+      "grades",
+      "promise"
+    ],
+    "Membership": [
+      "card",
+      "tiers",
+      "compare"
+    ],
+    "Faq": [
+      "accordion",
+      "topics",
+      "cards"
+    ],
+    "Comparison": [
+      "table",
+      "cards",
+      "spectrum"
+    ],
+    "Stories": [
+      "spotlight",
+      "cards",
+      "timeline"
+    ],
+    "ShareKit": [
+      "cards",
+      "strip",
+      "compact"
+    ],
+    "Financials": [
+      "bars",
+      "donut",
+      "table"
+    ],
+    "Services": [
+      "packages",
+      "list",
+      "compare"
+    ],
+    "CaseStudies": [
+      "featured",
+      "grid",
+      "beforeafter"
+    ],
+    "Resources": [
+      "library",
+      "featured",
+      "band"
+    ],
+    "Pathways": [
+      "doors",
+      "tabs",
+      "quiz"
+    ],
+    "Portfolio": [
+      "grid",
+      "featured",
+      "strip"
+    ],
+    "MediaKit": [
+      "kit",
+      "speaker",
+      "press"
+    ],
+    "Booking": [
+      "cards",
+      "list"
+    ]
+  },
+  "areas": {
+    "top_banner": "Above the header",
+    "sidebar": "Beside the page, under it on a phone",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": {
+      "entry": "article",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
+      "list": "list"
+    },
+    "video": {
+      "entry": "watch",
+      "list": "grid"
+    },
+    "newsletter": {
+      "entry": "issue",
+      "list": "list"
+    }
+  },
+  "chrome": {
+    "header": [
+      "bar"
+    ],
+    "footer": [
+      "columns"
+    ],
+    "takeoverBanner": true,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [
+      {
+        "slug": "",
+        "title": "Home",
+        "sections": [
+          {
+            "id": "Petition-home",
+            "type": "Petition",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "map",
+            "copy": {
+              "heading": "Add your name: put it on the record",
+              "addressedTo": "Your city council, its oversight committees, and the agencies that answer to them.",
+              "goalNote": "Goal set for the next public hearing.",
+              "volunteerPrompt": "I'd also like to help."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "datasetPreset": "alpr",
+              "datasetArea": "US-TX",
+              "badgeNoun": "ALPRs",
+              "uncategorizedLabel": "Unattributed",
+              "volunteerAsk": "on",
+              "recognition": true,
+              "anchorId": "petition"
+            },
+            "data": {
+              "source": "petition",
+              "items": [
+                {
+                  "title": "Publish a full inventory.",
+                  "body": "Everything in operation \u2014 what it is, who runs it, and what it costs \u2014 in a public dataset, updated on a regular schedule."
+                },
+                {
+                  "title": "Require a public vote",
+                  "body": "before any new deployment, contract, or renewal. No more decisions made by purchase order, out of public view."
+                },
+                {
+                  "title": "Cap how long data is kept",
+                  "body": "and end bulk sharing with outside agencies for anything not tied to an active, named investigation."
+                },
+                {
+                  "title": "Publish an independent audit",
+                  "body": "every year \u2014 who accessed what, under what authority, and whether it was justified."
+                },
+                {
+                  "group": "tile",
+                  "label": "Sites mapped",
+                  "value": "auto:total",
+                  "note": ""
+                },
+                {
+                  "group": "tile",
+                  "label": "Signatures",
+                  "value": "auto:signatures",
+                  "note": ""
+                },
+                {
+                  "group": "tile",
+                  "label": "Public votes taken",
+                  "value": "0",
+                  "note": "On the decisions that put this network here. That is what we are changing."
+                }
+              ]
+            }
+          },
+          {
+            "id": "Issues-home",
+            "type": "Issues",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "steps",
+            "copy": {
+              "kicker": "Get involved",
+              "heading": "Signing takes 30 seconds. Mapping takes four minutes.",
+              "lead": "Every dot on that map got there because a neighbor walked past one and tagged it. The inventory they won\u2019t publish, we\u2019re building ourselves \u2014 in the open, where nobody can quietly delete it."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Open the global map",
+                "target": {
+                  "kind": "external",
+                  "url": "https://maps.deflock.org"
+                },
+                "url": "https://maps.deflock.org",
+                "style": "primary"
+              },
+              {
+                "label": "Sign the petition",
+                "target": {
+                  "kind": "section",
+                  "slug": "",
+                  "anchor": "petition"
+                },
+                "url": "/#petition",
+                "style": "outline"
+              },
+              {
+                "label": "Join a mapping walk",
+                "target": {
+                  "kind": "section",
+                  "slug": "",
+                  "anchor": "events"
+                },
+                "url": "/#events",
+                "style": "outline"
+              }
+            ],
+            "options": {
+              "anchorId": "get-involved"
+            },
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Learn what to look for",
+                  "body": "A quick field guide shows you how to spot and identify what we\u2019re mapping \u2014 no expertise needed, just an eye for it.",
+                  "icon": "lightbulb"
+                },
+                {
+                  "title": "Document it",
+                  "body": "Photograph or note it from the public right-of-way \u2014 sidewalk or street. Never trespass, never touch anything.",
+                  "icon": "book"
+                },
+                {
+                  "title": "Add it to the record",
+                  "body": "Drop a pin on the open, community-owned map. Our short walkthrough does it with you, step by step.",
+                  "icon": "globe"
+                },
+                {
+                  "title": "Watch it count",
+                  "body": "It appears on the map above within the hour \u2014 permanent, public, and citable at the next hearing.",
+                  "icon": "zap"
+                }
+              ]
+            }
+          },
+          {
+            "id": "EventsList-home",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "list",
+            "copy": {
+              "heading": "Show up in person",
+              "eventsEmptyCta": "Nothing is on the calendar yet. Mapping walks and public hearings show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "max": 3,
+              "actions": "buttons",
+              "anchorId": "events"
+            }
+          },
+          {
+            "id": "MovementTicker-home",
+            "type": "MovementTicker",
+            "band": "panel",
+            "bleed": "contained",
+            "variant": null,
+            "copy": {
+              "heading": "Neighbors signing on"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "kinds": "signatures",
+              "showTotal": true,
+              "anchorId": "signers"
+            }
+          },
+          {
+            "id": "Cta-home",
+            "type": "Cta",
+            "band": "panel",
+            "bleed": "contained",
+            "variant": "banner",
+            "copy": {
+              "eyebrow": "Put it on the record",
+              "heading": "They did it quietly. We\u2019re doing it in the open.",
+              "body": "Every entry on that map is there because a neighbor added it. The public record we build together is the reason the next decision will have to be made in daylight.",
+              "donateButtonText": "",
+              "volunteerButtonText": "Add to the map"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Add to the map",
+                "target": {
+                  "kind": "section",
+                  "slug": "",
+                  "anchor": "get-involved"
+                },
+                "url": "/#get-involved"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "primary": [
+        {
+          "label": "The petition",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "petition"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Get involved",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "get-involved"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Events",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "events"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Sign the petition",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "petition"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": true,
+          "children": []
+        }
+      ],
+      "footer": [
+        {
+          "label": "The petition",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "petition"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Get involved",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "get-involved"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Events",
+          "kind": "section",
+          "target": {
+            "slug": "",
+            "anchor": "events"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        }
+      ]
+    },
+    "sections": []
+  }
+}
