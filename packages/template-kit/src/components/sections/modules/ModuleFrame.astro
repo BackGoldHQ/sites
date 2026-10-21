@@ -6,12 +6,15 @@
 // layout, the colours where it sits, light and dark, the radius and the type)
 // so it draws no ground, card, heading or platform footer of its own. The
 // face is the template's `frameFont` when it is one the embed look accepts
-// (FRAME_FONTS), read from `Astro.locals.template`; where that is unset (a
-// frame drawn outside PageSections: an area, an event's page), Public Sans,
-// as it is for a template that names none. An unknown value is never sent:
+// (FRAME_FONTS), read from `Astro.locals.template` (the routes set it);
+// where that is unset, Public Sans, as it is for a template that names none.
+// An unknown value is never sent:
 // the api drops a look with a malformed `font` as a whole. The corners are
 // the template's `frameRadius` (a whole number of pixels, 0 to 40, the embed look's bounds), else 12,
-// read the same way. The
+// read the same way. The colours are the band's through the template's
+// `frameColors` when it has one, and a template with `frameSkin` asks the
+// frame to load its stylesheet (`skin`, the site's own https origin, where the
+// template serves /_backgold/frame.css), read the same way. The
 // site credits BackGold once, as "Powered by BackGold" in the footer's bottom
 // row, never per module.
 //
@@ -65,6 +68,18 @@ const frameFont = Astro.locals.template?.frameFont
 const font = frameFont && FRAME_FONTS.includes(frameFont) ? frameFont : 'public-sans'
 const frameRadius = Astro.locals.template?.frameRadius
 const radius = typeof frameRadius === 'number' && Number.isInteger(frameRadius) && frameRadius >= 0 && frameRadius <= 40 ? frameRadius : 12
+/** The site's own https origin for a template that serves the frames its stylesheet; null otherwise (an http dev server cannot be one). */
+function skinOrigin(): string | null {
+  if (!Astro.locals.template?.frameSkin) return null
+  const site = bg.setup === null && bg.siteUrl ? bg.siteUrl : Astro.url.origin
+  try {
+    const url = new URL(site)
+    return url.protocol === 'https:' ? url.origin : null
+  } catch {
+    return null
+  }
+}
+const skin = skinOrigin()
 const band: SectionBand = card ? 'panel' : SECTION_BANDS.includes(sectionBand as SectionBand) ? (sectionBand as SectionBand) : 'plain'
 
 /** The module's address with the look query (and a Donate frame's donate names), or as sent when it is not one we can read. */
@@ -78,13 +93,16 @@ function framed(iframe: string | null): string | null {
   }
   if (isDonateFrame(type)) withDonateQuery(url, Astro.url.searchParams)
   url.searchParams.set('layout', layout)
-  for (const [key, value] of Object.entries(moduleLook(brand, band, appearance, theme))) url.searchParams.set(key, value)
+  for (const [key, value] of Object.entries(moduleLook(brand, band, appearance, theme, Astro.locals.template?.frameColors ?? null))) url.searchParams.set(key, value)
   url.searchParams.set('radius', String(radius))
   url.searchParams.set('font', font)
+  if (skin) url.searchParams.set('skin', skin)
   return url.toString()
 }
 
 const embed = sent ? { ...sent, iframe: framed(sent.iframe) } : null
+/** The frame's name as words: a heading's starred word (`*helps*`, a template's marked word) without its stars. */
+const name = title.replace(/\*([^*\n]+)\*/g, '$1')
 const hasHead = Astro.slots.has('default')
 
 /** What a visitor reads where a module with nothing to frame would be. */
@@ -104,7 +122,7 @@ const unavailable = UNAVAILABLE[type] ?? 'This is not available right now.'
 {embed ? (
   <div class:list={['module', card && 'module-card', className]} data-module={type} style={`--bg-embed-height:${height}`}>
     {hasHead && <div class="module-head"><slot /></div>}
-    <Embed embed={embed} title={title} />
+    <Embed embed={embed} title={name} />
   </div>
 ) : (
   <div class:list={['module', 'module-unavailable', card && 'module-card', className]} data-module={type} data-module-unavailable>

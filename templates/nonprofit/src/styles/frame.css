@@ -1,0 +1,216 @@
+/*
+  BackGold's module frames in the nonprofit template's look (boards N4 the
+  volunteer form, N6 the RSVP, N7 Donate, N10 the contact form, and the
+  newsletter band): served at /_backgold/frame.css (src/frame-css.ts) and
+  loaded by a frame the site asked to wear it (the embed look's `skin`,
+  TemplateConfig `frameSkin`). It loads inside the frame's own document, so
+  it reads none of the page's variables: the colours are the look's own
+  (`--bg-look-*`, the band the frame sits on, light and dark as the page
+  is), and the shapes and faces below are the template's tokens written out
+  again (template.css keeps the originals).
+
+  - Faces: labels, chips and buttons in Shantell Sans, hand-lettered; what a
+    visitor types in Nunito.
+  - Fields: a 2px pen edge (the ink 82% over the strong line) on blob
+    corners; focus is the ink with a hard offset and the dashed accent ring.
+  - Choices: outline chips; the picked one the primary sticker.
+  - Buttons: stickers, a 2px ink border, the hard 3px offset, tilted 1deg;
+    the send button carries the mail doodle. Donate's give button keeps the
+    accent (the page's one), every other call the primary.
+  - Errors: the exclamation doodle and a sentence in the accent, never red.
+  - Motion only under prefers-reduced-motion: no-preference: a sticker
+    lifts 1px.
+
+  Every rule sits under :root[data-bg-look] (the api's looked frames) or
+  :root .bg-look (the donate and event frames), one step above the look's
+  own rules.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Shantell+Sans:wght,BNCE,INFM@300..800,-100..100,0..100&display=swap');
+
+:root[data-bg-look],
+:root:has(.bg-look) {
+  --np-font: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --np-display: 'Shantell Sans', 'Nunito', ui-rounded, system-ui, sans-serif;
+  --np-hand: 'INFM' 55, 'BNCE' 22;
+  --np-hand-calm: 'INFM' 25, 'BNCE' 0;
+  --np-ink: var(--bg-look-ink, #16191f);
+  --np-surface: var(--bg-look-surface, #fffdf7);
+  --np-edge: color-mix(in srgb, var(--np-ink) 82%, var(--bg-look-line-strong, #e8c87a));
+  --np-accent: var(--bg-look-accent, #b34b34);
+  --np-primary: var(--bg-look-button-2, #2d4fd6);
+  --np-primary-ink: var(--bg-look-button-2-ink, #fff3d6);
+  --np-blob-sm: 12px 16px 10px 15px / 15px 10px 16px 12px;
+  --np-blob-pill: 30px 24px 28px 22px / 24px 30px 22px 28px;
+  --np-off: 3px;
+  --np-d-mail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7 13.8C18.4 13.2 29.8 13.2 41.2 13.6C41.4 21 41.4 28.2 41 35.4C29.8 36 18.6 36 7.4 35.6C6.8 28.4 6.8 21 7 13.8ZM7.8 15C13.4 19.4 18.6 23.6 24 27.2C29.6 23.4 35 19.2 40.4 14.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-exclaim: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.6 6.5C24 14.2 23.6 21.8 23.8 29.5M23.9 39.3L24.1 39.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* ── Faces ── */
+
+:root[data-bg-look] body,
+:root .bg-look {
+  font-family: var(--np-font);
+}
+:root[data-bg-look] :is(.gg-fb-label, .gg-po-label, .gg-po-q, .gg-fb-sechead, .gg-po-sechead, .gg-su-heading),
+:root .bg-look :is(.card-title, h2, h3, label) {
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:root[data-bg-look] :is(.gg-fb-label, .gg-po-label) {
+  font-size: 1rem;
+}
+
+/* ── Fields: the pen edge on blob corners ── */
+
+:root[data-bg-look] :is(.gg-su-input, .gg-fb-input, .gg-fb-select, .gg-fb-textarea, .gg-po-input, .gg-fb-other-text, .gg-po-other-text),
+:root .bg-look :is(.input, .select, .textarea) {
+  min-height: 48px;
+  border: 2px solid var(--np-edge);
+  border-radius: var(--np-blob-sm);
+  background: var(--np-surface);
+  color: var(--np-ink);
+  font-family: var(--np-font);
+  font-size: 1rem;
+  box-shadow: none;
+}
+:root[data-bg-look] :is(.gg-su-input, .gg-fb-input, .gg-fb-select, .gg-fb-textarea, .gg-po-input, .gg-fb-other-text, .gg-po-other-text):focus,
+:root .bg-look :is(.input, .select, .textarea):focus {
+  border-color: var(--np-ink);
+  box-shadow: 2px 2px 0 0 var(--np-ink);
+  outline: 3px dashed var(--np-accent);
+  outline-offset: 3px;
+}
+:root[data-bg-look] :is(.gg-su-input, .gg-fb-input, .gg-fb-textarea, .gg-po-input)::placeholder {
+  color: var(--bg-look-muted, #535e8f);
+  opacity: 1;
+}
+:root[data-bg-look] :is(.gg-su-input, .gg-fb-input, .gg-fb-select, .gg-fb-textarea)[aria-invalid='true'] {
+  border-color: var(--np-accent);
+  border-style: dashed;
+}
+
+/* ── Choices: outline chips, the picked one the primary sticker ── */
+
+:root[data-bg-look] :is(.gg-fb-choice, .gg-po-choice),
+:root[data-bg-look] .gg-fb-group-opts > .gg-fb-check {
+  border: 2px solid var(--np-edge);
+  border-radius: var(--np-blob-pill);
+  background: var(--np-surface);
+  color: var(--np-ink);
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+}
+:root[data-bg-look] :is(.gg-fb-choice, .gg-po-choice)[aria-pressed='true'],
+:root[data-bg-look] .gg-fb-group-opts > .gg-fb-check:has(input:checked) {
+  border-color: var(--np-ink);
+  background: var(--np-primary);
+  color: var(--np-primary-ink);
+  box-shadow: 2px 2px 0 0 var(--np-ink);
+}
+
+/* ── Buttons: stickers ── */
+
+:root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit, .gg-fb-next, .gg-po-next, .gg-po-submit, .gg-fb-step-submit, .gg-su-account-btn, .gg-fb-account-btn),
+:root .bg-look .btn:is(.btn-primary, .btn-secondary, .btn-outline) {
+  --np-rot: -1deg;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  min-height: 50px;
+  border: 2px solid var(--np-ink);
+  border-radius: var(--np-blob-pill);
+  background: var(--np-primary);
+  color: var(--np-primary-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--np-surface),
+    var(--np-off) var(--np-off) 0 0 var(--np-ink);
+  transform: rotate(var(--np-rot));
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  text-transform: none;
+}
+/* Donate's give button keeps the accent (the look's `button`): the page's one accent. */
+:root .bg-look .btn.btn-primary {
+  background: var(--bg-look-button, #ff6b4a);
+  color: var(--bg-look-button-ink, #16191f);
+}
+:root[data-bg-look] :is(.gg-su-account-btn, .gg-fb-account-btn),
+:root .bg-look .btn.btn-outline {
+  background: transparent;
+  color: var(--np-ink);
+  box-shadow: var(--np-off) var(--np-off) 0 0 var(--np-ink);
+}
+:root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit)::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.25em;
+  height: 1.25em;
+  background: currentColor;
+  -webkit-mask: var(--np-d-mail) center / contain no-repeat;
+  mask: var(--np-d-mail) center / contain no-repeat;
+}
+:root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit, .gg-fb-next, .gg-po-next, .gg-po-submit, .gg-fb-step-submit, .gg-su-account-btn, .gg-fb-account-btn):focus-visible,
+:root .bg-look .btn:focus-visible {
+  outline: 3px dashed var(--np-accent);
+  outline-offset: 5px;
+}
+:root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit, .gg-fb-next, .gg-po-next, .gg-po-submit, .gg-fb-step-submit, .gg-su-account-btn, .gg-fb-account-btn):active,
+:root .bg-look .btn:is(.btn-primary, .btn-secondary, .btn-outline):active {
+  transform: rotate(var(--np-rot)) translate(2px, 2px);
+  box-shadow:
+    inset 0 0 0 2px var(--np-surface),
+    1px 1px 0 0 var(--np-ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit, .gg-fb-next, .gg-po-next, .gg-po-submit, .gg-fb-step-submit),
+  :root .bg-look .btn:is(.btn-primary, .btn-secondary, .btn-outline) {
+    transition:
+      transform 0.12s ease-out,
+      box-shadow 0.12s ease-out;
+  }
+  :root[data-bg-look] :is(.gg-su-submit, .gg-fb-submit, .gg-fb-next, .gg-po-next, .gg-po-submit, .gg-fb-step-submit):hover,
+  :root .bg-look .btn:is(.btn-primary, .btn-secondary, .btn-outline):hover {
+    transform: rotate(var(--np-rot)) translate(-1px, -1px);
+    box-shadow:
+      inset 0 0 0 2px var(--np-surface),
+      calc(var(--np-off) + 1px) calc(var(--np-off) + 1px) 0 0 var(--np-ink);
+  }
+}
+
+/* ── Errors: the exclamation doodle and a sentence in the accent ── */
+
+:root[data-bg-look] :is(.gg-fb-msg, .gg-su-msg, .gg-po-msg)[data-tone='error'] {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--np-accent);
+  font-weight: 800;
+}
+:root[data-bg-look] :is(.gg-fb-msg, .gg-su-msg, .gg-po-msg)[data-tone='error']::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: currentColor;
+  -webkit-mask: var(--np-d-exclaim) center / contain no-repeat;
+  mask: var(--np-d-exclaim) center / contain no-repeat;
+}
+
+/* ── Event and donate frames: the card is the site's (the template draws it), the inner tiles pen-edged ── */
+
+:root .bg-look .card {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root .bg-look :is(.border, .border-base-300) {
+  border-color: var(--np-edge);
+}

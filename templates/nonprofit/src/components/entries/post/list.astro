@@ -1,0 +1,103 @@
+---
+// The post list as this template draws it (board N8, Stories at /news), and
+// the list of every type the organization adds: the kit's ListFrame (the
+// head, the category chips, the search beside the head, the pager), named as
+// the header menu names the list ("Stories"). On the list's first page the
+// newest entry leads: its cover on a paper mount in a pen frame, taped at a
+// corner (or the soft field with the sprout doodle when it has none), its
+// category as a chip with its doodle, the title, the summary and the byline
+// (the writer's picture or initials, the name, the day). Every other entry is
+// a pen-outlined card, two across: its cover (or the soft field with the
+// category's doodle), the category as an outline chip, the title, the summary
+// and the byline. A later page, and a search's results, are cards alone. The
+// pager's links are stickers (template.css).
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import ListFrame from '@backgold/template-kit/components/entries/ListFrame.astro'
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { basePath, initials, rowTerm, singularOf, writers } from '@backgold/template-kit/lib/entries'
+import { formatShortDay } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+import { termIcon } from '../../../lib/doodles.ts'
+import { listLabel } from '../../../lib/list-label.ts'
+
+type Props = ListLayoutProps
+
+const props = Astro.props
+const bg = Astro.locals.backgold
+const live = bg.setup === null
+const types = props.type === 'blog' && live ? (await bg.client.types()).types : []
+const name = props.type === 'blog' && live ? await listLabel(bg.client, basePath(props.base)) : null
+const rows = props.entries.map((entry) => {
+  const term = rowTerm(entry, props.filter?.taxonomy)
+  const kind = entry.type !== 'post' ? singularOf(types, entry.type) : null
+  const by = writers(entry.authors)
+  const first = by[0]
+  return {
+    entry,
+    href: entry.url ? safeHref(entry.url) : null,
+    image: entry.hero ? safeSrc(entry.hero.url) : null,
+    line: [kind, term?.label].filter(Boolean).join(' · ') || null,
+    icon: termIcon(term?.label),
+    by: by.map((a) => a.display_name).join(', ') || null,
+    avatar: first ? { url: safeSrc(first.avatar_url), initials: initials(first.display_name) } : null,
+    day: formatShortDay(entry.publish_at),
+  }
+})
+const lead = props.pager.newest === null && props.search?.q == null ? (rows[0] ?? null) : null
+const rest = lead ? rows.slice(1) : rows
+const noun = props.type === 'blog' ? (name ? name.toLowerCase() : 'posts') : props.type.plural_label.toLowerCase()
+---
+<ListFrame {...props} name={name} noun={noun} class="list-posts np-posts">
+  {lead && (
+    <article class="np-post-lead">
+      {lead.image ? (
+        <div class="np-lead-photo np-post-photo"><img src={lead.image} alt="" decoding="async" fetchpriority="high" /></div>
+      ) : (
+        <div class="np-lead-photo np-post-photo np-field" aria-hidden="true"><Doodle name={lead.icon} /></div>
+      )}
+      <div class="np-post-lead-words">
+        {lead.line && <p class="np-post-chips"><span class="chip"><Doodle name={lead.icon} />{lead.line}</span></p>}
+        <h2 class="np-post-lead-title">{lead.href ? <a href={lead.href}>{lead.entry.title}</a> : lead.entry.title}</h2>
+        {lead.entry.summary && <p class="np-post-lead-summary">{lead.entry.summary}</p>}
+        {(lead.by || lead.day) && (
+          <p class="np-post-byline">
+            {lead.avatar && (lead.avatar.url ? <img class="post-avatar" src={lead.avatar.url} alt="" loading="lazy" decoding="async" /> : <span class="post-avatar" aria-hidden="true">{lead.avatar.initials}</span>)}
+            <span>
+              {lead.by && <b>{lead.by}</b>}
+              {lead.by && lead.day && ' · '}
+              {lead.day && lead.entry.publish_at && <time datetime={lead.entry.publish_at}>{lead.day}</time>}
+            </span>
+          </p>
+        )}
+      </div>
+    </article>
+  )}
+  {rest.length > 0 && (
+    <ol class="np-post-cards" role="list">
+      {rest.map((row) => (
+        <li class="np-post-card np-card">
+          <article>
+            {row.image ? (
+              <img class="np-post-card-image" src={row.image} alt="" loading="lazy" decoding="async" />
+            ) : (
+              <span class="np-post-card-image np-field" aria-hidden="true"><Doodle name={row.icon} /></span>
+            )}
+            {row.line && <p class="np-post-chips"><span class="chip chip-outline">{row.line}</span></p>}
+            <h2 class="np-post-card-title">{row.href ? <a href={row.href}>{row.entry.title}</a> : row.entry.title}</h2>
+            {row.entry.summary && <p class="np-post-card-summary">{row.entry.summary}</p>}
+            {(row.by || row.day) && (
+              <p class="np-post-byline">
+                {row.avatar && (row.avatar.url ? <img class="post-avatar" src={row.avatar.url} alt="" loading="lazy" decoding="async" /> : <span class="post-avatar" aria-hidden="true">{row.avatar.initials}</span>)}
+                <span>
+                  {row.by && <b>{row.by}</b>}
+                  {row.by && row.day && ' · '}
+                  {row.day && row.entry.publish_at && <time datetime={row.entry.publish_at}>{row.day}</time>}
+                </span>
+              </p>
+            )}
+          </article>
+        </li>
+      ))}
+    </ol>
+  )}
+</ListFrame>

@@ -2697,7 +2697,9 @@ async function checkNewsBase(origin, fixture) {
     entryCrumbs?.itemListElement?.[1]?.name === 'News' && entryCrumbs.itemListElement[1].item === `${origin}/news`,
     "the entry's breadcrumb goes back to News at /news",
   )
-  if (ON_KIT) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
+  // The nonprofit template names the list as the header menu does (the fixture's link to it says Blog).
+  const crumbWord = NONPROFIT ? 'Blog' : 'News'
+  if (ON_KIT) check(new RegExp(`<nav class="crumbs"[^>]*>\\s*<a href="/news"[^>]*>${crumbWord}</a>`).test(html), `the entry page links back to ${crumbWord} at /news`)
 
   res = await get(origin, '/')
   html = await res.text()
@@ -4487,8 +4489,8 @@ async function checkNonprofit(origin) {
   )
   const shifts = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
   check(
-    (shifts.match(/class="np-shift np-card"/g) ?? []).length === 3 && !shifts.includes('np-week-head') && (shifts.match(/class="np-live" data-bg-live="evt_np\d"/g) ?? []).length === 3 && shifts.includes('>Sign up for this shift<'),
-    "home's EventsList · shifts draws its three rows in one run, each with its live slot and Sign up for this shift",
+    (shifts.match(/class="np-shift np-card"/g) ?? []).length === 3 && !shifts.includes('np-week-head') && (shifts.match(/class="np-live" data-bg-live="evt_np\d"/g) ?? []).length === 3 && shifts.includes('>RSVP<') && !shifts.includes('Sign up for this shift'),
+    "home's EventsList · shifts draws its three rows in one run, each with its live slot and the events' own RSVP",
   )
   const programs = sectionsOf(html).find((s) => s.type === 'Issues')?.html ?? ''
   check((programs.match(/<use href="#d-(sprout|book|wrench)">/g) ?? []).length === 3 && (programs.match(/class="np-when"/g) ?? []).length === 3, "home's Issues · cards draws each row's icon as a doodle and its note")
@@ -4518,6 +4520,19 @@ async function checkNonprofit(origin) {
   res = await get(origin, at('donate'))
   html = await res.text()
   check(res.status === 200 && !html.includes('data-type="SignupCapture"'), 'Donate carries no newsletter band, by its rule')
+  res = await get(origin, '/blog')
+  html = await res.text()
+  check(res.status === 200 && html.includes('class="np-post-lead"') && /class="np-lead-photo np-post-photo/.test(html) && /class="np-post-card np-card"/.test(html), "the post list is the template's own: the lead framed, the rest pen-outlined cards")
+  const postHref = /<h2 class="np-post-lead-title"><a href="([^"]+)"/.exec(html)?.[1]
+  res = await get(origin, postHref ?? '/blog/none')
+  html = await res.text()
+  check(res.status === 200 && html.includes('np-article') && /class="share np-share"/.test(html) && /<a class="button button-quiet button-small" href="mailto:/.test(html), "a post is the template's own article: Share as outline stickers")
+  res = await get(origin, '/_backgold/frame.css')
+  const frameCss = await res.text()
+  check(
+    res.status === 200 && (res.headers.get('content-type') ?? '').startsWith('text/css') && res.headers.get('access-control-allow-origin') === '*' && frameCss.includes(':root[data-bg-look]'),
+    "/_backgold/frame.css serves the frames' stylesheet to any origin",
+  )
 }
 
 // ── The candidate template (--template candidate) ────────────────────────────

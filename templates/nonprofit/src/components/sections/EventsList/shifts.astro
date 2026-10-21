@@ -3,20 +3,23 @@
 // section head, then a hand-cut row per event: its date as a torn-off
 // calendar page (the month on the primary, the day hand-lettered, the
 // weekday), the type as a chip, the title linking to the event's page, the
-// time and the place beside the clock and pin doodles, the spots, and at the
-// right the row's one button ("Sign up for this shift", "Get tickets" when
+// time and the place beside the clock and pin doodles, the seats, and at the
+// right the row's one button as the kit words it ("RSVP", "Get tickets" when
 // the event sells them, "Details" in the outline once registration has
-// closed) over a quiet "Add to calendar".
+// closed) over a quiet "Add to calendar". The rows are events, and say so:
+// a volunteer shift is BackGold's own (its sign-up card at /volunteer/<slug>
+// on the site), and this layout lists shifts once the Content API serves
+// them (TODO(shifts feed), below).
 //
-// The spots are live, never part of the cached page: the kit's LiveCounts
+// The seats are live, never part of the cached page: the kit's LiveCounts
 // writes the words ("6 going · 4 seats left") into each row's slot after the
 // page loads, with the going count and the capacity as data-going and
 // data-capacity; where the event has a capacity this layout's script words
-// them as spots ("6 of 10 filled · 4 spots left", "Full") and draws one dot
-// per spot beside them, filled for each one taken and dashed for each one
-// open (up to 24 spots; past that, the words alone). The dots are a picture
-// of the words, hidden from screen readers. With scripts off the row keeps
-// its button and draws neither.
+// them again ("6 of 10 going · 4 seats left", "Full") and draws one dot per
+// seat beside them, filled for each one taken and dashed for each one open
+// (up to 24; past that, the words alone). The dots are a picture of the
+// words, hidden from screen readers. With scripts off the row keeps its
+// button and draws neither.
 //
 // A list with no `max` (Get involved) is grouped by week, Monday to Sunday in
 // each event's own calendar, under a hand-lettered "Week of Nov 2" with the
@@ -25,12 +28,19 @@
 // capped list (home's next three) is one run of rows. With no events the
 // head stands over the section's empty-events line as a dashed invitation;
 // with neither events nor a heading nothing is drawn.
+//
+// TODO(shifts feed): once the vendored contract has GET /shifts (platform
+// MR !1791: slug, title, starts_at, ends_at, location, capacity, signed_up,
+// state, signup_url = /volunteer/<slug>; counts from /shifts/live), read it
+// through the content client here and draw those rows instead, each one's
+// button "Sign up" to its signup_url with the spots as dots; until then the
+// rows below are the section's events.
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
 import LiveCounts from '@backgold/template-kit/components/sections/EventsList/LiveCounts.astro'
 import { eventsOf, monthName, type EventRow } from '@backgold/template-kit/components/sections/EventsList/events.ts'
-import { links, linkOf } from '@backgold/template-kit/lib/section'
+import { links } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 import Doodle from '../../Doodle.astro'
 
@@ -74,9 +84,6 @@ for (const event of events) {
   if (last && last.key === key) last.rows.push(event)
   else weeks.push({ key, heading: monday ? `Week of ${short(monday)}` : null, dates: monday ? span(monday) : null, rows: [event] })
 }
-
-/** The row's one button: the kit's link, worded for a shift while it takes sign-ups. */
-const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkOf('Sign up for this shift', e.action.href) : e.action)
 ---
 {(heading || events.length > 0) && (
   <Band section={section} class="events events-shifts np-shifts">
@@ -94,7 +101,7 @@ const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkO
             )}
             <ul class="np-shift-list" role="list">
               {week.rows.map((event) => {
-                const action = actionOf(event)
+                const action = event.action
                 return (
                   <li class="np-shift np-card">
                     {event.when && event.startsAt ? (
@@ -156,7 +163,7 @@ const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkO
               dots.textContent = ''
               if (!slot.hasAttribute('data-capacity') || !(capacity > 0) || !(going >= 0)) return
               var left = capacity - going
-              slot.textContent = going + ' of ' + capacity + ' filled · ' + (left > 0 ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full')
+              slot.textContent = going + ' of ' + capacity + ' going · ' + (left > 0 ? left + (left === 1 ? ' seat left' : ' seats left') : 'Full')
               if (capacity > MOST) return
               for (var i = 0; i < capacity; i++) {
                 var dot = document.createElement('i')
