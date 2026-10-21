@@ -62,7 +62,6 @@ const ALIASES: Record<string, DoodleName> = {
   leaf: 'sprout',
   briefcase: 'wrench',
   home: 'house',
-  users: 'people',
   globe: 'pin',
   'dollar-sign': 'gift',
   food: 'basket',
