@@ -1,5 +1,6 @@
 // Her skin for BackGold's frames (the RSVP and tickets, a petition's sheet
-// and block, a form, a poll, the donate form, the sign-up, the live feed),
+// and block, a form, a poll, the donate form, the sign-up, the live feed, a
+// volunteer shift's sign-up card),
 // served at /_backgold/frame.css (src/pages/[skin]/frame.css.ts) and linked
 // by each frame when the kit sends `skin` (src/template.ts `frameSkin`),
 // written to BackGold's frame-skin contract (the platform's
@@ -10,7 +11,8 @@
 // square fields on the field edge, white when focused; the white block
 // submit in capitals that inverts on hover; choices and items as hairline
 // boxes that invert when picked; a petition's count set huge over a
-// hairline meter; cards as hairline boxes. It never hides a required field,
+// hairline meter, a shift's spots in the meta line over the same meter;
+// cards as hairline boxes. It never hides a required field,
 // a consent row, a legal line, an error or the submit, and every state
 // (focus, invalid, picked, disabled) still reads as what it is. The frame
 // may refuse the skin (a preview host): the look alone then draws them.
@@ -156,6 +158,20 @@ html[data-bg-look] :is([data-bg-fr='petition-sheet'], [data-bg-fr='petition']) .
   border-radius: 0;
 }
 html[data-bg-look] .bg-fr-signer { ${META} color: var(--bg-look-muted); }
+
+/* A shift's spots: the count in the meta line, the meter a white hairline on the line. */
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-count { ${META} color: var(--bg-look-ink); }
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-progress {
+  height: 4px;
+  background: var(--bg-look-line);
+  border: 0;
+  border-radius: 0;
+}
+html[data-bg-look] [data-bg-fr='shift'] .bg-fr-progress > * {
+  height: 100%;
+  background: var(--bg-look-ink);
+  border-radius: 0;
+}
 
 /* The live feed's total: her display weight. */
 html[data-bg-look] [data-bg-fr='movement-ticker'] .bg-fr-count { color: var(--bg-look-ink); font-weight: 500; }

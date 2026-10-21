@@ -1,0 +1,298 @@
+---
+// `/volunteer`, the organization's open volunteer shifts (the kit's
+// 'volunteer:list'), in the row grammar of EventsList · shifts: a page head
+// (the kicker, the one <h1>, a line with the organization's name), then the
+// shifts grouped by week, Monday to Sunday in the shifts' own calendar,
+// under "Week of Nov 2" and the week's dates (the script says "This week"
+// and "Next week" in the visitor's own time; the page is cached). Each row
+// is a date tile (the month in small capitals over the day in the display
+// face, the weekday under it), the title linking to the shift's page, the
+// time span and the place under it, the spots as dots (one per spot up to
+// 24, filled for each one taken) beside the counts in words, and the row's
+// one button to the shift's page by its state: "Sign up", "Join the
+// waitlist", "Full" and "Closed" in the quiet button. The counts and the
+// button are read again after load (ShiftLive). The zone is named once
+// under the rows when every shift is in it. With no open shift the head
+// stands over one dashed line saying so, with the organization's name.
+//
+// In a narrow column (a phone, or the list beside a Sidebar) the tile and
+// the title come first, the counts under the title, the button full width
+// under them.
+import ShiftLive from './ShiftLive.astro'
+import type { VolunteerListProps } from './props'
+import { shiftView, weeksOf } from '../../lib/shifts'
+import { zoneName } from '../../lib/format'
+
+type Props = VolunteerListProps
+
+const { shifts, siteName } = Astro.props
+const views = shifts.map(shiftView)
+const weeks = weeksOf(views)
+const zones = new Set(shifts.map((s) => s.timezone))
+const zone = zones.size === 1 ? zoneName([...zones][0]) : null
+---
+<div class="listing volunteer-list" data-volunteer-list>
+  <header class="page-header">
+    <p class="kicker">Volunteer</p>
+    <h1>Open shifts</h1>
+    <p class="lede">Every open volunteer shift with {siteName}, soonest first. Pick one to sign up.</p>
+  </header>
+  {weeks.length > 0 ? (
+    <div class="vl-weeks">
+      {weeks.map((week) => (
+        <section class="vl-week" aria-label={week.heading ?? 'Shifts'}>
+          {week.heading && (
+            <h2 class="vl-week-head" data-vl-week={week.key}>
+              <span class="vl-week-name">{week.heading}</span>
+              <small>{week.dates}</small>
+            </h2>
+          )}
+          <ul class="sh-list" role="list">
+            {week.shifts.map((shift) => (
+              <li class="sh-row" data-state={shift.state}>
+                {shift.when ? (
+                  <time class="sh-tile" datetime={shift.startsAt}>
+                    <span class="sh-month" aria-hidden="true">{shift.when.monthShort}</span>
+                    <b aria-hidden="true">{shift.when.day}</b>
+                    {shift.when.weekday && <span class="sh-weekday" aria-hidden="true">{shift.when.weekday}</span>}
+                    <span class="visually-hidden">{shift.when.full}</span>
+                  </time>
+                ) : (
+                  <span class="sh-tile" aria-hidden="true"><b>–</b></span>
+                )}
+                <div class="sh-body">
+                  <h3 class="sh-title"><a href={shift.href}>{shift.title}</a></h3>
+                  {(shift.time || shift.place) && <p class="sh-meta">{[shift.time, shift.place].filter(Boolean).join(' · ')}</p>}
+                </div>
+                <p class="sh-facts">
+                  {shift.dots.length > 0 && (
+                    <span class="sh-dots" aria-hidden="true" data-bg-shift-dots={shift.id}>
+                      {shift.dots.map((taken) => <i data-taken={taken ? '' : undefined}></i>)}
+                    </span>
+                  )}
+                  <span class="sh-live" data-bg-shift={shift.id} data-going={shift.signedUp} data-capacity={shift.capacity ?? undefined}>{shift.words}</span>
+                </p>
+                <p class="sh-action">
+                  <a class:list={['button', 'button-small', shift.action.quiet ? 'button-quiet' : 'button-2']} href={shift.href} data-bg-shift-action={shift.id} data-state={shift.state}>
+                    <span data-bg-shift-label>{shift.action.label}</span><span class="visually-hidden">: {shift.title}</span>
+                  </a>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {zone && <p class="vl-zone">Times are {zone}.</p>}
+      <script is:inline>
+        (function (root) {
+          if (!root) return
+          var pad = function (n) {
+            return (n < 10 ? '0' : '') + n
+          }
+          var key = function (d) {
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+          }
+          var monday = new Date()
+          monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+          var thisWeek = key(monday)
+          monday.setDate(monday.getDate() + 7)
+          var nextWeek = key(monday)
+          var heads = root.querySelectorAll('[data-vl-week]')
+          for (var h = 0; h < heads.length; h++) {
+            var week = heads[h].getAttribute('data-vl-week')
+            var name = heads[h].querySelector('.vl-week-name')
+            if (week === thisWeek) name.textContent = 'This week'
+            else if (week === nextWeek) name.textContent = 'Next week'
+          }
+        })(document.currentScript.closest('[data-volunteer-list]'))
+      </script>
+    </div>
+  ) : (
+    <p class="sh-empty">{siteName} has no open volunteer shifts right now. New ones show here as soon as they are posted.</p>
+  )}
+  <ShiftLive />
+</div>
+
+<style>
+  /* The rows lay out by the list's own width: beside a Sidebar it is narrower than the screen. */
+  .volunteer-list {
+    container-type: inline-size;
+  }
+  .vl-weeks {
+    display: grid;
+    gap: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+    margin-top: clamp(1.25rem, 1rem + 1vw, 2rem);
+  }
+  .vl-week-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0 0 0.875rem;
+    font-size: var(--h3);
+  }
+  .vl-week-head small {
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .vl-zone {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .sh-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* A phone: the tile beside the title, the counts under the title, the button across the bottom. */
+  .sh-row {
+    display: grid;
+    grid-template-columns: 3.75rem minmax(0, 1fr);
+    grid-template-areas:
+      'tile body'
+      'tile facts'
+      'action action';
+    gap: 0.5rem 1rem;
+    align-items: center;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .sh-row > * {
+    margin: 0;
+  }
+  .sh-tile {
+    grid-area: tile;
+    align-self: start;
+    display: grid;
+    justify-items: center;
+    padding: 0.5rem 0 0.5625rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    line-height: 1;
+    text-align: center;
+  }
+  .sh-tile b {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .sh-month {
+    margin-bottom: 0.3125rem;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .sh-weekday {
+    margin-top: 0.3125rem;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sh-body {
+    grid-area: body;
+    min-width: 0;
+  }
+  .sh-body > * {
+    margin: 0;
+  }
+  .sh-title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .sh-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .sh-title a:hover {
+    text-decoration: underline;
+  }
+  .sh-meta {
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .sh-facts {
+    grid-area: facts;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    font-size: var(--text-sm);
+  }
+  .sh-dots {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    max-width: 12rem;
+  }
+  .sh-dots :global(i) {
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+    border-radius: 50%;
+  }
+  .sh-dots :global(i[data-taken]) {
+    border: 1.5px solid var(--button);
+    background: var(--button);
+  }
+  .sh-live {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .sh-live:empty {
+    display: none;
+  }
+  .sh-action {
+    grid-area: action;
+  }
+  .sh-action .button {
+    width: 100%;
+  }
+  .sh-empty {
+    margin: clamp(1.25rem, 1rem + 1vw, 2rem) 0 0;
+    padding: 1.125rem 1.25rem;
+    border: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: var(--radius);
+    color: var(--muted);
+  }
+  /* Wider: one line per shift, the counts and the button at the right. */
+  @container (min-width: 44rem) {
+    .sh-row {
+      grid-template-columns: 4.25rem minmax(0, 1fr) auto auto;
+      grid-template-areas: 'tile body facts action';
+      gap: 0 1.5rem;
+      padding: 1rem 1.25rem;
+    }
+    .sh-tile {
+      align-self: center;
+    }
+    .sh-tile b {
+      font-size: 2rem;
+    }
+    .sh-facts {
+      justify-content: flex-end;
+      max-width: 16rem;
+      text-align: right;
+    }
+    .sh-action .button {
+      width: auto;
+      min-width: 9rem;
+    }
+  }
+</style>
