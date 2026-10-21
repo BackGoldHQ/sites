@@ -63,6 +63,7 @@ var siteExample = {
     domain: "pinevalleyliberty.org",
     mode: "headless",
     favicon_url: "https://api.backgold.com/api/media-files/med_logo",
+    meta_domain_verification: "x7k2q9w4m1p8z3r6t5v0n2b8c4d6f1",
     pack: "liberty-blue",
     style: '{"width":"full"}',
     theme: {
@@ -558,6 +559,49 @@ var eventsLiveExample = {
     { id: "evt_4m1", going: 88, seats_left: 12 }
   ]
 };
+var shiftsExample = {
+  shifts: [
+    {
+      id: "shf_7q2",
+      slug: "town-hall-greeters",
+      title: "Town hall greeters",
+      starts_at: "2026-10-08T23:00:00.000Z",
+      ends_at: "2026-10-09T01:30:00.000Z",
+      timezone: "America/Chicago",
+      location: "Pine Valley Library",
+      notes: "Meet at the front desk. Name tags are on us.",
+      capacity: 8,
+      signed_up: 5,
+      waitlisted: 0,
+      state: "open",
+      subject: { kind: "event", slug: "town-hall" },
+      signup_url: "https://pinevalleyliberty.org/volunteer/town-hall-greeters"
+    },
+    {
+      id: "shf_9d4",
+      slug: "saturday-sign-crew",
+      title: "Saturday sign crew",
+      starts_at: "2026-10-10T14:00:00.000Z",
+      ends_at: "2026-10-10T17:00:00.000Z",
+      timezone: "America/Chicago",
+      location: "14 Rail Street, Pine Valley",
+      notes: null,
+      capacity: 6,
+      signed_up: 6,
+      waitlisted: 0,
+      state: "full",
+      subject: { kind: "standalone", slug: null },
+      signup_url: "https://pinevalleyliberty.org/volunteer/saturday-sign-crew"
+    }
+  ],
+  next_cursor: null
+};
+var shiftsLiveExample = {
+  shifts: [
+    { id: "shf_7q2", signed_up: 6, waitlisted: 0, state: "open" },
+    { id: "shf_9d4", signed_up: 6, waitlisted: 2, state: "waitlist" }
+  ]
+};
 var course = {
   id: "ci_c01",
   slug: "foundations",
@@ -683,6 +727,8 @@ var CONTENT_API_EXAMPLES = {
   EventsResponse: eventsExample,
   EventResponse: eventExample,
   EventsLiveResponse: eventsLiveExample,
+  ShiftsResponse: shiftsExample,
+  ShiftsLiveResponse: shiftsLiveExample,
   CoursesResponse: coursesExample,
   CourseResponse: courseExample,
   LessonResponse: lessonExample,
@@ -691,4 +737,4 @@ var CONTENT_API_EXAMPLES = {
   VisitorExchangeResponse: visitorExchangeExample
 };
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };

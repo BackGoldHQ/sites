@@ -1,0 +1,66 @@
+---
+// A post as this template draws it (board N9, one story), and every entry of
+// a type the organization adds: the kit's header (the breadcrumb, named as
+// the header menu names the list, "Stories"; the category chips; the title,
+// whose starred word the middleware marks; the summary; the byline with the
+// reading time), then the cover on a paper mount in a pen frame, tilted and
+// taped at a corner (an entry with no cover goes straight to the words), the
+// body in the reading face with every blockquote a sticker (template.css),
+// the type's own fields, the squiggle rule, "Share this story" (the list's
+// name, singular) as outline stickers, and the author box.
+import { relFor, renderMarkdown, safeSrc } from '@backgold/astro/server'
+import AuthorBox from '@backgold/template-kit/components/entries/AuthorBox.astro'
+import EntryFields from '@backgold/template-kit/components/entries/EntryFields.astro'
+import EntryHeader from '@backgold/template-kit/components/entries/EntryHeader.astro'
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { listOf, readingMinutes } from '@backgold/template-kit/lib/entries'
+import '@backgold/template-kit/styles/entries.css'
+import Doodle from '../../Doodle.astro'
+import { listLabel } from '../../../lib/list-label.ts'
+
+type Props = EntryLayoutProps
+
+const { entry, type } = Astro.props
+const bg = Astro.locals.backgold
+const list = listOf(type)
+const label = list && bg.setup === null ? await listLabel(bg.client, list.path) : null
+const hero = entry.hero ? safeSrc(entry.hero.url) : null
+const media = safeSrc(entry.media_url)
+const body = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+const noun = (label ? label.replace(/ies$/i, 'y').replace(/s$/i, '') : (type?.singular_label ?? 'post')).toLowerCase()
+const origin = bg.setup === null ? bg.siteUrl : Astro.url.origin
+const url = entry.url ? new URL(entry.url, origin).href : null
+const shares = url
+  ? [
+      { label: 'Email', icon: 'mail' as const, href: `mailto:?subject=${encodeURIComponent(entry.title)}&body=${encodeURIComponent(url)}` },
+      { label: 'X', icon: null, href: `https://x.com/intent/post?text=${encodeURIComponent(entry.title)}&url=${encodeURIComponent(url)}` },
+      { label: 'Facebook', icon: null, href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+    ]
+  : []
+---
+<article class="entry entry-article np-article">
+  <EntryHeader entry={entry} type={type} minutes={readingMinutes(entry.body?.markdown)} listLabel={label} />
+  {hero && (
+    <figure class="np-cover">
+      <div class="np-lead-photo np-cover-photo"><img src={hero} alt="" decoding="async" fetchpriority="high" /></div>
+    </figure>
+  )}
+  {media && <p class="entry-media-link"><a href={media} rel={relFor(media)}>Open the media file</a></p>}
+  {body && <div class="prose entry-body" set:html={body} />}
+  <EntryFields entry={entry} type={type} />
+  {shares.length > 0 && (
+    <>
+      <div class="np-rule" aria-hidden="true"></div>
+      <div class="share np-share" role="group" aria-label={`Share this ${noun}`}>
+        <span class="share-label">Share this {noun}</span>
+        {shares.map((link) => (
+          <a class="button button-quiet button-small" href={link.href} rel={link.href.startsWith('https:') ? 'noopener' : undefined}>
+            {link.icon && <Doodle name={link.icon} />}
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </>
+  )}
+  <AuthorBox authors={entry.authors} />
+</article>

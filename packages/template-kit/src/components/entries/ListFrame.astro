@@ -35,12 +35,15 @@ import '../../styles/entries.css'
 interface Props extends ListLayoutProps {
   /** The plural the empty sentence and the pager's label use: "posts", "episodes", "videos", "issues". */
   noun: string
+  /** The list's name in place of the one its address gives ("News"): a template's own words for it (the menu's "Stories"). A list with an intro page keeps the intro's. */
+  name?: string | null
   class?: string
 }
 
-const { template, type, base: address, entries, pager, filter, term, search, intro = null, areas = null, noun, class: className } = Astro.props
+const { template, type, base: address, entries, pager, filter, term, search, intro = null, areas = null, noun, name: named = null, class: className } = Astro.props
 const base = basePath(address)
-const name = listName(type, address, intro)
+const name = (intro?.page.title?.trim() ? null : named) || listName(type, address, intro)
+const searchLabel = named && name === named ? `Search ${named.toLowerCase()}` : undefined
 const current = term ? `${term.taxonomy.key}/${term.term.slug}` : null
 const q = search?.q ?? null
 const results = (n: number) => (n === 1 ? '1 result' : `${n} results`)
@@ -65,7 +68,7 @@ const { chips, featured } = bg.setup === null ? await listTermsOf(bg.client, bas
         </header>
       )}
     </div>
-    {search && searchInHead && <ListSearch search={search} />}
+    {search && searchInHead && <ListSearch search={search} label={searchLabel} />}
   </div>
   {opening && openingRest && <div class="list-intro"><PageSections template={template} page={opening} siteName={name} only="rest" /></div>}
   {(chips.length > 0 || featured || (search && !searchInHead)) && (
@@ -89,7 +92,7 @@ const { chips, featured } = bg.setup === null ? await listTermsOf(bg.client, bas
           )}
         </nav>
       )}
-      {search && !searchInHead && <ListSearch search={search} />}
+      {search && !searchInHead && <ListSearch search={search} label={searchLabel} />}
     </div>
   )}
   {q !== null && entries.length > 0 && <p class="list-results" role="status">{results(entries.length)} for ‘{q}’</p>}

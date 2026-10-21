@@ -15,7 +15,7 @@ import { linkOf, rows, type Link } from '../../../lib/section'
 import { formatWhen, text, zoneName } from '../../../lib/format'
 import { eventPagePath } from '../../../lib/events'
 
-interface When {
+export interface When {
   /** "Tuesday, October 14, 2026 at 7:00 PM CDT", as formatWhen writes it. */
   full: string
   /** "Tue", or null for a date with no time (formatWhen leaves the weekday out). */
@@ -77,7 +77,8 @@ const MONTHS = Array.from({ length: 12 }, (_, i) =>
 // CDT" on an older ICU), or "October 14, 2026" for a value with no time.
 const WHEN = /^(?:(\p{L}+), )?(\p{L}+) (\d{1,2}), (\d{4})(?:(?:,| at) (.+))?$/u
 
-function whenOf(value: unknown, timeZone: unknown): When | null {
+/** A start as the rows show it, in its own zone (formatWhen's parts); null when it does not parse. */
+export function whenOf(value: unknown, timeZone: unknown): When | null {
   const full = formatWhen(value, timeZone)
   const m = full ? WHEN.exec(full) : null
   if (!full || !m) return null

@@ -170,7 +170,7 @@ body::before {
 
 /*
   Every rule below sits under :is(body, #main), which matches every element
-  (each is inside <body>) and counts as an id: the kit's components carry
+  (each is inside the body) and counts as an id: the kit's components carry
   Astro-scoped styles (a class plus a data-astro-cid attribute, or more),
   which a plain class rule here would lose to whatever its order. The prefix
   lifts every restyle above them evenly, so the rules below still settle
@@ -711,6 +711,9 @@ body::before {
   .bg-section .faq-question,
   .bg-section .post-lead,
   .bg-section .module-card,
+  .bg-section .share-card,
+  .bg-section .faq-card,
+  .bg-section .result,
   .listing .post-lead,
   .listing .card {
     --np-edge: var(--np-edge-card);
@@ -741,6 +744,9 @@ body::before {
   .bg-section .faq-question::before,
   .bg-section .post-lead::before,
   .bg-section .module-card::before,
+  .bg-section .share-card::before,
+  .bg-section .faq-card::before,
+  .bg-section .result::before,
   .listing .post-lead::before,
   .listing .card::before {
     content: '';
@@ -783,12 +789,12 @@ body::before {
   /* Firefox does not keep a stretched mask's stroke at 2px: a plain 2px blob border instead. */
   @supports (-moz-appearance: none) {
     .np-card,
-    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card),
+    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card, .share-card, .faq-card, .result),
     .listing :is(.post-lead, .card) {
       border: 2px solid var(--edge);
     }
     .np-card::before,
-    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card)::before,
+    .bg-section :is(.issue-card, .stat, .sv-package, .ms-tier, .quote, .person, .card, .faq-question, .post-lead, .module-card, .share-card, .faq-card, .result)::before,
     .listing :is(.post-lead, .card)::before {
       content: none;
     }
@@ -1488,7 +1494,8 @@ body::before {
     font-weight: 700;
   }
   .letter-image,
-  .letter-tile {
+  .letter-tile,
+  .bg-section .about-left-image {
     border-radius: var(--blob-2);
     transform: rotate(-1.2deg);
     box-shadow: 0 0 0 0.6875rem var(--surface), 0 0 0 calc(0.6875rem + 2px) var(--ink);
@@ -1942,15 +1949,15 @@ body::before {
     --button-2-ink: var(--ink);
     transform: none;
   }
-  .bg-section .ms-tier-name {
+  .bg-section .ms-tier-name,
+  .bg-section .sv-package-name {
+    color: var(--ink);
     font-family: var(--font-display);
+    font-variation-settings: var(--hand);
     font-size: 1.375rem;
     font-weight: 800;
     letter-spacing: 0;
     text-transform: none;
-  }
-  .bg-section .ms-tier-name {
-    font-variation-settings: var(--hand);
   }
   .bg-section .ms-tier-price {
     font-family: var(--font-display);
@@ -2019,8 +2026,51 @@ body::before {
     color: var(--button-2-ink);
   }
 
-  /* ── The post list and a post ── */
+  /* CaseStudies: the program's tag in mixed case, as every kicker here. */
+  .bg-section .result-tag {
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
 
+  /* Donate · story's Share and Copy link: small outline stickers. */
+  .bg-section .donate-share a {
+    padding: 0.375rem 0.875rem;
+    border: 2px solid var(--ink);
+    border-radius: var(--blob-pill);
+    background: transparent;
+    color: var(--ink);
+    box-shadow: 2px 2px 0 0 var(--ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* ShareKit · cards: pen-outlined, the words on the soft field. */
+  .bg-section .share-card > *,
+  .bg-section .faq-card > *,
+  .bg-section .result > * {
+    position: relative;
+    z-index: 2;
+  }
+  .bg-section .share-card .share-text {
+    border-radius: var(--blob-sm);
+    background: var(--soft);
+  }
+
+  /*
+    ── The post list (board N8) and a post (N9), this template's own layouts ──
+    The list: its name under the underline doodle, the search beside it as a
+    pen-drawn pill, the chips; the lead's cover on a paper mount in a pen
+    frame, taped (the soft field and the category's doodle without one); the
+    rest as pen-outlined cards two across with the byline; the pager as
+    stickers. A post: the breadcrumb with the arrow doodle, the cover framed
+    and taped, the squiggle rule, Share as outline stickers.
+  */
   .post-lead-title,
   .post-row-title,
   .card-title {
@@ -2041,13 +2091,255 @@ body::before {
   .post-row {
     border-bottom: 2px dotted var(--line-strong);
   }
-  .post-avatar,
-  .author-avatar {
+  .np-posts .list-header h1 {
+    position: relative;
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    font-size: var(--h1);
+  }
+  .np-posts .list-header h1::after {
+    content: '';
+    position: absolute;
+    left: -0.25rem;
+    right: -0.25rem;
+    bottom: -0.625rem;
+    height: 0.75rem;
+    background: var(--accent);
+    -webkit-mask: var(--np-under) 0 0 / 100% 100% no-repeat;
+    mask: var(--np-under) 0 0 / 100% 100% no-repeat;
+  }
+  .np-posts .list-search {
+    flex-basis: 17.5rem;
+    min-height: 3.25rem;
+    border: 2px solid var(--edge);
+    border-radius: var(--blob-pill);
+    background: var(--surface);
+  }
+  .np-posts .list-search:focus-within {
+    border-color: var(--ink);
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
+  .np-posts .list-search input {
+    font-size: 1.0625rem;
+  }
+  @media (max-width: 47.99rem) {
+    .np-posts .list-search {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+  }
+  .np-posts .list-bar {
+    margin-bottom: 2.25rem;
+  }
+  .np-post-lead {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  .np-post-photo img {
+    aspect-ratio: 16 / 10;
+  }
+  .np-post-photo.np-field {
+    aspect-ratio: 16 / 10;
+  }
+  .np-post-lead-words > * {
+    margin: 0;
+  }
+  .np-post-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 0.625rem;
+  }
+  .np-post-lead-title {
+    margin: 0.25rem 0 0.75rem;
+    font-size: clamp(1.875rem, 1.3rem + 1.7vw, 2.625rem);
+    text-wrap: balance;
+  }
+  .np-post-lead-title a,
+  .np-post-card-title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .np-post-lead-title a:hover,
+  .np-post-card-title a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .np-post-lead-summary {
+    color: var(--muted);
+    font-size: var(--text-lg);
+  }
+  .np-post-byline {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 1rem 0 0;
+    color: var(--muted);
+    font-size: 0.9375rem;
+  }
+  .np-post-byline b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .np-post-byline .post-avatar {
+    width: 2.375rem;
+    height: 2.375rem;
+    font-size: 0.875rem;
+  }
+  img.post-avatar {
+    object-fit: cover;
+  }
+  .np-post-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: 2rem 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-post-card {
+    padding: 1.125rem 1.125rem 1.375rem;
+  }
+  .np-post-card > article {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .np-post-card-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--blob-sm);
+  }
+  .np-post-card-image.np-field .dd {
+    width: 3rem;
+    height: 3rem;
+  }
+  .np-post-card .np-post-chips {
+    margin-top: 1rem;
+  }
+  .np-post-card-title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.3125rem, 1.15rem + 0.4vw, 1.5rem);
+    line-height: 1.15;
+  }
+  .np-post-card-summary {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.96875rem;
+  }
+  .np-post-card .np-post-byline {
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+  .np-posts .pager {
+    align-items: center;
+    margin-top: 2.75rem;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .np-posts .pager a {
+    --rot: -1deg;
+    min-height: 3rem;
+    padding: 0.55em 1.35em 0.5em;
     border: 2px solid var(--ink);
-    border-radius: var(--blob-3);
-    background: var(--soft);
-    color: var(--link);
+    border-radius: var(--blob-pill);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--off) var(--off) 0 0 var(--ink);
+    transform: rotate(var(--rot));
     font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: 1.0625rem;
+    font-weight: 700;
+  }
+  .np-posts .pager a[rel='next'] {
+    --rot: 0.8deg;
+  }
+  .np-posts .pager a:focus-visible {
+    outline: 3px dashed var(--accent);
+    outline-offset: 5px;
+  }
+  .np-posts .pager a:active {
+    transform: rotate(var(--rot)) translate(2px, 2px);
+    box-shadow: 1px 1px 0 0 var(--ink);
+  }
+  .np-article .crumbs {
+    align-items: center;
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand-calm);
+    font-size: 1.0625rem;
+    color: var(--link);
+  }
+  .np-article .crumbs a {
+    text-decoration: none;
+  }
+  .np-article .crumbs-sep {
+    width: 1.5rem;
+    height: 1.5rem;
+    overflow: hidden;
+    color: transparent;
+    background: var(--link);
+    -webkit-mask: var(--np-d-arrow) center / contain no-repeat;
+    mask: var(--np-d-arrow) center / contain no-repeat;
+  }
+  .np-article .entry-terms .chip {
+    font-size: 0.9375rem;
+  }
+  .np-cover {
+    margin: 2.25rem 0 2.75rem;
+  }
+  .np-cover-photo img {
+    aspect-ratio: auto;
+    max-height: 36rem;
+  }
+  .np-rule {
+    height: 0.875rem;
+    margin: 3rem 0 1.25rem;
+    background: var(--line-strong);
+    -webkit-mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+    mask: var(--np-wave) 0 50% / 3rem 0.875rem repeat-x;
+  }
+  .np-share {
+    gap: 0.875rem 1rem;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .np-share .share-label {
+    margin-right: 0.25rem;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-variation-settings: var(--hand);
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+  .np-share .button .dd {
+    width: 1.1em;
+    height: 1.1em;
+    stroke-width: 3;
+  }
+  .np-article .author-boxes {
+    margin-top: 2.25rem;
+  }
+  .np-article .author-box {
+    padding: 1.5rem 1.75rem;
+    gap: 1.25rem;
+  }
+  .np-article .author-box > * {
+    position: relative;
+    z-index: 2;
+  }
+  .np-article .author-box .author-box-avatar {
+    width: 6rem;
+    height: 6rem;
+    font-size: 2rem;
+    object-fit: cover;
   }
   /* Reading stays in the body face (the article, the letter, the event's description). */
   .entry-article .entry-body,

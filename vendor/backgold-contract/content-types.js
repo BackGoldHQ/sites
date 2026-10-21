@@ -1,4 +1,4 @@
-import { OPERATOR_TAG_CATEGORIES, TAG_CATEGORIES, CONTENT_ACCESS_LEVELS, BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-M4T5UZWC.js';
+import { OPERATOR_TAG_CATEGORIES, TAG_CATEGORIES, CONTENT_ACCESS_LEVELS, BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-UVWZGL4W.js';
 import { z } from 'zod';
 import MarkdownIt from 'markdown-it';
 
@@ -147,7 +147,7 @@ var contentShape = {
     })
   ).max(CONTENT_LIMITS.BYLINES_MAX).optional(),
   /**
-   * Who may open the entry (CONTENT_ACCESS_LEVELS, 0547); null = follows (a
+   * Who may open the entry (CONTENT_ACCESS_LEVELS, 0552); null = follows (a
    * lesson follows its course, any other entry is public). Absent on create =
    * the type's default_access.
    */
@@ -461,7 +461,7 @@ var contentTypeUpdateSchema = z.strictObject({
   icon: z.enum(CONTENT_TYPE_ICONS).optional(),
   routable: z.boolean().optional(),
   url_base: urlBaseUpdate.nullable().optional(),
-  /** The access rule a new entry of the type starts with (0547); null = new entries follow. */
+  /** The access rule a new entry of the type starts with (0552); null = new entries follow. */
   default_access: z.enum(CONTENT_ACCESS_LEVELS).nullable().optional()
 });
 function isContentReferenceTarget(value) {

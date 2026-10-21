@@ -468,6 +468,25 @@ export function brandCss(
 export const SECTION_BANDS = ['plain', 'tint', 'panel', 'wash', 'contrast'] as const
 export type SectionBand = (typeof SECTION_BANDS)[number]
 
+/** One band's colours as a module frame wears them: the band, its ground included, as `#rrggbb`. */
+export type FrameColors = Readonly<Band>
+
+/**
+ * A template's change to the colours a module frame is sent (TemplateConfig
+ * `frameColors`): given the band's colours and the scheme, the colours to
+ * send. Only the eleven the look carries are sent; the ground is there to
+ * read.
+ */
+export type FrameColorsAdjust = (colors: FrameColors, scheme: 'light' | 'dark') => FrameColors
+
+/** A band through a template's adjust; a colour it returns that is not `#rrggbb` keeps the band's, since the api drops a malformed look whole. */
+function adjusted(b: Band, scheme: 'light' | 'dark', adjust: FrameColorsAdjust | null): Band {
+  if (!adjust) return b
+  const out = adjust(b, scheme)
+  const keep = (key: keyof Band) => (/^#[0-9a-f]{6}$/i.test(out[key] ?? '') ? out[key] : b[key])
+  return Object.fromEntries((Object.keys(b) as Array<keyof Band>).map((key) => [key, keep(key)])) as unknown as Band
+}
+
 /** One band's colours as a BackGold module's `look` value: eleven hex colours, no '#', joined by '.'. */
 function lookValue(b: Band): string {
   return [b.ink, b.muted, b.accent, b.link, b.button, b.buttonInk, b.button2, b.button2Ink, b.surface, b.line, b.lineStrong]
@@ -478,17 +497,21 @@ function lookValue(b: Band): string {
 /**
  * The query a BackGold module's frame takes to wear this site where it sits
  * (BackGold's embed look: `look`, `look_dark`): the colours of `band`, the
- * light set, and the dark set unless the appearance pins one. A module drawn
- * in a card sits on the card colour, which is the panel band's ground.
+ * light set, and the dark set unless the appearance pins one, each through
+ * the template's `adjust` when it has one. A module drawn in a card sits on
+ * the card colour, which is the panel band's ground.
  */
 export function moduleLook(
   brand: BrandColors | null | undefined,
   band: SectionBand,
   appearance: Appearance,
   theme: SiteThemeLike | null | undefined = null,
+  adjust: FrameColorsAdjust | null = null,
 ): Record<string, string> {
-  const light = lookValue(lightOf(brand, theme).bands[band])
-  const dark = lookValue(darkOf(brand, theme).bands[band])
+  const lightBand = lightOf(brand, theme).bands[band]
+  const darkBand = darkOf(brand, theme).bands[band]
+  const light = lookValue(adjusted(lightBand, 'light', adjust))
+  const dark = lookValue(adjusted(darkBand, 'dark', adjust))
   if (appearance === 'light') return { look: light }
   if (appearance === 'dark') return { look: dark }
   return { look: light, look_dark: dark }

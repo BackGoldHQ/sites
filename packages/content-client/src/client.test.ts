@@ -14,6 +14,7 @@ import {
   pagesExample,
   redirectsExample,
   sectionsExample,
+  shiftsExample,
   siteExample,
   sitemapExample,
   termsExample,
@@ -63,6 +64,7 @@ const ROUTES: Record<string, Handler> = {
     url.searchParams.get('type') === 'gala'
       ? { status: 400, body: { error: 'type must be one of rally, convention, fundraiser, blank', code: 'BAD_TYPE' } }
       : ok(eventsExample),
+  '/shifts': () => ok(shiftsExample),
   '/terms/tag': () => ok(termsExample),
   '/authors': () => ok(authorsExample),
   '/authors/dana-k': () => ok(authorExample),
@@ -147,6 +149,7 @@ describe('createClient: every named method', () => {
     assert.deepEqual(await client.entries('post'), entriesExample)
     assert.deepEqual(await client.entry('post', 'levy-explained'), entryExample)
     assert.deepEqual(await client.events(), eventsExample)
+    assert.deepEqual(await client.shifts(), shiftsExample)
     assert.deepEqual(await client.terms('tag'), termsExample)
     assert.deepEqual(await client.authors(), authorsExample)
     assert.deepEqual(await client.author('dana-k'), authorExample)
