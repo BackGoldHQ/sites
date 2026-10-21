@@ -5,6 +5,7 @@
 // summary with the match in context, presenter and vote or the reported
 // value when present, the citation boxed, and its links (Open original
 // first when it has one). Hover inverts the whole row.
+import { recordTransition } from '../../lib/archive/transition'
 import type { Context, SearchDoc } from '../../lib/archive/search'
 import type { ArchiveType } from '../../lib/archive/index'
 import { shortDay } from '../../lib/archive/format'
@@ -31,7 +32,7 @@ const summary = doc.summary || null
   <span class="ar-mark">{doc.mark ?? kindOf(doc.kind).code}</span>
   <div class="ar-row-body">
     <p><span class="ar-kind">{singular}</span> <span class="ar-meta">{meta.join(' · ')}</span></p>
-    <h3 class="ar-row-title"><a href={doc.url}>{doc.title}</a></h3>
+    <h3 class="ar-row-title" style={`view-transition-name:${recordTransition(doc.url)}`}><a href={doc.url}>{doc.title}</a></h3>
     {!compact && summary && <p class="ar-row-summary"><Marked text={summary} context={fieldHit ? null : context} /></p>}
     {!compact && !summary && !fieldHit && doc.kind !== 'board_meeting' && <p class="ar-row-summary ar-faint">No summary in the archive for this record. Read the source.</p>}
     {!compact && fieldHit && context && <p class="ar-row-summary"><span class="ar-meta">Matched in a field · </span><Marked text="" context={context} /></p>}

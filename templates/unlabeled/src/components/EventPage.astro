@@ -79,7 +79,7 @@ const meeting = hearing && bg.setup === null ? await lastMeeting(bg.client) : nu
       )}
     </div>
     <div class="u-event-title">
-      <h1>{event.title}</h1>
+      <h1 data-u-decode>{event.title}</h1>
       <p class="u-event-meta">
         {start && <b>{start.time}</b>}
         {place && <span>{place}</span>}
@@ -253,3 +253,7 @@ const meeting = hearing && bg.setup === null ? await lastMeeting(bg.client) : nu
     }
   }
 </style>
+
+<script>
+  import '../scripts/motion'
+</script>

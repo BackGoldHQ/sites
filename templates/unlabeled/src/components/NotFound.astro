@@ -17,7 +17,7 @@ const news = bg.setup === null ? blogBaseOf((await bg.client.types()).types) : n
   <div class="u-404-body">
     <Mark kind="skull" class="u-404-mark" />
     <div>
-      <h1>Not on the record.</h1>
+      <h1 data-u-decode>Not on the record.</h1>
       <p class="u-404-lede">That address isn't here. Maybe it moved, maybe it never was. Everything we publish starts from the home page, and every board record we've pulled is in the archive.</p>
       <form class="u-404-search" action="/archive" method="get" role="search">
         <label class="u-meta" for="u-404-q">Search the archive</label>
@@ -100,3 +100,7 @@ const news = bg.setup === null ? blogBaseOf((await bg.client.types()).types) : n
     }
   }
 </style>
+
+<script>
+  import '../scripts/motion'
+</script>
