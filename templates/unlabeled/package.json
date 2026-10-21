@@ -11,7 +11,8 @@
     "preview": "astro build && wrangler dev",
     "deploy": "astro build && wrangler deploy",
     "types": "backgold-content types --out src/backgold.d.ts",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.3",
@@ -19,12 +20,14 @@
     "@backgold/content": "workspace:^",
     "@backgold/contract": "workspace:*",
     "@backgold/template-kit": "workspace:^",
-    "astro": "^7.3.5"
+    "astro": "^7.3.5",
+    "minisearch": "^7.2.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "typescript": "^6.0.3",
-    "wrangler": "^4.149.0"
+    "wrangler": "^4.149.0",
+    "vitest": "~4.1.1"
   },
   "engines": {
     "node": ">= 22.12"

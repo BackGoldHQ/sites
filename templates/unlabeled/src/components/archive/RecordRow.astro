@@ -1,0 +1,52 @@
+---
+// One record as a row in the dossier (board U2): its mark, the meta line
+// (kind · category · date · meeting · campuses), the title as filed, the
+// summary with the match in context, presenter and vote or the reported
+// value when present, the citation, and its links.
+import type { Context, SearchDoc } from '../../lib/archive/search'
+import type { ArchiveType } from '../../lib/archive/index'
+import { shortDay } from '../../lib/archive/format'
+import { formatUsd } from '../../lib/archive/query'
+import { kindOf } from '../../lib/archive/kinds'
+import Marked from './Marked.astro'
+
+interface Props {
+  doc: SearchDoc
+  types: ArchiveType[]
+  context?: Context | null
+  /** Leave the summary out (the latest-records list). */
+  compact?: boolean
+}
+
+const { doc, types, context = null, compact = false } = Astro.props
+const singular = types.find((t) => t.key === doc.kind)?.singular ?? doc.kind
+const day = shortDay(doc.date)
+const meta = [singular, doc.category, day?.toUpperCase(), doc.meeting && doc.kind !== 'board_meeting' ? `Meeting ${doc.meeting}` : null, ...doc.campuses].filter(Boolean)
+const fieldHit = context?.where === 'field'
+const summary = doc.summary || null
+---
+<li>
+  <span class="ar-mark">{doc.mark ?? kindOf(doc.kind).code}</span>
+  <div class="ar-row-body">
+    <p class="ar-meta">{meta.join(' · ')}</p>
+    <h3 class="ar-row-title"><a href={doc.url}>{doc.title}</a></h3>
+    {!compact && summary && <p class="ar-row-summary"><Marked text={summary} context={fieldHit ? null : context} /></p>}
+    {!compact && !summary && !fieldHit && doc.kind !== 'board_meeting' && <p class="ar-row-summary ar-faint">No summary in the archive for this record. Read the source.</p>}
+    {!compact && fieldHit && context && <p class="ar-row-summary"><span class="ar-meta">Matched in a field · </span><Marked text="" context={context} /></p>}
+    {!compact && (
+      <dl class="ar-row-facts">
+        {doc.presenter && <div><dt>Presenter</dt><dd>{doc.presenter}</dd></div>}
+        {doc.vote && <div><dt>Vote</dt><dd>{doc.vote}</dd></div>}
+        {doc.kind === 'board_decision' && doc.amounts[0] !== undefined && <div><dt>Largest amount</dt><dd>{formatUsd(doc.amounts[0])}</dd></div>}
+        {doc.kind === 'data_bucket' && doc.amounts[0] !== undefined && <div><dt>Total</dt><dd>{formatUsd(doc.amounts[0])}</dd></div>}
+        {doc.pay !== null && <div><dt>Reported value</dt><dd>{formatUsd(doc.pay)} <span class="ar-faint">· Unit not defined in the workbook</span></dd></div>}
+      </dl>
+    )}
+    {!compact && doc.citation.length > 0 && <p class="ar-row-cite">{doc.citation.join('; ')}</p>}
+    {!compact && doc.links.length > 0 && (
+      <p class="ar-row-links">
+        {doc.links.map((l) => <a href={l.href} rel={l.external ? 'noopener' : undefined}>{l.label}{l.external ? ' ↗' : ''}</a>)}
+      </p>
+    )}
+  </div>
+</li>

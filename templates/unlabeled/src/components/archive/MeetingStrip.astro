@@ -1,0 +1,38 @@
+---
+// The meetings as a horizontal strip (boards U2, U4): each column is one
+// board meeting, its date, a bar for the decisions that reference it (— for
+// none), and its A / M / R marks (agenda, minutes, resolutions on BoardBook).
+import type { MeetingMark } from '../../lib/archive/views'
+import { dayParts } from '../../lib/archive/format'
+
+interface Props {
+  marks: MeetingMark[]
+  /** The meeting this page is, drawn outlined. */
+  current?: string | null
+}
+
+const { marks, current = null } = Astro.props
+const most = Math.max(1, ...marks.map((m) => m.decisions))
+---
+{marks.length > 0 && (
+  <>
+    <div class="ar-strip" role="list">
+      {marks.map((m) => {
+        const p = dayParts(m.doc.date!)
+        return (
+          <a role="listitem" href={m.doc.url} aria-current={m.doc.slug === current ? 'page' : undefined} aria-label={`${m.doc.title}: ${m.decisions} decisions`}>
+            <span class="ar-faint">{p.year}</span>
+            <span>{p.month}</span>
+            <b>{p.day}</b>
+            <span class="ar-bar" style={`height:${m.decisions ? Math.max(8, Math.round((m.decisions / most) * 100)) : 0}%`} />
+            <span>{m.decisions || '—'}</span>
+            <span class="ar-marks" aria-hidden="true">
+              <span data-on={m.agenda ? '' : undefined}>A</span><span data-on={m.minutes ? '' : undefined}>M</span><span data-on={m.resolutions ? '' : undefined}>R</span>
+            </span>
+          </a>
+        )
+      })}
+    </div>
+    <p class="ar-meta ar-hint">A Agenda on BoardBook · M Minutes on BoardBook · R Resolutions on BoardBook · Bar = decisions referencing the meeting · — = none filed</p>
+  </>
+)}

@@ -1,0 +1,32 @@
+---
+// A record's diagram (board U3): the mono re-render the import stores
+// (`<field>_mono`) when there is one, else the archive's colour original
+// shown in grey, always with the original and its Mermaid source a click
+// away. An SVG is drawn as an image, so nothing inside it runs.
+import { httpUrl, fileUrl } from '../../lib/archive/record'
+
+interface Props {
+  fields: Record<string, unknown>
+  /** The field holding the original SVG: `timeline_diagram` or `sankey_diagram`. */
+  field: 'timeline_diagram' | 'sankey_diagram'
+  /** The field holding its Mermaid source. */
+  data: 'timeline_data' | 'sankey_data'
+  title: string
+}
+
+const { fields, field, data, title } = Astro.props
+const original = httpUrl(fields[field]) ?? fileUrl(fields[field])
+const mono = httpUrl(fields[`${field}_mono`]) ?? fileUrl(fields[`${field}_mono`])
+const source = httpUrl(fields[data])
+const shown = mono ?? original
+---
+{shown && (
+  <figure class="ar-figure">
+    <p class="ar-meta" style="margin-bottom:0.75rem">// The record’s diagram{mono ? '' : ' · the archive’s original, in grey'}</p>
+    <img class:list={[!mono && 'ar-gray']} src={shown} alt={`Diagram: ${title}`} loading="lazy" decoding="async" />
+    <figcaption class="ar-meta">
+      {original && <a href={original} rel="noopener">Original diagram ↗</a>}
+      {source && <a href={source} rel="noopener">Mermaid source (.mmd) ↗</a>}
+    </figcaption>
+  </figure>
+)}

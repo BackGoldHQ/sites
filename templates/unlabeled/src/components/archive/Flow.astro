@@ -1,0 +1,65 @@
+---
+// A bucket's own flow (boards U3, U5): its line items on one side and its
+// total on the other, each band as wide as its figure, white for the
+// bucket, grey hatching for its lines. Drawn only for a bucket whose lines
+// add up to its total (money.ts `balanced`); an inflow's lines run into the
+// total, an outflow's total runs out to its lines.
+import type { Bucket } from '../../lib/archive/money'
+import { formatUsd } from '../../lib/archive/query'
+
+interface Props {
+  bucket: Bucket
+}
+
+const { bucket } = Astro.props
+const W = 1000
+const GAP = 6
+const lines = bucket.lines.filter((l) => l.value !== null && l.value > 0)
+const total = bucket.total ?? 1
+const usable = 260 - GAP * (lines.length - 1)
+const H = 260
+const outflow = bucket.side === 'Outflow'
+const barX = outflow ? 40 : W - 60
+const linesX = outflow ? W - 60 : 40
+let y = 0
+const bands = lines.map((l) => {
+  const h = Math.max(2, (l.value! / total) * usable)
+  const band = { line: l, y, h }
+  y += h + GAP
+  return band
+})
+let ty = 0
+const paths = bands.map((b) => {
+  const th = (b.line.value! / total) * H
+  const from = outflow ? { x: barX + 20, y0: ty, y1: ty + th } : { x: linesX + 20, y0: b.y, y1: b.y + b.h }
+  const to = outflow ? { x: linesX, y0: b.y, y1: b.y + b.h } : { x: barX, y0: ty, y1: ty + th }
+  ty += th
+  const mid = (from.x + to.x) / 2
+  return `M${from.x},${from.y0} C${mid},${from.y0} ${mid},${to.y0} ${to.x},${to.y0} L${to.x},${to.y1} C${mid},${to.y1} ${mid},${from.y1} ${from.x},${from.y1} Z`
+})
+// Labels sit beside their bands, pushed down so none overlaps the one above.
+let floor = -Infinity
+const labels = bands.map((b) => {
+  const y = Math.max(b.y + Math.min(b.h, 24) / 2 + 4, floor + 14)
+  floor = y
+  return y
+})
+const id = `hatch-${bucket.doc.id.replace(/[^a-z0-9]/gi, '')}`
+---
+<div class="ar-flow">
+  <p class="ar-meta" style="margin-bottom:0.5rem">// The flow, from the bucket’s own lines · in = out: {formatUsd(total)}</p>
+  <svg viewBox={`0 -10 ${W} ${Math.max(H, (labels.at(-1) ?? 0) + 10) + 40}`} role="img" aria-label={`${bucket.doc.title}: ${lines.map((l) => `${l.label} ${formatUsd(l.value!)}`).join('; ')}; total ${formatUsd(total)}`}>
+    <defs>
+      <pattern id={id} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="2" height="6" fill="#616161" />
+      </pattern>
+    </defs>
+    {paths.map((d) => <path d={d} fill={`url(#${id})`} stroke="#616161" stroke-width="0.5" />)}
+    <rect x={barX} y="0" width="20" height={H} fill="#fff" />
+    {bands.map((b) => <rect x={linesX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
+    {bands.map((b, i) => (
+      <text x={outflow ? linesX - 8 : linesX + 28} y={labels[i]} fill="#fff" font-size="11" font-family="monospace" text-anchor={outflow ? 'end' : 'start'}>{b.line.label.slice(0, 60)} · {formatUsd(b.line.value!)}</text>
+    ))}
+    <text x={outflow ? barX : barX + 20} y={H + 22} fill="#949494" font-size="11" font-family="monospace" text-anchor={outflow ? 'start' : 'end'}>{formatUsd(total)}</text>
+  </svg>
+</div>

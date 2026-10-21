@@ -1,0 +1,69 @@
+---
+// One source document at /sources/<slug> (board U3, frame 4): the meta
+// line, the title, the readable text in the reading pane (exactly as the
+// archive extracted it, OCR noise and all; the lines citing the items its
+// decisions name set in white; `?find=` sets and counts the lines holding
+// those words), its meeting, BoardBook and the archived copy, the source
+// note, and the decisions that cite it.
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import EntryHead from '../archive/EntryHead.astro'
+import ReadingPane from '../archive/ReadingPane.astro'
+import { archiveFor, sourceOf } from '../../lib/archive/index'
+import { httpUrl, list, str } from '../../lib/archive/record'
+import { shortDay } from '../../lib/archive/format'
+import { itemKey, linesCiting } from '../../lib/archive/agenda'
+import { readableText } from '../../lib/archive/text'
+
+type Props = EntryLayoutProps
+
+const { entry, type } = Astro.props
+const base = type?.url_base ?? 'sources'
+const { data, doc } = await archiveFor(Astro.locals, 'source_document', entry, base)
+const docs = data?.docs ?? [doc]
+const f = doc.fields
+const find = Astro.url.searchParams.get('find')?.slice(0, 80) ?? null
+if (find) Astro.response.headers.set('Cache-Control', 'no-store')
+const sameKind = docs.filter((d) => d.kind === 'source_document' && d.category === doc.category).length
+const meeting = docs.find((d) => d.kind === 'board_meeting' && d.slug === doc.meeting) ?? null
+const citing = docs.filter((d) => d.kind === 'board_decision' && list(d.fields.source_documents).includes(doc.slug)).sort((a, b) => (a.mark ?? '').localeCompare(b.mark ?? ''))
+const textUrl = httpUrl(f.readable_text)
+const source = sourceOf(Astro.locals)
+const text = textUrl && source ? await readableText(textUrl, source) : null
+const items = [...new Set(citing.map((d) => str(d.fields.agenda_item)).filter((v): v is string => v !== null).map(itemKey))]
+const cited = text ? [...new Set(items.flatMap((i) => linesCiting(text, i)))].sort((a, b) => a - b) : []
+---
+<ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Sources', href: `/${base}` }, ...(doc.category ? [{ label: doc.category }] : []), ...(doc.date ? [{ label: shortDay(doc.date)! }] : [])]}>
+  <EntryHead label="Source document" path={`/${base}/${doc.slug}`} meta={[type?.singular_label ?? 'Source document', doc.category, shortDay(doc.date)?.toUpperCase(), doc.category && `${sameKind} in the archive`]} title={entry.title} summary={entry.summary} />
+  <div class="ar-two" style="margin-top:1.5rem">
+    <div>
+      {textUrl ? (
+        <>
+          <form method="get" class="ar-field" style="max-width:28rem" role="search">
+            <label class="visually-hidden" for="ar-find">Find in this document</label>
+            <input id="ar-find" name="find" type="search" value={find ?? ''} placeholder="Find in this document" style="font-size:1rem" />
+            <button class="ar-btn ar-btn-outline" type="submit">Find</button>
+          </form>
+          <ReadingPane text={text} href={textUrl} cited={cited} find={find} />
+        </>
+      ) : (
+        <p class="ar-faint">The archive has no readable text for this document.</p>
+      )}
+    </div>
+    <div>
+      <dl class="ar-facts" style="margin-top:0;grid-template-columns:1fr">
+        {meeting && <div><dt>Meeting</dt><dd><a href={meeting.url}>{[str(meeting.fields.meeting_kind), shortDay(meeting.date), str(meeting.fields.meeting_time)].filter(Boolean).join(' · ')} →</a></dd></div>}
+        {doc.links.length > 0 && <div><dt>Where it lives</dt><dd class="ar-row-links">{doc.links.map((l) => <a href={l.href} rel={l.external ? 'noopener' : undefined}>{l.label}{l.external ? ' ↗' : ''}</a>)}</dd></div>}
+        {str(f.original_filename) && <div><dt>Original file name</dt><dd>{str(f.original_filename)}</dd></div>}
+        {str(f.source_note) && <div><dt>Source note</dt><dd>{str(f.source_note)}</dd></div>}
+      </dl>
+      <p class="ar-label" style="margin-top:1.5rem">// Decisions that cite it · {citing.length}</p>
+      {citing.length > 0 ? (
+        <ul class="ar-list-plain">{citing.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a></li>)}</ul>
+      ) : (
+        <p class="ar-faint">No decision in the archive cites this document.</p>
+      )}
+      {meeting && <p class="ar-meta ar-hint"><a href={meeting.url}>The meeting page →</a></p>}
+    </div>
+  </div>
+</ArchiveFrame>

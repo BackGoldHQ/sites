@@ -1,0 +1,65 @@
+---
+// One pay record at /pay/<slug> (board U3, frame 3): the unit note first,
+// before any name or number; the person and position; the reported value
+// ("reported normal-pay value", never a salary); the office; the citation
+// (workbook, sheet and row, the field); the same office's rows by last
+// name around this one, never by value.
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import EntryHead from '../archive/EntryHead.astro'
+import Citation from '../archive/Citation.astro'
+import { archiveFor } from '../../lib/archive/index'
+import { payRows, sortPay } from '../../lib/archive/pay'
+import { str } from '../../lib/archive/record'
+import { formatUsd } from '../../lib/archive/query'
+
+type Props = EntryLayoutProps
+
+/** Rows shown either side of this one in its office. */
+const AROUND = 3
+
+const { entry, type } = Astro.props
+const base = type?.url_base ?? 'pay'
+const { data, doc } = await archiveFor(Astro.locals, 'pay_record', entry, base)
+const docs = data?.docs ?? [doc]
+const f = doc.fields
+const office = doc.category
+const rows = sortPay(payRows(docs).filter((r) => r.office === (office ?? 'No office given')), 'name')
+const at = rows.findIndex((r) => r.doc.id === doc.id)
+const around = at >= 0 ? rows.slice(Math.max(0, at - AROUND), at + AROUND + 1) : []
+const unit = str(f.unit_note) ?? 'The workbook does not define whether the value is annual, hourly or another pay unit.'
+const value = str(f.pay_display) ?? (doc.pay !== null ? formatUsd(doc.pay) : null)
+const citation = [...doc.citation, 'field EMP_ASGN_PAY_HIST_A_NRML_PAY']
+---
+<ArchiveFrame crumbs={[{ label: 'Pay', href: '/archive/pay' }, ...(office ? [{ label: office }] : []), { label: doc.mark ?? entry.title }]}>
+  <div class="ar-unit" style="margin-top:1.25rem" role="note">
+    <b>Read the unit first.</b> {unit} It is not labeled a salary here for that reason.
+  </div>
+  <EntryHead label="Pay record" path={`/${base}/${doc.slug}`} meta={[type?.singular_label ?? 'Pay record', office]} title={entry.title}>
+    {value && <p style="margin-top:1.25rem"><span class="ar-meta">Reported normal-pay value · unit not defined</span><br /><span class="ar-big">{value}</span></p>}
+  </EntryHead>
+  <dl class="ar-facts">
+    {office && <div><dt>District office</dt><dd>{office}</dd></div>}
+    <div><dt>Person · position</dt><dd>{[str(f.person), str(f.position)].filter(Boolean).join(' · ')}</dd></div>
+    {entry.summary && <div><dt>Summary, as the archive gives it</dt><dd>{entry.summary}</dd></div>}
+  </dl>
+  <Citation lines={citation} links={doc.links} />
+  {around.length > 1 && (
+    <section style="margin-top:1.5rem" aria-label="Same office">
+      <p class="ar-label">// Same office · {rows.length} rows in {office} · by last name, not by value · rows either side of this one</p>
+      <table class="ar-table">
+        <tbody>
+          {around.map((r) => (
+            <tr aria-current={r.doc.id === doc.id ? 'true' : undefined}>
+              <td class="ar-meta">{r.row !== null ? `Row ${r.row}` : ''}</td>
+              <td>{r.doc.id === doc.id ? <strong>{r.person} — {r.position}</strong> : <a href={r.doc.url}>{r.person} — {r.position}</a>}</td>
+              <td class="ar-num">{r.display ?? (r.value !== null ? formatUsd(r.value) : '—')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="ar-meta ar-hint"><a href={`/archive/pay?office=${encodeURIComponent(office ?? '')}#office`}>All {rows.length} in /archive/pay →</a></p>
+    </section>
+  )}
+  <p class="ar-muted" style="margin-top:1.5rem">Names and positions are as the workbook gives them. Names are public record.</p>
+</ArchiveFrame>

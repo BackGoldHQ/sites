@@ -1,0 +1,124 @@
+---
+// The archive's one script (board U2, frame 3): it loads /archive/index.json
+// (the same documents the server searches), answers each keystroke in the
+// search field without a round trip, shows the best few with the query's
+// parse, and writes the URL as it goes. Enter, or "All results", opens the
+// server's results page; with scripts off the form does exactly that.
+---
+<script>
+  import { createSearcher, hrefOf, paramsOf, type SearchDoc } from '../../lib/archive/search'
+  import { parseChips } from '../../lib/archive/query'
+
+  const SHOWN = 6
+  const form = document.querySelector<HTMLFormElement>('[data-ar-search]')
+  const input = form?.querySelector<HTMLInputElement>('[data-ar-input]')
+  const live = form?.querySelector<HTMLElement>('[data-ar-live]')
+
+  const text = (tag: string, value: string, className?: string) => {
+    const el = document.createElement(tag)
+    el.textContent = value
+    if (className) el.className = className
+    return el
+  }
+
+  if (form && input && live) {
+    let searcher: ReturnType<typeof createSearcher> | null = null
+    let loading: Promise<void> | null = null
+    let selected = -1
+    const load = () =>
+      (loading ??= fetch('/archive/index.json', { headers: { Accept: 'application/json' } })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+        .then((body: { docs: SearchDoc[] }) => {
+          searcher = createSearcher(body.docs)
+        })
+        .catch(() => {
+          // The form still works without the island.
+          loading = null
+        }))
+
+    const close = () => {
+      live.hidden = true
+      live.replaceChildren()
+      selected = -1
+    }
+
+    const render = () => {
+      if (!searcher) return
+      const q = input.value.trim()
+      const params = { ...paramsOf(new URLSearchParams(location.search)), q, page: 1 }
+      history.replaceState(null, '', hrefOf(params))
+      if (!q) return close()
+      const result = searcher.run(params)
+      const list = document.createElement('ul')
+      list.setAttribute('role', 'listbox')
+      list.id = 'ar-live-list'
+      result.hits
+        .slice()
+        .sort((a, b) => b.score - a.score)
+        .slice(0, SHOWN)
+        .forEach((hit, i) => {
+          const li = document.createElement('li')
+          const a = document.createElement('a')
+          a.href = hit.doc.url
+          a.id = `ar-live-${i}`
+          a.setAttribute('role', 'option')
+          a.append(text('span', [hit.doc.mark, hit.doc.category, hit.doc.date].filter(Boolean).join(' · '), 'ar-meta'), document.createElement('br'), text('strong', hit.doc.title))
+          if (hit.context) {
+            const p = document.createElement('span')
+            p.className = 'ar-muted'
+            p.append(document.createElement('br'), hit.context.before, text('mark', hit.context.hit), hit.context.after)
+            a.append(p)
+          }
+          li.append(a)
+          list.append(li)
+        })
+      const footer = document.createElement('footer')
+      const all = document.createElement('a')
+      all.href = hrefOf(params)
+      all.textContent = result.total === 0 ? `No records for ‘${q}’ · see what is close →` : `All ${result.total} results →`
+      footer.append(text('span', '↑ ↓ move · ↵ open · esc close', 'ar-meta'), all)
+      const chips = parseChips(result.parsed)
+      const parse = document.createElement('p')
+      parse.className = 'ar-chips'
+      parse.style.padding = '0 0.875rem 0.5rem'
+      for (const c of chips) parse.append(text('span', c, 'ar-chip ar-chip-parse'))
+      live.replaceChildren(list, ...(chips.length ? [parse] : []), footer)
+      live.hidden = false
+      selected = -1
+      input.setAttribute('aria-controls', list.id)
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    input.addEventListener('focus', () => void load())
+    input.addEventListener('input', () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => void load().then(render), 60)
+    })
+    input.addEventListener('keydown', (event) => {
+      const options = [...live.querySelectorAll<HTMLAnchorElement>('[role="option"]')]
+      if (event.key === 'Escape') return close()
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return
+      if (event.key === 'Enter') {
+        if (selected >= 0 && options[selected]) {
+          event.preventDefault()
+          location.href = options[selected].href
+        }
+        return
+      }
+      if (options.length === 0) return
+      event.preventDefault()
+      selected = (selected + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length
+      options.forEach((o, i) => o.setAttribute('aria-selected', String(i === selected)))
+      input.setAttribute('aria-activedescendant', options[selected]!.id)
+    })
+    document.addEventListener('keydown', (event) => {
+      const target = event.target as HTMLElement | null
+      if (event.key !== '/' || target?.closest('input, textarea, select, [contenteditable]')) return
+      event.preventDefault()
+      input.focus()
+    })
+    document.addEventListener('click', (event) => {
+      if (!form.contains(event.target as Node)) close()
+    })
+  }
+</script>

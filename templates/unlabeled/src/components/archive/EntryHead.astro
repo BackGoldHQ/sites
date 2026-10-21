@@ -1,0 +1,22 @@
+---
+// The top of an archive entry's page (board U3): the type and the address
+// as a running line, the meta line (kind · category · date · meeting ·
+// campuses), the title huge, the summary as the archive wrote it.
+interface Props {
+  /** "Decision GOV-D01", "Meeting". */
+  label: string
+  path: string
+  meta: Array<string | null | undefined | false>
+  title: string
+  summary?: string | null
+}
+
+const { label, path, meta, title, summary = null } = Astro.props
+---
+<header class="ar-entry" style="margin-top:1.25rem">
+  <p class="ar-meta">{label} // {path}</p>
+  <p class="ar-meta ar-entry-meta">{meta.filter(Boolean).join(' · ')}</p>
+  <h1>{title}</h1>
+  {summary && <p class="ar-lede">{summary}</p>}
+  <slot />
+</header>

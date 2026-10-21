@@ -1,0 +1,43 @@
+---
+// A text extraction in a reading pane (boards U3, U4): line-numbered, the
+// cited lines set in white, each line addressable (`#L1035`), the text
+// exactly as the archive made it. `limit` shows only the first lines, with
+// the whole text a link away; `find` sets every line holding those words
+// in white and counts them.
+interface Props {
+  text: string | null
+  /** Where the text lives, for when it cannot be read. */
+  href: string | null
+  cited?: number[]
+  limit?: number | null
+  wholeHref?: string | null
+  find?: string | null
+  label?: string
+}
+
+const { text, href, cited = [], limit = null, wholeHref = null, find = null, label = 'Readable text' } = Astro.props
+const lines = text === null ? [] : text.split(/\r?\n/)
+const needle = find?.trim().toLowerCase() || null
+const found = needle ? lines.flatMap((line, i) => (line.toLowerCase().includes(needle) ? [i + 1] : [])) : []
+const marked = new Set([...cited, ...found])
+const shown = limit !== null ? lines.slice(0, limit) : lines
+---
+{text === null ? (
+  <p class="ar-faint" style="margin-top:1rem">The readable text could not be read just now.{href && <> <a href={href} rel="noopener">Open it where the archive keeps it ↗</a></>}</p>
+) : (
+  <>
+    <p class="ar-meta" style="margin-top:1rem">
+      // {label} · {shown.length < lines.length ? `lines 1–${shown.length.toLocaleString('en-US')} of ${lines.length.toLocaleString('en-US')}` : `${lines.length.toLocaleString('en-US')} lines`} · the text extraction, exactly as made
+      {needle && <> · “{find}” on {found.length} {found.length === 1 ? 'line' : 'lines'}</>}
+      {cited.length > 0 && <> · <a href={`#L${cited[0]}`}>Go to the cited item</a></>}
+    </p>
+    <div class="ar-pane">
+      <ol>
+        {shown.map((line, i) => (
+          <li id={`L${i + 1}`} data-cited={marked.has(i + 1) ? '' : undefined}><span>{i + 1}</span><span>{line || ' '}</span></li>
+        ))}
+      </ol>
+    </div>
+    {shown.length < lines.length && wholeHref && <p class="ar-meta ar-hint"><a href={wholeHref}>Read the whole text →</a></p>}
+  </>
+)}

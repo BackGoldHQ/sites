@@ -1,0 +1,304 @@
+---
+// /archive, the reader's door and the archive's search (boards U2, U11).
+// At rest: the head, the five holdings numerals (live counts), the search
+// field, the kind chips, the term rail, the meeting strip, the latest
+// records, the downloads and the two doors. With a query
+// (`?q&kind&category&meeting&from&to&pay_min&pay_max&sort&page`): the
+// results grouped by kind with counts, the filter rail (a sheet on a
+// phone), sort and pager; the URL is the state, and the page works with
+// scripts off. An empty result says what was searched and where to go next.
+//
+// The index is the request's (src/lib/archive/index.ts), read under the
+// content version. A response to any of the query's names is never stored
+// at the edge (the cache keys this path by `q` and `cursor` alone), and a
+// stored copy of the door never answers one (READS_QUERY_HEADER).
+import Site from '@backgold/template-kit/layouts/Site.astro'
+import { READS_QUERY_HEADER } from '@backgold/astro/server'
+import template from '../../template'
+import ArchiveFrame from '../../components/archive/ArchiveFrame.astro'
+import SearchBox from '../../components/archive/SearchBox.astro'
+import RecordRow from '../../components/archive/RecordRow.astro'
+import MeetingStrip from '../../components/archive/MeetingStrip.astro'
+import Island from '../../components/archive/Island.astro'
+import { browsePath, loadArchive, sourceOf } from '../../lib/archive/index'
+import { ARCHIVE_QUERY_NAMES, asksAnything, closestSmaller, hrefOf, paramsOf, searcherFor, SORTS } from '../../lib/archive/search'
+import { HOLDINGS, kindOf } from '../../lib/archive/kinds'
+import { countBy, latestRecords, meetingMarks } from '../../lib/archive/views'
+import { isEmptyQuery } from '../../lib/archive/query'
+import { longDay, plural, shortDay } from '../../lib/archive/format'
+
+const source = sourceOf(Astro.locals)
+if (!source) return new Response(null, { status: 503 })
+const bg = Astro.locals.backgold
+if (bg.setup !== null) return new Response(null, { status: 503 })
+
+const data = await loadArchive(source)
+const searcher = searcherFor(data)
+const params = paramsOf(Astro.url.searchParams)
+const asking = asksAnything(Astro.url.searchParams)
+Astro.response.headers.set(READS_QUERY_HEADER, ARCHIVE_QUERY_NAMES.join(','))
+if (asking) Astro.response.headers.set('Cache-Control', 'no-store')
+
+const result = searcher.run(params)
+const { types, docs } = data
+const present = types.filter((t) => t.present)
+const counted = (key: (typeof HOLDINGS)[number]) => docs.filter((d) => d.kind === key).length
+const totalEntries = docs.length
+const marks = meetingMarks(docs)
+const latest = latestRecords(docs, marks)
+const decisionCategories = countBy(docs.filter((d) => d.kind === 'board_decision').map((d) => d.category))
+const campuses = countBy(docs.filter((d) => d.kind === 'board_decision' || d.kind === 'data_bucket').flatMap((d) => d.campuses))
+const showResults = asking && !(isEmptyQuery(result.parsed) && !params.kind && !params.category && !params.meeting && !params.from && !params.to && params.payMin === null && params.payMax === null)
+const queried = params.q !== ''
+
+// The empty result's ways out.
+const empty = showResults && result.total === 0
+const closest = empty ? closestSmaller(searcher, result.parsed) : null
+const nearestCategory = empty ? ((closest?.first?.kind === 'board_decision' && closest.first.category ? decisionCategories.find((c) => c.value === closest.first!.category) : null) ?? decisionCategories[0] ?? null) : null
+const words = result.parsed.words.map((w) => w.toLowerCase()).filter((w) => w.length >= 4)
+const pages = empty || !showResults ? ((await bg.client.pages().catch(() => null))?.pages ?? []) : []
+const sitePage = empty && words.length ? (pages.find((p) => words.some((w) => `${p.title ?? ''} ${p.slug}`.toLowerCase().includes(w))) ?? null) : null
+const submitPage = pages.find((p) => p.slug === 'submit-documents') ?? null
+const requests = types.find((t) => t.key === 'information_request' && t.present) ?? null
+const requestHowTo = requests ? `/${requests.base}#request-a-record` : null
+
+const title = showResults ? (queried ? `${plural(result.total, 'record')} for ‘${params.q}’` : plural(result.total, 'record')) : 'Find the record. Read the source.'
+const groups = present.map((t) => ({ type: t, hits: result.hits.filter((h) => h.doc.kind === t.key) })).filter((g) => g.hits.length > 0)
+const filters = [params.kind, params.category, params.meeting, params.from, params.to, params.payMin, params.payMax].filter((v) => v !== null).length
+---
+<Site template={template} title={showResults ? `${title} · Archive` : 'Read it yourself · Archive'} description="Search the BISD public data archive: board meetings, decisions, data buckets, pay records, source documents and records requests." canonicalPath={showResults ? hrefOf(params) : '/archive'} page={null}>
+  <ArchiveFrame crumbs={showResults ? [{ label: 'Search results' }] : []}>
+    <section class="ar-door" aria-labelledby="ar-title">
+      <p class="ar-meta" style="margin-top:1.25rem">BISD public data archive{showResults && queried ? ` / ${params.q}` : ''}</p>
+      <h1 id="ar-title" style="margin-top:0.5rem">{title}</h1>
+      {!showResults && (
+        <>
+          <p class="ar-intro">Search the full archive by topic, date, school, program, person, salary or pay value, dollar amount or policy. Every summary links back to the original diagram, workbook or source material included in the archive.</p>
+          {present.length > 0 ? (
+            <div class="ar-holdings">
+              {HOLDINGS.filter((k) => types.find((t) => t.key === k)?.present).map((k) => {
+                const t = types.find((x) => x.key === k)!
+                return (
+                  <a href={browsePath(t)}>
+                    <b>{counted(k)}</b>
+                    <span class="ar-meta">{t.plural} · /{t.base}</span>
+                  </a>
+                )
+              })}
+            </div>
+          ) : (
+            <p class="ar-intro">The archive has nothing published yet. Its records appear here as they are published in BackGold.</p>
+          )}
+        </>
+      )}
+      <SearchBox params={params} types={types} counts={result.kinds} total={Object.values(result.kinds).reduce((a, b) => a + b, 0)} />
+    </section>
+
+    {showResults && !empty && (
+      <section class="ar-results" aria-label="Results">
+        <details class="ar-sheet">
+          <summary>Filters{filters ? ` · ${filters}` : ''}</summary>
+          <div class="ar-rail">
+            <div>
+              <p class="ar-label">// Kind</p>
+              <ul class="ar-terms">
+                {present.map((t) => <li><a href={hrefOf(params, { kind: params.kind === t.key ? null : t.key, page: 1 })} aria-current={params.kind === t.key ? 'true' : undefined}><span>{params.kind === t.key ? '■ ' : ''}{kindOf(t.key).chip}</span><span>{result.kinds[t.key]}</span></a></li>)}
+              </ul>
+            </div>
+            {result.categories.length > 0 && (
+              <div>
+                <p class="ar-label">// Category</p>
+                <ul class="ar-terms">
+                  {result.categories.slice(0, 12).map((c) => <li><a href={hrefOf(params, { category: params.category === c.value ? null : c.value, page: 1 })}><span>{params.category === c.value ? '■ ' : ''}{c.value}</span><span>{c.count}</span></a></li>)}
+                </ul>
+              </div>
+            )}
+            {result.campuses.length > 0 && (
+              <div>
+                <p class="ar-label">// Campus</p>
+                <ul class="ar-terms">
+                  {result.campuses.slice(0, 12).map((c) => <li><a href={hrefOf(params, { category: params.category === c.value ? null : c.value, page: 1 })}><span>{params.category === c.value ? '■ ' : ''}{c.value}</span><span>{c.count}</span></a></li>)}
+                </ul>
+              </div>
+            )}
+            {result.meetings.length > 0 && (
+              <div>
+                <p class="ar-label">// Meeting</p>
+                <ul class="ar-terms">
+                  {result.meetings.slice(0, 12).map((m) => <li><a href={hrefOf(params, { meeting: params.meeting === m.value ? null : m.value, page: 1 })}><span>{params.meeting === m.value ? '■ ' : ''}{shortDay(m.value) ?? m.value}</span><span>{m.count}</span></a></li>)}
+                </ul>
+              </div>
+            )}
+            <form method="get" action="/archive">
+              {params.q && <input type="hidden" name="q" value={params.q} />}
+              {params.kind && <input type="hidden" name="kind" value={params.kind} />}
+              {params.category && <input type="hidden" name="category" value={params.category} />}
+              {params.meeting && <input type="hidden" name="meeting" value={params.meeting} />}
+              {params.sort !== 'relevance' && <input type="hidden" name="sort" value={params.sort} />}
+              <fieldset>
+                <legend class="ar-label">// Date from — to</legend>
+                <div class="ar-pair">
+                  <input type="date" name="from" value={params.from ?? ''} aria-label="From" />
+                  <input type="date" name="to" value={params.to ?? ''} aria-label="To" />
+                </div>
+                {result.span && <p class="ar-meta ar-hint">{result.span.from} → {result.span.to}</p>}
+              </fieldset>
+              <fieldset style="margin-top:1rem">
+                <legend class="ar-label">// Pay value · pay records only</legend>
+                <div class="ar-pair">
+                  <input type="number" name="pay_min" min="0" step="any" value={params.payMin ?? ''} placeholder="min" aria-label="Pay value at least" />
+                  <input type="number" name="pay_max" min="0" step="any" value={params.payMax ?? ''} placeholder="max" aria-label="Pay value at most" />
+                </div>
+              </fieldset>
+              <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+                <button class="ar-btn ar-btn-outline" type="submit">Apply</button>
+                {filters > 0 && <a class="ar-btn ar-btn-outline" href={hrefOf({ ...params, kind: null, category: null, meeting: null, from: null, to: null, payMin: null, payMax: null, page: 1 })}>Clear filters</a>}
+              </p>
+            </form>
+          </div>
+        </details>
+
+        <div>
+          <div class="ar-result-head">
+            <p class="ar-meta">Searched titles, summaries, every field and term of {plural(present.length, 'type')} · grouped by type</p>
+            <nav class="ar-sorts" aria-label="Sort">
+              {SORTS.map((s) => <a class="ar-chip" href={hrefOf(params, { sort: s, page: 1 })} aria-current={params.sort === s ? 'true' : undefined}>{s === 'relevance' ? 'Relevance' : s === 'newest' ? 'Newest' : 'Oldest'}</a>)}
+            </nav>
+          </div>
+          {groups.map((g) => (
+            <section class="ar-group" aria-label={g.type.plural}>
+              <header><h2 style="font-size:1.25rem">{g.type.plural}</h2><span class="ar-meta">{result.kinds[g.type.key]} of {result.total}</span></header>
+              <ul class="ar-rows">
+                {g.hits.map((h) => <RecordRow doc={h.doc} types={types} context={h.context} />)}
+              </ul>
+            </section>
+          ))}
+          <nav class="ar-pager ar-meta" aria-label="Pages">
+            {result.page > 1 ? <a href={hrefOf(params, { page: result.page - 1 })}>← Previous</a> : <span />}
+            <span>{result.pages > 1 ? `Page ${result.page} of ${result.pages}` : `All ${result.total} shown`}</span>
+            {result.page < result.pages ? <a href={hrefOf(params, { page: result.page + 1 })}>Next →</a> : <span />}
+          </nav>
+        </div>
+      </section>
+    )}
+
+    {empty && (
+      <section class="ar-empty" style="margin-top:1.5rem" aria-label="Nothing found">
+        {present.length > 0 ? (
+          <p>We searched all {plural(totalEntries, 'entry', 'entries')} ({present.map((t) => t.plural.toLowerCase()).join(', ')}: titles, summaries and every field) for <strong>{params.q || 'these filters'}</strong>. Nothing in the BISD archive says that.</p>
+        ) : (
+          <p>The archive has nothing published yet, so nothing matches <strong>{params.q || 'these filters'}</strong>. Its records appear here as they are published in BackGold.</p>
+        )}
+        <dl>
+          {closest && (
+            <div>
+              <dt>Closest</dt>
+              <dd><a href={hrefOf({ ...params, q: closest.q, page: 1 })}>{plural(closest.count, 'record')} for ‘{closest.q}’ alone</a>{closest.first && <> · {closest.first.title}{closest.first.date ? ` · ${shortDay(closest.first.date)}` : ''}</>}</dd>
+            </div>
+          )}
+          {filters > 0 && (
+            <div>
+              <dt>Without the filters</dt>
+              <dd><a href={hrefOf({ ...params, kind: null, category: null, meeting: null, from: null, to: null, payMin: null, payMax: null, page: 1 })}>Search ‘{params.q}’ across everything</a></dd>
+            </div>
+          )}
+          {nearestCategory && (
+            <div>
+              <dt>Category</dt>
+              <dd><a href={hrefOf({ ...params, q: '', category: nearestCategory.value, kind: 'board_decision', page: 1 })}>Nearest category: {nearestCategory.value} ({nearestCategory.count}) →</a></dd>
+            </div>
+          )}
+          {sitePage && (
+            <div>
+              <dt>On this site</dt>
+              <dd><a href={sitePage.url}>{sitePage.title ?? sitePage.slug} →</a></dd>
+            </div>
+          )}
+          {requestHowTo && (
+            <div>
+              <dt>Not public yet?</dt>
+              <dd><a href={requestHowTo}>Ask for it. Request a record →</a></dd>
+            </div>
+          )}
+        </dl>
+      </section>
+    )}
+
+    {!showResults && present.length > 0 && (
+      <>
+        <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-browse">
+          <p class="ar-meta">§ // Browse</p>
+          <h2 id="ar-browse">By category · by meeting</h2>
+          <div class="ar-browse">
+            {decisionCategories.length > 0 && (
+              <div>
+                <p class="ar-label">Decision category · {plural(decisionCategories.length, 'term')}</p>
+                <ul class="ar-terms">{decisionCategories.map((c) => <li><a href={hrefOf(params, { category: c.value, kind: 'board_decision' })}><span>{c.value}</span><span>{c.count}</span></a></li>)}</ul>
+              </div>
+            )}
+            {campuses.length > 0 && (
+              <div>
+                <p class="ar-label">Campus · {plural(campuses.length, 'term')}</p>
+                <ul class="ar-terms">{campuses.map((c) => <li><a href={hrefOf(params, { category: c.value })}><span>{c.value}</span><span>{c.count}</span></a></li>)}</ul>
+              </div>
+            )}
+          </div>
+          {marks.length > 0 && (
+            <div style="margin-top:2rem">
+              <p class="ar-label">// {plural(marks.length, 'board meeting')} · {longDay(marks[0]!.doc.date)} → {longDay(marks.at(-1)!.doc.date)}</p>
+              <MeetingStrip marks={marks} />
+            </div>
+          )}
+        </section>
+
+        {(latest.requests.length > 0 || latest.decisions.length > 0) && (
+          <section class="ar-band" aria-labelledby="ar-latest">
+            <h2 id="ar-latest">Latest</h2>
+            <div class="ar-two" style="margin-top:1rem">
+              {latest.requests.length > 0 && requests && (
+                <div>
+                  <p class="ar-label">Latest records requests · <a href={`/${requests.base}`}>The ledger →</a></p>
+                  <ul class="ar-rows">{latest.requests.map((d) => <RecordRow doc={d} types={types} compact />)}</ul>
+                </div>
+              )}
+              {latest.meeting && latest.decisions.length > 0 && (
+                <div>
+                  <p class="ar-label">From the latest meeting · {shortDay(latest.meeting.doc.date)} · <a href={latest.meeting.doc.url}>The meeting →</a></p>
+                  <ul class="ar-rows">{latest.decisions.map((d) => <RecordRow doc={d} types={types} compact />)}</ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section class="ar-band" aria-labelledby="ar-take">
+          <p class="ar-meta">§ // Take it with you</p>
+          <h2 id="ar-take">Downloads · documents · requests</h2>
+          <div class="ar-doors">
+            <div>
+              <p class="ar-label">Download the whole thing</p>
+              <p><a href="/archive/archive.csv" download>archive.csv</a> <span class="ar-faint">· {plural(totalEntries, 'row')}, one per record</span></p>
+            </div>
+            {submitPage && (
+              <div>
+                <p class="ar-label">// Got documents?</p>
+                <h3>Submit documents</h3>
+                <p class="ar-muted">BISD or HISD records you got back from a request, a board packet, a workbook. Send it in; the team reads it and adds it to the record with its source.</p>
+                <p><a class="ar-btn ar-btn-outline" href={submitPage.url}>Submit documents</a></p>
+              </div>
+            )}
+            {requestHowTo && (
+              <div>
+                <p class="ar-label">// Not here yet?</p>
+                <h3>Request a record</h3>
+                <p class="ar-muted">Anybody can ask BISD for public information. It takes a few lines in writing. Here is how, step by step, and what to do with what comes back.</p>
+                <p><a class="ar-btn ar-btn-outline" href={requestHowTo}>How to request a record</a></p>
+              </div>
+            )}
+          </div>
+        </section>
+      </>
+    )}
+  </ArchiveFrame>
+  <Island />
+</Site>

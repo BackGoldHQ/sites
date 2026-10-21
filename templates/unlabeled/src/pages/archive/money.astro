@@ -1,0 +1,90 @@
+---
+// /archive/money (board U5, frame 1): the data buckets grouped by family,
+// the Financial family by fund (General Fund, Debt Service and bonds,
+// Capital projects, Child nutrition, Grants: the page's reading of each
+// bucket, not a field), each bucket a card with its total, its first line
+// items and its basis; a flow drawn only for a bucket whose lines add up to
+// its total; the staff and student counts as ramps.
+import Site from '@backgold/template-kit/layouts/Site.astro'
+import template from '../../template'
+import ArchiveFrame from '../../components/archive/ArchiveFrame.astro'
+import Flow from '../../components/archive/Flow.astro'
+import { loadArchive, sourceOf } from '../../lib/archive/index'
+import { moneyView, type Bucket } from '../../lib/archive/money'
+import { formatUsd } from '../../lib/archive/query'
+import { hrefOf, REST } from '../../lib/archive/search'
+import { plural } from '../../lib/archive/format'
+
+/** Line items a card shows before "+ n more". */
+const CARD_LINES = 3
+
+const source = sourceOf(Astro.locals)
+if (!source) return new Response(null, { status: 503 })
+const data = await loadArchive(source)
+const view = moneyView(data.docs)
+const total = view.families.reduce((n, f) => n + f.count, 0)
+const fill = (b: Bucket) => (b.side === 'Inflow' ? 'solid' : b.side === 'Outflow' ? 'hatched' : 'open')
+const flows = view.funds.flatMap((f) => f.buckets).filter((b) => b.balanced)
+---
+<Site template={template} title="Money · Archive" description="The BISD archive's data buckets: funds, totals, line items and their basis." canonicalPath="/archive/money" page={null}>
+  <ArchiveFrame crumbs={[{ label: 'Money' }]}>
+    <header class="ar-entry" style="margin-top:1.25rem">
+      <p class="ar-meta">Money // /archive/money · {plural(total, 'data bucket')} · {plural(view.families.length, 'family', 'families')}</p>
+      <h1>The money, as filed.</h1>
+      <p class="ar-lede">Each bucket is a total the archive built from a board decision or the audited financial report, with its line items and its basis. Grouped here by the fund or population it belongs to.</p>
+    </header>
+    {total === 0 ? (
+      <p class="ar-faint" style="margin-top:1.5rem">The archive has no data buckets published yet.</p>
+    ) : (
+      <>
+        <div class="ar-holdings">
+          {view.families.map((f) => <a href={`#family-${f.name.toLowerCase().replace(/\W+/g, '-')}`}><b>{f.count}</b><span class="ar-meta">{f.name}</span></a>)}
+          <a href={hrefOf(REST, { kind: 'data_bucket' })}><b>{total}</b><span class="ar-meta">All buckets · search them →</span></a>
+        </div>
+
+        {view.funds.map((fund, i) => (
+          <section class="ar-band" style="margin-top:2rem" id={i === 0 ? 'family-financial' : undefined} aria-labelledby={`fund-${fund.key}`}>
+            <p class="ar-meta">family · Financial · fund {i + 1} of {view.funds.length}</p>
+            <h2 id={`fund-${fund.key}`}>{fund.name}</h2>
+            <p class="ar-muted" style="margin-top:0.5rem">{fund.note} {plural(fund.buckets.length, 'bucket')}.</p>
+            {fund.buckets.filter((b) => b.balanced).slice(0, 1).map((b) => <Flow bucket={b} />)}
+            <div class="ar-cards">
+              {fund.buckets.map((b) => (
+                <article class="ar-card">
+                  <p class="ar-meta">{[b.side, b.doc.mark].filter(Boolean).join(' · ')}</p>
+                  <h3><a href={b.doc.url}>{b.doc.title}</a></h3>
+                  <p class="ar-big">{b.total !== null ? formatUsd(b.total) : (b.totalLabel ?? '—')}</p>
+                  {b.lines.length > 0 && (
+                    <ul>
+                      {b.lines.slice(0, CARD_LINES).map((l) => <li><span>{l.label}</span><span>{l.value === null ? '' : formatUsd(l.value)}</span></li>)}
+                    </ul>
+                  )}
+                  {b.lines.length > CARD_LINES && <p class="ar-meta"><a href={b.doc.url}>+ {plural(b.lines.length - CARD_LINES, 'more line item')}</a></p>}
+                  {b.basis && <p class="ar-meta">Basis · {b.basis}</p>}
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {view.counts.map((family) => (
+          <section class="ar-band" style="margin-top:2rem" id={`family-${family.name.toLowerCase().replace(/\W+/g, '-')}`} aria-labelledby={`fam-${family.name}`}>
+            <p class="ar-meta">family · {family.name} · {plural(family.buckets.length, 'bucket')} · counts as ramps: solid in, hatched out, open a node</p>
+            <h2 id={`fam-${family.name}`}>{family.name}</h2>
+            <ul class="ar-list-plain" style="margin-top:1rem">
+              {family.buckets.map((b) => (
+                <li>
+                  <p class="ar-meta">{[b.side, b.doc.mark].filter(Boolean).join(' · ')}</p>
+                  <a href={b.doc.url}>{b.doc.title}</a>
+                  {b.doc.summary && <p class="ar-muted">{b.doc.summary}</p>}
+                  {b.count !== null && <div class="ar-ramp" data-fill={fill(b)} style={`width:${Math.max(1, Math.round((b.count / family.max) * 100))}%`} title={b.count.toLocaleString('en-US')} />}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        {flows.length > 0 && <p class="ar-meta ar-hint" style="margin-top:1rem">A flow is drawn only where a bucket’s line items add up to its total: {plural(flows.length, 'bucket')} of {view.funds.reduce((n, f) => n + f.buckets.length, 0)} do.</p>}
+      </>
+    )}
+  </ArchiveFrame>
+</Site>

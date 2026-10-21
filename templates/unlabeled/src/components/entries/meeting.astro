@@ -1,0 +1,167 @@
+---
+// One board meeting at /meetings/<date> (board U4): the date huge, its time
+// and kind, the agenda, minutes and resolutions cells (BoardBook, the
+// archived copies, the text), the meetings strip with this one marked, the
+// agenda's own outline as the spine with each decision hung on the item it
+// cites (`agenda_item`), those that cite none under "No item cited", and
+// the agenda's text in a reading pane.
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import MeetingStrip from '../archive/MeetingStrip.astro'
+import ReadingPane from '../archive/ReadingPane.astro'
+import { archiveFor, sourceOf } from '../../lib/archive/index'
+import { meetingMarks } from '../../lib/archive/views'
+import { fileUrl, httpUrl, str } from '../../lib/archive/record'
+import { dayParts, plural, shortDay, weekday } from '../../lib/archive/format'
+import { agendaOutline, itemKey, linesCiting } from '../../lib/archive/agenda'
+import { readableText } from '../../lib/archive/text'
+
+type Props = EntryLayoutProps
+
+/** The agenda lines the pane shows before "Read the whole text". */
+const PANE_LINES = 400
+
+const { entry, type } = Astro.props
+const base = type?.url_base ?? 'meetings'
+const { data, doc } = await archiveFor(Astro.locals, 'board_meeting', entry, base)
+const docs = data?.docs ?? [doc]
+const f = doc.fields
+const marks = meetingMarks(docs)
+const at = marks.findIndex((m) => m.doc.id === doc.id)
+const previous = at > 0 ? marks[at - 1]! : null
+const next = at >= 0 && at < marks.length - 1 ? marks[at + 1]! : null
+const decisions = docs.filter((d) => d.kind === 'board_decision' && d.meeting === doc.slug).sort((a, b) => (a.mark ?? '').localeCompare(b.mark ?? ''))
+const documents = docs.filter((d) => d.kind === 'source_document' && d.meeting === doc.slug)
+const agendaDoc = documents.find((d) => d.category === 'Agenda') ?? null
+const minutesDoc = documents.find((d) => d.category === 'Minutes') ?? null
+const resolutions = documents.filter((d) => d.category === 'Resolution')
+const agendaTextUrl = httpUrl(f.agenda_text)
+const source = sourceOf(Astro.locals)
+const agendaText = agendaTextUrl && source ? await readableText(agendaTextUrl, source) : null
+const outline = agendaText ? agendaOutline(agendaText) : []
+const categories = new Set(decisions.map((d) => d.category).filter(Boolean)).size
+const itemOf = (d: (typeof decisions)[number]) => {
+  const item = str(d.fields.agenda_item)
+  return item ? itemKey(item) : null
+}
+const placed = new Set(outline.map((i) => i.number))
+const onItems = decisions.filter((d) => {
+  const item = itemOf(d)
+  return item !== null && placed.has(item)
+})
+const unplaced = decisions.filter((d) => !onItems.includes(d))
+// The outline's sections (II.E) with their items (II.E.8), each item with the decisions citing it.
+const sections = outline
+  .filter((i) => i.depth === 2)
+  .map((section) => ({
+    section,
+    items: outline.filter((i) => i.depth === 3 && i.number.startsWith(`${section.number}.`)).map((item) => ({ item, records: onItems.filter((d) => itemOf(d) === item.number) })),
+  }))
+  .filter((s) => s.items.length > 0)
+const cited = agendaText ? [...new Set(onItems.flatMap((d) => linesCiting(agendaText, itemOf(d)!)))].sort((a, b) => a - b) : []
+const p = doc.date ? dayParts(doc.date) : null
+const noMinutes = !httpUrl(f.minutes_link) && !minutesDoc
+const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not specified'}${(d.vote ?? 'Not specified') === 'Not specified' && noMinutes ? ' · no minutes posted for this meeting' : ''}`
+---
+<ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Meetings', href: `/${base}` }, { label: shortDay(doc.date) ?? entry.title }]}>
+  <header class="ar-entry" style="margin-top:1.25rem">
+    <p class="ar-meta">Meeting // /{base}/{doc.slug} · {str(f.meeting_kind) ?? 'Board meeting'}{at >= 0 ? ` · ${at + 1} of ${marks.length} in the archive` : ''}</p>
+    <p class="ar-meta ar-entry-meta">{[weekday(doc.date), str(f.meeting_kind)].filter(Boolean).join(' · ')}</p>
+    {p ? <h1>{p.month} {p.day} {p.year}{str(f.meeting_time) && <span class="ar-muted"> · {str(f.meeting_time)}</span>}</h1> : <h1>{entry.title}</h1>}
+  </header>
+
+  <dl class="ar-facts">
+    <div>
+      <dt>// Agenda</dt>
+      <dd class="ar-row-links">
+        {httpUrl(f.agenda_link) && <a href={httpUrl(f.agenda_link)!} rel="noopener">BoardBook ↗</a>}
+        {httpUrl(f.agenda_download) && <a href={httpUrl(f.agenda_download)!} rel="noopener">Download ↗</a>}
+        {fileUrl(f.agenda_pdf) && <a href={fileUrl(f.agenda_pdf)!}>Archived PDF</a>}
+        {agendaDoc && <a href={agendaDoc.url}>Text</a>}
+        {!httpUrl(f.agenda_link) && !agendaDoc && <span class="ar-faint">—</span>}
+      </dd>
+    </div>
+    <div>
+      <dt>// Minutes</dt>
+      <dd class="ar-row-links">
+        {httpUrl(f.minutes_link) && <a href={httpUrl(f.minutes_link)!} rel="noopener">BoardBook ↗</a>}
+        {httpUrl(f.minutes_download) && <a href={httpUrl(f.minutes_download)!} rel="noopener">Download ↗</a>}
+        {fileUrl(f.minutes_pdf) && <a href={fileUrl(f.minutes_pdf)!}>Archived PDF</a>}
+        {minutesDoc && <a href={minutesDoc.url}>Text</a>}
+        {noMinutes && <span class="ar-faint">— Not posted on BoardBook when the archive was compiled</span>}
+      </dd>
+    </div>
+    <div>
+      <dt>// Resolutions</dt>
+      <dd class="ar-row-links">
+        {httpUrl(f.resolutions_link) && <a href={httpUrl(f.resolutions_link)!} rel="noopener">Supplementals ↗</a>}
+        {resolutions.map((r) => <a href={r.url}>{r.title}</a>)}
+        {!httpUrl(f.resolutions_link) && resolutions.length === 0 && <span class="ar-faint">—</span>}
+      </dd>
+    </div>
+    <div>
+      <dt>// Decisions</dt>
+      <dd><span class="ar-big">{decisions.length}</span>{decisions.length > 0 && <p class="ar-meta">Filed in {plural(categories, 'category', 'categories')} · {onItems.length} on agenda items, {unplaced.length} with no item cited</p>}</dd>
+    </div>
+  </dl>
+
+  <nav class="ar-nextprev ar-meta" aria-label="Meetings" style="margin-top:1rem">
+    <div>{previous ? <a href={previous.doc.url}>← {shortDay(previous.doc.date)} · previous meeting</a> : <span class="ar-faint">First in the archive</span>}</div>
+    <div>{next ? <a href={next.doc.url}>{shortDay(next.doc.date)} · next meeting →</a> : <span class="ar-faint">Latest in the archive</span>}</div>
+  </nav>
+  <MeetingStrip marks={marks} current={doc.slug} />
+
+  <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-spine">
+    <p class="ar-meta">§ The meeting, in agenda order</p>
+    <h2 id="ar-spine">Every decision with its vote</h2>
+    {decisions.length === 0 && <p class="ar-faint" style="margin-top:1rem">The archive files no decision from this meeting.</p>}
+    {decisions.length > 0 && sections.length === 0 && <p class="ar-faint" style="margin-top:1rem">{agendaTextUrl ? (agendaText ? 'The agenda’s text names no numbered items.' : 'The agenda’s text could not be read just now, so the decisions are listed by mark.') : 'The archive has no agenda text for this meeting, so the decisions are listed by mark.'}</p>}
+    {sections.length > 0 && (
+      <ol class="ar-spine" style="margin-top:1rem">
+        {sections.map(({ section, items }) => (
+          <li>
+            <p class="ar-meta"><strong>{section.number} · {section.title}</strong> · {plural(items.reduce((n, i) => n + i.records.length, 0), 'record')} on {plural(items.length, 'item')}</p>
+            <ol>
+              {items.map(({ item, records }) => (
+                <li>
+                  <span class="ar-meta">{item.number}</span>
+                  <div>
+                    <p>{item.title}</p>
+                    {records.length > 0 ? (
+                      <ul class="ar-item-records" style="margin-top:0.375rem">
+                        {records.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a><p class="ar-meta">{d.category} · {voteLine(d)}</p></li>)}
+                      </ul>
+                    ) : (
+                      <p class="ar-faint ar-meta">No record in the archive for this item</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ol>
+    )}
+    {unplaced.length > 0 && (
+      <div style="margin-top:1.25rem">
+        {sections.length > 0 && <p class="ar-label">No item cited · {plural(unplaced.length, 'record')}</p>}
+        <ul class="ar-rows">
+          {unplaced.map((d) => (
+            <li>
+              <span class="ar-mark">{d.mark ?? 'DEC'}</span>
+              <div class="ar-row-body"><p class="ar-meta">{d.category}</p><h3 class="ar-row-title"><a href={d.url}>{d.title}</a></h3><p class="ar-meta">{voteLine(d)}</p></div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </section>
+
+  {agendaTextUrl && (
+    <section class="ar-band" aria-labelledby="ar-pane">
+      <p class="ar-meta">§ Reading pane</p>
+      <h2 id="ar-pane">The agenda, as the archive extracted it</h2>
+      <ReadingPane text={agendaText} href={agendaTextUrl} cited={cited} limit={PANE_LINES} wholeHref={agendaDoc?.url ?? agendaTextUrl} label="Agenda text" />
+    </section>
+  )}
+</ArchiveFrame>
