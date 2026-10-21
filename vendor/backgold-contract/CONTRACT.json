@@ -1,5 +1,11 @@
 {
+<<<<<<< HEAD
   "platform": "d1ef925c8d6bc564f0e671da02a20c895a92aec0",
   "branch": "main",
   "pulled": "2026-10-27T06:21:46.010Z"
+=======
+  "platform": "62ab3e956790cf3f42cdd86730109ac86696d586",
+  "branch": "jh/content-post-prose-layout",
+  "pulled": "2026-10-21T21:07:58.305Z"
+>>>>>>> 373ef2c (The kit's ContentPost reads the whole post in place as its Prose layout; the candidate template draws it by default)
 }

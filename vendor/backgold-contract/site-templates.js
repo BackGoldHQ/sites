@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-3KB7ZRTE.js';
 import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-LK52PNGL.js';
+=======
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-6L74ALML.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-XH5WEM3Q.js';
+>>>>>>> 373ef2c (The kit's ContentPost reads the whole post in place as its Prose layout; the candidate template draws it by default)
 import { z } from 'zod';
 
 var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive", "academy", "nonprofit", "unlabeled"];
