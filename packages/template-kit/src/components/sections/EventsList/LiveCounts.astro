@@ -10,8 +10,11 @@
 // on the page, asks `GET /events/live?ids=` for their ids (50 at a time) and
 // writes each event's counts into its slots as text: "N going" when anyone
 // is going, "N seats left" when the event has a capacity, joined by " · ".
-// An event the answer leaves out, or a failed read, leaves its slots empty,
-// as they are with scripts off.
+// Each slot it fills also carries the numbers, for a layout that draws them
+// (the nonprofit template's spot dots): `data-going`, and `data-capacity`
+// (going plus seats left) when the event has a capacity. An event the
+// answer leaves out, or a failed read, leaves its slots empty and
+// unnumbered, as they are with scripts off.
 import { firstLiveScript, liveSource } from '../../../lib/live'
 
 const source = firstLiveScript(Astro.request) ? await liveSource(Astro.locals.backgold.firstParty) : null
@@ -51,8 +54,13 @@ const source = firstLiveScript(Astro.request) ? await liveSource(Astro.locals.ba
                 var event = events[e]
                 if (!event || typeof event.id !== 'string') continue
                 var text = words(event)
+                var going = typeof event.going === 'number' && isFinite(event.going) && event.going >= 0 ? event.going : null
+                var left = typeof event.seats_left === 'number' && isFinite(event.seats_left) && event.seats_left >= 0 ? event.seats_left : null
                 for (var s = 0; s < slots.length; s++) {
-                  if (slots[s].getAttribute('data-bg-live') === event.id) slots[s].textContent = text
+                  if (slots[s].getAttribute('data-bg-live') !== event.id) continue
+                  slots[s].textContent = text
+                  if (going !== null) slots[s].setAttribute('data-going', String(going))
+                  if (going !== null && left !== null) slots[s].setAttribute('data-capacity', String(going + left))
                 }
               }
             })

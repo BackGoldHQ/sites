@@ -1,3 +1,176 @@
-# The Nonprofit template
+# BackGold nonprofit template
 
-Scaffolded from `templates/party`; the build pass fills this in.
+The website template for a community nonprofit on BackGold: a food bank, a
+mutual-aid group, a youth program, an animal rescue, a neighborhood
+association. It is an Astro site on Cloudflare Workers, drawn by the template
+kit (`@backgold/template-kit`) from the organization's content through the
+Content API, like the [party template](../party/README.md). This README covers
+what is the nonprofit template's own; the party template's README is the
+reference for everything the kit does the same way (layouts are files, areas,
+the header and footer, restyling, the legal line).
+
+The look is bright, bubbly and hand-drawn, drawn to boards N1 to N12 and
+N-catalogue (`docs/design/nonprofit-template-2026-10` in the platform
+repository): a hand-lettered display face, sticker buttons, wobbly pen
+outlines on every card, tape, doodles, torn paper between bands and a paper
+grain over every ground. The template owns the type, the spacing, the shapes,
+the texture and the motion; the organization owns the colors. Every color is
+a band token the kit writes from the organization's brand
+(`packages/template-kit/src/lib/brand.ts`), so the look holds under any brand
+and in both schemes.
+
+## Start a nonprofit site
+
+In the operator app, start a new site from the Nonprofit template. That makes
+a site in template mode and writes the starter from `template.json` into it:
+
+| Page | Starts with |
+| --- | --- |
+| Home | Hero · overlap, StatCards · row, Issues · cards (the programs), EventsList · shifts (the next three), Stories · spotlight, Cta · photo |
+| About (`/about`) | Hero · statement, About · letter, TeamGrid · grid, Financials · donut |
+| Programs (`/programs`) | Hero · split, Services · programs, Pathways · doors, Faq · topics |
+| Get involved (`/get-involved`) | Hero · statement, EventsList · shifts (grouped by week), FormBlock · wide, Issues · steps |
+| Events (`/events`) | EventsList · agenda |
+| Donate (`/donate`) | Donate · story, Membership · tiers |
+| Contact (`/contact`) | Hero · statement, FormBlock · card, About · left |
+
+- **Menus**: the header has About, Programs, Get involved, Events, Stories
+  (the post list, at `/news`) and Contact, and Donate as the header button on
+  every page; the footer has three columns, Visit, Help out and About us.
+- **Reusable sections**: the newsletter band (SignupCapture · band) above the
+  footer on every page but Donate; a drive banner (Cta · strip, the top
+  banner), off until the organization dates it; a sidebar card (Cta · card),
+  off until the organization places it.
+
+Every word is starter copy for the organization to replace. Figures are
+`Your figure`; nothing is typed in as a price or a statistic.
+
+## Where the files live
+
+| File | What it is |
+| --- | --- |
+| `template.json` | The manifest: the layouts this template draws per section type (the default first), the areas, the entry layouts, the site parts and the starter. |
+| `src/template.ts` | The template's config for the kit: the manifest, the kit's sections with this template's own layouts registered, the kit's entry layouts, the two faces, and `defaultAppearance: 'light'`. |
+| `src/styles/template.css` | The whole look, over the kit's stylesheet: faces, stickers, pen outlines, tape, marked words, dividers, torn edges, grain and every section's restyle. Its header comment lists each part. |
+| `src/components/sections/` | This template's own layouts (below). |
+| `src/components/Doodle.astro` | One doodle from the sprite, `<svg class="dd"><use href="#d-…"/></svg>`. |
+| `src/lib/doodles.ts` | The doodle set: 9 marks and 24 icons (48-unit strokes, round caps), the marker strokes for a marked word, `iconOf` (a row's `icon` → its doodle) and the sprite. |
+| `src/lib/marked.ts`, `src/middleware.ts` | The marked word and the sprite (below). |
+| `test/marked.test.mjs` | The rewrite's tests: `pnpm --filter backgold-template-nonprofit test`. |
+| `astro.config.mjs`, `wrangler.jsonc`, `package.json` | As the party template's. |
+
+## Its own layouts
+
+| Layout | What it draws |
+| --- | --- |
+| `Services:programs` | Proposed (not yet in the contract's catalogue): an even grid of program cards, each with the row's `icon` as a doodle, its price as a chip in the operator's words ("Free"), its name and summary, its first three `includes` as For, When and Where, and its button as an outline sticker. `featured` is never drawn: no program looks recommended over another. |
+| `EventsList:shifts` | The kit's shift rows, hand-drawn: a torn-off calendar page for the date, the type as a chip, the time and place beside doodles, "Sign up for this shift" (or "Get tickets", or "Details" once closed), Add to calendar. The spots are drawn as dots (taken filled, open dashed) beside the live words, from the `data-going` and `data-capacity` the kit's LiveCounts writes; without scripts the row keeps its button and draws neither. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. |
+| `Issues:cards` (and `Issues`) | The kit's cards with the row's `icon` as a doodle and its `note` as a chip with the clock. |
+| `Pathways:doors` (and `Pathways`) | Each pathway as a door, arched with a knob, its `icon` as a doodle; the whole card is the link. |
+
+A row's `icon` maps to a doodle by name (`basket`, `book`, `wrench`, `sprout`,
+`people`, `heart`, …) or alias (`food`, `garden`, `tools`, …); any other word
+draws the sparkle, and a row with no icon draws none.
+
+Everything else is the kit's layout restyled in `template.css`, among them
+StatCards · row as pinned notes with the figure on a highlighter swipe,
+Financials · donut as hatched wedges in a pen circle, Progress · bar as a
+marker swipe in a pen trough, Membership · tiers and Services · packages with
+no card filled, and every blockquote in a post as a sticker.
+
+## The marked word (this template's convention)
+
+An operator marks the one word that matters in a heading by wrapping it in
+asterisks: `Everyone eats. Everyone *helps*.` The template draws a circle
+around it in a page-opening Hero's headline and an underline swoosh under it
+everywhere else, in the band's accent text color. A heading with no starred
+word, more than one pair or a lone star is drawn as written: the template
+never guesses the word.
+
+The kit draws the headings, so the template marks them after the fact:
+`src/middleware.ts` runs inside `@backgold/astro`'s middleware (so the edge
+cache stores its output) and, on an HTML page only, rewrites each h1, h2 and
+h3 that holds one starred pair (`src/lib/marked.ts`), never touching
+`<script>`, `<style>`, attributes or JSON, and changing nothing on a second
+pass. It also writes the doodle sprite once after `<body>` and, on a page
+with a mark, a small script that draws each mark's stroke in once when it
+enters the viewport (only under `prefers-reduced-motion: no-preference`;
+without it the stroke is simply there). A heading helper in the kit, so every
+template can honor the convention, is the brief's decision 9, the owner's
+call. A starred word in an attribute (a frame's title) keeps its asterisks.
+
+## The faces
+
+Shantell Sans for display (headlines at 800 with the Informal axis at 55 and
+Bounce at 22; buttons, chips and small numerals at 25 and 0; the letter's
+signature in the italic at 100 and 40) and Nunito for text (400, 600, 700,
+800, italic 400), both from Google Fonts (`fonts` in `src/template.ts`). Long
+reading stays in Nunito. An organization that saves a theme in BackGold
+replaces both.
+
+## Designer's calls it implements
+
+From the boards' README: pen outlines in the band's ink mixed 82% over its
+strong line; a sticker's inset ring in the band's ground; the heart on every
+Donate sticker; the header's Donate as the outline sticker on `/donate` (the
+kit's `aria-current`) and on a page carrying QuickDonate; the menu sheet does
+not repeat Donate; the marked word from the operator's asterisks; Hero ·
+overlap's card as a torn sheet of the contrast band, taped; tears only where
+grounds differ, never on the Hero, always on the footer; grain at 5%; tape
+and highlighter from the accent; StatCards as pinned notes; no filled card in
+Membership · tiers and Services; shifts grouped by week with spots as dots and
+words; the post list labelled Stories at `/news`; Footer · columns the
+default; errors as the exclamation doodle and a sentence in the accent, never
+red; RSVP and Sign up as primary stickers; kickers in mixed case after a
+doodle; the phone header's menu as an icon. Motion only under
+`prefers-reduced-motion: no-preference`: a sticker lifts 1px, a marked word
+draws in once. In Firefox, which does not keep a stretched mask's stroke at
+2px, a card's pen outline is a plain 2px blob border.
+
+## Develop locally
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm --filter @backgold/content build
+pnpm --filter @backgold/astro build
+pnpm --filter backgold-template-nonprofit dev
+```
+
+`node scripts/starter-e2e.mjs --template nonprofit` builds the template and
+checks it end to end, its starter pages at `/nonprofit-<slug>`. With
+`--serve` it keeps the site running with the starter's pages at their own
+addresses, its menus and the boards' brand; `NONPROFIT_BRAND` (JSON:
+`primary_color`, `secondary_color`, `accent_color`) swaps the brand.
+
+## Staging deploy
+
+As the party template's (its README, Staging deploy), with this template's
+names: the Worker `template-nonprofit` in `sites-staging`, the job
+`deploy-nonprofit-staging`, and the cache's KV namespace
+`backgold-nonprofit-staging-cache` with its id in the
+`NONPROFIT_STAGING_KV_ID` CI variable. Before the first deploy, once:
+
+```bash
+npx wrangler kv namespace create backgold-nonprofit-staging-cache
+glab variable set NONPROFIT_STAGING_KV_ID <id> --masked --protected -R backgold/sites
+```
+
+The api dispatches a site to `template-nonprofit` once the platform knows the
+`nonprofit` template key.
+
+## Production deploy
+
+As the party template's (its README, Production deploy): the Worker
+`template-nonprofit` in `sites-production`, deployed by
+`deploy-nonprofit-production` from the `deploy-production` button. Once:
+
+```bash
+npx wrangler kv namespace create backgold-nonprofit-production-cache
+glab variable set NONPROFIT_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

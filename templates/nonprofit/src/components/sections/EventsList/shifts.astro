@@ -1,0 +1,178 @@
+---
+// EventsList · shifts as this template draws it (boards N1 and N4): the
+// section head, then a hand-cut row per event: its date as a torn-off
+// calendar page (the month on the primary, the day hand-lettered, the
+// weekday), the type as a chip, the title linking to the event's page, the
+// time and the place beside the clock and pin doodles, the spots, and at the
+// right the row's one button ("Sign up for this shift", "Get tickets" when
+// the event sells them, "Details" in the outline once registration has
+// closed) over a quiet "Add to calendar".
+//
+// The spots are live, never part of the cached page: the kit's LiveCounts
+// writes the words ("6 going · 4 seats left") into each row's slot after the
+// page loads, with the going count and the capacity as data-going and
+// data-capacity, and this layout's script draws one dot per spot beside the
+// words, filled for each one taken and dashed for each one open (up to 24
+// spots; past that, the words alone). The dots are a picture of the words,
+// hidden from screen readers. With scripts off the row keeps its button and
+// draws neither.
+//
+// A list with no `max` (Get involved) is grouped by week, Monday to Sunday in
+// each event's own calendar, under a hand-lettered "Week of Nov 2" with the
+// week's dates and a squiggle rule; a week with no event is not drawn. A
+// capped list (home's next three) is one run of rows. With no events the
+// head stands over the section's empty-events line as a dashed invitation;
+// with neither events nor a heading nothing is drawn.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import LiveCounts from '@backgold/template-kit/components/sections/EventsList/LiveCounts.astro'
+import { eventsOf, monthName, type EventRow } from '@backgold/template-kit/components/sections/EventsList/events.ts'
+import { links, linkOf } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const invitation = text(section.copy.eventsEmptyCta)
+const events = eventsOf(section)
+const capped = typeof section.options?.max === 'number'
+
+/** The Monday that starts the event's week, in its own calendar, as a UTC date; null for an undated row. */
+const mondayOf = (e: EventRow): Date | null => {
+  if (!e.when) return null
+  const day = new Date(Date.UTC(e.when.year, e.when.monthIndex, Number(e.when.day)))
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7))
+  return day
+}
+const short = (d: Date) => `${monthName(d.getUTCMonth()).slice(0, 3)} ${d.getUTCDate()}`
+/** "Nov 2 to 8", or "Nov 30 to Dec 6" across a month. */
+const span = (monday: Date) => {
+  const sunday = new Date(monday)
+  sunday.setUTCDate(sunday.getUTCDate() + 6)
+  return `${short(monday)} to ${sunday.getUTCMonth() === monday.getUTCMonth() ? sunday.getUTCDate() : short(sunday)}`
+}
+
+interface Week {
+  key: string
+  heading: string | null
+  dates: string | null
+  rows: EventRow[]
+}
+const weeks: Week[] = []
+for (const event of events) {
+  const monday = capped ? null : mondayOf(event)
+  const key = monday ? monday.toISOString().slice(0, 10) : 'rows'
+  const last = weeks[weeks.length - 1]
+  if (last && last.key === key) last.rows.push(event)
+  else weeks.push({ key, heading: monday ? `Week of ${short(monday)}` : null, dates: monday ? span(monday) : null, rows: [event] })
+}
+
+/** The row's one button: the kit's link, worded for a shift while it takes sign-ups. */
+const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkOf('Sign up for this shift', e.action.href) : e.action)
+---
+{(heading || events.length > 0) && (
+  <Band section={section} class="events events-shifts np-shifts">
+    <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={links(section)} />
+    {events.length > 0 ? (
+      <div class="np-weeks" data-np-shifts>
+        {weeks.map((week) => (
+          <div class="np-week">
+            {week.heading && (
+              <h3 class="np-week-head">
+                {week.heading}
+                <small>{week.dates}</small>
+                <span class="np-rule" aria-hidden="true"></span>
+              </h3>
+            )}
+            <ul class="np-shift-list" role="list">
+              {week.rows.map((event) => {
+                const action = actionOf(event)
+                return (
+                  <li class="np-shift np-card">
+                    {event.when && event.startsAt ? (
+                      <time class="np-tile" datetime={event.startsAt}>
+                        <span class="np-tile-month" aria-hidden="true">{event.when.monthShort}</span>
+                        <b aria-hidden="true">{event.when.day}</b>
+                        {event.when.weekday && <span class="np-tile-weekday" aria-hidden="true">{event.when.weekday}</span>}
+                        <span class="visually-hidden">{event.when.full}</span>
+                      </time>
+                    ) : (
+                      <span class="np-tile" aria-hidden="true"><b>–</b></span>
+                    )}
+                    <div class="np-shift-body">
+                      {event.type && <p class="np-shift-type"><span class="chip"><Doodle name="people" />{event.type}</span></p>}
+                      <h3 class="np-shift-title">{event.link ? <a href={event.link.href} rel={event.link.rel}>{event.title}</a> : event.title}</h3>
+                      {(event.when?.time || event.place) && (
+                        <p class="np-shift-meta">
+                          {event.when?.time && <span><Doodle name="clock" />{event.when.time}</span>}
+                          {event.place && <span><Doodle name="pin" />{event.place}</span>}
+                        </p>
+                      )}
+                      {(event.id || event.closed) && (
+                        <p class="np-spots">
+                          {event.id && <span class="np-dots" aria-hidden="true"></span>}
+                          {event.id && <span class="np-live" data-bg-live={event.id}></span>}
+                          {event.closed && <span class="np-closed"><Doodle name="exclaim" />Registration closed</span>}
+                        </p>
+                      )}
+                    </div>
+                    {(action || event.calendar) && (
+                      <div class="np-shift-go">
+                        {action && (
+                          <a class:list={['button', event.closed && 'button-quiet']} href={action.href} rel={action.rel}>
+                            {action.label}<span class="visually-hidden">: {event.title}</span>
+                          </a>
+                        )}
+                        {event.calendar && (
+                          <a class="np-calendar" href={event.calendar.href} rel={event.calendar.rel}>
+                            <Doodle name="calendar" />{event.calendar.label}<span class="visually-hidden">: {event.title}</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+        <script is:inline>
+          (function (root) {
+            if (!root || !window.MutationObserver) return
+            var MOST = 24
+            var draw = function (slot) {
+              var dots = slot.previousElementSibling
+              if (!dots || !dots.classList.contains('np-dots')) return
+              var going = Number(slot.getAttribute('data-going'))
+              var capacity = Number(slot.getAttribute('data-capacity'))
+              dots.textContent = ''
+              if (!slot.hasAttribute('data-capacity') || !(capacity > 0) || capacity > MOST || !(going >= 0)) return
+              for (var i = 0; i < capacity; i++) {
+                var dot = document.createElement('i')
+                if (i >= going) dot.className = 'np-open'
+                dots.appendChild(dot)
+              }
+            }
+            var slots = root.querySelectorAll('[data-bg-live]')
+            var watch = new MutationObserver(function (changes) {
+              for (var c = 0; c < changes.length; c++) draw(changes[c].target)
+            })
+            for (var s = 0; s < slots.length; s++) {
+              draw(slots[s])
+              watch.observe(slots[s], { attributes: true, attributeFilter: ['data-going', 'data-capacity'] })
+            }
+          })(document.currentScript.closest('[data-np-shifts]'))
+        </script>
+      </div>
+    ) : (
+      <p class="np-invite"><Doodle name="calendar" />{invitation ?? 'No shifts are posted right now.'}</p>
+    )}
+    <LiveCounts />
+  </Band>
+)}

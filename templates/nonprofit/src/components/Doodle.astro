@@ -1,0 +1,14 @@
+---
+// One doodle from the template's sprite (src/lib/doodles.ts, written once a
+// page by src/middleware.ts): a 48-unit pen stroke in `currentColor`, hidden
+// from screen readers (the words beside it carry the meaning).
+import type { DoodleName } from '../lib/doodles.ts'
+
+interface Props {
+  name: DoodleName
+  class?: string
+}
+
+const { name, class: className } = Astro.props
+---
+<svg class:list={['dd', className]} viewBox="0 0 48 48" aria-hidden="true" focusable="false"><use href={`#d-${name}`}></use></svg>

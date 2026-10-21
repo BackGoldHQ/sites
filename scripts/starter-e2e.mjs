@@ -42,6 +42,9 @@
 //   node scripts/starter-e2e.mjs --template candidate
 //                                         the candidate template's checks, its
 //                                         starter pages at /candidate-<slug>
+// --template nonprofit serves its starter pages at /nonprofit-<slug> and
+// checks its own layouts and its middleware in the HTML (its block, near
+// the end); with --serve, at their own addresses.
 // --template academy also runs the template first-party, as BackGold serves
 // it (its block, near the end): the Worker reads the fixture through a
 // service binding to a stand-in api Worker, a visitor signs in through the
@@ -1817,7 +1820,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
   const plain = fixtureData(examples, kitchenSections)
   const based = blogBase === 'news' ? newsBaseData(plain, examples) : plain
   // `academy`: the organization is an academy on the academy template's starter (withAcademy).
-  const data = academy ? withAcademy(based, examples) : withCandidate(based, examples)
+  const data = academy ? withAcademy(based, examples) : withNonprofit(withCandidate(based, examples), examples)
   // `progress`: what the lesson pages saved, as the api took it; `done`, the lessons it marked finished.
   const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '', progress: [], done: new Set() }
   const MOUNT = '/api/content/v1'
@@ -3113,7 +3116,8 @@ async function runLiveScript(html) {
   const attributes = Object.fromEntries([...tag[1].matchAll(/([\w-]+)="([^"]*)"/g)].map((m) => [m[1], decode(m[2])]))
   const slots = [...html.matchAll(/\bdata-bg-live="([^"]*)"/g)].map((m) => {
     const id = decode(m[1])
-    return { id, textContent: '', getAttribute: (name) => (name === 'data-bg-live' ? id : null) }
+    const data = {}
+    return { id, textContent: '', data, getAttribute: (name) => (name === 'data-bg-live' ? id : (data[name] ?? null)), setAttribute: (name, value) => (data[name] = value) }
   })
   const reads = []
   const document = {
@@ -3184,7 +3188,7 @@ async function checkFirstPartyLive(siteDir) {
   const tag = /<script\b([^>]*\bdata-bg-live-api="[^"]*"[^>]*)>([\s\S]*?)<\/script>/.exec(html)
   check(tag !== null && /\bdata-bg-live-api="\/api\/content\/v1\/events\/live"/.test(tag[1]), 'first-party, the script asks the same-origin path /api/content/v1/events/live')
   check(!/data-bg-live-key/.test(tag[1]), 'and carries no key attribute')
-  const slot = { textContent: '', getAttribute: (name) => (name === 'data-bg-live' ? 'evt_w1' : null) }
+  const slot = { textContent: '', getAttribute: (name) => (name === 'data-bg-live' ? 'evt_w1' : null), setAttribute: () => {} }
   const asked = []
   runInNewContext(tag[2], {
     document: {
@@ -3294,6 +3298,13 @@ async function checkPartyBoards(origin, fixture) {
       filled.evt_w1.length === 2 &&
       filled.evt_w3.length === 2,
     `it fills each slot: "142 going", "88 going · 12 seats left", and nothing for an event left out or with no one going (${JSON.stringify(filled)})`,
+  )
+  const numbers = Object.fromEntries(upcomingIds.map((id) => [id, ran.slots.find((s) => s.id === id)?.data ?? null]))
+  check(
+    JSON.stringify(numbers.evt_w1) === '{"data-going":"142"}' &&
+      JSON.stringify(numbers.evt_w3) === '{"data-going":"88","data-capacity":"100"}' &&
+      JSON.stringify(numbers.evt_w2) === '{}',
+    `and writes the numbers on each slot it fills: data-going, and data-capacity where the event has seats (${JSON.stringify(numbers)})`,
   )
   const actions = (markup) => [...markup.matchAll(/<a class="button[^"]*" href="([^"]*)"[^>]*>\s*([^<]*?)\s*<span class="visually-hidden"[^>]*>: ([^<]*)<\/span>/g)].map((m) => [decode(m[3]), m[2], decode(m[1])])
   const agendaActions = Object.fromEntries(actions(agenda).map(([title, label, href]) => [title, `${label} ${href}`]))
@@ -4230,6 +4241,179 @@ async function driveLook() {
 }
 
 // ── petition-drive (end) ─────────────────────────────────────────────────────
+
+// ── The nonprofit template (--template nonprofit) ────────────────────────────
+//
+// Its starter pages (templates/nonprofit/template.json) as the fixture serves
+// them, with what BackGold fills put in: volunteer shifts over the next three
+// weeks with their live counts (spots taken and left), the team, the
+// membership program's tiers, the shares of the Financials figures, the
+// module frames, photos for the heroes and the closing call, and the
+// reusable sections the starter's rules place (the newsletter band above the
+// footer on every page but Donate; the drive banner and the sidebar card,
+// which a site turns on, on home and Events). The checks read them at
+// /nonprofit-<slug> (/nonprofit-home for home); --serve puts them at their
+// own addresses with the starter's menus and the boards' brand (Kettle
+// blue, Paper, Persimmon; NONPROFIT_BRAND, a JSON { primary_color,
+// secondary_color, accent_color }, replaces it), so the site looks like a new
+// nonprofit site (boards N1 to N12). Then the checks for the template's own
+// layouts and its middleware, in the HTML.
+
+const NONPROFIT = TEMPLATE_NAME === 'nonprofit'
+
+/** The address a nonprofit starter page is served at: its own under --serve, else /nonprofit-<slug>. */
+const nonprofitSlug = (slug) => (SERVE ? slug || 'home' : `nonprofit-${slug || 'home'}`)
+
+/** A volunteer shift `days` from now at `hour` UTC, with its live counts. */
+function nonprofitShifts() {
+  const at = (days, hour) => {
+    const d = new Date()
+    d.setUTCHours(hour, 0, 0, 0)
+    d.setUTCDate(d.getUTCDate() + days)
+    return d.toISOString()
+  }
+  const shift = (id, title, days, hour, location, going, seatsLeft, extra = {}) => ({
+    row: { id, title, starts_at: at(days, hour), ends_at: null, timezone: 'America/Chicago', location, is_virtual: false, type: 'volunteer_shift', registration_closed: false, sells_tickets: false, tickets_url: null, url: `https://events.example.org/${id}`, ...extra },
+    live: { going, seats_left: seatsLeft },
+  })
+  return [
+    shift('evt_np1', 'Sort and pack for the Saturday market', 2, 14, 'The market lot', 6, 4),
+    shift('evt_np2', 'Garden day', 3, 15, 'The community garden', 3, 5),
+    shift('evt_np3', 'Homework club tutor', 4, 21, 'The branch library', 3, 1),
+    shift('evt_np4', 'Tool library check-in desk', 9, 23, 'The tool library', 2, 0, { registration_closed: true }),
+    shift('evt_np5', 'Sort and pack for the Saturday market', 16, 14, 'The market lot', 2, 8),
+  ]
+}
+
+/** The membership program's three tiers, as BackGold bakes them. */
+const NONPROFIT_MEMBERSHIP = ['Neighbor', 'Regular', 'Keeper'].map((name, i) => ({
+  model: 'tiered', name, monthly_cents: null, annual_cents: [2500, 6000, 12000][i], lifetime_cents: null, onetime_cents: null, symbolic: false,
+  benefits: ['The newsletter, first', 'A vote at the annual meeting', 'Our thanks, in person'],
+}))
+
+/** `data` with the nonprofit's starter pages added (only on --template nonprofit). */
+function withNonprofit(data, ex) {
+  if (!NONPROFIT) return data
+  const { starter } = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
+  const donateEmbed = ex.PageResponse.sections.find((s) => s.type === 'Donate').embed
+  const signupEmbed = ex.PageResponse.areas.above_footer[0].sections[0].embed
+  const shifts = nonprofitShifts()
+  const photo = (name, alt) => ({ url: `https://api.backgold.com/api/media-files/med_${name}`, alt })
+  const team = [
+    { group: 'exec', name: 'Odessa Plume', role: 'Director', bio: 'Started the market with a folding table.', image_url: null, link_url: null },
+    { group: 'staff', name: 'Tobias Wren', role: 'Volunteer coordinator', dept: 'Programs', image_url: null, link_url: null },
+    { group: 'staff', name: 'Hester Quill', role: 'Garden lead', dept: 'Programs', image_url: null, link_url: null },
+    { group: 'open', role: 'Board seat', dept: 'Board', blurb: 'One seat opens each spring. Tell us why you would like it.', link_url: '/contact' },
+  ]
+  const fill = (pageId) => (section) => {
+    const s = { options: {}, ...structuredClone(section) }
+    if (s.type === 'EventsList') {
+      const rows = [...shifts.map((x) => x.row), ...(s.variant === 'agenda' ? data.events.upcoming : [])]
+      s.data = { source: 'events', items: s.options.max ? rows.slice(0, s.options.max) : rows }
+    }
+    if (s.type === 'Hero' && (s.variant === 'overlap' || s.variant === 'split')) s.media = { photoUrl: photo('market', 'Volunteers at the Saturday market') }
+    if (s.type === 'Hero' && s.copy.caption === undefined && s.variant === 'overlap') s.copy = { ...s.copy, caption: 'Photo: the Saturday market', imageAlt: 'Volunteers at the Saturday market' }
+    if (s.type === 'Cta' && s.variant === 'photo') s.media = { photoUrl: photo('potluck', 'The fall potluck') }
+    if (s.type === 'TeamGrid') s.data = { source: 'team', items: team }
+    if (s.type === 'Financials') s.data = { ...s.data, items: s.data.items.map((row, i) => ({ ...row, share: [78, 14, 8][i] })) }
+    if (s.type === 'Donate') s.embed = donateEmbed
+    if (s.type === 'Membership') s.data = { source: 'membership', items: NONPROFIT_MEMBERSHIP }
+    if (s.type === 'FormBlock') s.embed = { iframe: `https://api.backgold.com/f/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    if (s.type === 'SignupCapture') s.embed = { ...signupEmbed, iframe: signupEmbed.iframe.replace(/[^/]+$/, s.id) }
+    return s
+  }
+  const reusable = (key, pageId) => {
+    const r = starter.sections.find((x) => x.key === key)
+    return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
+  }
+  const pages = starter.pages.map((p) => {
+    const slug = nonprofitSlug(p.slug)
+    const id = `lp_nonprofit_${p.slug || 'home'}`
+    const url = slug === 'home' ? '/' : `/${slug}`
+    return {
+      summary: { id, slug, title: p.title, url, is_home: slug === 'home', published_at: '2026-10-20T14:00:00.000Z', updated_at: '2026-10-20T14:00:00.000Z', takes_donations: true },
+      response: {
+        page: { ...ex.PageResponse.page, id, slug, title: p.title, url, is_home: slug === 'home', takes_donations: true, meta: { title: null, description: null, image_url: null } },
+        sections: p.sections.map(fill(id)),
+        areas: {
+          top_banner: p.slug === '' ? [reusable('drive-banner', id)] : [],
+          sidebar: p.slug === 'events' ? [reusable('sidebar-card', id)] : [],
+          above_footer: p.slug === 'donate' ? [] : [reusable('the-newsletter', id)],
+        },
+        legal: data.legal,
+      },
+    }
+  })
+  const bySlug = new Map(pages.map((p) => [p.summary.slug, p.response]))
+  const out = {
+    ...data,
+    pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
+    page: (slug, headline) => bySlug.get(slug) ?? data.page(slug, headline),
+    events: { ...data.events, live: { ...data.events.live, ...Object.fromEntries(shifts.map((x) => [x.row.id, x.live])) } },
+  }
+  if (!SERVE) return out
+  // --serve: the starter's menus, the newsletter band on the posts, and the boards' brand with no saved theme.
+  let n = 0
+  const menuItem = (item) => ({
+    id: `nav_n${++n}`,
+    label: item.label,
+    kind: item.kind,
+    target: { kind: item.kind, ...(item.target.slug !== undefined ? { slug: item.target.slug || 'home' } : {}) },
+    url: item.kind === 'page' ? (item.target.slug ? `/${item.target.slug}` : '/') : item.kind === 'blog' ? `/${data.types.find((t) => t.key === 'post').url_base}` : item.kind === 'donate' ? '/donate' : null,
+    external: false,
+    header_button: item.header_button,
+    shows_on: item.shows_on,
+    children: item.children.map(menuItem),
+  })
+  const brand = { primary_color: '#2d4fd6', secondary_color: '#fff3d6', accent_color: '#ff6b4a', ...(process.env.NONPROFIT_BRAND ? JSON.parse(process.env.NONPROFIT_BRAND) : {}) }
+  return {
+    ...out,
+    site: { ...out.site, name: 'Kettle Commons', brand: { ...out.site.brand, logo_url: null, ...brand }, theme: null },
+    menus: {
+      ...out.menus,
+      primary: { menu: { key: 'primary' }, items: starter.menus.primary.map(menuItem) },
+      footer: { menu: { key: 'footer' }, items: starter.menus.footer.map(menuItem) },
+    },
+    entryAreas: { top_banner: [], sidebar: [], above_footer: [reusable('the-newsletter', 'lp_nonprofit_news')] },
+  }
+}
+
+/** The template's own layouts and its middleware, in the HTML of its starter pages. */
+async function checkNonprofit(origin) {
+  log('\nNonprofit: Services · programs, EventsList · shifts, the icon doodles, the marked words and the sprite')
+  const at = (slug) => `/${nonprofitSlug(slug)}`
+  let res = await get(origin, at(''))
+  let html = await res.text()
+  check(res.status === 200 && html.split('class="np-sprite"').length === 2 && /<body[^>]*><svg class="np-sprite"/.test(html), 'home carries the doodle sprite once, right after <body>')
+  check(
+    /<h1[^>]*>Everyone eats\. Everyone <span class="np-mark"><span class="np-mark-word">helps<\/span><svg class="np-mark-u"/.test(html) && !/\*helps\*/.test(html.replace(/<script[\s\S]*?<\/script>/g, '')),
+    "the hero's starred word is marked, and its asterisks are gone from the page",
+  )
+  const shifts = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
+  check(
+    (shifts.match(/class="np-shift np-card"/g) ?? []).length === 3 && !shifts.includes('np-week-head') && (shifts.match(/class="np-live" data-bg-live="evt_np\d"/g) ?? []).length === 3 && shifts.includes('>Sign up for this shift<'),
+    "home's EventsList · shifts draws its three rows in one run, each with its live slot and Sign up for this shift",
+  )
+  const programs = sectionsOf(html).find((s) => s.type === 'Issues')?.html ?? ''
+  check((programs.match(/<use href="#d-(basket|book|wrench)">/g) ?? []).length === 3 && (programs.match(/class="np-when"/g) ?? []).length === 3, "home's Issues · cards draws each row's icon as a doodle and its note")
+  res = await get(origin, at('programs'))
+  html = await res.text()
+  const services = sectionsOf(html).find((s) => s.type === 'Services')?.html ?? ''
+  check(
+    /data-variant="programs"/.test(services) && (services.match(/class="np-program np-card"/g) ?? []).length === 4 && (services.match(/<dt>/g) ?? []).length === 12 && !/featured/.test(services),
+    'Programs draws Services · programs: four cards, For / When / Where each, nothing featured',
+  )
+  const doors = sectionsOf(html).find((s) => s.type === 'Pathways')?.html ?? ''
+  check((doors.match(/class="door door-linked"/g) ?? []).length === 3 && doors.includes('<use href="#d-heart">'), 'Pathways · doors draws three linked doors with their icons')
+  res = await get(origin, at('get-involved'))
+  html = await res.text()
+  const weeks = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
+  check(res.status === 200 && (weeks.match(/class="np-week-head"/g) ?? []).length >= 2 && /Week of [A-Z][a-z]{2} \d{1,2}<small>/.test(weeks), 'Get involved groups its shifts by week under "Week of …" with the dates')
+  check(weeks.includes('>Details<') && weeks.includes('Registration closed'), 'a shift whose registration closed offers Details and says so')
+  res = await get(origin, at('donate'))
+  html = await res.text()
+  check(res.status === 200 && !html.includes('data-type="SignupCapture"'), 'Donate carries no newsletter band, by its rule')
+}
 
 // ── The candidate template (--template candidate) ────────────────────────────
 //
@@ -5195,6 +5379,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
     if (PETITION_DRIVE) await checkPetitionDrive(configured.origin, fixture, chrome)
     // ── petition-drive (end) ──
     if (CANDIDATE) await checkCandidateLook(configured.origin, chrome, fixture)
+    if (NONPROFIT) await checkNonprofit(configured.origin)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

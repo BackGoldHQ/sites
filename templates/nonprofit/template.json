@@ -6,35 +6,27 @@
   "variants": {
     "Hero": [
       "centered",
-      "cover",
       "split",
       "overlap",
+      "cover",
       "statement",
-      "donate",
-      "video",
-      "rotating"
+      "donate"
     ],
     "About": [
       "right",
       "left",
       "letter",
-      "portrait",
-      "books"
+      "portrait"
     ],
     "Issues": [
       "cards",
       "steps",
       "numbered",
-      "rows",
-      "checklist",
-      "tabs",
-      "drawer"
+      "checklist"
     ],
     "StatCards": [
       "row",
-      "ribbon",
-      "feature",
-      "wall"
+      "feature"
     ],
     "Cta": [
       "card",
@@ -45,15 +37,11 @@
     "QuoteStrip": [
       "row",
       "single",
-      "ticker",
-      "logos",
-      "carousel",
       "wall"
     ],
     "Map": [
       "directory",
-      "map",
-      "bar"
+      "map"
     ],
     "MovementMap": [
       "full"
@@ -70,138 +58,20 @@
       "tall",
       "card"
     ],
-    "Progress": [
-      "bar",
-      "ring",
-      "compact",
-      "match"
-    ],
-    "Countdown": [
-      "banner"
-    ],
-    "Leaderboard": [
-      "table"
-    ],
-    "SocialFeed": [
-      "grid"
-    ],
-    "MovementTicker": [
-      "ticker"
-    ],
-    "EventsList": [
-      "list",
-      "cards",
-      "agenda",
-      "compact",
-      "calendar",
-      "shifts",
-      "week",
-      "cohorts",
-      "map"
-    ],
-    "Blog": [
-      "cards",
-      "list",
-      "feature"
-    ],
-    "Collection": [
-      "cards",
-      "list",
-      "compact",
-      "feature",
-      "library",
-      "shelves",
-      "outline"
-    ],
-    "ContentPost": [
-      "card",
-      "banner",
-      "player",
-      "theater"
-    ],
-    "PlatformPlanks": [
-      "numbered",
-      "columns",
-      "longread"
-    ],
-    "CandidateRoster": [
-      "cards",
-      "ballot",
-      "compact"
-    ],
-    "TeamGrid": [
-      "grid",
-      "board",
-      "list"
-    ],
-    "Donate": [
-      "form",
-      "story"
-    ],
-    "Petition": [
-      "none",
-      "image",
-      "map",
-      "coverage"
-    ],
-    "FormBlock": [
-      "card",
-      "wide"
-    ],
-    "SignupCapture": [
-      "card",
-      "band",
-      "inline"
-    ],
-    "Store": [
-      "grid",
-      "featured"
-    ],
-    "Event": [
-      "detail",
-      "card"
-    ],
-    "Calendar": [
-      "month",
-      "agenda"
-    ],
-    "PollBlock": [
-      "card"
-    ],
-    "SocialFrame": [
-      "ring"
-    ],
-    "Advocacy": [
-      "full",
-      "compact"
-    ],
     "QuickDonate": [
       "grid",
-      "hero",
       "bar",
-      "jar",
       "band",
       "ladder"
     ],
     "VoterTools": [
-      "register",
-      "polling",
-      "dates"
+      "register"
     ],
     "SampleBallot": [
-      "slate",
-      "cards",
-      "measures"
+      "slate"
     ],
     "Scorecard": [
-      "table",
-      "grades",
-      "promise"
-    ],
-    "Membership": [
-      "card",
-      "tiers",
-      "compare"
+      "table"
     ],
     "Faq": [
       "accordion",
@@ -210,8 +80,7 @@
     ],
     "Comparison": [
       "table",
-      "cards",
-      "spectrum"
+      "cards"
     ],
     "Stories": [
       "spotlight",
@@ -231,7 +100,7 @@
     "Services": [
       "packages",
       "list",
-      "compare"
+      "programs"
     ],
     "CaseStudies": [
       "featured",
@@ -240,27 +109,121 @@
     ],
     "Resources": [
       "library",
-      "featured",
-      "band"
+      "featured"
     ],
     "Pathways": [
       "doors",
-      "tabs",
       "quiz"
     ],
     "Portfolio": [
-      "grid",
-      "featured",
-      "strip"
+      "grid"
     ],
     "MediaKit": [
       "kit",
-      "speaker",
       "press"
+    ],
+    "Progress": [
+      "bar",
+      "ring",
+      "compact",
+      "match"
+    ],
+    "Countdown": [
+      "banner",
+      "inline"
+    ],
+    "Leaderboard": [
+      "table"
+    ],
+    "SocialFeed": [
+      "grid"
+    ],
+    "MovementTicker": [
+      "ticker"
+    ],
+    "EventsList": [
+      "list",
+      "cards",
+      "agenda",
+      "compact",
+      "calendar",
+      "shifts",
+      "week",
+      "map"
+    ],
+    "Blog": [
+      "cards",
+      "list",
+      "feature"
+    ],
+    "Collection": [
+      "cards",
+      "list",
+      "compact",
+      "feature"
+    ],
+    "ContentPost": [
+      "card",
+      "banner",
+      "player"
+    ],
+    "PlatformPlanks": [
+      "numbered"
+    ],
+    "CandidateRoster": [
+      "cards"
+    ],
+    "TeamGrid": [
+      "grid",
+      "list"
+    ],
+    "Membership": [
+      "card",
+      "tiers",
+      "compare"
     ],
     "Booking": [
       "cards",
       "list"
+    ],
+    "Donate": [
+      "form",
+      "story"
+    ],
+    "SignupCapture": [
+      "card",
+      "band",
+      "inline"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "PollBlock": [
+      "card"
+    ],
+    "Petition": [
+      "none",
+      "image"
+    ],
+    "Store": [
+      "grid",
+      "featured"
+    ],
+    "Event": [
+      "detail",
+      "card"
+    ],
+    "Calendar": [
+      "month",
+      "agenda"
+    ],
+    "SocialFrame": [
+      "ring"
+    ],
+    "Advocacy": [
+      "full",
+      "compact"
     ]
   },
   "areas": {
@@ -274,16 +237,16 @@
       "entry": "article",
       "list": "list"
     },
-    "podcast": {
-      "entry": "episode",
-      "list": "list"
-    },
     "video": {
       "entry": "watch",
       "list": "grid"
     },
     "newsletter": {
       "entry": "issue",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
       "list": "list"
     }
   },
@@ -293,8 +256,8 @@
       "centered"
     ],
     "footer": [
-      "giving",
       "columns",
+      "giving",
       "closing",
       "compact"
     ],
@@ -312,32 +275,40 @@
             "type": "Hero",
             "band": "plain",
             "bleed": "full",
-            "variant": "cover",
+            "variant": "overlap",
             "copy": {
-              "headline": "More freedom. Fewer excuses.",
-              "subheadline": "Your party, in every county: we run candidates, we post every check we write, and we think you can run your own life.",
-              "ctaText": "Join the party"
+              "kicker": "A neighborhood nonprofit",
+              "headline": "Everyone eats. Everyone *helps*.",
+              "subheadline": "Say what you do and who it is for in a sentence or two: the programs you run, where, and that anyone is welcome."
             },
             "media": {},
             "links": [
               {
-                "label": "Join the party",
+                "label": "Volunteer a shift",
                 "target": {
-                  "kind": "surface",
-                  "path": "/join"
+                  "kind": "page",
+                  "slug": "get-involved"
                 },
-                "url": "/join"
+                "url": "/get-involved"
+              },
+              {
+                "label": "See our programs",
+                "target": {
+                  "kind": "page",
+                  "slug": "programs"
+                },
+                "url": "/programs"
               }
             ]
           },
           {
             "id": "StatCards-home",
             "type": "StatCards",
-            "band": "contrast",
-            "bleed": "contained",
-            "variant": "ribbon",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "row",
             "copy": {
-              "heading": ""
+              "heading": "A year of Saturdays, *counted*."
             },
             "media": {},
             "links": [],
@@ -345,26 +316,20 @@
               "source": "stats",
               "items": [
                 {
-                  "label": "county chapters, and counting",
                   "value": "Your figure",
-                  "note": "",
-                  "accent": true
-                },
-                {
-                  "label": "candidates on the November ballot",
-                  "value": "Your figure",
+                  "label": "bags of groceries packed each month",
                   "note": "",
                   "accent": false
                 },
                 {
-                  "label": "registered members",
                   "value": "Your figure",
+                  "label": "kids at homework help this fall",
                   "note": "",
                   "accent": false
                 },
                 {
-                  "label": "on the ballot since",
                   "value": "Your figure",
+                  "label": "volunteer hours this year",
                   "note": "",
                   "accent": false
                 }
@@ -376,39 +341,43 @@
             "type": "Issues",
             "band": "plain",
             "bleed": "full",
-            "variant": "numbered",
+            "variant": "cards",
             "copy": {
-              "kicker": "What we stand for",
-              "heading": "Three things we would change first",
+              "kicker": "What we do",
+              "heading": "Three doors, *always* open.",
               "lead": ""
             },
             "media": {},
             "links": [
               {
-                "label": "The whole platform",
+                "label": "All programs",
                 "target": {
-                  "kind": "section",
-                  "slug": "about",
-                  "anchor": "platform"
+                  "kind": "page",
+                  "slug": "programs"
                 },
-                "url": "/about#platform",
-                "style": "ghost"
+                "url": "/programs"
               }
             ],
             "data": {
               "source": "issues",
               "items": [
                 {
-                  "title": "Keep what you earn",
-                  "body": "No new income tax bracket, and a vote of the people before any new levy."
+                  "title": "Saturday market",
+                  "body": "Free groceries you pick yourself, laid out like a market, not handed out like a line. Bring a bag.",
+                  "note": "Saturdays, 9 to noon",
+                  "icon": "basket"
                 },
                 {
-                  "title": "Open every ledger",
-                  "body": "Every check the state writes, online within a week, searchable by anyone."
+                  "title": "Homework club",
+                  "body": "Tutors, snacks and a quiet table for kids after school.",
+                  "note": "Monday to Thursday, after school",
+                  "icon": "book"
                 },
                 {
-                  "title": "Let families choose",
-                  "body": "School funding follows the student, to any school that will teach them."
+                  "title": "Tool library",
+                  "body": "Borrow a drill, a ladder or a wheelbarrow with a library card. Bring it back when the job is done.",
+                  "note": "Wednesday evenings and Saturdays",
+                  "icon": "wrench"
                 }
               ]
             }
@@ -416,77 +385,104 @@
           {
             "id": "EventsList-home",
             "type": "EventsList",
-            "band": "tint",
+            "band": "wash",
             "bleed": "full",
-            "variant": "cards",
+            "variant": "shifts",
             "copy": {
-              "heading": "Where to find us this month",
-              "eventsEmptyCta": "Nothing is on the calendar yet. New events show here as soon as they are posted."
+              "kicker": "Lend a hand",
+              "heading": "Shifts that need *you*",
+              "eventsEmptyCta": "No shifts are posted right now. New ones show here as soon as they are on the calendar."
             },
             "media": {},
-            "links": [],
+            "links": [
+              {
+                "label": "All shifts",
+                "target": {
+                  "kind": "page",
+                  "slug": "get-involved"
+                },
+                "url": "/get-involved"
+              }
+            ],
             "options": {
               "max": 3
             }
           },
           {
-            "id": "Blog-home",
-            "type": "Blog",
+            "id": "Stories-home",
+            "type": "Stories",
             "band": "plain",
             "bleed": "full",
-            "variant": "feature",
+            "variant": "spotlight",
             "copy": {
-              "heading": "From the party"
+              "kicker": "Stories",
+              "heading": "What a Saturday *grows* into",
+              "label": "Your program",
+              "title": "The garden that started with one borrowed shovel",
+              "summary": "Tell the story of one program in three sentences: how it began, who it helps now, and what changed.",
+              "status": "Growing",
+              "readLabel": "Read the story"
             },
             "media": {},
-            "links": [],
-            "options": {
-              "maxItems": 4
+            "links": [
+              {
+                "label": "Read the story",
+                "target": {
+                  "kind": "page",
+                  "slug": "news"
+                },
+                "url": "/news"
+              }
+            ],
+            "data": {
+              "source": "stories",
+              "items": [
+                {
+                  "title": "A first week, told by a volunteer",
+                  "body": "What it was like to show up the first time, in their words.",
+                  "label": "Volunteers",
+                  "status": "Ongoing",
+                  "tone": "progress"
+                },
+                {
+                  "title": "What one season added up to",
+                  "body": "A short look back at a season: what you set out to do and what happened.",
+                  "label": "Your program",
+                  "status": "Done",
+                  "tone": "won"
+                }
+              ]
             }
-          },
-          {
-            "id": "CandidateRoster-home",
-            "type": "CandidateRoster",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "compact",
-            "copy": {
-              "heading": "Our candidates",
-              "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set."
-            },
-            "media": {},
-            "links": []
           },
           {
             "id": "Cta-home",
             "type": "Cta",
             "band": "contrast",
-            "bleed": "contained",
+            "bleed": "full",
             "variant": "photo",
             "copy": {
-              "eyebrow": "Take part",
-              "heading": "This state does not need another party that asks permission.",
-              "body": "Members choose our candidates, write the platform and vote at convention. Volunteers do the rest.",
-              "donateButtonText": "Become a member",
-              "volunteerButtonText": "Volunteer"
+              "eyebrow": "Give",
+              "heading": "Keep the *kettle* on all winter.",
+              "body": "A monthly gift keeps the programs running between drives. Change it or stop it any time, from the email we send you.",
+              "donateButtonText": "Give monthly"
             },
             "media": {},
             "links": [
               {
-                "label": "Become a member",
+                "label": "Give monthly",
                 "target": {
                   "kind": "surface",
-                  "path": "/join"
+                  "path": "/donate"
                 },
-                "url": "/join"
+                "url": "/donate"
               },
               {
-                "label": "Volunteer",
+                "label": "Other ways to give",
                 "target": {
                   "kind": "page",
-                  "slug": "contact"
+                  "slug": "donate"
                 },
-                "url": "/contact"
+                "url": "/donate"
               }
             ]
           }
@@ -501,23 +497,14 @@
             "type": "Hero",
             "band": "plain",
             "bleed": "full",
-            "variant": "split",
+            "variant": "statement",
             "copy": {
-              "headline": "A party for people who would rather be left alone.",
-              "subheadline": "We run candidates in every corner of the state on one idea: you are the best judge of how to live your life.",
-              "ctaText": "Join the party"
+              "kicker": "Who we are",
+              "headline": "Run by the neighbors who *use* it.",
+              "subheadline": "Say where you started, who runs things now and who the doors are open to."
             },
             "media": {},
-            "links": [
-              {
-                "label": "Join the party",
-                "target": {
-                  "kind": "surface",
-                  "path": "/join"
-                },
-                "url": "/join"
-              }
-            ]
+            "links": []
           },
           {
             "id": "About-about",
@@ -526,255 +513,350 @@
             "bleed": "full",
             "variant": "letter",
             "copy": {
-              "heading": "We are not here to manage you.",
-              "body": "Every two years someone promises to fix this state from the top down. We think it works better from the bottom up: families, neighbors, and county chapters that meet in libraries and grange halls and argue about the right things.\n\nWe are a small party with a long memory. We post every check we write. Our members pick our candidates and write our platform, and we keep showing up in every county, whether or not the cameras do."
+              "heading": "A letter from our director",
+              "body": "Write to the people who will read this page: why the organization exists, what a good week looks like, and what you hope a visitor does next.\n\nKeep it short and in your own voice. A letter reads best at three or four paragraphs.",
+              "signature": "Your director’s name",
+              "role": "Director"
             },
             "media": {},
             "links": []
           },
           {
-            "id": "StatCards-about",
-            "type": "StatCards",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "row",
-            "copy": {
-              "heading": ""
-            },
-            "media": {},
-            "links": [],
-            "data": {
-              "source": "stats",
-              "items": [
-                {
-                  "label": "the year the party was founded",
-                  "value": "Your figure",
-                  "note": "",
-                  "accent": true
-                },
-                {
-                  "label": "counties with a chapter that meets every month",
-                  "value": "Your figure",
-                  "note": "",
-                  "accent": false
-                },
-                {
-                  "label": "the year we started posting every check online",
-                  "value": "Your figure",
-                  "note": "",
-                  "accent": false
-                }
-              ]
-            }
-          },
-          {
-            "id": "PlatformPlanks-about",
-            "type": "PlatformPlanks",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "longread",
-            "copy": {
-              "heading": "What we stand for"
-            },
-            "media": {},
-            "links": [],
-            "options": {
-              "anchorId": "platform"
-            },
-            "data": {
-              "source": "platform",
-              "items": [
-                {
-                  "title": "Your money",
-                  "ethos": "What you earn is yours first. Government should have to make its case every year.",
-                  "planks": [
-                    {
-                      "headline": "No new income tax bracket",
-                      "plain": "The top state rate stays where it is, and a new bracket needs a vote of the people."
-                    },
-                    {
-                      "headline": "A levy needs a ballot",
-                      "plain": "No new levy without a vote in a general election, not a quiet special one."
-                    }
-                  ]
-                },
-                {
-                  "title": "Open government",
-                  "ethos": "If the state spends it, you can see it, within a week, without filing a request.",
-                  "planks": [
-                    {
-                      "headline": "Every check online",
-                      "plain": "A searchable ledger of every payment the state makes, updated weekly."
-                    },
-                    {
-                      "headline": "Meetings on the record",
-                      "plain": "Every public body streams and archives its meetings."
-                    }
-                  ]
-                },
-                {
-                  "title": "Education",
-                  "ethos": "Funding follows the student to any school that will teach them.",
-                  "planks": [
-                    {
-                      "headline": "Education savings accounts",
-                      "plain": "For every family, not a lottery for a few."
-                    }
-                  ]
-                }
-              ]
-            }
-          },
-          {
-            "id": "QuoteStrip-about",
-            "type": "QuoteStrip",
-            "band": "wash",
-            "bleed": "full",
-            "variant": "single",
-            "copy": {
-              "heading": ""
-            },
-            "media": {},
-            "links": [],
-            "data": {
-              "source": "quotes",
-              "items": [
-                {
-                  "quote": "A line someone said or wrote about your party goes here, in their words.",
-                  "attribution": "Who said it, and where"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "slug": "leadership",
-        "title": "Leadership",
-        "sections": [
-          {
-            "id": "Hero-leadership",
-            "type": "Hero",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "statement",
-            "copy": {
-              "headline": "The people who answer the phone.",
-              "subheadline": "Our officers and state committee, elected by members at convention."
-            },
-            "media": {},
-            "links": []
-          },
-          {
-            "id": "TeamGrid-leadership",
+            "id": "TeamGrid-about",
             "type": "TeamGrid",
             "band": "plain",
             "bleed": "full",
-            "variant": "board",
+            "variant": "grid",
             "copy": {
-              "heading": "The state committee",
-              "teamOpenRolesIntro": "An open seat is an invitation. Any member in good standing can stand for it at convention.",
-              "interestButtonText": "Ask about running"
-            },
-            "media": {},
-            "links": [
-              {
-                "label": "Ask about running",
-                "target": {
-                  "kind": "page",
-                  "slug": "contact"
-                },
-                "url": "/contact"
-              }
-            ]
-          },
-          {
-            "id": "Cta-leadership",
-            "type": "Cta",
-            "band": "contrast",
-            "bleed": "full",
-            "variant": "banner",
-            "copy": {
-              "eyebrow": "Run with us",
-              "heading": "Thinking about running? Start with a conversation.",
-              "body": "Members choose our candidates. Tell us where you live and what you would run for.",
-              "donateButtonText": "Become a member",
-              "volunteerButtonText": "Talk to us"
-            },
-            "media": {},
-            "links": [
-              {
-                "label": "Become a member",
-                "target": {
-                  "kind": "surface",
-                  "path": "/join"
-                },
-                "url": "/join"
-              },
-              {
-                "label": "Talk to us",
-                "target": {
-                  "kind": "page",
-                  "slug": "contact"
-                },
-                "url": "/contact"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "slug": "candidates",
-        "title": "Candidates",
-        "sections": [
-          {
-            "id": "Hero-candidates",
-            "type": "Hero",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "statement",
-            "copy": {
-              "headline": "On your ballot.",
-              "subheadline": "Members chose every one of them at convention. Find who is running where you live."
+              "heading": "The people behind it",
+              "teamOpenRolesIntro": "We are looking for help. If one of these fits, say hello."
             },
             "media": {},
             "links": []
           },
           {
-            "id": "CandidateRoster-candidates",
-            "type": "CandidateRoster",
-            "band": "plain",
+            "id": "Financials-about",
+            "type": "Financials",
+            "band": "wash",
             "bleed": "full",
-            "variant": "ballot",
+            "variant": "donut",
             "copy": {
-              "heading": "On your ballot",
-              "candidatesEmptyCta": "Our slate is chosen by members at convention. It shows here once it is set."
+              "kicker": "Where the money goes",
+              "heading": "Every dollar, *accounted* for",
+              "body": "The figures from your latest annual report, as you published them.",
+              "year": "Your year",
+              "sourceNote": "From our annual report."
             },
             "media": {},
             "links": [],
-            "options": {
-              "showFilters": true
+            "data": {
+              "source": "financials",
+              "items": [
+                {
+                  "category": "Programs",
+                  "amount": "Your figure",
+                  "note": "The market, homework help and the tool library"
+                },
+                {
+                  "category": "Running the place",
+                  "amount": "Your figure",
+                  "note": "Rent, utilities and insurance"
+                },
+                {
+                  "category": "Raising the next dollar",
+                  "amount": "Your figure",
+                  "note": ""
+                }
+              ]
             }
           }
         ]
       },
       {
-        "slug": "news",
-        "title": "News",
+        "slug": "programs",
+        "title": "Programs",
         "sections": [
           {
-            "id": "Hero-news",
+            "id": "Hero-programs",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "split",
+            "copy": {
+              "kicker": "Programs",
+              "headline": "Ways we show up, *every* week.",
+              "subheadline": "All free, all run with volunteers, all open to anyone nearby. Pick the one you need, or the one you would like to help with."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Find your way in",
+                "target": {
+                  "kind": "section",
+                  "slug": "programs",
+                  "anchor": "ways-in"
+                },
+                "url": "/programs#ways-in"
+              },
+              {
+                "label": "Volunteer",
+                "target": {
+                  "kind": "page",
+                  "slug": "get-involved"
+                },
+                "url": "/get-involved"
+              }
+            ]
+          },
+          {
+            "id": "Services-programs",
+            "type": "Services",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "programs",
+            "copy": {
+              "kicker": "What we run",
+              "heading": "Every program, *plainly*",
+              "body": "Who it is for, when, where, and how to start. If something here does not fit you, ask us; it usually can."
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "services",
+              "items": [
+                {
+                  "name": "Saturday market",
+                  "price": "Free",
+                  "summary": "Free groceries you pick yourself: produce, bread, pantry staples.",
+                  "includes": [
+                    "Anyone nearby. No forms, no proof.",
+                    "Saturdays, 9 to noon",
+                    "Your address"
+                  ],
+                  "buttonLabel": "Come to the market",
+                  "href": "/contact",
+                  "icon": "basket"
+                },
+                {
+                  "name": "Homework club",
+                  "price": "Free",
+                  "summary": "Volunteer tutors, a snack and a quiet table.",
+                  "includes": [
+                    "Kids in grades 2 to 8",
+                    "Monday to Thursday, after school",
+                    "Your address"
+                  ],
+                  "buttonLabel": "Sign up for homework club",
+                  "href": "/contact",
+                  "icon": "book"
+                },
+                {
+                  "name": "Tool library",
+                  "price": "Free with a library card",
+                  "summary": "Tools on a pegboard and a volunteer who knows what each one is for.",
+                  "includes": [
+                    "Anyone with a library card",
+                    "Wednesday evenings and Saturdays",
+                    "Your address"
+                  ],
+                  "buttonLabel": "Borrow a tool",
+                  "href": "/contact",
+                  "icon": "wrench"
+                },
+                {
+                  "name": "Community garden",
+                  "price": "Free",
+                  "summary": "Raised beds and a shed. Take a bed for the season, or drop in to weed and take home what you pick.",
+                  "includes": [
+                    "Anyone; beds by lottery each spring",
+                    "Garden days, Tuesday and Saturday",
+                    "Your address"
+                  ],
+                  "buttonLabel": "Join a garden day",
+                  "href": "/get-involved",
+                  "icon": "sprout"
+                }
+              ]
+            }
+          },
+          {
+            "id": "Pathways-programs",
+            "type": "Pathways",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "doors",
+            "copy": {
+              "kicker": "Three ways in",
+              "heading": "Which *door* is yours?",
+              "programsLabel": "Start here"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "ways-in"
+            },
+            "data": {
+              "source": "pathways",
+              "items": [
+                {
+                  "title": "Get help",
+                  "summary": "You would like groceries, homework help, a tool or a garden bed.",
+                  "outcome": "What is open this week and how to start",
+                  "href": "/programs",
+                  "icon": "basket"
+                },
+                {
+                  "title": "Give help",
+                  "summary": "You have two hours, a skill, or a car on Saturday mornings.",
+                  "outcome": "A first shift with someone to pair you",
+                  "href": "/get-involved",
+                  "icon": "people"
+                },
+                {
+                  "title": "Give",
+                  "summary": "You would like to keep it all running from wherever you are.",
+                  "outcome": "A monthly gift you can change any time",
+                  "href": "/donate",
+                  "icon": "heart"
+                }
+              ]
+            }
+          },
+          {
+            "id": "Faq-programs",
+            "type": "Faq",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "topics",
+            "copy": {
+              "kicker": "Questions",
+              "heading": "Things people *ask* us",
+              "contactHeading": "Didn’t find it? Write to us. A person answers."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Ask a question",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ],
+            "data": {
+              "source": "faq",
+              "items": [
+                {
+                  "topic": "The market",
+                  "question": "Do I need to sign up or show anything to use the market?",
+                  "answer": "No. Bring a bag and come during market hours."
+                },
+                {
+                  "topic": "Homework club",
+                  "question": "How does my child join?",
+                  "answer": "Say how a family signs up: a form, a phone call or a visit."
+                },
+                {
+                  "topic": "Volunteering",
+                  "question": "Can I volunteer with my kids?",
+                  "answer": "Say which shifts welcome kids, and from what age."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "get-involved",
+        "title": "Get involved",
+        "sections": [
+          {
+            "id": "Hero-get-involved",
             "type": "Hero",
             "band": "plain",
             "bleed": "full",
             "variant": "statement",
             "copy": {
-              "kicker": "News",
-              "headline": "From the party",
-              "subheadline": "Announcements, candidate news and the occasional argument, from the state committee and our county chapters."
+              "kicker": "Get involved",
+              "headline": "Two hours, no experience *needed*.",
+              "subheadline": "Pick a shift, bring a friend, and someone will show you the ropes when you get there."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Find a shift",
+                "target": {
+                  "kind": "section",
+                  "slug": "get-involved",
+                  "anchor": "shifts"
+                },
+                "url": "/get-involved#shifts"
+              }
+            ]
+          },
+          {
+            "id": "EventsList-get-involved",
+            "type": "EventsList",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "shifts",
+            "copy": {
+              "kicker": "Open shifts",
+              "heading": "Shifts, week by *week*",
+              "eventsEmptyCta": "No shifts are posted right now. Sign up below and we will write when the next ones open."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "shifts"
+            }
+          },
+          {
+            "id": "FormBlock-get-involved",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Sign up to volunteer"
             },
             "media": {},
             "links": []
+          },
+          {
+            "id": "Issues-get-involved",
+            "type": "Issues",
+            "band": "wash",
+            "bleed": "full",
+            "variant": "steps",
+            "copy": {
+              "kicker": "What happens next",
+              "heading": "After you *sign* up",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "We write back",
+                  "body": "A person, not a robot, within a few days.",
+                  "icon": "mail"
+                },
+                {
+                  "title": "Your first shift",
+                  "body": "Paired with someone who has done it before.",
+                  "icon": "people"
+                },
+                {
+                  "title": "Come back when you can",
+                  "body": "No minimum, no guilt. Shifts are posted every week.",
+                  "icon": "calendar"
+                }
+              ]
+            }
           }
         ]
       },
@@ -783,30 +865,20 @@
         "title": "Events",
         "sections": [
           {
-            "id": "Hero-events",
-            "type": "Hero",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "statement",
-            "copy": {
-              "headline": "Show up.",
-              "subheadline": "Forums, door-knocks, new member nights and the odd dinner. Everything is open to the public unless it says members only."
-            },
-            "media": {},
-            "links": []
-          },
-          {
             "id": "EventsList-events",
             "type": "EventsList",
             "band": "plain",
             "bleed": "full",
-            "variant": "calendar",
+            "variant": "agenda",
             "copy": {
-              "heading": "On the calendar",
-              "eventsEmptyCta": "Hosting a chapter meeting, a forum or a holiday party? Tell us and we will put it here."
+              "heading": "What’s *coming* up",
+              "eventsEmptyCta": "Nothing is on the calendar this month. Write to us if you would like to host something."
             },
             "media": {},
-            "links": []
+            "links": [],
+            "options": {
+              "actions": "buttons"
+            }
           }
         ]
       },
@@ -821,83 +893,29 @@
             "bleed": "full",
             "variant": "story",
             "copy": {
-              "heading": "Candidates in every county, paid for by people like you."
+              "heading": "Donate",
+              "storyHeadline": "Keep the doors *open*.",
+              "storyBody": "Say what a gift pays for, in a sentence or two: a week of groceries, a semester of snacks, a new set of tools."
             },
             "media": {},
             "links": []
           },
           {
-            "id": "Issues-donate",
-            "type": "Issues",
-            "band": "tint",
+            "id": "Membership-donate",
+            "type": "Membership",
+            "band": "plain",
             "bleed": "full",
-            "variant": "cards",
+            "variant": "tiers",
             "copy": {
-              "kicker": "Other ways to give",
-              "heading": "Not today? There are other ways.",
-              "lead": ""
+              "kicker": "Become a member",
+              "heading": "Members keep it *running*",
+              "body": "Say what members get and how renewal works, plainly.",
+              "note": "Memberships renew each year. We email you a week before, and you can cancel from that email."
             },
             "media": {},
             "links": [
               {
-                "label": "Join the party",
-                "target": {
-                  "kind": "surface",
-                  "path": "/join"
-                },
-                "url": "/join",
-                "style": "primary"
-              },
-              {
-                "label": "Volunteer",
-                "target": {
-                  "kind": "page",
-                  "slug": "contact"
-                },
-                "url": "/contact",
-                "style": "outline"
-              }
-            ],
-            "data": {
-              "source": "issues",
-              "items": [
-                {
-                  "title": "Mail a check",
-                  "body": "Our mailing address is on the contact page."
-                },
-                {
-                  "title": "Become a member",
-                  "body": "Members choose our candidates and vote at convention."
-                },
-                {
-                  "title": "Give your time",
-                  "body": "Two hours a month on the phones or at the doors goes a long way."
-                }
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "slug": "join",
-        "title": "Join",
-        "sections": [
-          {
-            "id": "Cta-join",
-            "type": "Cta",
-            "band": "panel",
-            "bleed": "full",
-            "variant": "card",
-            "copy": {
-              "eyebrow": "Membership",
-              "heading": "Make it official.",
-              "body": "Members choose our candidates, write our platform and vote at the state convention. Pick a membership on the next page.",
-              "donateButtonText": "Become a member"
-            },
-            "media": {},
-            "links": [
-              {
-                "label": "Become a member",
+                "label": "Join",
                 "target": {
                   "kind": "surface",
                   "path": "/join"
@@ -905,68 +923,6 @@
                 "url": "/join"
               }
             ]
-          }
-        ]
-      },
-      {
-        "slug": "petition",
-        "title": "Petition",
-        "sections": [
-          {
-            "id": "Petition-petition",
-            "type": "Petition",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "coverage",
-            "copy": {
-              "heading": "Put every party on every ballot."
-            },
-            "media": {},
-            "links": []
-          },
-          {
-            "id": "About-petition",
-            "type": "About",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "right",
-            "copy": {
-              "heading": "A ballot with two names is a habit, not a choice.",
-              "body": "Say here what is wrong now and what you are asking for, in two or three short paragraphs.\n\nEvery name on this petition goes to the people who decide, with the signer's county beside it."
-            },
-            "media": {},
-            "links": []
-          },
-          {
-            "id": "Issues-petition",
-            "type": "Issues",
-            "band": "tint",
-            "bleed": "full",
-            "variant": "steps",
-            "copy": {
-              "kicker": "How it works",
-              "heading": "From your name to the ballot",
-              "lead": ""
-            },
-            "media": {},
-            "links": [],
-            "data": {
-              "source": "issues",
-              "items": [
-                {
-                  "title": "Sign",
-                  "body": "Add your name and county. It takes a minute."
-                },
-                {
-                  "title": "Share",
-                  "body": "Send it to three people in your county who would sign too."
-                },
-                {
-                  "title": "Show up",
-                  "body": "Come to the delivery, so the people who decide see who signed."
-                }
-              ]
-            }
           }
         ]
       },
@@ -981,8 +937,9 @@
             "bleed": "full",
             "variant": "statement",
             "copy": {
-              "headline": "Talk to a person.",
-              "subheadline": "Questions about the party, a candidate, or how to start a chapter. Someone on the state committee reads every message."
+              "kicker": "Contact",
+              "headline": "Say *hello*.",
+              "subheadline": "Write to us with a question, an idea or an offer of help. A person answers."
             },
             "media": {},
             "links": []
@@ -990,11 +947,11 @@
           {
             "id": "FormBlock-contact",
             "type": "FormBlock",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "wide",
+            "band": "tint",
+            "bleed": "contained",
+            "variant": "card",
             "copy": {
-              "heading": "Send us a message"
+              "heading": "Send us a note"
             },
             "media": {},
             "links": []
@@ -1002,39 +959,15 @@
           {
             "id": "About-contact",
             "type": "About",
-            "band": "tint",
+            "band": "plain",
             "bleed": "full",
             "variant": "left",
             "copy": {
-              "heading": "The state office",
-              "body": "Your office's street address goes here, with the days someone is in.\n\nAdd your mailing address, your phone number and its hours, and an email address for the press."
+              "heading": "Come by",
+              "body": "Your street address\n\nYour hours, one line a day."
             },
             "media": {},
             "links": []
-          },
-          {
-            "id": "Map-contact",
-            "type": "Map",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "map",
-            "copy": {
-              "heading": "Find your county chapter",
-              "litLabel": "Chapter meets monthly",
-              "darkLabel": "No chapter yet",
-              "charterCtaText": "Start a chapter"
-            },
-            "media": {},
-            "links": [
-              {
-                "label": "Start a chapter",
-                "target": {
-                  "kind": "page",
-                  "slug": "contact"
-                },
-                "url": "/contact"
-              }
-            ]
           }
         ]
       }
@@ -1042,10 +975,10 @@
     "menus": {
       "primary": [
         {
-          "label": "Home",
+          "label": "About",
           "kind": "page",
           "target": {
-            "slug": ""
+            "slug": "about"
           },
           "shows_on": {
             "rule": "every_page"
@@ -1054,69 +987,23 @@
           "children": []
         },
         {
-          "label": "About",
-          "kind": "group",
-          "target": {},
+          "label": "Programs",
+          "kind": "page",
+          "target": {
+            "slug": "programs"
+          },
           "shows_on": {
             "rule": "every_page"
           },
           "header_button": false,
-          "children": [
-            {
-              "label": "About",
-              "kind": "page",
-              "target": {
-                "slug": "about"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Platform",
-              "kind": "section",
-              "target": {
-                "slug": "about",
-                "anchor": "platform"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Leadership",
-              "kind": "page",
-              "target": {
-                "slug": "leadership"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Candidates",
-              "kind": "page",
-              "target": {
-                "slug": "candidates"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            }
-          ]
+          "children": []
         },
         {
-          "label": "News",
-          "kind": "blog",
-          "target": {},
+          "label": "Get involved",
+          "kind": "page",
+          "target": {
+            "slug": "get-involved"
+          },
           "shows_on": {
             "rule": "every_page"
           },
@@ -1136,11 +1023,9 @@
           "children": []
         },
         {
-          "label": "Petition",
-          "kind": "page",
-          "target": {
-            "slug": "petition"
-          },
+          "label": "Stories",
+          "kind": "blog",
+          "target": {},
           "shows_on": {
             "rule": "every_page"
           },
@@ -1160,23 +1045,11 @@
           "children": []
         },
         {
-          "label": "Join",
-          "kind": "page",
-          "target": {
-            "slug": "join"
-          },
-          "shows_on": {
-            "rule": "every_page"
-          },
-          "header_button": false,
-          "children": []
-        },
-        {
           "label": "Donate",
           "kind": "donate",
           "target": {},
           "shows_on": {
-            "rule": "donation_pages"
+            "rule": "every_page"
           },
           "header_button": true,
           "children": []
@@ -1184,7 +1057,7 @@
       ],
       "footer": [
         {
-          "label": "The party",
+          "label": "Visit",
           "kind": "group",
           "target": {},
           "shows_on": {
@@ -1193,82 +1066,10 @@
           "header_button": false,
           "children": [
             {
-              "label": "About",
+              "label": "Programs",
               "kind": "page",
               "target": {
-                "slug": "about"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Platform",
-              "kind": "section",
-              "target": {
-                "slug": "about",
-                "anchor": "platform"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Leadership",
-              "kind": "page",
-              "target": {
-                "slug": "leadership"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Candidates",
-              "kind": "page",
-              "target": {
-                "slug": "candidates"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
-              "label": "Contact",
-              "kind": "page",
-              "target": {
-                "slug": "contact"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            }
-          ]
-        },
-        {
-          "label": "Take part",
-          "kind": "group",
-          "target": {},
-          "shows_on": {
-            "rule": "every_page"
-          },
-          "header_button": false,
-          "children": [
-            {
-              "label": "Join",
-              "kind": "page",
-              "target": {
-                "slug": "join"
+                "slug": "programs"
               },
               "shows_on": {
                 "rule": "every_page"
@@ -1289,10 +1090,53 @@
               "children": []
             },
             {
-              "label": "Sign the petition",
+              "label": "Stories",
+              "kind": "blog",
+              "target": {},
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Help out",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Volunteer",
               "kind": "page",
               "target": {
-                "slug": "petition"
+                "slug": "get-involved"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Donate",
+              "kind": "donate",
+              "target": {},
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Become a member",
+              "kind": "page",
+              "target": {
+                "slug": "donate"
               },
               "shows_on": {
                 "rule": "every_page"
@@ -1303,7 +1147,7 @@
           ]
         },
         {
-          "label": "Read",
+          "label": "About us",
           "kind": "group",
           "target": {},
           "shows_on": {
@@ -1312,9 +1156,11 @@
           "header_button": false,
           "children": [
             {
-              "label": "News",
-              "kind": "blog",
-              "target": {},
+              "label": "Who we are",
+              "kind": "page",
+              "target": {
+                "slug": "about"
+              },
               "shows_on": {
                 "rule": "every_page"
               },
@@ -1322,10 +1168,10 @@
               "children": []
             },
             {
-              "label": "Newsletter",
-              "kind": "content_list",
+              "label": "Contact",
+              "kind": "page",
               "target": {
-                "type_key": "newsletter"
+                "slug": "contact"
               },
               "shows_on": {
                 "rule": "every_page"
@@ -1339,70 +1185,8 @@
     },
     "sections": [
       {
-        "key": "blog-sidebar",
-        "label": "Blog sidebar",
-        "kind": "sidebar",
-        "document": [
-          {
-            "id": "EventsList-blog-sidebar",
-            "type": "EventsList",
-            "band": "plain",
-            "bleed": "full",
-            "variant": "compact",
-            "copy": {
-              "heading": "Coming up",
-              "eventsEmptyCta": "New events show here as soon as they are posted."
-            },
-            "media": {},
-            "links": [],
-            "options": {
-              "max": 3
-            }
-          },
-          {
-            "id": "Cta-blog-sidebar",
-            "type": "Cta",
-            "band": "panel",
-            "bleed": "full",
-            "variant": "card",
-            "copy": {
-              "heading": "Make it official",
-              "body": "Members vote at convention, choose our candidates and keep the lights on.",
-              "donateButtonText": "Become a member"
-            },
-            "media": {},
-            "links": [
-              {
-                "label": "Become a member",
-                "target": {
-                  "kind": "surface",
-                  "path": "/join"
-                },
-                "url": "/join"
-              }
-            ]
-          }
-        ],
-        "rules": [
-          {
-            "area_key": "sidebar",
-            "shows_on": "entry_types",
-            "content_types": [
-              "post"
-            ]
-          },
-          {
-            "area_key": "sidebar",
-            "shows_on": "type_lists",
-            "content_types": [
-              "post"
-            ]
-          }
-        ]
-      },
-      {
-        "key": "join-the-newsletter",
-        "label": "Join the newsletter",
+        "key": "the-newsletter",
+        "label": "The newsletter band",
         "kind": "pre_footer",
         "document": [
           {
@@ -1410,9 +1194,11 @@
             "type": "SignupCapture",
             "band": "tint",
             "bleed": "full",
-            "variant": "card",
+            "variant": "band",
             "copy": {
-              "heading": "One email a week. What happened, what is next, where to show up."
+              "kicker": "The newsletter",
+              "heading": "One email a month: good news, open shifts, *what’s growing*.",
+              "lede": "Written by volunteers. Nothing in between."
             },
             "media": {},
             "links": []
@@ -1421,35 +1207,70 @@
         "rules": [
           {
             "area_key": "above_footer",
-            "shows_on": "every_page"
+            "shows_on": "every_page_except",
+            "pages": [
+              "donate"
+            ]
           }
         ]
       },
       {
-        "key": "live-moment",
-        "label": "Live moment",
+        "key": "drive-banner",
+        "label": "Drive banner",
         "kind": "announcement",
         "document": [
           {
-            "id": "Cta-live-moment",
+            "id": "Cta-drive-banner",
             "type": "Cta",
             "band": "contrast",
             "bleed": "full",
             "variant": "strip",
             "copy": {
-              "eyebrow": "Tonight",
-              "heading": "Watch the candidate forum live at 7",
-              "donateButtonText": "Watch live"
+              "eyebrow": "Matching week",
+              "heading": "Every gift is matched until the date you set.",
+              "donateButtonText": "Give now"
             },
             "media": {},
             "links": [
               {
-                "label": "Watch live",
+                "label": "Give now",
+                "target": {
+                  "kind": "surface",
+                  "path": "/donate"
+                },
+                "url": "/donate"
+              }
+            ]
+          }
+        ],
+        "rules": []
+      },
+      {
+        "key": "sidebar-card",
+        "label": "Sidebar card",
+        "kind": "sidebar",
+        "document": [
+          {
+            "id": "Cta-sidebar-card",
+            "type": "Cta",
+            "band": "contrast",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "eyebrow": "Lend a hand",
+              "heading": "Two hours this week?",
+              "body": "Shifts are posted every week. Bring a friend.",
+              "donateButtonText": "Find a shift"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Find a shift",
                 "target": {
                   "kind": "page",
-                  "slug": "events"
+                  "slug": "get-involved"
                 },
-                "url": "/events"
+                "url": "/get-involved"
               }
             ]
           }

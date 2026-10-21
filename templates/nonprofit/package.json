@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "BackGold's party template: an Astro site on Cloudflare Workers that draws a state party's BackGold site through the Content API.",
+  "description": "BackGold's nonprofit template: a bright, hand-drawn Astro site on Cloudflare Workers that draws a nonprofit's BackGold site (programs, volunteer shifts, stories, giving) through the Content API.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -11,7 +11,8 @@
     "preview": "astro build && wrangler dev",
     "deploy": "astro build && wrangler deploy",
     "types": "backgold-content types --out src/backgold.d.ts",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "node --test \"test/*.test.mjs\""
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.3",

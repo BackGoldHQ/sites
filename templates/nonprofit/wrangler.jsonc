@@ -29,10 +29,10 @@
   },
   // BackGold's own deploys of this template: the Worker `template-nonprofit` in
   // a Workers for Platforms dispatch namespace, `sites-staging` (the
-  // `deploy-party-staging` job in this repository's .gitlab-ci.yml, which
+  // `deploy-nonprofit-staging` job in this repository's .gitlab-ci.yml, which
   // runs by itself on a push to main that changed the template, a package,
   // vendor/, the lockfile or the CI file) and `sites-production` (the manual
-  // `deploy-party-production` job there, run from the `deploy-production` button), each uploaded with
+  // `deploy-nonprofit-production` job there, run from the `deploy-production` button), each uploaded with
   // `wrangler deploy --dispatch-namespace <namespace>`. Nothing above changes
   // for the Deploy button; a copy of this template can delete this block. An
   // env inherits main, compatibility, assets and observability from above,
@@ -43,7 +43,7 @@
       // The staging api Worker (givegold-api-staging) answers every
       // *.backgold.dev host. For a site on this template it hands the request
       // to the namespace's Worker `template-<template key>`, this one (the key
-      // is `party`, from template.json), with the site's id in the
+      // is `nonprofit`, from template.json), with the site's id in the
       // X-BackGold-Site header, so one deploy serves every site on the
       // template. A Worker in a dispatch namespace has no routes, Custom
       // Domain or workers.dev address: the api's dispatch is its only way in.
@@ -59,7 +59,7 @@
         // carries them.
         "BACKGOLD_API_ORIGIN": "https://api.backgold.dev"
       },
-      // The job replaces the id below with the PARTY_STAGING_KV_ID CI
+      // The job replaces the id below with the NONPROFIT_STAGING_KV_ID CI
       // variable before it builds (wrangler reads no environment variable
       // here), and refuses to deploy when that variable is unset or is not a
       // namespace id. The namespace is created once, by hand:
@@ -83,8 +83,8 @@
         // carries them.
         "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
       },
-      // The `deploy-party-production` job replaces the id below with the
-      // PARTY_PRODUCTION_KV_ID CI variable before it builds, and refuses to
+      // The `deploy-nonprofit-production` job replaces the id below with the
+      // NONPROFIT_PRODUCTION_KV_ID CI variable before it builds, and refuses to
       // deploy when that variable is unset or is not a namespace id. The
       // namespace is created once, by hand, and is not staging's:
       // `npx wrangler kv namespace create backgold-nonprofit-production-cache`.

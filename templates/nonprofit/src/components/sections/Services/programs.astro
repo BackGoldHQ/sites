@@ -1,0 +1,88 @@
+---
+// Services · programs, the layout this template proposes (board N3, "Every
+// program, plainly"): the section head and the body, then an even grid of
+// hand-cut cards, two across (one on a phone), one per program in the
+// operator's order. Each card carries the row's `icon` as a doodle on the
+// soft field (iconOf; none when the row names no icon), its price as a chip
+// at the top right in the operator's own words ("Free"), its name, its
+// summary, its first three includes as For, When and Where (any more follow
+// as a checked list), and its button as an outline sticker. A program never
+// looks recommended over another: the `featured` flag and its label are not
+// drawn. The note sits small under the cards. Nothing is drawn with neither
+// a heading nor a program.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { servicesOf } from '@backgold/template-kit/components/sections/Services/services.ts'
+import { rows } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+import { iconOf, type DoodleName } from '../../../lib/doodles.ts'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const s = servicesOf(section)
+// The rows servicesOf keeps (those with a name, in order), for their icons.
+const icons = rows(section)
+  .filter((row) => text(row.name)?.trim())
+  .map((row) => iconOf(row.icon))
+const FACTS: { label: string; doodle: DoodleName }[] = [
+  { label: 'For', doodle: 'people' },
+  { label: 'When', doodle: 'clock' },
+  { label: 'Where', doodle: 'pin' },
+]
+---
+{(heading || s.items.length > 0) && (
+  <Band section={section} class="services services-programs">
+    <SectionHead kicker={text(section.copy.kicker)} heading={heading} more={[]} />
+    <Prose value={section.copy.body} class="lede" />
+    {s.items.length > 0 && (
+      <ul class="np-programs np-cards" role="list">
+        {s.items.map((program, i) => {
+          const icon = icons[i] ?? null
+          const facts = program.includes.slice(0, FACTS.length)
+          const more = program.includes.slice(FACTS.length)
+          return (
+            <li class="np-program np-card">
+              {(icon || program.price) && (
+                <div class="np-program-top">
+                  {icon && <span class="np-icon"><Doodle name={icon} /></span>}
+                  {program.price && <span class="chip chip-accent np-price">{program.price}</span>}
+                </div>
+              )}
+              <h3 class="np-program-name">{program.name}</h3>
+              {program.summary && <p class="np-program-summary">{program.summary}</p>}
+              {facts.length > 0 && (
+                <dl class="np-facts">
+                  {facts.map((fact, f) => (
+                    <div>
+                      <dt><Doodle name={FACTS[f]!.doodle} />{FACTS[f]!.label}</dt>
+                      <dd>{fact}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {more.length > 0 && (
+                <ul class="np-includes" role="list">
+                  {more.map((line) => <li><Doodle name="check" />{line}</li>)}
+                </ul>
+              )}
+              {program.link && (
+                <p class="np-program-action">
+                  <a class="button button-quiet" href={program.link.href} rel={program.link.rel}>{program.link.label}<span class="visually-hidden">: {program.name}</span></a>
+                </p>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    )}
+    {s.note && <p class="fine">{s.note}</p>}
+  </Band>
+)}
