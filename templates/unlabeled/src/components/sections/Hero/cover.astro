@@ -70,6 +70,25 @@ const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line 
   :global(.bg-section.u-cover-photo) {
     background-image: none;
   }
+  /* The photo fills the band, so the band, not its column, is its box. */
+  :global(.bg-section.u-cover) > :global(.bg-section-inner) {
+    position: static;
+  }
+  /* The running head and its folio sit on black slabs over the photo. */
+  :global(main .bg-section.u-cover-photo)::before,
+  :global(main .bg-section.u-cover-photo)::after {
+    position: relative;
+    z-index: 1;
+    background: var(--page);
+  }
+  :global(main .bg-section.u-cover-photo)::before {
+    padding: 0.5rem 3rem 0.5rem 0.75rem;
+  }
+  :global(main .bg-section.u-cover-photo)::after {
+    position: absolute;
+    top: var(--space);
+    padding: 0.5rem 0.75rem;
+  }
   :global(.bg-section.u-cover-photo) > :global(.bg-section-inner) {
     display: flex;
     flex-direction: column;

@@ -88,9 +88,14 @@ const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
 // The face a kit template's module frames are asked for: its config's
 // `frameFont`, else the kit's Public Sans.
 const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
+// The corners those frames are asked for: its config's `frameRadius`, else the kit's 12.
+const FRAME_RADIUS = (ON_KIT && /\bframeRadius:\s*(\d+)/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || '12'
 // ── petition-drive (begin) ──
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
+// ── unlabeled (begin) ──
+const UNLABELED = TEMPLATE_NAME === 'unlabeled'
+// ── unlabeled (end) ──
 const SERVE = process.argv.includes('--serve')
 // --serve: the organization at /news (newsBaseData), always on the candidate template.
 const SERVE_NEWS = SERVE && (process.argv.includes('--news') || TEMPLATE_NAME === 'candidate')
@@ -1880,7 +1885,7 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     const auth = req.headers.authorization ?? ''
     const key = auth.startsWith('Bearer ') ? auth.slice(7) : ''
     // ── petition-drive (begin) ──
-    if (PETITION_DRIVE && url.pathname.startsWith('/embed/petition/')) {
+    if ((PETITION_DRIVE || UNLABELED) && url.pathname.startsWith('/embed/petition/')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
       return res.end(petitionStubFrame(url.search))
     }
@@ -2272,7 +2277,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
     ON_KIT
-      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`).test(html)
+      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}"`).test(html)
       : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
     ON_KIT ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
   )
@@ -3055,7 +3060,7 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=12&amp;font=${FRAME_FONT}"`) : null
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
@@ -4111,6 +4116,97 @@ function petitionDriveFixture(fixture) {
     },
   }
 }
+
+// ── unlabeled (begin) ──
+/**
+ * Unlabeled's site as its starter seeds it, put on the fixture for --serve:
+ * every starter page at its slug (home at `/`), its sections as the Content
+ * API sends them (BackGold's frames as the fixture's stand-in frame, the
+ * fixture's upcoming events in the events lists, no typed ticker rows: the
+ * live feed is BackGold's), the early-voting strip in Top banner on every page
+ * but Donate and the newsletter band Above the footer, the starter's menus,
+ * and her brand: white, black and white, no saved theme (so the template's
+ * own faces load), pinned dark, her six socials and her legal line.
+ */
+function unlabeledFixture(fixture) {
+  const manifest = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
+  const { starter } = manifest
+  const own = fixture.data.page
+  const events = fixture.data.events.upcoming.filter((e) => e.type !== 'fundraiser')
+  const FRAMED = new Set(['Petition', 'FormBlock', 'PollBlock', 'Donate', 'SignupCapture', 'Event'])
+  const fill = (pageId) => (s) => {
+    const section = { ...structuredClone(s), options: s.options ?? {} }
+    if (FRAMED.has(s.type)) {
+      if (s.type === 'Petition') delete section.data
+      section.embed = { iframe: `${fixture.origin}/embed/petition/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
+    }
+    if (s.type === 'EventsList') section.data = { source: 'events', items: s.options?.max ? events.slice(0, s.options.max) : events }
+    if (s.type === 'Progress') section.data = { source: 'progress', items: [] }
+    if (s.type === 'Collection') section.data = { source: 'newsletter', items: [] }
+    if (s.type === 'Hero' && s.variant === 'cover') section.media = { imageUrl: { url: `${fixture.origin}/media/forum-crowd.svg`, alt: s.copy.imageAlt ?? '' } }
+    return section
+  }
+  const area = (key, pageId) => {
+    const r = starter.sections.find((x) => x.key === key)
+    return { key: r.key, label: r.label, from: null, until: null, sections: r.document.map(fill(pageId)) }
+  }
+  const pages = new Map(
+    starter.pages.map((p) => {
+      const slug = p.slug || 'home'
+      const id = `lp_unlabeled_${slug.replaceAll('-', '_')}`
+      const home = own('home', fixture.state.headline)
+      return [
+        slug,
+        {
+          ...home,
+          page: { ...home.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: slug === 'donate', meta: { title: null, description: null, image_url: null } },
+          sections: p.sections.map(fill(id)),
+          areas: { top_banner: slug === 'donate' ? [] : [area('early-voting', id)], sidebar: [], above_footer: [area('the-newsletter', id)] },
+        },
+      ]
+    }),
+  )
+  fixture.data.page = (slug, headline) => pages.get(slug) ?? own(slug, headline)
+  fixture.data.pages = [
+    ...fixture.data.pages.filter((p) => !pages.has(p.slug)),
+    ...[...pages.values()].map(({ page }) => ({ id: page.id, slug: page.slug, title: page.title, url: page.url, is_home: page.is_home, published_at: '2026-10-20T14:00:00.000Z', updated_at: '2026-10-20T14:00:00.000Z', takes_donations: page.takes_donations })),
+  ]
+  let n = 0
+  const menuItem = (item) => ({
+    id: `nav_u${++n}`,
+    label: item.label,
+    kind: item.kind,
+    target: { kind: item.kind, ...(item.target.slug !== undefined ? { slug: item.target.slug || 'home' } : {}) },
+    url:
+      item.kind === 'page' ? (item.target.slug ? `/${item.target.slug}` : '/')
+      : item.kind === 'donate' ? '/donate'
+      : item.kind === 'external' ? item.target.url.replace('https://unlabeledtexas.com', '')
+      : item.kind === 'content_list' ? '/records'
+      : null,
+    external: false,
+    header_button: item.header_button,
+    shows_on: item.shows_on,
+    children: item.children.map(menuItem),
+  })
+  fixture.data.menus = {
+    ...fixture.data.menus,
+    primary: { menu: { key: 'primary' }, items: starter.menus.primary.map(menuItem) },
+    footer: { menu: { key: 'footer' }, items: starter.menus.footer.map(menuItem) },
+    utility: { menu: { key: 'utility' }, items: [] },
+  }
+  fixture.data.site = {
+    ...fixture.data.site,
+    name: 'Unlabeled',
+    domain: 'unlabeledtexas.com',
+    style: JSON.stringify({ appearance: 'dark', density: 'compact', radiusPx: 0 }),
+    theme: null,
+    brand: { ...fixture.data.site.brand, logo_url: null, primary_color: '#ffffff', secondary_color: '#000000', accent_color: '#ffffff' },
+    seo: { ...fixture.data.site.seo, description: 'No red. No blue. Just Texans.' },
+    social: ['instagram', 'youtube', 'linkedin', 'facebook', 'tiktok', 'discord'].map((platform) => ({ platform, url: `https://${platform}.com/unlabeledtexas` })),
+  }
+  fixture.data.legal = { disclaimer: 'Contributions or gifts to Unlabeled are not deductible as charitable contributions for federal income tax purposes.', required: true }
+}
+// ── unlabeled (end) ──
 
 /**
  * The petition drive's starter page on the Worker, in a headless Chrome:
@@ -5356,6 +5452,12 @@ async function main() {
     }
   }
   // ── petition-drive (end) ──
+  // ── unlabeled (begin) ──
+  // --serve: her site as the starter seeds it (unlabeledFixture): every
+  // starter page at its slug, her menus, her two areas, her brand and
+  // socials, pinned dark, so it can be looked at against boards U1, U6–U9.
+  if (UNLABELED && SERVE) unlabeledFixture(fixture)
+  // ── unlabeled (end) ──
 writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBACKGOLD_WEBHOOK_SECRET=${WEBHOOK_SECRET}\n`)
 
   // SITE_URL is the Worker's own address, so canonicals point at the page Lighthouse reads.

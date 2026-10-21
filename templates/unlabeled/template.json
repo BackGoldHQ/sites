@@ -376,11 +376,21 @@
             "bleed": "full",
             "variant": "strip",
             "copy": {
-              "heading": "I voted. Prove yours counts too.",
-              "copyLabel": "Copy link"
+              "kicker": "Pass it on",
+              "heading": "I voted. Prove yours counts too."
             },
             "media": {},
-            "links": []
+            "links": [],
+            "data": {
+              "source": "share",
+              "items": [
+                {
+                  "network": "Text it",
+                  "text": "I voted. Prove yours counts too: check in at your polling location and Unlabeled will prove your vote was counted. unlabeledtexas.com/proof-your-vote-counts",
+                  "href": ""
+                }
+              ]
+            }
           }
         ]
       },
@@ -499,11 +509,21 @@
             "bleed": "full",
             "variant": "strip",
             "copy": {
-              "heading": "Pass it on. Students are watching who shows up.",
-              "copyLabel": "Copy link"
+              "kicker": "Pass it on",
+              "heading": "Students are watching who shows up."
             },
             "media": {},
-            "links": []
+            "links": [],
+            "data": {
+              "source": "share",
+              "items": [
+                {
+                  "network": "Text it",
+                  "text": "BISD students want answers. Where is Big Lando? Sign the petition: unlabeledtexas.com/bisd-where-is-big-lando",
+                  "href": ""
+                }
+              ]
+            }
           },
           {
             "id": "EventsList-lando",
@@ -1005,18 +1025,6 @@
           "header_button": false,
           "children": [
             {
-              "label": "The archive",
-              "kind": "external",
-              "target": {
-                "url": "https://unlabeledtexas.com/archive"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
-            {
               "label": "BISD: Where is Big Lando",
               "kind": "page",
               "target": {
@@ -1102,18 +1110,6 @@
           ]
         },
         {
-          "label": "Archive",
-          "kind": "external",
-          "target": {
-            "url": "https://unlabeledtexas.com/archive"
-          },
-          "shows_on": {
-            "rule": "every_page"
-          },
-          "header_button": false,
-          "children": []
-        },
-        {
           "label": "Donate",
           "kind": "donate",
           "target": {},
@@ -1193,18 +1189,6 @@
           },
           "header_button": false,
           "children": [
-            {
-              "label": "The archive",
-              "kind": "external",
-              "target": {
-                "url": "https://unlabeledtexas.com/archive"
-              },
-              "shows_on": {
-                "rule": "every_page"
-              },
-              "header_button": false,
-              "children": []
-            },
             {
               "label": "BISD: Public info",
               "kind": "content_list",

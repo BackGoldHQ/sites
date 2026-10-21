@@ -196,9 +196,12 @@ h4 {
   letter-spacing: 0;
   line-height: 0.98;
 }
+/* Her display weight is 500 everywhere: the kit's layouts set their own heavier weights on their headings, so this one wins. */
+:is(h1, h2, h3, h4) {
+  font-weight: 500 !important;
+}
 h1 {
   font-size: var(--h1);
-  font-weight: 500;
 }
 h2 {
   font-size: var(--h2);
@@ -367,6 +370,15 @@ a {
   text-decoration: none;
 }
 
+/* Every other button a layout draws (share, copy, tabs): the display face in capitals, square, outlined. */
+.bg-section button:not([class*='module']) {
+  border-radius: 0 !important;
+  font-family: var(--font-display) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* ── 3. The page's skeleton: bands on a hairline grid, each opened by a running head ── */
 
 /*
@@ -386,6 +398,13 @@ a {
     calc(50% + min(var(--content), 100% - 2 * var(--gutter)) / 2) top;
   background-repeat: no-repeat;
 }
+/* Below 760px the grid drops to four columns (U11). */
+@media (max-width: 47.49rem) {
+  .bg-section,
+  .u-grid {
+    --u-grid: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px calc(100% / 4));
+  }
+}
 .bg-section {
   position: relative;
   border-top: 1px solid var(--line);
@@ -400,20 +419,22 @@ a {
 /*
   The running head (U-cat §3): every band in the page opens with its section
   mark and slug at the left (`§ 02 // what-we-do`, the band's anchor when it
-  has one) and its folio at the right in white, over a hairline, in the meta
-  face. `.u-running-head` draws the same row in markup (left, centre, folio
-  spans) where a page has words for the centre title.
+  has one) over a hairline, and its folio at the right in white, in the meta
+  face. `.u-running-head` draws the same row in markup (left, centre and
+  folio spans) where a page has words for the centre title.
 */
 main {
   counter-reset: u-folio;
 }
 main .bg-section {
   counter-increment: u-folio;
+  --u-head-gap: clamp(1.25rem, 1rem + 1vw, 2rem);
 }
-main .bg-section > .bg-section-inner::before,
+main .bg-section::before,
 .u-running-head {
   display: block;
-  margin: 0 0 clamp(1.25rem, 1rem + 1vw, 2rem);
+  max-width: var(--bg-content-width);
+  margin: 0 auto var(--u-head-gap, 1.5rem);
   padding: 0 3rem 0.875rem 0;
   border-bottom: 1px solid var(--line);
   color: var(--u-faint);
@@ -423,17 +444,17 @@ main .bg-section > .bg-section-inner::before,
   line-height: 1.2;
   text-transform: uppercase;
 }
-main .bg-section > .bg-section-inner::before {
+main .bg-section::before {
   content: '§ ' counter(u-folio, decimal-leading-zero);
 }
-main .bg-section[id] > .bg-section-inner::before {
+main .bg-section[id]::before {
   content: '§ ' counter(u-folio, decimal-leading-zero) ' // ' attr(id);
 }
-main .bg-section > .bg-section-inner::after {
+main .bg-section::after {
   content: counter(u-folio, decimal-leading-zero);
   position: absolute;
-  top: 0;
-  right: 0;
+  top: var(--u-folio-top, var(--space));
+  right: max(var(--gutter), 50% - var(--bg-content-width) / 2);
   color: var(--ink);
   font-family: var(--font-meta);
   font-size: var(--u-meta-size);
@@ -464,12 +485,12 @@ main .bg-section[data-type='MovementTicker'],
 main .bg-section.cta-strip {
   counter-increment: none;
 }
-main .bg-section[data-type='MovementTicker'] > .bg-section-inner::before,
-main .bg-section[data-type='MovementTicker'] > .bg-section-inner::after,
-main .bg-section.cta-strip > .bg-section-inner::before,
-main .bg-section.cta-strip > .bg-section-inner::after,
-.bg-area .bg-section > .bg-section-inner::before,
-.bg-area .bg-section > .bg-section-inner::after {
+main .bg-section[data-type='MovementTicker']::before,
+main .bg-section[data-type='MovementTicker']::after,
+main .bg-section.cta-strip::before,
+main .bg-section.cta-strip::after,
+.bg-area .bg-section::before,
+.bg-area .bg-section::after {
   content: none;
 }
 /* A contained band is a box on the grid, square, edged with the strong rule. */
@@ -480,35 +501,54 @@ main .bg-section.cta-strip > .bg-section-inner::after,
 
 /*
   The chapter mark (U1 between the programs and the manifesto, U-cat §4): the
-  skull and horns on a strong rule between bands, the next section's mark
-  beside it. Drawn before the letter (About) on any page, and by `.u-chapter`
-  in markup (src/components/Mark.astro holds the skull for it).
+  skull and horns on a strong rule between bands, the band's section mark
+  beside it. Drawn over the letter (About) on any page, as its running head,
+  and by `.u-chapter` in markup (src/components/Mark.astro holds the skull).
 */
 main .bg-section[data-type='About'] {
-  padding-top: calc(var(--space) + clamp(5rem, 4rem + 4vw, 7.5rem));
+  --u-skull: clamp(9rem, 7rem + 6vw, 13rem);
 }
-main .bg-section[data-type='About']::before {
+/* The chapter mark carries the band's section mark; the folio waits for the next band. */
+main .bg-section[data-type='About']::after {
+  content: none;
+}
+main .bg-section[data-type='About']::before,
+main .bg-section[data-type='About'][id]::before {
+  content: '';
+  padding: calc(var(--u-skull) * 304 / 612 * 0.62) 0 0;
+  border: 0;
+  background:
+    linear-gradient(var(--line-strong), var(--line-strong)) left calc(var(--u-skull) * 304 / 612 * 0.62 + 0.6em) / calc(50% - var(--u-skull) / 2 - 1rem) 1px no-repeat,
+    linear-gradient(var(--line-strong), var(--line-strong)) right calc(var(--u-skull) * 304 / 612 * 0.62 + 0.6em) / calc(50% - var(--u-skull) / 2 - 1rem) 1px no-repeat;
+  height: calc(var(--u-skull) * 304 / 612);
+  margin-bottom: var(--u-head-gap);
+}
+main .bg-section[data-type='About'] > .bg-section-inner::before {
   content: '';
   position: absolute;
-  top: calc(var(--space) * 0.6);
+  top: calc(-1 * (var(--u-skull) * 304 / 612 + var(--u-head-gap)));
   left: 50%;
-  width: clamp(9rem, 7rem + 6vw, 13rem);
+  width: var(--u-skull);
   aspect-ratio: 612 / 304;
   transform: translateX(-50%);
   background: var(--ink);
   -webkit-mask: url('../assets/skull.svg') center / contain no-repeat;
   mask: url('../assets/skull.svg') center / contain no-repeat;
 }
-main .bg-section[data-type='About']::after {
-  content: '';
+main .bg-section[data-type='About'] > .bg-section-inner::after {
+  content: '§ ' counter(u-folio, decimal-leading-zero);
   position: absolute;
-  top: calc(var(--space) * 0.6 + clamp(9rem, 7rem + 6vw, 13rem) * 304 / 612 * 0.6);
-  left: max(var(--gutter), 50% - var(--content) / 2);
-  right: max(var(--gutter), 50% - var(--content) / 2);
-  height: 1px;
-  background:
-    linear-gradient(var(--line-strong), var(--line-strong)) left / calc(50% - clamp(6rem, 5rem + 4vw, 8.5rem)) 1px no-repeat,
-    linear-gradient(var(--line-strong), var(--line-strong)) right / calc(50% - clamp(6rem, 5rem + 4vw, 8.5rem)) 1px no-repeat;
+  top: calc(-1 * (var(--u-skull) * 304 / 612 * 0.38 + var(--u-head-gap)));
+  left: calc(50% + var(--u-skull) / 2 + 1.25rem);
+  padding: 0 0.75rem;
+  background: var(--page);
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .u-chapter {
   display: grid;
@@ -788,7 +828,7 @@ main .cta-strip .strip-words {
 main .cta-strip .strip-words b {
   font-weight: 500;
 }
-main .cta-strip .strip-links a {
+main .bg-section.cta-strip .strip-links a {
   display: inline-flex;
   align-items: center;
   min-height: 3.25rem;
@@ -799,7 +839,7 @@ main .cta-strip .strip-links a {
   font-size: 1.125rem;
   text-decoration: none;
 }
-main .cta-strip .strip-links a:hover {
+main .bg-section.cta-strip .strip-links a:hover {
   background: var(--u-ink);
   color: var(--u-ground);
 }
@@ -822,8 +862,9 @@ main .cta-strip .strip-links a:hover {
   line-height: 0.95 !important;
   max-width: 16em;
 }
-.statement-lede {
+.bg-section .statement .statement-lede {
   max-width: 34em;
+  color: var(--ink);
 }
 
 /* Issues · Cards (U1 programs, U9 other ways in): numbered boxes on one strong rule, the box inverts on hover. */
@@ -890,7 +931,21 @@ main .cta-strip .strip-links a:hover {
 
 /* About · Letter (U1's manifesto): the heading at D1, the body in the text face, the closing line huge. */
 .bg-section[data-type='About'] .letter:not(.letter-with-photo) {
-  max-width: 46rem;
+  max-width: none;
+}
+/* On a wide screen the letter sits in the right two thirds of the grid and its closing line runs back out across all of it. */
+@media (min-width: 60rem) {
+  .bg-section[data-type='About'] .letter-words {
+    padding-left: calc(100% / 3);
+  }
+  .bg-section[data-type='About'] .letter-signature {
+    margin-left: -50% !important;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line-strong);
+  }
+}
+.bg-section[data-type='About'] .letter-body {
+  max-width: 40rem;
 }
 .bg-section[data-type='About'] .letter-words h2 {
   font-size: var(--u-d1);
@@ -915,17 +970,75 @@ main .cta-strip .strip-links a:hover {
   color: var(--ink) !important;
   text-transform: uppercase;
 }
+/* No photo: no tile in its place. The role line ("But she's welcome, too.") reads under the heading. */
+.bg-section[data-type='About'] .letter-tile {
+  display: none !important;
+}
+.bg-section[data-type='About'] .letter-with-photo:has(.letter-tile) {
+  grid-template-columns: 1fr !important;
+}
+.bg-section[data-type='About'] .letter-words {
+  display: flex;
+  flex-direction: column;
+}
+.bg-section[data-type='About'] .letter-words > h2 {
+  order: -1;
+}
+.bg-section[data-type='About'] .letter-words > .kicker {
+  order: -2;
+}
 .bg-section[data-type='About'] .letter-role {
-  font-family: var(--font-meta);
-  font-size: var(--u-meta-size);
-  letter-spacing: var(--u-meta-track);
+  order: -1;
+  margin: -0.25rem 0 1.5rem !important;
+  color: var(--muted) !important;
+  font-family: var(--font-display) !important;
+  font-size: var(--u-d4) !important;
+  letter-spacing: 0.04em !important;
+}
+/* StatCards · Row (U7): figures huge in capitals on one strong rule, labels in the meta face, cells split by hairlines. */
+.bg-section[data-type='StatCards'] .stat-list {
+  gap: 0 !important;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+.bg-section[data-type='StatCards'] .stat {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.25rem 1.25rem 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.bg-section[data-type='StatCards'] .stat + .stat {
+  padding-left: 1.25rem !important;
+  border-left: 1px solid var(--line) !important;
+}
+.bg-section[data-type='StatCards'] .stat > * {
+  margin: 0;
+}
+.bg-section[data-type='StatCards'] .stat-value {
+  order: 2;
+  margin: 0.5rem 0 !important;
+  color: var(--ink) !important;
+  font-size: clamp(2.75rem, 2rem + 3vw, 4.5rem) !important;
+  font-weight: 500 !important;
+  line-height: 0.95;
   text-transform: uppercase;
 }
-
-/* StatCards (U7): figures huge on hairlines, labels in the meta face. */
-.bg-section[data-type='StatCards'] :is(.stat, .stat-card, li) {
-  border-radius: 0;
-  box-shadow: none;
+.bg-section[data-type='StatCards'] .stat-label {
+  order: 1;
+}
+.bg-section[data-type='StatCards'] .stat-note {
+  order: 3;
+}
+.bg-section[data-type='StatCards'] :is(.stat-label, .stat-note) {
+  color: var(--muted) !important;
+  font-family: var(--font-meta) !important;
+  font-size: var(--u-meta-size) !important;
+  font-weight: 400 !important;
+  letter-spacing: var(--u-meta-track) !important;
+  text-transform: uppercase;
 }
 
 /* Progress · Bar (U9): the bar a white fill on hatching, square. */
@@ -957,6 +1070,71 @@ main .cta-strip .strip-links a:hover {
 .bg-section[data-type='EventsList'] h3,
 .bg-section[data-type='Event'] h3 {
   font-size: var(--u-d4);
+}
+/* EventsList · Compact (U1 "Next up"): one row per event, the day huge, the month under it, the title and its time and place beside. */
+.bg-section.events-compact .compact-events {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  border-top: 1px solid var(--line-strong);
+}
+.bg-section.events-compact .compact-events > li {
+  display: grid !important;
+  grid-template-columns: clamp(4.5rem, 3.5rem + 3vw, 7rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem !important;
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.bg-section.events-compact .compact-events > li:hover {
+  background: var(--ink) !important;
+  color: var(--page);
+  --ink: var(--page);
+  --link: var(--page);
+  --muted: var(--page);
+}
+.bg-section.events-compact .compact-day {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding: 0 0 0 0.25rem;
+  border-right: 1px solid var(--line-strong);
+}
+.bg-section.events-compact .compact-day b {
+  font-family: var(--font-display);
+  font-size: var(--u-d2) !important;
+  font-weight: 500 !important;
+  line-height: 0.95;
+}
+.bg-section.events-compact .compact-day span:not(.visually-hidden) {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track);
+  color: var(--muted);
+}
+.bg-section.events-compact .compact-events h3 {
+  margin: 0 0 0.25rem;
+  font-size: var(--u-d4);
+}
+.bg-section.events-compact .compact-events h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.bg-section.events-compact .compact-events p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.bg-section.events-compact .compact-more a {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ── Above the footer: the sign-up band in one line on the second surface ── */
