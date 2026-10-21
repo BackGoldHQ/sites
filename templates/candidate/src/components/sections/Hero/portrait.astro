@@ -5,8 +5,9 @@
 // at the left, on two lines when it is two words (the first name over the
 // last, C1 and C9's "IRIS / DELACORTE"), the line under
 // it and the buttons, and the portrait at the
-// right, standing on the band's floor (no gap under it) over a stripe in the
-// accent. On a phone the portrait follows the words, still on the floor.
+// right, standing on the band's floor (no gap under it) and reaching the
+// words' top, so the two columns read as one block. On a phone the portrait
+// follows the words, still on the floor.
 // The portrait's alt text is `copy.imageAlt`, and its caption
 // (`copy.caption`, C1's "Photo: Iris at the Osgood County fair") a chip at
 // its lower left. Without a portrait the words take the full width, with no
@@ -84,31 +85,21 @@ const buttons = links(section)
 <style>
   /*
     The portrait stands on the floor: the band keeps its top padding and drops
-    the bottom one, which the stripe replaces. The stripe and the office line's
-    rule are the brand's accent itself in both sets (C1, C9): they are
-    decoration, not text, so they keep the accent where the band's accent for
-    text falls back to its ink.
+    the bottom one. The office line's rule is the brand's accent itself in both
+    sets (C1, C9): decoration, not text, so it keeps the accent where the
+    band's accent for text falls back to its ink.
   */
   :global(.bg-section.hero-portrait) {
     position: relative;
     overflow: hidden;
     padding-bottom: 0;
   }
-  :global(.bg-section.hero-portrait)::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 0.625rem;
-    background: var(--bg-brand-accent, var(--accent));
-  }
   .hp {
     display: grid;
     align-items: end;
   }
   .hp-words {
-    padding-bottom: calc(var(--space) * 0.75 + 0.625rem);
+    padding-bottom: calc(var(--space) * 0.75);
     min-width: 0;
   }
   .hp-office {
@@ -183,7 +174,6 @@ const buttons = links(section)
   .hp-frame {
     position: relative;
     min-width: 0;
-    margin-bottom: 0.625rem;
   }
   .hp-portrait {
     display: block;
@@ -206,8 +196,17 @@ const buttons = links(section)
       align-self: center;
       padding-bottom: var(--space);
     }
+    /* The frame fills the row, so the portrait's top meets the words' top and its foot the floor. */
+    .hp-with-portrait .hp-frame {
+      align-self: stretch;
+      display: flex;
+    }
     .hp-portrait {
-      aspect-ratio: 4 / 5;
+      flex: 1 1 auto;
+      height: 100%;
+      min-height: 30rem;
+      aspect-ratio: auto;
+      object-position: 50% 20%;
       border-radius: 1.625rem 1.625rem 0 0;
     }
   }

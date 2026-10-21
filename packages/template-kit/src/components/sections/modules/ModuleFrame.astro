@@ -33,7 +33,8 @@
 //
 // A Donate frame also carries the page address's donate names (an ask
 // amount, a donate place, `utm_*`, lib/donate-frame.ts) that its address from
-// BackGold does not already name.
+// BackGold does not already name; a form frame carries the page's `pick`,
+// the choice it opens on (lib/donate-frame.ts withPickQuery).
 //
 // A section BackGold sends with no embed has nothing to frame (no donation
 // form for the organization, no petition picked, an event no longer public):
@@ -43,7 +44,7 @@
 import type { SectionEmbed } from '@backgold/content'
 import { Embed } from '@backgold/astro/components'
 import { SECTION_BANDS, appearanceOf, moduleLook, type SectionBand } from '../../../lib/brand'
-import { isDonateFrame, withDonateQuery } from '../../../lib/donate-frame'
+import { isDonateFrame, isFormFrame, withDonateQuery, withPickQuery } from '../../../lib/donate-frame'
 
 interface Props {
   /** The section's (or the event page's) embed, as BackGold sends it. */
@@ -101,6 +102,7 @@ function framed(iframe: string | null): string | null {
     return iframe
   }
   if (isDonateFrame(type)) withDonateQuery(url, Astro.url.searchParams)
+  if (isFormFrame(type)) withPickQuery(url, Astro.url.searchParams)
   url.searchParams.set('layout', layout)
   for (const [key, value] of Object.entries(moduleLook(brand, band, appearance, theme, Astro.locals.template?.frameColors ?? null))) url.searchParams.set(key, value)
   url.searchParams.set('radius', String(radius))

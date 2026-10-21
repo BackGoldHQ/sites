@@ -31,7 +31,9 @@
 // A page that draws a Donate frame (a section or an area item of type Donate)
 // names the donate query names its frame copies (READS_QUERY_HEADER,
 // lib/donate-frame.ts), so the edge cache never answers `?amount=25` with
-// the bare page's copy, and a request that carries one is never stored.
+// the bare page's copy, and a request that carries one is never stored. A
+// page that draws a form frame names `pick`, the choice the form opens on,
+// the same way.
 //
 // `/events/<type>` is the events page with its Agenda and Calendar sections
 // narrowed to that type (the Agenda's rows read from the Content API's `GET
@@ -75,7 +77,7 @@ import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { EVENTS_CALENDAR_PATH, MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, eventsCalendar, typedEventsPage } from '../lib/events'
 import { entryCard, leadsWithHero } from '../lib/section'
-import { DONATE_READS_QUERY, carriesDonateQuery, drawsDonateFrame } from '../lib/donate-frame'
+import { DONATE_READS_QUERY, FORM_READS_QUERY, carriesDonateQuery, carriesPickQuery, drawsDonateFrame, drawsFormFrame } from '../lib/donate-frame'
 import { markReading } from '../lib/reading'
 import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
 import template from 'virtual:backgold-template'
@@ -199,9 +201,19 @@ const areas: Areas | null =
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term' || resolved.kind === 'lesson'
       ? resolved.areas
       : event?.areas ?? null
-if (drawsDonateFrame(resolved.kind === 'page' ? resolved.page.sections : [], areas)) {
-  Astro.response.headers.set(READS_QUERY_HEADER, DONATE_READS_QUERY)
-  if (carriesDonateQuery(Astro.url.searchParams)) Astro.response.headers.set('Cache-Control', 'no-store')
+{
+  const pageSections = resolved.kind === 'page' ? resolved.page.sections : []
+  const reads = [
+    ...(drawsDonateFrame(pageSections, areas) ? [DONATE_READS_QUERY] : []),
+    ...(drawsFormFrame(pageSections, areas) ? [FORM_READS_QUERY] : []),
+  ]
+  if (reads.length > 0) {
+    Astro.response.headers.set(READS_QUERY_HEADER, reads.join(','))
+    const carries =
+      (drawsDonateFrame(pageSections, areas) && carriesDonateQuery(Astro.url.searchParams)) ||
+      (drawsFormFrame(pageSections, areas) && carriesPickQuery(Astro.url.searchParams))
+    if (carries) Astro.response.headers.set('Cache-Control', 'no-store')
+  }
 }
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
