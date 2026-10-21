@@ -167,4 +167,10 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
       transform: translateY(0.75rem);
     }
   }
+  /* The kicker reads in the photo band's full ink, not the accent: over a bright
+     sky the accent (a light blue in both modes) fades where the scrim is still
+     thin (A1 note 2: legibility is not a taste). */
+  .cover-words.on-photo .kicker {
+    color: var(--band-photo-ink);
+  }
 </style>
