@@ -314,6 +314,7 @@ starter:
     - pnpm --filter @backgold/content build
     - pnpm --filter @backgold/astro build
     - pnpm --filter "backgold-template-$TEMPLATE" exec astro check
+    - pnpm --filter "backgold-template-$TEMPLATE" test --if-present
     - node scripts/starter-e2e.mjs --template "$TEMPLATE" --lighthouse
 
 # party = the party template (templates/party), drawn by the template kit
