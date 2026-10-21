@@ -106,7 +106,7 @@ keeps its own pages and gains the links it lacks):
 
 | Page | Sections |
 | --- | --- |
-| Home (`""`) | Hero · Cover (*No red. No blue. Just Texans.*), MovementTicker, Issues · Cards (her four programs), About · Letter (the manifesto, unsigned, filed under *Nonpartisan to the bone* and *Texas, all of it*; the chapter mark over it), StatCards · Archive (the archive's door, *Read it yourself.*, its live counts), EventsList · Compact, Cta · Strip (Donate) |
+| Home (`""`) | Hero · Cover (*Not Red. Not Blue. Just Texans.*), MovementTicker, Issues · Cards (her four programs), About · Letter (the manifesto, unsigned, filed under *Nonpartisan to the bone* and *Texas, all of it*; the chapter mark over it), StatCards · Archive (the archive's door, *Read it yourself.*, its live counts), EventsList · Compact, Cta · Strip (Donate) |
 | `events` | Hero · Statement, EventsList · Agenda |
 | `proof-your-vote-counts` | Hero · Statement, FormBlock · Wide, StatCards · Row, ShareKit · Strip |
 | `bisd-where-is-big-lando` | Hero · Statement, Issues · Numbered (the four asks), Petition (her legal note as the sheet's goal note, under the count), ShareKit · Strip, EventsList · Compact |
