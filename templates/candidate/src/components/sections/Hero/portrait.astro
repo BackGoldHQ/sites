@@ -10,14 +10,19 @@
 // The portrait's alt text is `copy.imageAlt`, and its caption
 // (`copy.caption`, C1's "Photo: Iris at the Osgood County fair") a chip at
 // its lower left. Without a portrait the words take the full width, with no
-// caption. The page-opening Hero's
+// caption. With a background photo beside the portrait (`media.imageUrl`,
+// a place: a skyline, a main street), the photo fills the band behind both
+// under the Full photo hero's scrim, deepest at the left where the words
+// sit, and the words read in the photo band's inks. The page-opening Hero's
 // headline is the page's <h1> (`level={1}`); any other Hero's is an <h2>. A
 // Hero with its signup form on carries an `embed`: BackGold's own form,
-// framed under the buttons.
+// framed under the buttons in the site's own look (ModuleFrame), so it
+// draws no card, heading or platform footer of its own.
 import type { ComponentProps } from 'astro/types'
-import { Embed } from '@backgold/astro/components'
+import { safeSrc } from '@backgold/astro/server'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
 import { heroPhoto, links } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 
@@ -32,12 +37,22 @@ const caption = text(section.copy.caption)
 // A two-word name breaks between its words; any other headline wraps as it falls.
 const words = headline?.trim().split(/\s+/) ?? []
 const lines = words.length === 2 ? words : null
-const portrait = heroPhoto(section, 'photoUrl', 'imageUrl')
+const photo = heroPhoto(section, 'photoUrl')
+// Without a portrait the section's picture stands in for it, as before.
+const portrait = photo ?? heroPhoto(section, 'imageUrl')
+// A place behind the portrait: the section's picture when the portrait is its own photo.
+const backdrop = photo ? safeSrc(section.media.imageUrl?.url) : null
 const buttons = links(section)
 ---
 {(headline || subheadline || portrait) && (
-  <Band section={section} class="hero-portrait">
-    <div class:list={['hp', portrait && 'hp-with-portrait']}>
+  <Band section={section} class:list={['hero-portrait', backdrop && 'hero-portrait-photo']}>
+    {backdrop && (
+      <>
+        <img class="hp-backdrop" src={backdrop} alt="" loading={level === 1 ? 'eager' : 'lazy'} decoding="async" />
+        <div class="hp-scrim" aria-hidden="true"></div>
+      </>
+    )}
+    <div class:list={['hp', portrait && 'hp-with-portrait', backdrop && 'on-photo']}>
       <div class="hp-words">
         {office && <p class="hp-office">{office}</p>}
         {headline && <Heading class="hp-name">{lines ? <><span>{lines[0]}</span> <span>{lines[1]}</span></> : headline}</Heading>}
@@ -47,7 +62,7 @@ const buttons = links(section)
             {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
           </p>
         )}
-        {section.embed && <Embed embed={section.embed} title="Sign up" />}
+        {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hp-signup" />}
       </div>
       {portrait && (
         <div class="hp-frame">
@@ -136,9 +151,34 @@ const buttons = links(section)
   .hp-words .actions {
     margin-top: 1.875rem;
   }
-  .hp-words > :global(.bg-embed) {
+  .hp-words > :global(.hp-signup) {
     margin-top: 1.5rem;
     max-width: 36rem;
+  }
+  /* The place behind the words and the portrait, under the Full photo hero's scrim (deepest where the words sit). */
+  .hp-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+  .hp-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--band-photo) 90%, transparent) 0%,
+      color-mix(in srgb, var(--band-photo) 78%, transparent) 50%,
+      color-mix(in srgb, var(--band-photo) 55%, transparent) 100%
+    );
+  }
+  :global(.bg-section.hero-portrait-photo) .hp {
+    position: relative;
+    z-index: 1;
   }
   .hp-frame {
     position: relative;
