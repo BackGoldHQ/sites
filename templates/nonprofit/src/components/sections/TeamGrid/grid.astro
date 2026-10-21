@@ -1,0 +1,73 @@
+---
+// TeamGrid · grid as this template draws it (board N2, "The people behind
+// it"): the people in their groups, Leadership then Staff (the kit's
+// teamOf, which reads the party's seats the same way), each group under a
+// hand-lettered heading with a wavy rule and drawn as hand-cut cards, four
+// across (two on a phone): the photo, or the person's initials hand-lettered
+// on the soft field, never a grey silhouette; the name, the role (and the
+// department for staff) and the short bio. Open roles and seats close the
+// list as dashed invitation cards with the star doodle, the section's
+// open-roles line over them and its "interested?" link under them. Nothing
+// is drawn with no one in it.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import { initials, teamOf } from '@backgold/template-kit/components/sections/TeamGrid/people.ts'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const intro = text(section.copy.teamOpenRolesIntro)
+const { leaders, staff, open, interest } = teamOf(section)
+const groups = [
+  { name: 'Leadership', people: leaders },
+  { name: 'Staff', people: staff },
+].filter((g) => g.people.length > 0)
+const named = groups.length > 1 || open.length > 0
+---
+{(leaders.length > 0 || staff.length > 0 || open.length > 0) && (
+  <Band section={section} class="team np-team">
+    {heading && <h2>{heading}</h2>}
+    {groups.map((group) => (
+      <div class="np-team-group">
+        {named && <h3 class="np-group-head">{group.name}<span class="np-rule" aria-hidden="true"></span></h3>}
+        <ul class="np-people" role="list">
+          {group.people.map((p) => (
+            <li class="np-person np-card">
+              {p.photo ? (
+                <img class="np-person-photo" src={p.photo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class="np-person-photo np-person-initials" aria-hidden="true">{initials(p.name)}</span>
+              )}
+              <h4 class="np-person-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.name}</a> : p.name}</h4>
+              {(p.role || p.dept) && <p class="np-person-role">{[p.role, group.people === staff ? p.dept : null].filter(Boolean).join(', ')}</p>}
+              {p.bio && <p class="np-person-bio">{p.bio}</p>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+    {open.length > 0 && (
+      <div class="np-team-group">
+        <h3 class="np-group-head">Open roles<span class="np-rule" aria-hidden="true"></span></h3>
+        {intro && <p class="lede">{intro}</p>}
+        <ul class="np-people" role="list">
+          {open.map((p) => (
+            <li class="np-open-role">
+              <Doodle name="star" />
+              <h4 class="np-person-name">{p.link ? <a href={p.link.href} rel={p.link.rel}>{p.role}</a> : p.role}</h4>
+              {p.dept && <p class="np-person-role">{p.dept}</p>}
+              {p.blurb && <p class="np-person-bio">{p.blurb}</p>}
+            </li>
+          ))}
+        </ul>
+        {interest && <p class="actions"><a class="button button-quiet" href={interest.href} rel={interest.rel}>{interest.label}</a></p>}
+      </div>
+    )}
+  </Band>
+)}

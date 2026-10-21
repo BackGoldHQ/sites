@@ -4476,7 +4476,7 @@ function withNonprofit(data, ex) {
 
 /** The template's own layouts and its middleware, in the HTML of its starter pages. */
 async function checkNonprofit(origin) {
-  log('\nNonprofit: Services · programs, EventsList · shifts, the icon doodles, the marked words and the sprite')
+  log('\nNonprofit: its own layouts (programs, shifts, cards, doors, split, team, form), the marked words and the sprite')
   const at = (slug) => `/${nonprofitSlug(slug)}`
   let res = await get(origin, at(''))
   let html = await res.text()
@@ -4504,8 +4504,17 @@ async function checkNonprofit(origin) {
   res = await get(origin, at('get-involved'))
   html = await res.text()
   const weeks = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
-  check(res.status === 200 && (weeks.match(/class="np-week-head"/g) ?? []).length >= 2 && /Week of [A-Z][a-z]{2} \d{1,2}<small>/.test(weeks), 'Get involved groups its shifts by week under "Week of …" with the dates')
+  check(res.status === 200 && (weeks.match(/class="np-week-head"/g) ?? []).length >= 2 && /<span class="np-week-name">Week of [A-Z][a-z]{2} \d{1,2}<\/span><small>/.test(weeks), 'Get involved groups its shifts by week under "Week of …" with the dates')
   check(weeks.includes('>Details<') && weeks.includes('Registration closed'), 'a shift whose registration closed offers Details and says so')
+  const form = sectionsOf(html).find((s) => s.type === 'FormBlock')?.html ?? ''
+  check(/class="np-form-words"/.test(form) && /<h2>Tell us, and we’ll find you a <span class="np-mark">/.test(form) && /title="Tell us, and we’ll find you a spot"/.test(form), 'FormBlock · wide draws its intro column beside the form, the frame titled without the asterisks')
+  res = await get(origin, at('about'))
+  html = await res.text()
+  const team = sectionsOf(html).find((s) => s.type === 'TeamGrid')?.html ?? ''
+  check((team.match(/class="np-person np-card"/g) ?? []).length === 3 && (team.match(/np-person-initials/g) ?? []).length === 3 && (team.match(/class="np-open-role"/g) ?? []).length === 1, 'TeamGrid · grid draws the people as cards with their initials, and the open seat as an invitation')
+  res = await get(origin, at('programs'))
+  html = await res.text()
+  check(/<p class="kicker">Programs<\/p>\s*<h1 class="split-headline"/.test(html.replace(/ data-astro-cid-[a-z0-9]+(="[^"]*")?/g, '')), 'Hero · split draws its kicker over the headline')
   res = await get(origin, at('donate'))
   html = await res.text()
   check(res.status === 200 && !html.includes('data-type="SignupCapture"'), 'Donate carries no newsletter band, by its rule')

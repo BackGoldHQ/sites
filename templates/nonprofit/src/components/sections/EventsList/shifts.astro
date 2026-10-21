@@ -11,15 +11,17 @@
 // The spots are live, never part of the cached page: the kit's LiveCounts
 // writes the words ("6 going · 4 seats left") into each row's slot after the
 // page loads, with the going count and the capacity as data-going and
-// data-capacity, and this layout's script draws one dot per spot beside the
-// words, filled for each one taken and dashed for each one open (up to 24
-// spots; past that, the words alone). The dots are a picture of the words,
-// hidden from screen readers. With scripts off the row keeps its button and
-// draws neither.
+// data-capacity; where the event has a capacity this layout's script words
+// them as spots ("6 of 10 filled · 4 spots left", "Full") and draws one dot
+// per spot beside them, filled for each one taken and dashed for each one
+// open (up to 24 spots; past that, the words alone). The dots are a picture
+// of the words, hidden from screen readers. With scripts off the row keeps
+// its button and draws neither.
 //
 // A list with no `max` (Get involved) is grouped by week, Monday to Sunday in
 // each event's own calendar, under a hand-lettered "Week of Nov 2" with the
-// week's dates and a squiggle rule; a week with no event is not drawn. A
+// week's dates and a squiggle rule (the script says "This week" and "Next
+// week" in the visitor's own time); a week with no event is not drawn. A
 // capped list (home's next three) is one run of rows. With no events the
 // head stands over the section's empty-events line as a dashed invitation;
 // with neither events nor a heading nothing is drawn.
@@ -84,8 +86,8 @@ const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkO
         {weeks.map((week) => (
           <div class="np-week">
             {week.heading && (
-              <h3 class="np-week-head">
-                {week.heading}
+              <h3 class="np-week-head" data-np-week={week.key}>
+                <span class="np-week-name">{week.heading}</span>
                 <small>{week.dates}</small>
                 <span class="np-rule" aria-hidden="true"></span>
               </h3>
@@ -152,12 +154,34 @@ const actionOf = (e: EventRow) => (e.action && e.action.label === 'RSVP' ? linkO
               var going = Number(slot.getAttribute('data-going'))
               var capacity = Number(slot.getAttribute('data-capacity'))
               dots.textContent = ''
-              if (!slot.hasAttribute('data-capacity') || !(capacity > 0) || capacity > MOST || !(going >= 0)) return
+              if (!slot.hasAttribute('data-capacity') || !(capacity > 0) || !(going >= 0)) return
+              var left = capacity - going
+              slot.textContent = going + ' of ' + capacity + ' filled · ' + (left > 0 ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full')
+              if (capacity > MOST) return
               for (var i = 0; i < capacity; i++) {
                 var dot = document.createElement('i')
                 if (i >= going) dot.className = 'np-open'
                 dots.appendChild(dot)
               }
+            }
+            // A week's heading says This week or Next week in the visitor's own time (the page is cached, so the server cannot).
+            var pad = function (n) {
+              return (n < 10 ? '0' : '') + n
+            }
+            var monday = new Date()
+            monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+            var key = function (d) {
+              return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            }
+            var thisWeek = key(monday)
+            monday.setDate(monday.getDate() + 7)
+            var nextWeek = key(monday)
+            var heads = root.querySelectorAll('[data-np-week]')
+            for (var h = 0; h < heads.length; h++) {
+              var name = heads[h].querySelector('.np-week-name')
+              var wk = heads[h].getAttribute('data-np-week')
+              if (wk === thisWeek) name.textContent = 'This week'
+              else if (wk === nextWeek) name.textContent = 'Next week'
             }
             var slots = root.querySelectorAll('[data-bg-live]')
             var watch = new MutationObserver(function (changes) {

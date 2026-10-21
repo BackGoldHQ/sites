@@ -37,6 +37,8 @@ a site in template mode and writes the starter from `template.json` into it:
 - **Menus**: the header has About, Programs, Get involved, Events, Stories
   (the post list, at `/news`) and Contact, and Donate as the header button on
   every page; the footer has three columns, Visit, Help out and About us.
+- **Volunteer form**: FormBlock · wide on Get involved opens with its own
+  intro ("Tell us, and we'll find you a *spot*").
 - **Reusable sections**: the newsletter band (SignupCapture · band) above the
   footer on every page but Donate; a drive banner (Cta · strip, the top
   banner), off until the organization dates it; a sidebar card (Cta · card),
@@ -67,6 +69,10 @@ Every word is starter copy for the organization to replace. Figures are
 | `EventsList:shifts` | The kit's shift rows, hand-drawn: a torn-off calendar page for the date, the type as a chip, the time and place beside doodles, "Sign up for this shift" (or "Get tickets", or "Details" once closed), Add to calendar. The spots are drawn as dots (taken filled, open dashed) beside the live words, from the `data-going` and `data-capacity` the kit's LiveCounts writes; without scripts the row keeps its button and draws neither. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. |
 | `Issues:cards` (and `Issues`) | The kit's cards with the row's `icon` as a doodle and its `note` as a chip with the clock. |
 | `Pathways:doors` (and `Pathways`) | Each pathway as a door, arched with a knob, its `icon` as a doodle; the whole card is the link. |
+| `Hero:split` | The kit's split hero with the section's kicker over the headline (the kit's leaves it out). |
+| `TeamGrid:grid` (and `TeamGrid`) | Leadership and Staff as groups under a hand-lettered heading with a wavy rule, each person a card with their photo or their initials on the soft field; open roles and seats as dashed invitation cards. |
+| `Stories:spotlight` (and `Stories`) | The featured story in a taped frame, or the soft field with a doodle when it has no picture; the section's first link is its read link and any further links ("All stories") sit in the section head; the listed stories as wide rows under the squiggle-and-confetti rule. A watch link is not drawn here (Stories · cards and timeline draw it). |
+| `FormBlock:wide` | The section's kicker, heading and body as an intro column beside BackGold's form card (the frame's title is the heading without its asterisks). |
 
 A row's `icon` maps to a doodle by name (`basket`, `book`, `wrench`, `sprout`,
 `people`, `heart`, …) or alias (`food`, `garden`, `tools`, …); any other word
@@ -99,6 +105,23 @@ without it the stroke is simply there). A heading helper in the kit, so every
 template can honor the convention, is the brief's decision 9, the owner's
 call. A starred word in an attribute (a frame's title) keeps its asterisks.
 
+## How the stylesheet wins over the kit's
+
+The kit's components carry Astro-scoped styles (a class plus a
+`data-astro-cid` attribute), which outrank a plain class rule. Every rule in
+`template.css` that restyles the kit sits under `:is(body, #main)`: it matches
+every element and counts as an id, so the template's rules beat the kit's
+scoped ones evenly and still settle among themselves by their own order. Only
+the tokens, `body` and the page's grain sit outside it. A new rule goes inside.
+
+## A page with no Hero
+
+The kit draws a page that does not open with a Hero under a page header, the
+page's title as its `<h1>` (every template on the kit does). On this template
+that header is the quiet title: the title set small in the accent after the
+calendar doodle, so the first section's own kicker and heading lead the page
+(the starter's Events opens on its agenda's "What's coming up").
+
 ## The faces
 
 Shantell Sans for display (headlines at 800 with the Informal axis at 55 and
@@ -126,6 +149,31 @@ doodle; the phone header's menu as an icon. Motion only under
 `prefers-reduced-motion: no-preference`: a sticker lifts 1px, a marked word
 draws in once. In Firefox, which does not keep a stretched mask's stroke at
 2px, a card's pen outline is a plain 2px blob border.
+
+## Known gaps
+
+What the boards draw that this template does not, and why:
+
+- **The menu sheet's closing stickers and address** (N11: Volunteer a shift,
+  Become a member, the street address): the kit's sheet has no slot for a
+  template's own part. Follow-up: a sheet slot in the kit's Site layout.
+- **The breadcrumb says News, not Stories** (N9): the kit names the list in a
+  post's crumbs from its blog base (`listOf` in the kit's `lib/entries.ts`),
+  not from the menu. Follow-up: the platform names the post list (a label for
+  the blog base), or the kit reads the list's intro page title there.
+- **The hero's hand-lettered aside** ("two hours, no experience needed", N1):
+  Hero · overlap has no field for it, and the template adds no copy of its own.
+- **Agenda rows say RSVP, not Sign up, on volunteer shifts** (N5): the kit's
+  agenda words its button; Events · agenda is the kit's layout.
+- **Financials · donut**: every wedge carries the same hatch (a conic
+  gradient cannot vary its pattern per slice) and the hole has no
+  hand-lettered label (the template adds no copy).
+- **StatCards** with the starter's `Your figure` set the words at the
+  figure's size: CSS cannot tell the starter's word from a number.
+- **Contrast the kit owns**: under the marigold, straw and apricot brand in
+  the dark scheme, the kit's derived tint ground gives muted text 4.39:1 and
+  accent text 4.16:1 (board N12's brand 3); both come from `brand.ts`, not
+  from this template.
 
 ## Develop locally
 

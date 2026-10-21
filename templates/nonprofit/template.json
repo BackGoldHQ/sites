@@ -432,6 +432,14 @@
                   "slug": "news"
                 },
                 "url": "/news"
+              },
+              {
+                "label": "All stories",
+                "target": {
+                  "kind": "page",
+                  "slug": "news"
+                },
+                "url": "/news"
               }
             ],
             "data": {
@@ -819,7 +827,9 @@
             "bleed": "full",
             "variant": "wide",
             "copy": {
-              "heading": "Sign up to volunteer"
+              "kicker": "Not sure where you fit?",
+              "heading": "Tell us, and we’ll find you a *spot*",
+              "body": "Say who reads these and how soon they write back. A person, not a robot."
             },
             "media": {},
             "links": []
@@ -871,6 +881,7 @@
             "bleed": "full",
             "variant": "agenda",
             "copy": {
+              "kicker": "Come by",
               "heading": "What’s *coming* up",
               "eventsEmptyCta": "Nothing is on the calendar this month. Write to us if you would like to host something."
             },

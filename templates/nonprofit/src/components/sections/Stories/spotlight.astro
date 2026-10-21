@@ -1,0 +1,90 @@
+---
+// Stories · spotlight as this template draws it (board N1, "What a Saturday
+// grows into"): the section head, with the section's links after the first
+// as its "more" links ("All stories"), the line of copy, then the featured
+// story: its picture in a taped frame at the left, or, with none, the soft
+// field of the brand with the sprout doodle, never a grey box; at the right
+// its label as a chip, its title, the summary, the status and outcome chips
+// and the read link (the section's first link) as the primary sticker. The
+// stories in the list follow under the squiggle-and-confetti rule as wide
+// rows: a square photo or the soft field with the sparkle doodle, then the
+// label chip and the status chip (the accent for a win), the title and the line. With no story, no featured
+// title and no heading it draws nothing. A watch link is the kit's layout's
+// (Stories · cards and timeline draw it); this one reads the first link only.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { featuredOf, storiesOf } from '@backgold/template-kit/components/sections/Stories/stories.ts'
+import { links } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import Doodle from '../../Doodle.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const [first, ...more] = section.links ?? []
+const featured = featuredOf({ ...section, links: first ? [first] : [] })
+const stories = storiesOf(section)
+const moreLinks = more.length > 0 ? links({ ...section, links: more }) : []
+const Title = heading ? 'h3' : 'h2'
+const Small = heading ? 'h4' : 'h3'
+---
+{(heading || featured || stories.length > 0) && (
+  <Band section={section} class="stories stories-spotlight np-spotlight">
+    <SectionHead kicker={kicker} heading={heading} more={moreLinks} />
+    <Prose value={section.copy.body} class="lede" />
+    {featured && (
+      <article class="np-lead">
+        {featured.picture ? (
+          <div class="np-lead-photo"><img src={featured.picture.url} alt={featured.picture.alt} loading="lazy" decoding="async" /></div>
+        ) : (
+          <div class="np-lead-photo np-field" aria-hidden="true"><Doodle name="sprout" /></div>
+        )}
+        <div class="np-lead-words">
+          {featured.label && <p class="np-lead-label"><span class="chip"><Doodle name="sprout" />{featured.label}</span></p>}
+          <Title class="np-lead-title">{featured.title}</Title>
+          {featured.summary && <p class="np-lead-summary">{featured.summary}</p>}
+          {(featured.status || featured.outcome) && (
+            <p class="np-lead-chips">
+              {featured.status && <span class="chip chip-accent"><Doodle name="sparkle" />{featured.status}</span>}
+              {featured.outcome && <span class="chip chip-outline">{featured.outcome}</span>}
+            </p>
+          )}
+          {featured.read && <p class="actions"><a class="button" href={featured.read.href} rel={featured.read.rel}>{featured.read.label}</a></p>}
+        </div>
+      </article>
+    )}
+    {stories.length > 0 && (
+      <>
+        {featured && <div class="np-divider" aria-hidden="true"><span class="np-confetti"></span></div>}
+        <ul class="np-small-stories" role="list">
+          {stories.map((story) => (
+            <li class="np-small-story np-card">
+              {story.photo ? (
+                <img class="np-small-photo" src={story.photo} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class="np-small-photo np-field" aria-hidden="true"><Doodle name="sparkle" /></span>
+              )}
+              <div class="np-small-words">
+                {(story.label || story.status) && (
+                  <p class="np-small-chips">
+                    {story.label && <span class="chip chip-outline">{story.label}</span>}
+                    {story.status && <span class={story.tone === 'won' ? 'chip chip-accent' : 'chip'}>{story.status}</span>}
+                  </p>
+                )}
+                <Small class="np-small-title">{story.link ? <a href={story.link.href} rel={story.link.rel}>{story.title}</a> : story.title}</Small>
+                {story.body && <p class="np-small-body">{story.body}</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </Band>
+)}

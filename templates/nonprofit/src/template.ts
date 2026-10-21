@@ -1,7 +1,10 @@
 // The nonprofit template, as the kit (@backgold/template-kit) draws it: its
-// manifest, the kit's sections with four of its own (Services · programs,
-// the layout it proposes; EventsList · shifts, with spot dots and weeks;
-// Issues · cards and Pathways · doors with the row's icon as a doodle), the
+// manifest, the kit's sections with its own (Services · programs, the layout
+// it proposes; EventsList · shifts, with spot dots and weeks; Issues · cards
+// and Pathways · doors with the row's icon as a doodle; Hero · split with its
+// kicker; TeamGrid · grid as cards with open roles as invitations; Stories ·
+// spotlight with its soft field and wide rows; FormBlock · wide with an intro
+// column), the
 // kit's entry layouts, its faces and its light-first look. The hand-drawn
 // look itself is src/styles/template.css; the doodle sprite and the marked
 // word are src/middleware.ts's. astro.config.mjs names this file to the
@@ -16,9 +19,13 @@ import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
 import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import EventsListShifts from './components/sections/EventsList/shifts.astro'
+import FormBlockWide from './components/sections/FormBlock/wide.astro'
+import HeroSplit from './components/sections/Hero/split.astro'
 import IssuesCards from './components/sections/Issues/cards.astro'
 import PathwaysDoors from './components/sections/Pathways/doors.astro'
 import ServicesPrograms from './components/sections/Services/programs.astro'
+import StoriesSpotlight from './components/sections/Stories/spotlight.astro'
+import TeamGridGrid from './components/sections/TeamGrid/grid.astro'
 import './styles/template.css'
 
 export default defineTemplate({
@@ -31,6 +38,12 @@ export default defineTemplate({
     'Pathways:doors': PathwaysDoors,
     'Services:programs': ServicesPrograms,
     'EventsList:shifts': EventsListShifts,
+    'FormBlock:wide': FormBlockWide,
+    'Hero:split': HeroSplit,
+    Stories: StoriesSpotlight,
+    'Stories:spotlight': StoriesSpotlight,
+    TeamGrid: TeamGridGrid,
+    'TeamGrid:grid': TeamGridGrid,
   },
   entries: kitEntries,
   fonts: {
