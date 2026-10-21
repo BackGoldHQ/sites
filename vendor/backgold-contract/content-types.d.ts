@@ -270,8 +270,8 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
-        video: "video";
         tag: "tag";
+        video: "video";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -294,8 +294,8 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
-        video: "video";
         tag: "tag";
+        video: "video";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -308,10 +308,10 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     default_access: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
+        tag: "tag";
         public: "public";
         signed_in: "signed_in";
         members: "members";
-        tag: "tag";
     }>>>;
 }, z.core.$strict>;
 type ContentTypeUpdateInput = z.infer<typeof contentTypeUpdateSchema>;
@@ -321,17 +321,17 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        date: "date";
-        link: "link";
-        list: "list";
-        datetime: "datetime";
-        short_text: "short_text";
         long_text: "long_text";
+        short_text: "short_text";
+        rich_text: "rich_text";
+        image: "image";
+        pdf: "pdf";
+        link: "link";
+        date: "date";
+        datetime: "datetime";
         choice: "choice";
         choices: "choices";
-        pdf: "pdf";
-        image: "image";
-        rich_text: "rich_text";
+        list: "list";
         reference: "reference";
     }>;
     required: z.ZodDefault<z.ZodBoolean>;
