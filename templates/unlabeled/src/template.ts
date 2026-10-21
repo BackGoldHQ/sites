@@ -80,15 +80,15 @@ export default defineTemplate({
   eventPage: EventPage,
   notFound: NotFound,
   // The archive is this template's own route, which no menu link in BackGold
-  // can name: ARCHIVE at the end of the header menu (after PETITION, as the
-  // boards draw it) and first in the BISD group, current on the archive and
-  // on every record's own address but the records requests' (BISD: Public
-  // info is current there); and first in the footer's The record,
-  // with Request a record (the how-to on her records ledger) after it.
+  // can name: ARCHIVE at the top level of the header menu, last (after
+  // PETITION, as the boards draw it), in the bar and the phone sheet, current
+  // on the archive and on every record type's own address; the BISD group
+  // holds only her own rows. The footer's The record opens with The archive
+  // and BISD: Public info, with Request a record (the how-to on her records
+  // ledger) after them.
   menuLinks: [
-    { label: 'Archive', href: '/archive', group: 'BISD', match: 'prefix', also: ARCHIVE_BASES.filter((base) => base !== '/records') },
+    { label: 'Archive', href: '/archive', match: 'prefix', also: ARCHIVE_BASES },
     { label: 'The archive', href: '/archive', menu: 'footer', group: 'The record', match: 'prefix', also: ARCHIVE_BASES },
-    { label: 'BISD: Public info', href: '/records', group: 'BISD', match: 'prefix' },
     { label: 'BISD: Public info', href: '/records', menu: 'footer', group: 'The record', match: 'prefix' },
     { label: 'Request a record', href: '/records#request-a-record', menu: 'footer', group: 'The record' },
   ],
