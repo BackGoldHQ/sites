@@ -1,164 +1,169 @@
-// Her skin for BackGold's frames (the RSVP and tickets, the petition's sheet,
-// a form, a poll, the donate form, the sign-up), served at
-// /_backgold/frame.css (src/pages/[skin]/frame.css.ts) and linked by each
-// frame when the kit sends `skin` (src/template.ts `frameSkin`). The frame is
-// another origin's page, so it cannot read this site's variables: her values
-// are written in. What it draws, as boards U6–U9 draw the frames: labels in
-// capitals, small and tracked, in the grey; square black fields on a
-// strong hairline, white when focused; the white block submit in capitals
-// that inverts on hover; no rounded corner, no shadow, no colour but white
-// and the greys (a validation message keeps the frame's own status colour);
-// a petition's count set huge; the cards as hairline boxes; the live feed
-// (MovementTicker) as one line: the count, then each name and what they
-// did, between hairlines.
-//
-// The selectors are the frames' markup as BackGold serves it today: the look
-// root `.bg-look`, the `data-test-*` hooks on the event and petition frames,
-// the sign-up's `gg-su-*` classes and the form controls' component classes
-// (`.input`, `.btn`, `.checkbox`). Everything is scoped under the look root
-// or the sign-up island, so a frame without them is left as it is.
+// Her skin for BackGold's frames (the RSVP and tickets, a petition's sheet
+// and block, a form, a poll, the donate form, the sign-up, the live feed),
+// served at /_backgold/frame.css (src/pages/[skin]/frame.css.ts) and linked
+// by each frame when the kit sends `skin` (src/template.ts `frameSkin`),
+// written to BackGold's frame-skin contract (the platform's
+// docs/FRAME-SKINS.md): every rule under `html[data-bg-look]`, only the
+// `bg-fr-*` parts, their states and the `--bg-look-*` variables, which carry
+// her colours (src/template.ts `frameColors`). What it draws, as boards
+// U6–U9 draw the frames: labels in small tracked capitals in the grey;
+// square fields on the field edge, white when focused; the white block
+// submit in capitals that inverts on hover; choices and items as hairline
+// boxes that invert when picked; a petition's count set huge over a
+// hairline meter; cards as hairline boxes. It never hides a required field,
+// a consent row, a legal line, an error or the submit, and every state
+// (focus, invalid, picked, disabled) still reads as what it is. The frame
+// may refuse the skin (a preview host): the look alone then draws them.
 
-const INK = '#ffffff'
-const GROUND = '#000000'
-const MUTED = '#949494'
-const LINE = '#1a1a1a'
-const LINE_STRONG = '#616161'
+const META = `font-size: 11px; line-height: 1.45; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase;`
 
-/** The meta line: small capitals, tracked. */
-const META = `font-size: 11px !important; line-height: 1.4 !important; font-weight: 400 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important;`
+export const FRAME_SKIN_CSS = `/* Unlabeled: BackGold's frames in her look (FRAME-SKINS contract). */
+html[data-bg-look] { color-scheme: dark; }
+html[data-bg-look] body { background: transparent; }
 
-export const FRAME_SKIN_CSS = `/* Unlabeled: BackGold's frames in her look. */
-:root { color-scheme: dark; }
-html, body { background: transparent !important; }
-:is(.bg-look, [data-gg-island]) { color: ${INK}; }
-
-/* Square, flat. */
-:is(.bg-look, [data-gg-island]) :is(*, *::before, *::after):not(.radio) { border-radius: 0 !important; }
-:is(.bg-look, [data-gg-island]) :is([class*='shadow-'], .card, .gg-look-panel, .gg-ptask) { box-shadow: none !important; }
-
-/* The cards: hairline boxes on black. */
-.bg-look :is([data-test-event-rsvp-card], .gg-look-panel, .gg-ptask, .card) {
-  background: ${GROUND} !important;
-  border: 1px solid ${LINE_STRONG} !important;
+/* Cards: hairline boxes, square, flat. */
+html[data-bg-look] .bg-fr-card,
+html[data-bg-look] .bg-fr-sheet {
+  background: transparent;
+  border: 1px solid var(--bg-look-line-strong);
+  border-radius: 0;
+  box-shadow: none;
 }
-.bg-look :is(.bg-base-100, .bg-base-200) { background-color: ${GROUND} !important; }
-.bg-look .border-base-300 { border-color: ${LINE} !important; }
-
-/* Headings: the display face in capitals, weight 500. */
-.bg-look :is(h1, h2, h3, [data-test-event-free-heading], .gg-ptask .font-extrabold) {
-  font-weight: 500 !important;
-  text-transform: uppercase;
+html[data-bg-look] .bg-fr-card-head,
+html[data-bg-look] .bg-fr-title {
+  color: var(--bg-look-ink);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.1;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
-.bg-look :is(h3, [data-test-event-free-heading], .gg-ptask .font-extrabold) { font-size: 22px !important; line-height: 1.1 !important; }
 
-/* Grey words: everything the frame dims. */
-:is(.bg-look, [data-gg-island]) [class*='text-base-content/'] { color: ${MUTED} !important; }
+/* Labels, help, the autofill line and the legal lines: the meta line, in the grey. */
+html[data-bg-look] .bg-fr-label { ${META} color: var(--bg-look-muted); }
+html[data-bg-look] .bg-fr-req { color: var(--bg-look-ink); }
+html[data-bg-look] .bg-fr-help,
+html[data-bg-look] .bg-fr-autofill,
+html[data-bg-look] .bg-fr-fine { ${META} letter-spacing: 0.06em; color: var(--bg-look-muted); }
+html[data-bg-look] .bg-fr-autofill a,
+html[data-bg-look] .bg-fr-autofill button { color: var(--bg-look-ink); text-decoration: underline; text-underline-offset: 0.22em; }
 
-/* Labels and the small print: the meta line. */
-.bg-look :is(label.block, span.block.font-semibold, [data-test-event-question] > span.font-semibold, [data-test-event-guests] .font-semibold),
-.bg-look :is([data-test-event-donor-hint], [data-test-petition-express-hint], [data-test-event-free-footnote], [data-test-event-guests-help], [data-test-petition-latest-signer]),
-.gg-su :is(.gg-su-account-hint, .gg-su-fine) {
-  ${META}
-  color: ${MUTED} !important;
-}
-.bg-look :is(label.block, [data-test-event-question] > span.font-semibold) { margin-bottom: 6px !important; }
-/* The required mark and the petition's own accents: white, never a colour. */
-.bg-look :is(label, span.font-semibold) :is(.text-error, .text-primary),
-.bg-look :is(.text-primary, .text-success):not(.alert *):not([role='alert'] *) { color: ${INK} !important; }
-
-/* Links: white, underlined. */
-:is(.bg-look, [data-gg-island]) :is(a, .link) { color: ${INK} !important; text-decoration: underline; text-underline-offset: 0.22em; text-decoration-thickness: 1px; }
-
-/* Fields: square black boxes on the strong hairline, white when focused. */
-:is(.bg-look, [data-gg-island]) :is(.input, .textarea, .select, .gg-su-input) {
+/* Fields: square boxes on the field edge; white when focused; a dashed accent edge when they fail. */
+html[data-bg-look] .bg-fr-input {
   min-height: 46px;
-  background: ${GROUND} !important;
-  border: 1px solid ${LINE_STRONG} !important;
-  color: ${INK} !important;
-  font-size: 14px !important;
-  outline: none !important;
+  background: var(--bg-look-surface);
+  border: 1px solid var(--bg-look-field-edge);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--bg-look-ink);
+  font-size: 14px;
 }
-:is(.bg-look, [data-gg-island]) :is(.input, .textarea, .select, .gg-su-input)::placeholder { color: #737373; opacity: 1; }
-:is(.bg-look, [data-gg-island]) :is(.input, .textarea, .select, .gg-su-input):focus {
-  border-color: ${INK} !important;
-  box-shadow: inset 0 0 0 1px ${INK} !important;
+html[data-bg-look] .bg-fr-input:focus,
+html[data-bg-look] .bg-fr-input:focus-visible {
+  border-color: var(--bg-look-ink);
+  box-shadow: inset 0 0 0 1px var(--bg-look-ink);
+  outline: none;
 }
-.bg-look :is(.checkbox, .radio) { border: 1px solid ${LINE_STRONG} !important; background-color: ${GROUND}; }
-.bg-look .checkbox:checked { background-color: ${INK} !important; border-color: ${INK} !important; color: ${GROUND} !important; --chkbg: ${INK}; --chkfg: ${GROUND}; }
-.bg-look .radio:checked { background-color: ${INK} !important; border-color: ${INK} !important; box-shadow: 0 0 0 3px ${GROUND} inset !important; }
+html[data-bg-look] .bg-fr-input:user-invalid,
+html[data-bg-look] .bg-fr-input[aria-invalid='true'] {
+  border-color: var(--bg-look-accent);
+  border-style: dashed;
+}
+html[data-bg-look] .bg-fr-input[disabled] { border-style: dotted; }
 
-/* The submit: the white block, capitals, inverting on hover. */
-:is(.bg-look, [data-gg-island]) :is(button[type='submit'], .btn-primary, .btn-secondary, .gg-su-submit) {
+/* Choices and items: hairline boxes in capitals that invert when picked. */
+html[data-bg-look] .bg-fr-choice,
+html[data-bg-look] .bg-fr-item {
+  background: transparent;
+  border: 1px solid var(--bg-look-field-edge);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--bg-look-ink);
+}
+html[data-bg-look] .bg-fr-choice { ${META} font-size: 12px; }
+html[data-bg-look] .bg-fr-choice[aria-pressed='true'],
+html[data-bg-look] .bg-fr-choice:has(input:checked),
+html[data-bg-look] .bg-fr-item[aria-pressed='true'],
+html[data-bg-look] .bg-fr-item:has(input:checked) {
+  background: var(--bg-look-ink);
+  border-color: var(--bg-look-ink);
+  color: var(--bg-look-surface);
+}
+
+/* Checkbox and consent rows: the box ticked in white; the words stay whole. */
+html[data-bg-look] .bg-fr-check { color: var(--bg-look-muted); font-size: 12px; line-height: 1.5; }
+html[data-bg-look] .bg-fr-check input { accent-color: var(--bg-look-ink); border-radius: 0; }
+
+/* The message line: a failure in the accent with a rule before it. */
+html[data-bg-look] .bg-fr-error { font-size: 12px; letter-spacing: 0.04em; }
+html[data-bg-look] .bg-fr-error[data-tone='error'] {
+  padding-left: 10px;
+  border-left: 2px solid var(--bg-look-accent);
+  color: var(--bg-look-accent);
+}
+
+/* The main call: the white block in capitals, inverting on hover. */
+html[data-bg-look] .bg-fr-submit {
   min-height: 52px;
-  background: ${INK} !important;
-  border: 1px solid ${INK} !important;
-  color: ${GROUND} !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
+  background: var(--bg-look-ink);
+  border: 1px solid var(--bg-look-ink);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--bg-look-surface);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
-:is(.bg-look, [data-gg-island]) :is(button[type='submit'], .btn-primary, .btn-secondary, .gg-su-submit):is(:hover, :focus-visible) {
-  background: ${GROUND} !important;
-  color: ${INK} !important;
+html[data-bg-look] .bg-fr-submit:not([disabled]):is(:hover, :focus-visible) {
+  background: var(--bg-look-surface);
+  color: var(--bg-look-ink);
 }
-/* The other buttons (the guest steppers, choices): hairline boxes that invert. */
-.bg-look .btn:not(.btn-primary):not(.btn-secondary):not([type='submit']) {
-  background: ${GROUND} !important;
-  border: 1px solid ${LINE_STRONG} !important;
-  color: ${INK} !important;
-  font-weight: 500 !important;
-}
-.bg-look .btn:not(.btn-primary):not(.btn-secondary):not([type='submit']):hover { background: ${INK} !important; color: ${GROUND} !important; }
-.bg-look [data-test-event-guests] { border-color: ${LINE_STRONG} !important; }
-.bg-look [data-test-event-guests-count] { font-weight: 500 !important; font-size: 18px !important; }
+html[data-bg-look] .bg-fr-submit:focus-visible { outline: 2px solid var(--bg-look-link); outline-offset: 3px; }
+html[data-bg-look] .bg-fr-submit[disabled] { opacity: 0.55; cursor: not-allowed; }
 
-/* A petition's count, set huge, and its bar: white on the hairline. */
-.bg-look [data-test-petition-count] .text-4xl {
-  font-size: clamp(72px, 14vw, 132px) !important;
-  font-weight: 500 !important;
-  line-height: 0.9 !important;
+/* The other buttons: hairline boxes in capitals that invert on hover. */
+html[data-bg-look] .bg-fr-secondary {
+  background: transparent;
+  border: 1px solid var(--bg-look-field-edge);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--bg-look-ink);
+  ${META}
+  font-size: 12px;
+  font-weight: 500;
+}
+html[data-bg-look] .bg-fr-secondary:not([disabled]):hover { background: var(--bg-look-ink); color: var(--bg-look-surface); }
+html[data-bg-look] .bg-fr-secondary[disabled] { opacity: 0.55; }
+
+/* A petition's count, set huge, and its meter: a white hairline on the line. */
+html[data-bg-look] [data-bg-fr='petition-sheet'] .bg-fr-count,
+html[data-bg-look] [data-bg-fr='petition'] .bg-fr-count > :first-child {
+  color: var(--bg-look-ink);
+  font-size: clamp(72px, 14vw, 132px);
+  font-weight: 500;
+  line-height: 0.9;
   letter-spacing: -0.02em;
-  color: ${INK} !important;
 }
-.bg-look [data-test-petition-count] .text-sm { ${META} color: ${MUTED} !important; }
-.bg-look [data-test-petition-count] .bg-base-300 { background-color: ${LINE} !important; height: 4px !important; }
-.bg-look [data-test-petition-count] .bg-primary { background-color: ${INK} !important; }
+html[data-bg-look] :is([data-bg-fr='petition-sheet'], [data-bg-fr='petition']) .bg-fr-progress {
+  height: 4px;
+  background: var(--bg-look-line);
+  border: 0;
+  border-radius: 0;
+}
+html[data-bg-look] :is([data-bg-fr='petition-sheet'], [data-bg-fr='petition']) .bg-fr-progress > * {
+  background: var(--bg-look-ink);
+  border-radius: 0;
+}
+html[data-bg-look] .bg-fr-signer { ${META} color: var(--bg-look-muted); }
 
-/* The sign-up's opening line: the meta line, not a headline. */
-section[data-gg-band] > div > p:first-child { ${META} color: ${MUTED} !important; text-align: left !important; }
+/* The live feed's total: her display weight. */
+html[data-bg-look] [data-bg-fr='movement-ticker'] .bg-fr-count { color: var(--bg-look-ink); font-weight: 500; }
 
-/* The live feed: one line, no card. */
-[data-gg-island='movementticker'] { padding: 0 !important; background: transparent !important; min-height: 0 !important; }
-[data-gg-island='movementticker'] .gg-mt-panel { display: flex; align-items: center; max-width: none !important; margin: 0 !important; padding: 0 !important; background: none !important; color: ${INK} !important; overflow: hidden; }
-[data-gg-island='movementticker'] .gg-mt-total { display: flex; align-items: baseline; gap: 10px; flex: none; margin: 0 !important; padding: 0 24px 0 16px; white-space: nowrap; }
-[data-gg-island='movementticker'] .gg-mt-total-num { font-size: 22px !important; font-weight: 500 !important; background: none !important; -webkit-text-fill-color: ${INK} !important; color: ${INK} !important; }
-[data-gg-island='movementticker'] .gg-mt-total-label { ${META} display: inline !important; margin: 0 !important; color: ${MUTED} !important; }
-[data-gg-island='movementticker'] .gg-mt-feed { flex-direction: row !important; flex-wrap: nowrap; gap: 0 !important; margin: 0 !important; min-width: 0; overflow: hidden; }
-[data-gg-island='movementticker'] .gg-mt-row { flex: none; gap: 10px !important; padding: 14px 24px !important; border-top: 0 !important; border-left: 1px solid ${LINE} !important; animation: none !important; white-space: nowrap; }
-[data-gg-island='movementticker'] .gg-mt-avatar, [data-gg-island='movementticker'] .gg-mt-dot { display: none !important; }
-[data-gg-island='movementticker'] .gg-mt-body { display: flex; align-items: baseline; gap: 10px; }
-[data-gg-island='movementticker'] :is(.gg-mt-name, .gg-mt-ctx, .gg-mt-time, .gg-mt-tag) { ${META} display: inline !important; }
-[data-gg-island='movementticker'] .gg-mt-name { color: ${INK} !important; }
-[data-gg-island='movementticker'] :is(.gg-mt-ctx, .gg-mt-time, .gg-mt-tag) { color: ${MUTED} !important; border: 0 !important; padding: 0 !important; }
-[data-gg-island='movementticker'] .gg-mt-amt { background: none !important; -webkit-text-fill-color: ${INK} !important; color: ${INK} !important; }
-[data-gg-island='movementticker'] :is(.gg-mt-stats, .gg-mt-note) { display: none !important; }
+/* A map's legend: hairline rows in the meta face. */
+html[data-bg-look] .bg-fr-legend { border-top: 1px solid var(--bg-look-line); }
+html[data-bg-look] .bg-fr-legend-row { ${META} color: var(--bg-look-muted); }
 
-/* The petition island (a petition's map and coverage layouts): the sheet flat on black, the tally huge. */
-[data-gg-island='petition'] :is(.gg-pt-sheet, .gg-pt-body) { background: transparent !important; border: 0 !important; box-shadow: none !important; }
-[data-gg-island='petition'] .gg-pt-card { background: ${GROUND} !important; border: 1px solid ${LINE_STRONG} !important; box-shadow: none !important; }
-[data-gg-island='petition'] :is(.gg-pt-org, .gg-pt-goalnote, .gg-pt-week, .gg-pt-account-hint, .gg-pt-addr, .gg-pt-field > span, .gg-pt-tally-of) { ${META} color: ${MUTED} !important; }
-[data-gg-island='petition'] :is(.gg-pt-title, .gg-pt-cardhead) { font-weight: 500 !important; text-transform: uppercase; color: ${INK} !important; }
-[data-gg-island='petition'] .gg-pt-summary, [data-gg-island='petition'] .gg-pt-statement { color: ${INK} !important; }
-[data-gg-island='petition'] .gg-pt-statement { border-left: 1px solid ${LINE_STRONG} !important; }
-[data-gg-island='petition'] .gg-pt-ask-n { background: ${GROUND} !important; border: 1px solid ${LINE_STRONG} !important; color: ${INK} !important; }
-[data-gg-island='petition'] .gg-pt-tally-big { font-size: clamp(72px, 14vw, 132px) !important; font-weight: 500 !important; line-height: 0.9 !important; color: ${INK} !important; }
-[data-gg-island='petition'] .gg-pt-tally-bar { background: ${LINE} !important; height: 4px !important; border: 0 !important; }
-[data-gg-island='petition'] .gg-pt-tally-fill { background: ${INK} !important; }
-[data-gg-island='petition'] :is(.gg-pt-input, .gg-pt-textarea) { min-height: 46px; background: ${GROUND} !important; border: 1px solid ${LINE_STRONG} !important; color: ${INK} !important; }
-[data-gg-island='petition'] :is(.gg-pt-input, .gg-pt-textarea):focus { border-color: ${INK} !important; box-shadow: inset 0 0 0 1px ${INK} !important; outline: none !important; }
-[data-gg-island='petition'] .gg-pt-check input { accent-color: ${INK}; }
-[data-gg-island='petition'] .gg-pt-submit { min-height: 52px; background: ${INK} !important; border: 1px solid ${INK} !important; color: ${GROUND} !important; font-weight: 500 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; box-shadow: none !important; }
-[data-gg-island='petition'] .gg-pt-submit:is(:hover, :focus-visible) { background: ${GROUND} !important; color: ${INK} !important; }
+/* The done screen: her heading face. */
+html[data-bg-look] .bg-fr-done :is(h1, h2, h3) { font-weight: 500; text-transform: uppercase; }
 `
