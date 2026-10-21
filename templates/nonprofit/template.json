@@ -643,7 +643,7 @@
                   ],
                   "buttonLabel": "Come to the market",
                   "href": "/contact",
-                  "icon": "basket"
+                  "icon": "leaf"
                 },
                 {
                   "name": "Homework club",
@@ -669,7 +669,7 @@
                   ],
                   "buttonLabel": "Borrow a tool",
                   "href": "/contact",
-                  "icon": "wrench"
+                  "icon": "briefcase"
                 },
                 {
                   "name": "Community garden",
@@ -682,7 +682,7 @@
                   ],
                   "buttonLabel": "Join a garden day",
                   "href": "/get-involved",
-                  "icon": "sprout"
+                  "icon": "leaf"
                 }
               ]
             }
@@ -711,14 +711,14 @@
                   "summary": "You would like groceries, homework help, a tool or a garden bed.",
                   "outcome": "What is open this week and how to start",
                   "href": "/programs",
-                  "icon": "basket"
+                  "icon": "leaf"
                 },
                 {
                   "title": "Give help",
                   "summary": "You have two hours, a skill, or a car on Saturday mornings.",
                   "outcome": "A first shift with someone to pair you",
                   "href": "/get-involved",
-                  "icon": "people"
+                  "icon": "users"
                 },
                 {
                   "title": "Give",
@@ -853,17 +853,17 @@
                 {
                   "title": "We write back",
                   "body": "A person, not a robot, within a few days.",
-                  "icon": "mail"
+                  "icon": "zap"
                 },
                 {
                   "title": "Your first shift",
                   "body": "Paired with someone who has done it before.",
-                  "icon": "people"
+                  "icon": "users"
                 },
                 {
                   "title": "Come back when you can",
                   "body": "No minimum, no guilt. Shifts are posted every week.",
-                  "icon": "calendar"
+                  "icon": "home"
                 }
               ]
             }
