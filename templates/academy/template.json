@@ -26,7 +26,37 @@
       "right",
       "left",
       "letter",
-      "portrait"
+      "portrait",
+      "books"
+    ],
+    "Pathways": [
+      "doors",
+      "quiz"
+    ],
+    "Issues": [
+      "cards",
+      "steps",
+      "numbered",
+      "checklist"
+    ],
+    "StatCards": [
+      "row",
+      "feature"
+    ],
+    "Faq": [
+      "accordion",
+      "topics",
+      "cards"
+    ],
+    "TeamGrid": [
+      "grid",
+      "list"
+    ],
+    "VideoEmbed": [
+      "auto",
+      "landscape",
+      "portrait",
+      "square"
     ],
     "Cta": [
       "card",
