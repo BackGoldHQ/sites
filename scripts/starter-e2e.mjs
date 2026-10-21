@@ -4491,7 +4491,8 @@ async function driveLook() {
 // grouped by week (the nonprofit in its own shifts look), each shift's page
 // with its facts and BackGold's sign-up card framed in the site's look, a
 // button to `signup_url` for a row with no frame, and the 404 for a slug the
-// feed does not list.
+// feed does not list. Beside them, the kit's `/form/<slug>`: a 301 to the
+// page at that slug, else the 404.
 
 /**
  * A stand-in for BackGold's shift sign-up frame (`/embed/shift/<org>/<slug>`):
@@ -4581,6 +4582,14 @@ async function checkVolunteer(origin, fixture) {
   res = await get(origin, '/volunteer/no-such-shift')
   html = await read(res)
   check(res.status === 404 && html.includes('Page not found') && tags(html, 'h1').length === 1, `a slug the feed does not list is the 404 (got ${res.status})`)
+  // `/form/<slug>`, a standalone form's flyer address: a 301 to the page at
+  // that slug, the 404 for a slug with no page.
+  const formPage = fixture.data.pages.find((p) => !p.is_home && p.url === `/${p.slug}`)
+  res = await get(origin, `/form/${formPage.slug}`)
+  check(res.status === 301 && new URL(res.headers.get('location') ?? '', origin).pathname === `/${formPage.slug}`, `/form/${formPage.slug} is a 301 to /${formPage.slug} (got ${res.status} ${res.headers.get('location')})`)
+  res = await get(origin, '/form/no-such-page')
+  html = await read(res)
+  check(res.status === 404 && html.includes('Page not found'), `/form/<slug> with no page at that slug is the 404 (got ${res.status})`)
   if (NONPROFIT) {
     res = await get(origin, '/_backgold/frame.css')
     const skin = await res.text()
