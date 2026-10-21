@@ -4348,7 +4348,7 @@ function unlabeledFixture(fixture) {
     style: JSON.stringify({ appearance: 'dark', density: 'compact', radiusPx: 0 }),
     theme: null,
     brand: { ...fixture.data.site.brand, logo_url: null, primary_color: '#ffffff', secondary_color: '#000000', accent_color: '#ffffff' },
-    seo: { ...fixture.data.site.seo, description: 'No red. No blue. Just Texans.' },
+    seo: { ...fixture.data.site.seo, description: 'Not Red. Not Blue. Just Texans.' },
     social: ['instagram', 'youtube', 'linkedin', 'facebook', 'tiktok', 'discord'].map((platform) => ({ platform, url: `https://${platform}.com/unlabeledtexas` })),
   }
   fixture.data.legal = { disclaimer: 'Contributions or gifts to Unlabeled are not deductible as charitable contributions for federal income tax purposes.', required: true }
