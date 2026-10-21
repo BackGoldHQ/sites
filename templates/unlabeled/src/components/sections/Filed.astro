@@ -5,7 +5,11 @@
 // section's, on the same ground and grid (src/styles/template.css); it is
 // hidden in an area (Top banner, Above the footer, the Sidebar), and when the
 // layout draws nothing for want of content. The layouts in OWN_HEAD draw
-// their own head, or none.
+// their own head, or none. A section that carries one of BackGold's frames
+// (a petition, a form, a poll, the live feed) on the contrast band is drawn
+// on the plain one: her contrast band is black as well (only a call to
+// action turns it white, src/styles/template.css), and the plain band is
+// the one every frame is drawn for.
 import type { Section } from '@backgold/content'
 import { text } from '@backgold/template-kit/lib/format'
 import { OWN_HEAD, drawn } from '../../sections'
@@ -17,7 +21,8 @@ interface Props {
   level?: 1 | 2
 }
 
-const { section, variant } = Astro.props
+const { section: sent, variant } = Astro.props
+const section: Section = sent.embed && sent.band === 'contrast' ? { ...sent, band: 'plain' } : sent
 const own = (key: string) => (Object.hasOwn(drawn, key) ? drawn[key] : undefined)
 const key = variant && own(`${section.type}:${variant}`) ? `${section.type}:${variant}` : section.type
 const Layout = own(key)
@@ -28,8 +33,12 @@ const title = text(copy.heading) ?? text(copy.headline) ?? text(copy.storyHeadli
 ---
 {Layout && (headed ? (
   <HeadedBand kicker={kicker} title={title} band={section.band ?? 'plain'}>
-    <Layout {...Astro.props} />
+    <Layout {...Astro.props} section={section} />
   </HeadedBand>
 ) : (
-  <Layout {...Astro.props} />
+  <Layout {...Astro.props} section={section} />
 ))}
+
+<script>
+  import '../../scripts/motion'
+</script>

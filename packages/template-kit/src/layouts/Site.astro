@@ -9,7 +9,8 @@
 //                    chrome.header, one of template.json's `chrome.header`;
 //                    src/lib/chrome.ts). `bar`: the brand (the logo, else the
 //                    template's mark and the name as a two-line wordmark) at
-//                    the left; the header menu, each group a dropdown; the
+//                    the left; the header menu, each group a dropdown, its
+//                    repeats drawn once (src/lib/menu.ts); the
 //                    light and dark switch (ModeToggle, unless the site's
 //                    appearance is pinned); the header button at the right.
 //                    `centered`: the brand centred on a row of its own, the
@@ -96,6 +97,7 @@ import { appearanceOf, brandCss } from '../lib/brand'
 import { chromeOf, copyrightLine } from '../lib/chrome'
 import { siteFonts } from '../lib/fonts'
 import { footerColumnsOf } from '../lib/footer'
+import { tidyHeaderMenu } from '../lib/menu'
 import type { TemplateConfig } from '../template'
 import '../styles/site.css'
 
@@ -167,7 +169,9 @@ function withTemplateLinks(nodes: MenuNode[], menu: 'header' | 'footer'): MenuNo
   }
   return out
 }
-const headerNodes = withTemplateLinks(menuOf(headerItems, pathname, page), 'header')
+const headerButton = headerButtonOf(headerItems, pathname, page)
+/** The header menu, its repeats drawn once (lib/menu.ts): never the header button again, never two same links side by side, a group of one link a plain item. */
+const headerNodes = tidyHeaderMenu(withTemplateLinks(menuOf(headerItems, pathname, page), 'header'), headerButton)
 const footerNodes = withTemplateLinks(menuOf(footer?.items ?? [], pathname, page), 'footer')
 const bottomRow = menuOf(utility?.items ?? [], pathname, page).flatMap((node) => [node, ...node.children]).filter((node) => node.href)
 const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []
@@ -201,7 +205,6 @@ const donateIn = (nodes: MenuNode[]): MenuNode | null => {
   }
   return null
 }
-const headerButton = headerButtonOf(headerItems, pathname, page)
 const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (headerButton?.kind === 'donate' ? headerButton : null)) : null
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)

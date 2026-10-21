@@ -86,6 +86,14 @@ export interface TemplateConfig {
    */
   frameSkin?: boolean
   /**
+   * The component that draws one event's page at /events/<slug>, given
+   * `{ event }` (an EventDetail, lib/events.ts). Left out, the kit's
+   * (components/EventPage.astro).
+   */
+  eventPage?: AstroComponent
+  /** The component that draws the 404 page's content. Left out, the kit's (components/NotFound.astro). */
+  notFound?: AstroComponent
+  /**
    * Links a template adds to its menus for routes it draws itself (an
    * archive at `/archive`), which no menu link in BackGold can name
    * (layouts/Site.astro). `menu` 'header' (the default): at the top level,

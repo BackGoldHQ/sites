@@ -2,11 +2,13 @@
 // The top of an archive entry's page (board U3): the running head (its type
 // and address, its place in the category, the folio), the kind as a white
 // chip with the meta line, the title huge, then its text: the summary as
-// the archive wrote it, and the entry's full text after it. When the
+// the archive wrote it, and the entry's full text after it. The title
+// carries its record's view-transition name, as its result row does. When the
 // summary is the start of the full text (the CMS cut it short), the full
 // text stands in its place.
 import { renderMarkdown } from '@backgold/astro/server'
 import RunningHead from './RunningHead.astro'
+import { recordTransition } from '../../lib/archive/transition'
 
 interface Props {
   /** "Decision GOV-D01". */
@@ -31,7 +33,7 @@ const body = full ? renderMarkdown(full) : ''
 <header class="ar-entry">
   <RunningHead mark={`${label} // ${path}`} title={place} folio="R / 01" />
   <p class="ar-entry-meta"><span class="ar-kind">{kind}</span> <span class="ar-meta">{meta.filter(Boolean).join(' · ')}</span></p>
-  <h1>{title}</h1>
+  <h1 data-u-decode style={`view-transition-name:${recordTransition(path)}`}>{title}</h1>
   {lede && <p class="ar-lede">{lede}</p>}
   {body && <div class="ar-lede ar-prose" set:html={body} />}
   <slot />

@@ -90,6 +90,10 @@ const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
 const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
 // The corners those frames are asked for: its config's `frameRadius`, else the kit's 12.
 const FRAME_RADIUS = (ON_KIT && /\bframeRadius:\s*(\d+)/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || '12'
+// What a kit template's frame address carries after its layout: the look,
+// light and dark, the corners and the face (the skin is asked for only on
+// an https site, which the e2e is not).
+const FRAME_TAIL = `&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}`
 // ── petition-drive (begin) ──
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
@@ -2291,7 +2295,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
     ON_KIT
-      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}"`).test(html)
+      ? new RegExp(`<iframe\\b[^>]*data-bg-embed[^>]*src="https://secure\\.backgold\\.com/embed/d/df_general\\?layout=form${FRAME_TAIL}"`).test(html)
       : /<iframe\b[^>]*data-bg-embed[^>]*src="https:\/\/secure\.backgold\.com\/embed\/d\/df_general"/.test(html),
     ON_KIT ? "the Donate section is BackGold's frame, asked to wear the site in its layout" : "the Donate section is BackGold's embed iframe",
   )
@@ -2335,7 +2339,9 @@ async function checkConfigured(origin, fixture, disclaimer) {
   // its areas hold a dated item, the frames' one resize script because an
   // area's sign-up is framed by its reusable section, and on a template on
   // the kit the light and dark switch's two (the head's kept choice, the
-  // header button's).
+  // header button's), and a template with its own motion script
+  // (src/scripts/motion.ts) that one module, once.
+  const motion = existsSync(join(TEMPLATE, 'src/scripts/motion.ts'))
   const areaItems = Object.values(fixture.data.entryAreas).flat()
   const dated = areaItems.some((item) => item.from !== null || item.until !== null)
   const framed = areaItems.some((item) => item.sections.some((section) => section.embed?.iframe))
@@ -2343,12 +2349,14 @@ async function checkConfigured(origin, fixture, disclaimer) {
   const entryWindowScripts = html.split('[data-bg-area-item][data-from]').length - 1
   const entryResizeScripts = html.split("data.type !== 'givegold:resize'").length - 1
   const entryModeScripts = html.split("localStorage.getItem('gg-mode')").length - 1 + (html.split("querySelector('[data-mode-toggle]')").length - 1)
+  const entryMotionScripts = motion ? scripts.filter((s) => /type="module"/.test(s)).length : 0
   check(
-    scripts.length === entryWindowScripts + entryResizeScripts + entryModeScripts &&
+    scripts.length === entryWindowScripts + entryResizeScripts + entryModeScripts + entryMotionScripts &&
       entryWindowScripts === (dated ? 1 : 0) &&
       entryResizeScripts === (framed ? 1 : 0) &&
-      entryModeScripts === (ON_KIT ? 2 : 0),
-    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${ON_KIT ? ' and the light and dark switch\'s two' : ''} (${scripts.length} other script tag(s))`,
+      entryModeScripts === (ON_KIT ? 2 : 0) &&
+      entryMotionScripts === (motion ? 1 : 0),
+    `an entry loads only JSON-LD${dated ? ", the areas' window script once" : ''}${framed ? " and the frames' resize script once" : ''}${ON_KIT ? ' and the light and dark switch\'s two' : ''}${motion ? ' and its motion module once' : ''} (${scripts.length} other script tag(s))`,
   )
   const entryRail = /<div class="layout-rail">\s*<aside\b[^>]*>/.exec(html)?.[0] ?? ''
   check(
@@ -3076,7 +3084,7 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}"`) : null
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))

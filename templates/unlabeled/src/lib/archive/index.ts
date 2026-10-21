@@ -7,17 +7,20 @@
 //   KV key   bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT>
 //   value    ArchiveData as JSON (the documents the search is built from)
 //
-// The list route carries no field values, so a build reads each entry's
-// detail: one list page per 50 entries of a type, then one read per entry,
-// eight at a time. Each of those reads is itself cached by the client under
-// the same version, so a later entry page costs nothing new. The build
+// A build lists each type 50 entries a page with `include=fields`, which
+// carries each entry's fields, and keeps them as listed: one read per 50
+// entries. A listed entry the api sends without fields (an api that predates
+// `include`), and every entry of a type whose entries carry a prose body the
+// list does not send (BODY_KINDS: her records requests' responses), is read
+// on its own, eight at a time. Each of those reads is itself cached by the
+// client under the same version, so a later entry page costs nothing new. The build
 // writes KV once, the whole document set under one key. Within one isolate
 // the parsed index is held in memory per key and concurrent requests share
 // one build; two isolates that both miss on a new version each build it
 // (the second write is the same value), which costs reads, never
 // correctness, so no lock is kept.
 
-import type { BackgoldContent, ContentTypeSummary, EntryDetail } from '@backgold/content'
+import type { BackgoldContent, ContentTypeSummary, Entry, EntryDetail } from '@backgold/content'
 import { workerVars } from '@backgold/template-kit/lib/env'
 import { ARCHIVE_KINDS, type ArchiveKindKey } from './kinds'
 import { httpUrl, list, toDoc, type ArchiveDoc } from './record'
@@ -30,6 +33,9 @@ const INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
 
 /** Entry details read at once while building. */
 const DETAIL_CONCURRENCY = 8
+
+/** The kinds whose entries carry a prose body, which a list never sends: each is read on its own. */
+const BODY_KINDS: readonly ArchiveKindKey[] = ['information_request']
 
 export interface ArchiveType {
   key: ArchiveKindKey
@@ -114,9 +120,14 @@ export async function buildArchive(client: BackgoldContent, version: number): Pr
   const types = archiveTypes(all)
   const docs: ArchiveDoc[] = []
   for (const type of types.filter((t) => t.present)) {
-    const slugs: string[] = []
-    for await (const entry of client.allEntries(type.key, { limit: 50 })) slugs.push(entry.slug)
-    const details = await pool(slugs, DETAIL_CONCURRENCY, (slug) => client.entry(type.key, slug))
+    const unread: string[] = []
+    const fromList = !BODY_KINDS.includes(type.key)
+    for await (const entry of client.allEntries(type.key, { limit: 50, include: 'fields' })) {
+      const { fields } = entry as Entry & { fields?: unknown }
+      if (fromList && fields && typeof fields === 'object') docs.push(toDoc(type.key, { ...entry, fields, body: { markdown: '' } } as EntryDetail, type.base))
+      else unread.push(entry.slug)
+    }
+    const details = await pool(unread, DETAIL_CONCURRENCY, (slug) => client.entry(type.key, slug))
     for (const answer of details) if (answer) docs.push(toDoc(type.key, answer.entry as EntryDetail, type.base))
   }
   linkOriginals(docs)
