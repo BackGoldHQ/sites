@@ -1,0 +1,94 @@
+---
+// Petition · none as this template draws it when BackGold sends the
+// petition's text (petitionWords): the section's kicker and heading, the
+// text under them in Nunito, the asks as steps on the numbered stickers
+// (template.css "Issues · steps") and the legal note, in a column at the
+// left, and BackGold's sheet at the right (under them on a phone), asked to
+// collapse its own copy of the text (`text=collapsed`, the disclosure
+// frame.css styles). Without the text it is the kit's Petition, unchanged.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
+import KitPetition from '@backgold/template-kit/components/sections/Petition/index.astro'
+import { text } from '@backgold/template-kit/lib/format'
+import { petitionWords } from '@backgold/template-kit/lib/petition-text'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const words = petitionWords(section)
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+---
+{words ? (
+  <Band section={section} class="headed-module np-petition">
+    <div class="np-petition-words" data-petition-text>
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+      <div class="prose np-petition-prose" set:html={words.html} />
+      {words.asks.length > 0 && (
+        <ol class="steps np-petition-steps" role="list">
+          {words.asks.map((ask, i) => (
+            <li class="step">
+              <p class="step-label">Step {i + 1}</p>
+              <div>
+                <h3 class="step-title">{ask.title}</h3>
+                {ask.body && <p class="step-body">{ask.body}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {words.legal && <p class="fine np-petition-legal">{words.legal}</p>}
+    </div>
+    <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="none" card title={heading ?? section.type} height="44rem" params={{ text: 'collapsed' }} />
+  </Band>
+) : (
+  <KitPetition section={section} variant={variant} />
+)}
+
+<style>
+  .np-petition-prose {
+    max-width: 38em;
+    font-family: var(--font);
+  }
+  .np-petition-steps {
+    display: grid;
+    gap: 1.25rem;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .np-petition-steps .step {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.125rem;
+    align-items: start;
+  }
+  .np-petition-steps .step::after {
+    content: none;
+  }
+  .np-petition-steps .step-title {
+    margin: 0.25rem 0 0.375rem;
+    font-size: var(--h3);
+  }
+  .np-petition-steps .step-body {
+    margin: 0;
+  }
+  .np-petition-legal {
+    margin: 1.5rem 0 0;
+    max-width: 40em;
+    font-size: var(--text-sm);
+  }
+  @media (min-width: 48rem) {
+    :global(.np-petition > .bg-section-inner) {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: clamp(2rem, 1rem + 3vw, 3.5rem);
+      align-items: start;
+    }
+  }
+</style>

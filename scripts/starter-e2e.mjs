@@ -100,6 +100,9 @@ const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── unlabeled (begin) ──
 const UNLABELED = TEMPLATE_NAME === 'unlabeled'
 // ── unlabeled (end) ──
+// The templates whose Petition (none) draws the petition's text beside the
+// sheet when the Content API sends it, and so ask the frame for text=collapsed.
+const DRAWS_PETITION_TEXT = TEMPLATE_NAME === 'unlabeled' || TEMPLATE_NAME === 'nonprofit'
 const SERVE = process.argv.includes('--serve')
 // --serve: the organization at /news (newsBaseData), always on the candidate template.
 const SERVE_NEWS = SERVE && (process.argv.includes('--news') || TEMPLATE_NAME === 'candidate')
@@ -931,7 +934,18 @@ function kitchenSinkDocument() {
       block('Donate', { heading: 'Chip in', presetAmounts: '10,25,50', donationFormId: 'df_general' }),
       block('FormBlock', { heading: 'Get updates', subtext: 'One email a week.', buttonText: 'Sign up', pageId: 'lp_ks', fields: [{ label: 'Email', type: 'email', required: true }] }),
       block('PollBlock', { heading: 'Which issue matters most?', pageId: 'lp_ks', questions: [{ prompt: 'Pick one', options: 'Taxes, Schools, Roads', allowMultiple: false }] }),
-      block('Petition', { petitionSlug: 'freeze-the-levy', heading: 'Sign the petition', header: 'none', volunteerAsk: 'off', orgSlug: 'pine-valley' }),
+      block('Petition', {
+        petitionSlug: 'freeze-the-levy',
+        heading: 'Sign the petition',
+        header: 'none',
+        volunteerAsk: 'off',
+        orgSlug: 'pine-valley',
+        goalNote: 'This petition asks for a public vote and nothing else.',
+        asks: [
+          { title: 'Freeze the levy', body: 'Hold the property-tax levy at this year’s rate.' },
+          { title: 'Vote in public', body: 'Put any increase to a recorded vote at an evening meeting.' },
+        ],
+      }),
       block('Store', { heading: 'Gear', maxProducts: 6 }),
       block('Event', { eventSlug: 'budget-night', heading: 'Come to budget night', showDescription: true, eventName: 'Budget night', startsAt: '2026-10-15T23:00:00.000Z' }),
       block('Calendar', { heading: 'Calendar', opensOn: 'month', actions: 'link', orgSlug: 'pine-valley', pageId: 'lp_ks', events: [] }),
@@ -988,6 +1002,16 @@ function newsBaseData(data, ex) {
   }
 }
 
+/** The kitchen sink Petition's petition, as the Content API sends it on the section's `data.petition`. */
+const KITCHEN_PETITION = {
+  slug: 'freeze-the-levy',
+  title: 'Freeze the levy',
+  text_html: '<p>We, the undersigned residents of Pine Valley, ask the county board to freeze the property-tax levy until the voters have had their say.</p>',
+  addressed_to: 'The Pine Valley county board',
+  signature_count: 1234,
+  goal: 5000,
+}
+
 /** The kitchen sink's sections, made by the api's own projection from the vendored contract (vendor/backgold-contract). */
 async function kitchenSink() {
   const shared = await import(pathToFileURL(join(ROOT, 'vendor/backgold-contract/content-api.js')).href)
@@ -1000,6 +1024,11 @@ async function kitchenSink() {
     orgSlug: 'pine-valley',
     embedUrls: shared.contentApiEmbedUrls(origins),
   })
+  // The petition the Petition section names, as the Content API puts it on the
+  // section's data (the platform's projection reads it from the petition, not
+  // the block, so the vendored projectDocument does not make it).
+  const petition = sections.find((s) => s.type === 'Petition')
+  if (petition) petition.data = { ...(petition.data ?? { source: 'petition', items: [] }), petition: KITCHEN_PETITION }
   return {
     blocks: shared.CONTENT_API_BLOCKS,
     areaBlocks: shared.CONTENT_API_AREA_BLOCKS,
@@ -3141,8 +3170,22 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       if (section.embed?.iframe) {
         const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}"`) : null
+        // A Petition on a template that draws its text beside the sheet also asks the frame to collapse the text.
+        const extra = type === 'Petition' && DRAWS_PETITION_TEXT ? '&amp;text=collapsed' : ''
+        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}${extra}"`) : null
         if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
+        if (type === 'Petition') {
+          // The petition's words beside the sheet (and the frame told to collapse its copy), or neither.
+          const drawn = markup.includes('data-petition-text')
+          const words = [decode(KITCHEN_PETITION.text_html.replace(/<[^>]*>/g, '')), 'Freeze the levy', 'Vote in public', 'This petition asks for a public vote and nothing else.']
+          if (DRAWS_PETITION_TEXT) {
+            const missing = words.filter((w) => !text.includes(w))
+            if (!drawn || missing.length) failures.push(`Petition: expected the petition's text, asks and legal note beside the sheet (missing ${JSON.stringify(missing)})`)
+            if (UNLABELED && !/What you(’|')re signing/.test(text)) failures.push('Petition: expected the "What you’re signing" running line')
+          } else if (drawn || /[?&;]text=/.test(frames[0] ?? '')) {
+            failures.push('Petition: draws the petition text or sends text= on a template that does not')
+          }
+        }
       } else if (section.embed?.mount) {
         const mount = Object.entries(section.embed.mount).every(([name, value]) => markup.includes(value === '' ? ` ${name}` : `${name}="${value}"`))
         if (frames.length !== 0 || !mount || !markup.includes(`src="${section.embed.script}"`)) failures.push(`${type}: expected its mount container and script`)
@@ -4203,22 +4246,41 @@ function petitionDriveFixture(fixture) {
  * Unlabeled's site as its starter seeds it, put on the fixture for --serve:
  * every starter page at its slug (home at `/`), its sections as the Content
  * API sends them (BackGold's frames as the fixture's stand-in frame, the
- * fixture's upcoming events in the events lists, no typed ticker rows: the
+ * fixture's upcoming events in the events lists, her own petition sheet with
+ * its asks and its petition's text, no typed ticker rows: the
  * live feed is BackGold's), the early-voting strip in Top banner on every page
  * but Donate and the newsletter band Above the footer, the starter's menus,
  * and her brand: white, black and white, no saved theme (so the template's
  * own faces load), pinned dark, her six socials and her legal line.
  */
 function unlabeledFixture(fixture) {
+  // A starter page's petition as the Content API sends it on `data.petition`:
+  // its text is the page's Hero statement, its title the Hero's headline.
+  const unlabeledPetition = (page, s) => {
+    const hero = page?.sections.find((x) => x.type === 'Hero')?.copy ?? {}
+    const words = hero.subheadline ?? hero.lede ?? ''
+    const escape = (v) => v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    return {
+      slug: page?.slug ?? s.id,
+      title: hero.headline ?? s.copy.heading ?? 'Petition',
+      text_html: words ? `<p>${escape(words)}</p>` : null,
+      addressed_to: s.copy.addressedTo ?? null,
+      signature_count: 412,
+      goal: 1000,
+    }
+  }
   const manifest = JSON.parse(readFileSync(join(TEMPLATE, 'template.json'), 'utf8'))
   const { starter } = manifest
   const own = fixture.data.page
   const events = fixture.data.events.upcoming.filter((e) => e.type !== 'fundraiser')
   const FRAMED = new Set(['Petition', 'FormBlock', 'PollBlock', 'Donate', 'SignupCapture', 'Event'])
-  const fill = (pageId) => (s) => {
+  const fill = (pageId, page = null) => (s) => {
     const section = { ...structuredClone(s), options: s.options ?? {} }
     if (FRAMED.has(s.type)) {
-      if (s.type === 'Petition') delete section.data
+      // Her own sheet (`none`) gets its asks and the petition, the text the
+      // page's Hero states (unlabeledPetition); the kit's layouts get no rows.
+      if (s.type === 'Petition' && s.variant === 'none') section.data = { ...s.data, petition: unlabeledPetition(page, s) }
+      else if (s.type === 'Petition') delete section.data
       section.embed = { iframe: `${fixture.origin}/embed/petition/${pageId}/${s.id}`, script: 'https://secure.backgold.com/embed.js' }
     }
     if (s.type === 'EventsList') section.data = { source: 'events', items: s.options?.max ? events.slice(0, s.options.max) : events }
@@ -4241,7 +4303,7 @@ function unlabeledFixture(fixture) {
         {
           ...home,
           page: { ...home.page, id, slug, title: p.title, url: slug === 'home' ? '/' : `/${slug}`, is_home: slug === 'home', takes_donations: slug === 'donate', meta: { title: null, description: null, image_url: null } },
-          sections: p.sections.map(fill(id)),
+          sections: p.sections.map(fill(id, p)),
           areas: { top_banner: slug === 'donate' ? [] : [area('early-voting', id)], sidebar: [], above_footer: [area('the-newsletter', id)] },
         },
       ]
