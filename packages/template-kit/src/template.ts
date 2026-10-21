@@ -25,6 +25,7 @@ import type { SiteTemplateManifest } from '@backgold/contract/site-templates'
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
 import { entries } from './components/entries'
 import { sections } from './components/sections'
+import type { FrameColorsAdjust } from './lib/brand'
 
 export type AstroComponent = AstroComponentFactory
 
@@ -66,6 +67,24 @@ export interface TemplateConfig {
    * (sections/modules/ModuleFrame.astro).
    */
   frameRadius?: number
+  /**
+   * The template's change to the colours BackGold's module frames are sent
+   * (the embed look's `look` and `look_dark`), given each band's colours and
+   * the scheme: a template whose cards sit on the band's surface makes the
+   * frame's field edges its own ink, say. A colour it returns that is not
+   * `#rrggbb` keeps the band's. Left out, the frames get the band's colours
+   * as brand.ts derives them (sections/modules/ModuleFrame.astro).
+   */
+  frameColors?: FrameColorsAdjust
+  /**
+   * Whether the template serves its own stylesheet for BackGold's module
+   * frames at `/_backgold/frame.css` on the site's origin: the frames are
+   * then asked to load it (the embed look's `skin`, the site's https
+   * origin), and draw in the template's shapes and faces over the look's
+   * colours. Left out, the frames draw BackGold's own shapes in the look
+   * (sections/modules/ModuleFrame.astro).
+   */
+  frameSkin?: boolean
   /**
    * Links a template adds to its menus for routes it draws itself (an
    * archive at `/archive`), which no menu link in BackGold can name
@@ -115,7 +134,7 @@ export const defineTemplate = (config: TemplateConfig): TemplateConfig => config
 declare global {
   namespace App {
     interface Locals {
-      /** The template drawing this request; PageSections sets it for LeadingHero. */
+      /** The template drawing this request; the routes (and PageSections) set it for LeadingHero and ModuleFrame. */
       template?: TemplateConfig
     }
   }

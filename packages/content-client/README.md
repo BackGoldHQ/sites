@@ -181,6 +181,20 @@ const res = await fetch(`https://api.backgold.com/api/content/v1/events/live?ids
 const { events: counts } = await res.json()
 ```
 
+**`shifts({ cursor?, limit? })`**: the organization's open volunteer shifts,
+soonest first, one page at a time (1 to 50, default 20), with `next_cursor`.
+Each row has its title, `starts_at` and `ends_at` (show them in `timezone`),
+`location`, `capacity` (`null` for no limit), `signed_up`, `waitlisted`, its
+`state` (`open`, `full`, `waitlist`, `closed`) and `signup_url`, BackGold's
+signup card for it: link there. The counts move between publishes, so, as
+for events, ask `GET /api/content/v1/shifts/live?ids=<id>,<id>` from the
+browser for `{ shifts: [{ id, signed_up, waitlisted, state }] }` (cached 30
+seconds, never by version).
+
+```ts
+const { shifts } = await bg.shifts({ limit: 10 })
+```
+
 **`terms(taxonomy)`**: a taxonomy's terms.
 
 ```ts

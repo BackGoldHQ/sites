@@ -18,10 +18,13 @@ interface Props {
   /** Words over the title instead of the entry's terms ("Episode", an issue's line). */
   kicker?: string | null
   minutes?: number | null
+  /** The list's name in the breadcrumb in place of the one its address gives: a template's own words for it. */
+  listLabel?: string | null
 }
 
-const { entry, type, kicker = null, minutes = null } = Astro.props
-const list = listOf(type)
+const { entry, type, kicker = null, minutes = null, listLabel = null } = Astro.props
+const listed = listOf(type)
+const list = listed && listLabel ? { ...listed, name: listLabel } : listed
 const base = list?.path ?? null
 const day = formatDay(entry.publish_at)
 const groups = bylineGroups(entry.authors)

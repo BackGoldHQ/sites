@@ -81,6 +81,8 @@ import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
 import template from 'virtual:backgold-template'
 
 const { sections } = template
+// Every component this request draws reads the template here (ModuleFrame's frame options, LeadingHero's sections), areas and event pages included.
+Astro.locals.template = template
 
 const bg = Astro.locals.backgold
 if (bg.setup !== null) return new Response(null, { status: 503 })

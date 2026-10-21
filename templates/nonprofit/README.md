@@ -55,6 +55,9 @@ Every word is starter copy for the organization to replace. Figures are
 | `src/template.ts` | The template's config for the kit: the manifest, the kit's sections with this template's own layouts registered, the kit's entry layouts, the two faces, and `defaultAppearance: 'light'`. |
 | `src/styles/template.css` | The whole look, over the kit's stylesheet: faces, stickers, pen outlines, tape, marked words, dividers, torn edges, grain and every section's restyle. Its header comment lists each part. |
 | `src/components/sections/` | This template's own layouts (below). |
+| `src/components/entries/post/` | Its own post list and post (below). |
+| `src/lib/list-label.ts` | The post list's name from the header menu ("Stories"). |
+| `src/lib/frame-colors.ts`, `src/styles/frame.css`, `src/frame/` | BackGold's frames in the look (below). |
 | `src/components/Doodle.astro` | One doodle from the sprite, `<svg class="dd"><use href="#d-…"/></svg>`. |
 | `src/lib/doodles.ts` | The doodle set: 9 marks and 24 icons (48-unit strokes, round caps), the marker strokes for a marked word, `iconOf` (a row's `icon` → its doodle) and the sprite. |
 | `src/lib/marked.ts`, `src/middleware.ts` | The marked word and the sprite (below). |
@@ -66,12 +69,14 @@ Every word is starter copy for the organization to replace. Figures are
 | Layout | What it draws |
 | --- | --- |
 | `Services:programs` | Proposed (not yet in the contract's catalogue): an even grid of program cards, each with the row's `icon` as a doodle, its price as a chip in the operator's words ("Free"), its name and summary, its first three `includes` as For, When and Where, and its button as an outline sticker. `featured` is never drawn: no program looks recommended over another. |
-| `EventsList:shifts` | The kit's shift rows, hand-drawn: a torn-off calendar page for the date, the type as a chip, the time and place beside doodles, "Sign up for this shift" (or "Get tickets", or "Details" once closed), Add to calendar. The spots are drawn as dots (taken filled, open dashed) beside the live words, from the `data-going` and `data-capacity` the kit's LiveCounts writes; without scripts the row keeps its button and draws neither. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. |
+| `EventsList:shifts` | The organization's open volunteer shifts (the Content API's `GET /shifts`) as hand-drawn rows: a torn-off calendar page for the date, the time span and place beside doodles, "Part of" the event a shift belongs to, the spots as dots (taken filled, open dashed) beside the words ("6 of 10 filled · 4 spots left"), and the button to the shift's signup card on BackGold (`/volunteer/<slug>`): "Sign up for this shift", "Full · join the waitlist", or "Full" and "Closed" in the outline. The counts and the button are read again from `GET /shifts/live` after the page loads. An api with no shift feed, or an organization with no open shift, draws the section's events instead, with their own button ("RSVP", "Get tickets", "Details") and Add to calendar. A list with no `max` is grouped by week (Monday to Sunday) under "Week of Nov 2" with the week's dates. |
 | `Issues:cards` (and `Issues`) | The kit's cards with the row's `icon` as a doodle and its `note` as a chip with the clock. |
 | `Pathways:doors` (and `Pathways`) | Each pathway as a door, arched with a knob, its `icon` as a doodle; the whole card is the link. |
 | `Hero:split` | The kit's split hero with the section's kicker over the headline (the kit's leaves it out). |
 | `TeamGrid:grid` (and `TeamGrid`) | Leadership and Staff as groups under a hand-lettered heading with a wavy rule, each person a card with their photo or their initials on the soft field; open roles and seats as dashed invitation cards. |
 | `Stories:spotlight` (and `Stories`) | The featured story in a taped frame, or the soft field with a doodle when it has no picture; the section's first link is its read link and any further links ("All stories") sit in the section head; the listed stories as wide rows under the squiggle-and-confetti rule. A watch link is not drawn here (Stories · cards and timeline draw it). |
+| `post:list` (entry layout) | The post list (board N8): the kit's ListFrame named as the header menu names the list ("Stories", `src/lib/list-label.ts`), the search beside the head ("Search stories"), the category chips; on the first page the newest post leads, its cover on a paper mount in a pen frame, taped (the soft field and its category's doodle without one), the chip with the doodle, the title, the summary and the byline; the rest as pen-outlined cards two across with the byline; the pager as stickers. |
+| `post:article` (entry layout) | A post (board N9): the kit's header with the breadcrumb named from the menu ("Stories ↗ Grow Lab"), the chips, the title (the middleware marks its starred word), the byline and reading time; the cover framed and taped; the body in Nunito with every blockquote a sticker; the squiggle rule; "Share this story" as outline stickers; the author box. |
 | `FormBlock:wide` | The section's kicker, heading and body as an intro column beside BackGold's form card (the frame's title is the heading without its asterisks). |
 
 A row's `icon` maps to a doodle by name (`basket`, `book`, `wrench`, `sprout`,
@@ -83,6 +88,37 @@ StatCards · row as pinned notes with the figure on a highlighter swipe,
 Financials · donut as hatched wedges in a pen circle, Progress · bar as a
 marker swipe in a pen trough, Membership · tiers and Services · packages with
 no card filled, and every blockquote in a post as a sticker.
+
+## BackGold's frames
+
+Every BackGold frame on the site (the sign-up band, the volunteer and contact
+forms, Donate, an event's RSVP, Join) sits on the template's hand-cut card.
+Two things make the frame itself belong there:
+
+- **The colours it is sent** (`frameColors`, `src/lib/frame-colors.ts`): the
+  band's, with the frame's lines drawn in the pen (the strong line is the
+  ink 82% over it, the hairline the ink at 30%), so a field's edge reads on
+  the white card. The band's own lines are a quiet rule (Kettle Commons'
+  tint: `#e8c87a` on `#fffdf7`), and a field bordered in one vanishes.
+- **Its skin** (`frameSkin`, `src/styles/frame.css`, served at
+  `/_backgold/frame.css` by `src/frame/css.ts`, an injected route since
+  Astro routes no page under `_`): written to the platform's frame-skin
+  contract (`docs/FRAME-SKINS.md` in the platform repository): every rule
+  under `html[data-bg-look]`, only the `bg-fr-*` parts, their states and the
+  `--bg-look-*` colours (fields edged in `--bg-look-field-edge`). Labels,
+  card heads, choices and buttons hand-lettered; fields with the edge on
+  blob corners; choices as chips; the main call a sticker (a form's and a
+  sign-up's with the mail doodle; Donate's in the site's main colour); other
+  buttons outline stickers; failures as the exclamation doodle in the
+  accent. Nothing in it hides or covers a required field, consent, a legal
+  line, the message line or the main call. The faces load from the site
+  itself: the stylesheet opens with Shantell Sans' and Nunito's `@font-face`
+  rules (latin and latin-ext), their files at `/_backgold/fonts/<file>`
+  (`src/frame/font.ts`, read from Google Fonts' file host, with
+  `Access-Control-Allow-Origin: *`), since a skinned frame admits fonts from
+  the site's origin only. The kit asks a frame for the skin with `skin=<the
+  site's https origin>`; BackGold may refuse it silently, and then the frame
+  wears the colours above alone, which read on their own.
 
 ## The marked word (this template's convention)
 
@@ -157,17 +193,16 @@ What the boards draw that this template does not, and why:
 - **The menu sheet's closing stickers and address** (N11: Volunteer a shift,
   Become a member, the street address): the kit's sheet has no slot for a
   template's own part. Follow-up: a sheet slot in the kit's Site layout.
-- **The breadcrumb says News, not Stories** (N9): the kit names the list in a
-  post's crumbs from its blog base (`listOf` in the kit's `lib/entries.ts`),
-  not from the menu. Follow-up: the platform names the post list (a label for
-  the blog base), or the kit reads the list's intro page title there.
+- **Stories in the header is not drawn as current on a post** (N9): the
+  kit's menu marks a link current on its own address only.
+- **The 404 page offers "Read the news"**: the kit's not-found words.
 - **The hero's hand-lettered aside** ("two hours, no experience needed", N1):
   Hero · overlap has no field for it, and the template adds no copy of its own.
-- **Agenda rows say RSVP, not Sign up, on volunteer shifts** (N5): the kit's
-  agenda words its button; Events · agenda is the kit's layout.
-- **Financials · donut**: every wedge carries the same hatch (a conic
-  gradient cannot vary its pattern per slice) and the hole has no
-  hand-lettered label (the template adds no copy).
+- **Events · agenda does not list volunteer shifts** (N5): it is the kit's
+  layout over the events; the shifts are on Get involved and home.
+- **Financials · donut**: every wedge carries the same hatch angle (a conic
+  gradient cannot vary its pattern per slice; the colors differ) and the
+  hole has no hand-lettered label (the template adds no copy).
 - **StatCards** with the starter's `Your figure` set the words at the
   figure's size: CSS cannot tell the starter's word from a number.
 - **Contrast the kit owns**: under the marigold, straw and apricot brand in

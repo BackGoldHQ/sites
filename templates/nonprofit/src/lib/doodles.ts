@@ -94,6 +94,19 @@ const ALIASES: Record<string, DoodleName> = {
   document: 'doc',
 }
 
+/** Words in a category's name that say which doodle it gets (termIcon), beyond the icon names and aliases. */
+const TERM_WORDS: Record<string, DoodleName> = {
+  grow: 'sprout',
+  homework: 'book',
+  library: 'book',
+  school: 'book',
+  tool: 'wrench',
+  volunteer: 'people',
+  neighbor: 'people',
+  food: 'basket',
+  donor: 'gift',
+}
+
 /**
  * The doodle a row's `icon` value draws: its own name or an alias
  * (N-catalogue's list), the sparkle for any other word, and null when the
@@ -104,6 +117,24 @@ export function iconOf(value: unknown): DoodleName | null {
   const key = value.trim().toLowerCase()
   if (Object.hasOwn(ICONS, key) || Object.hasOwn(MARKS, key)) return key as DoodleName
   return ALIASES[key] ?? 'sparkle'
+}
+
+/**
+ * The doodle for a category by its name ("Grow Lab" → sprout, "Saturday
+ * Market" → basket): the first word that is an icon's name, an alias or one
+ * of TERM_WORDS (a plural read as its singular), else the sparkle.
+ */
+export function termIcon(label: unknown): DoodleName {
+  if (typeof label !== 'string') return 'sparkle'
+  for (const raw of label.toLowerCase().split(/[^a-z-]+/)) {
+    for (const word of [raw, raw.replace(/s$/, '')]) {
+      if (!word) continue
+      if (Object.hasOwn(ICONS, word) || Object.hasOwn(MARKS, word)) return word as DoodleName
+      const named = ALIASES[word] ?? TERM_WORDS[word]
+      if (named) return named
+    }
+  }
+  return 'sparkle'
 }
 
 /** Every doodle and marker as hidden <symbol>s, the page's one sprite. */

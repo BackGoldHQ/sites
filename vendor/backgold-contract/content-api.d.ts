@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as SiteMode, h as SiteApiKeyKind } from './constants-BgQMMyNq.js';
-export { i as ContentWebhookEvent, j as SITE_KEY_PREFIXES, k as SitePageModuleKind } from './constants-BgQMMyNq.js';
+import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as ShiftPublicState, h as ShiftPublicSubjectKind, i as SiteMode, j as SiteApiKeyKind } from './constants-3dFHOvY5.js';
+export { k as ContentWebhookEvent, l as SITE_KEY_PREFIXES, m as SitePageModuleKind } from './constants-3dFHOvY5.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -55,6 +55,12 @@ interface SiteResponse {
         domain: string;
         mode: SiteMode;
         favicon_url: string | null;
+        /**
+         * The content of the site's `<meta name="facebook-domain-verification">`
+         * tag: the site's own value, else its organization's; null when neither
+         * has one (draw no tag).
+         */
+        meta_domain_verification: string | null;
         pack: string | null;
         style: string | null;
         /** The saved theme the site wears, resolved; null when it wears its palette. */
@@ -337,7 +343,7 @@ declare const SECTION_LAYOUTS: {
     readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"];
     readonly About: readonly ["right", "left", "letter", "portrait", "books"];
     readonly Issues: readonly ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"];
-    readonly StatCards: readonly ["row", "ribbon", "feature", "wall"];
+    readonly StatCards: readonly ["row", "ribbon", "feature", "wall", "archive"];
     readonly Cta: readonly ["card", "banner", "strip", "photo"];
     readonly QuoteStrip: readonly ["row", "single", "ticker", "logos", "carousel", "wall"];
     readonly Map: readonly ["directory", "map", "bar"];
@@ -352,7 +358,7 @@ declare const SECTION_LAYOUTS: {
     readonly Stories: readonly ["spotlight", "cards", "timeline"];
     readonly ShareKit: readonly ["cards", "strip", "compact"];
     readonly Financials: readonly ["bars", "donut", "table"];
-    readonly Services: readonly ["packages", "list", "compare"];
+    readonly Services: readonly ["packages", "list", "compare", "programs"];
     readonly CaseStudies: readonly ["featured", "grid", "beforeafter"];
     readonly Resources: readonly ["library", "featured", "band"];
     readonly Pathways: readonly ["doors", "tabs", "quiz"];
@@ -563,7 +569,7 @@ interface Entry {
     /** Preview only: the entry's state ('draft' or 'published'). */
     status?: string;
     /**
-     * Who may open the entry (0547): its own rule, or the one it follows. Read
+     * Who may open the entry (0552): its own rule, or the one it follows. Read
      * through a course, a lesson with no rule of its own follows the course;
      * read anywhere else, an entry with no rule of its own that sits in
      * published courses opens for a reader who qualifies for one of them (and
@@ -795,6 +801,53 @@ interface EventLiveCounts {
 /** GET /events/live?ids= — live counts for the named events; an id the site cannot read is omitted. Never versioned. */
 interface EventsLiveResponse {
     events: EventLiveCounts[];
+}
+/** What a public shift belongs to: a public event (its slug, as GET /events/:slug reads it), else `standalone` with no slug. */
+interface ShiftSubject {
+    kind: ShiftPublicSubjectKind;
+    slug: string | null;
+}
+/**
+ * One open volunteer shift as GET /shifts lists it. Counts only: who signed
+ * up is never part of the Content API. `signup_url` is the shift's signup
+ * card on BackGold (`/volunteer/<slug>` on the site's own host, or on the
+ * organization's host for a headless site): a template links there.
+ */
+interface ShiftsListRow {
+    id: string;
+    slug: string;
+    title: string;
+    starts_at: string;
+    ends_at: string;
+    /** The organization's IANA zone: show the shift's times in it. */
+    timezone: string;
+    location: string | null;
+    /** The organizer's notes, plain text; null when empty. */
+    notes: string | null;
+    /** Spots on the shift; null for no limit. */
+    capacity: number | null;
+    /** Signed up, confirmed and attended: the people holding a spot. */
+    signed_up: number;
+    waitlisted: number;
+    state: ShiftPublicState;
+    subject: ShiftSubject;
+    signup_url: string;
+}
+/** GET /shifts — the organization's open public shifts, soonest first, one page at a time. */
+interface ShiftsResponse {
+    shifts: ShiftsListRow[];
+    next_cursor: string | null;
+}
+/** One shift's live counts and the state they make. */
+interface ShiftLiveCounts {
+    id: string;
+    signed_up: number;
+    waitlisted: number;
+    state: ShiftPublicState;
+}
+/** GET /shifts/live?ids= — live counts for the named shifts; an id the site cannot read is omitted. Never versioned. */
+interface ShiftsLiveResponse {
+    shifts: ShiftLiveCounts[];
 }
 /**
  * One event by its slug, for a site that draws the event's own page at
@@ -2109,7 +2162,7 @@ declare const CONTENT_API_BLOCKS: {
         readonly role: "data";
         readonly copy: readonly ["kicker", "heading", "body", "pickLabel"];
         readonly variant: "layout";
-        readonly options: readonly ["anchorId"];
+        readonly options: readonly ["inlineSlots", "slotsLink", "anchorId"];
         readonly data: {
             readonly source: "booking";
             readonly lists: readonly [{
@@ -2322,4 +2375,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

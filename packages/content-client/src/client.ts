@@ -47,6 +47,7 @@ import type {
   ReadOptions,
   RedirectsResponse,
   SectionsResponse,
+  ShiftsResponse,
   SiteResponse,
   SitemapResponse,
   TermsResponse,
@@ -557,6 +558,13 @@ export const createClient: CreateClient = (opts) => {
           cursor: eventsOpts.cursor,
           limit: eventsOpts.limit === undefined ? undefined : String(eventsOpts.limit),
         },
+        undefined,
+        'throw',
+      ))!,
+    shifts: async (shiftsOpts = {}) =>
+      (await read<ShiftsResponse>(
+        '/shifts',
+        { cursor: shiftsOpts.cursor, limit: shiftsOpts.limit === undefined ? undefined : String(shiftsOpts.limit) },
         undefined,
         'throw',
       ))!,

@@ -1,5 +1,7 @@
 // Where a visitor's browser reads an event's live counts: the Content API's
 // `GET /events/live?ids=`, which answers `{ events: [{ id, going, seats_left }] }`
+// (and a volunteer shift's, `GET /shifts/live?ids=`, `{ shifts: [{ id,
+// signed_up, waitlisted, state }] }`, the same way)
 // outside the content version (`Cache-Control: public, max-age=30`). The page
 // around the counts is cached under the content version, so the counts are
 // never part of it: a few lines of script fetch them after the page loads.
@@ -21,23 +23,25 @@
 import { apiOrigin, trimmed, workerVars } from './env'
 
 const PUBLISHABLE_KEY = /^bg_site_pk_[A-Za-z0-9]+$/
-const LIVE_PATH = '/api/content/v1/events/live'
+/** The live routes: an event's going and seats left, a volunteer shift's signed up and state. */
+const LIVE_PATHS = { events: '/api/content/v1/events/live', shifts: '/api/content/v1/shifts/live' } as const
 
 export interface LiveSource {
-  /** The same-origin path (first-party), else `<api origin>/api/content/v1/events/live`. */
+  /** The same-origin path (first-party), else `<api origin>/api/content/v1/events/live` (or `/shifts/live`). */
   url: string
   /** The publishable key the browser sends; null first-party, where none is sent. */
   key: string | null
 }
 
-/** The live route for this site (see above); null when a key-mode site has nothing to ask with. */
-export async function liveSource(firstParty: boolean): Promise<LiveSource | null> {
-  if (firstParty) return { url: LIVE_PATH, key: null }
+/** The live route for this site (see above), events' or shifts'; null when a key-mode site has nothing to ask with. */
+export async function liveSource(firstParty: boolean, feed: keyof typeof LIVE_PATHS = 'events'): Promise<LiveSource | null> {
+  const path = LIVE_PATHS[feed]
+  if (firstParty) return { url: path, key: null }
   const env = await workerVars()
   const key = trimmed(env.BACKGOLD_SITE_KEY)
   if (!PUBLISHABLE_KEY.test(key)) return null
   const origin = apiOrigin(env)
-  return origin ? { url: `${origin}${LIVE_PATH}`, key } : null
+  return origin ? { url: `${origin}${path}`, key } : null
 }
 
 const emitted = new WeakSet<Request>()

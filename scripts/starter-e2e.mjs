@@ -1962,6 +1962,15 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
       return res.end(JSON.stringify({ events }))
     }
 
+    // GET /shifts/live?ids=: a volunteer shift's counts and state, outside the content version (an organization with a shift feed only).
+    if (parts[0] === 'shifts' && parts[1] === 'live' && parts.length === 2 && data.shifts) {
+      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean)
+      if (ids.length === 0 || ids.length > 50) return send(400, { error: 'ids names 1 to 50 shifts', code: 'BAD_IDS' })
+      const shifts = data.shifts.filter((x) => ids.includes(x.id)).map(({ id, signed_up, waitlisted, state }) => ({ id, signed_up, waitlisted, state }))
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30', ...CORS })
+      return res.end(JSON.stringify({ shifts }))
+    }
+
     if (parts[0] === 'preview') {
       if (key !== SECRET_KEY) return send(403, { error: 'Preview needs a secret site key', code: 'SECRET_KEY_REQUIRED' })
       if (parts[1] !== PREVIEW_TOKEN) return send(400, { error: 'Bad preview token', code: 'BAD_PREVIEW_TOKEN' })
@@ -2065,6 +2074,11 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         }
         break
       }
+      case 'shifts':
+        // GET /shifts: the open volunteer shifts, for an organization that has a feed (the nonprofit's); an older api has none, a 404.
+        if (!data.shifts || parts.length !== 1) return missing()
+        body = { shifts: data.shifts.slice(0, Number(url.searchParams.get('limit') ?? 20)), next_cursor: null }
+        break
       case 'events': {
         // GET /events/:slug: an upcoming row whose url ends in the slug, with
         // its page's words and BackGold's RSVP frame; any other slug is a 404.
@@ -2697,7 +2711,9 @@ async function checkNewsBase(origin, fixture) {
     entryCrumbs?.itemListElement?.[1]?.name === 'News' && entryCrumbs.itemListElement[1].item === `${origin}/news`,
     "the entry's breadcrumb goes back to News at /news",
   )
-  if (ON_KIT) check(/<nav class="crumbs"[^>]*>\s*<a href="\/news"[^>]*>News<\/a>/.test(html), 'the entry page links back to News at /news')
+  // The nonprofit template names the list as the header menu does (the fixture's link to it says Blog).
+  const crumbWord = NONPROFIT ? 'Blog' : 'News'
+  if (ON_KIT) check(new RegExp(`<nav class="crumbs"[^>]*>\\s*<a href="/news"[^>]*>${crumbWord}</a>`).test(html), `the entry page links back to ${crumbWord} at /news`)
 
   res = await get(origin, '/')
   html = await res.text()
@@ -4371,13 +4387,30 @@ function nonprofitShifts() {
   const shift = (id, title, days, hour, location, going, seatsLeft, extra = {}) => ({
     row: { id, title, starts_at: at(days, hour), ends_at: null, timezone: 'America/Chicago', location, is_virtual: false, type: 'volunteer_shift', registration_closed: false, sells_tickets: false, tickets_url: null, url: `https://events.example.org/${id}`, ...extra },
     live: { going, seats_left: seatsLeft },
+    // The same shift as GET /shifts lists it: the closed one closed, a full one with a waitlist.
+    shift: (i) => ({
+      id: id.replace('evt_', 'shf_'),
+      slug: `shift-${i + 1}`,
+      title,
+      starts_at: at(days, hour),
+      ends_at: at(days, hour + 2),
+      timezone: 'America/Chicago',
+      location,
+      notes: null,
+      capacity: going + seatsLeft,
+      signed_up: going,
+      waitlisted: seatsLeft === 0 && !extra.registration_closed ? 2 : 0,
+      state: extra.registration_closed ? 'closed' : seatsLeft === 0 ? 'waitlist' : 'open',
+      subject: { kind: 'standalone', slug: null },
+      signup_url: `/volunteer/shift-${i + 1}`,
+    }),
   })
   return [
     shift('evt_np1', 'Sort and pack for the Saturday market', 2, 14, 'The market lot', 6, 4),
     shift('evt_np2', 'Garden day', 3, 15, 'The community garden', 3, 5),
     shift('evt_np3', 'Homework club tutor', 4, 21, 'The branch library', 3, 1),
     shift('evt_np4', 'Tool library check-in desk', 9, 23, 'The tool library', 2, 0, { registration_closed: true }),
-    shift('evt_np5', 'Sort and pack for the Saturday market', 16, 14, 'The market lot', 2, 8),
+    shift('evt_np5', 'Sort and pack for the Saturday market', 16, 14, 'The market lot', 10, 0),
   ]
 }
 
@@ -4446,6 +4479,7 @@ function withNonprofit(data, ex) {
     pages: [...data.pages.filter((p) => !bySlug.has(p.slug)), ...pages.map((p) => p.summary)],
     page: (slug, headline) => bySlug.get(slug) ?? data.page(slug, headline),
     events: { ...data.events, live: { ...data.events.live, ...Object.fromEntries(shifts.map((x) => [x.row.id, x.live])) } },
+    shifts: shifts.map((x, i) => x.shift(i)),
   }
   if (!SERVE) return out
   // --serve: the starter's menus, the newsletter band on the posts, and the boards' brand with no saved theme.
@@ -4487,8 +4521,8 @@ async function checkNonprofit(origin) {
   )
   const shifts = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
   check(
-    (shifts.match(/class="np-shift np-card"/g) ?? []).length === 3 && !shifts.includes('np-week-head') && (shifts.match(/class="np-live" data-bg-live="evt_np\d"/g) ?? []).length === 3 && shifts.includes('>Sign up for this shift<'),
-    "home's EventsList · shifts draws its three rows in one run, each with its live slot and Sign up for this shift",
+    (shifts.match(/class="np-shift np-card"/g) ?? []).length === 3 && !shifts.includes('np-week-head') && (shifts.match(/class="np-live" data-np-shift="shf_np\d"/g) ?? []).length === 3 && (shifts.match(/>Sign up for this shift</g) ?? []).length === 3 && shifts.includes('href="/volunteer/shift-1"') && shifts.includes('6 of 10 filled · 4 spots left'),
+    "home's EventsList · shifts draws the next three shifts from GET /shifts in one run, each with its counts and Sign up for this shift to its signup card",
   )
   const programs = sectionsOf(html).find((s) => s.type === 'Issues')?.html ?? ''
   check((programs.match(/<use href="#d-(sprout|book|wrench)">/g) ?? []).length === 3 && (programs.match(/class="np-when"/g) ?? []).length === 3, "home's Issues · cards draws each row's icon as a doodle and its note")
@@ -4505,7 +4539,8 @@ async function checkNonprofit(origin) {
   html = await res.text()
   const weeks = sectionsOf(html).find((s) => s.type === 'EventsList')?.html ?? ''
   check(res.status === 200 && (weeks.match(/class="np-week-head"/g) ?? []).length >= 2 && /<span class="np-week-name">Week of [A-Z][a-z]{2} \d{1,2}<\/span><small>/.test(weeks), 'Get involved groups its shifts by week under "Week of …" with the dates')
-  check(weeks.includes('>Details<') && weeks.includes('Registration closed'), 'a shift whose registration closed offers Details and says so')
+  check(weeks.includes('>Closed<') && weeks.includes('>Full · join the waitlist<') && !weeks.includes('data-bg-live='), "a closed shift says Closed and a full one offers its waitlist; the rows are the feed's, not the events'")
+  check(/data-np-shifts-live="[^"]*\/api\/content\/v1\/shifts\/live"/.test(weeks), "the shifts' live counts are read from /shifts/live")
   const form = sectionsOf(html).find((s) => s.type === 'FormBlock')?.html ?? ''
   check(/class="np-form-words"/.test(form) && /<h2>Tell us, and we’ll find you a <span class="np-mark">/.test(form) && /title="Tell us, and we’ll find you a spot"/.test(form), 'FormBlock · wide draws its intro column beside the form, the frame titled without the asterisks')
   res = await get(origin, at('about'))
@@ -4518,6 +4553,26 @@ async function checkNonprofit(origin) {
   res = await get(origin, at('donate'))
   html = await res.text()
   check(res.status === 200 && !html.includes('data-type="SignupCapture"'), 'Donate carries no newsletter band, by its rule')
+  res = await get(origin, '/blog')
+  html = await res.text()
+  check(res.status === 200 && html.includes('class="np-post-lead"') && /class="np-lead-photo np-post-photo/.test(html) && /class="np-post-card np-card"/.test(html), "the post list is the template's own: the lead framed, the rest pen-outlined cards")
+  const postHref = /<h2 class="np-post-lead-title"><a href="([^"]+)"/.exec(html)?.[1]
+  res = await get(origin, postHref ?? '/blog/none')
+  html = await res.text()
+  check(res.status === 200 && html.includes('np-article') && /class="share np-share"/.test(html) && /<a class="button button-quiet button-small" href="mailto:/.test(html), "a post is the template's own article: Share as outline stickers")
+  res = await get(origin, '/_backgold/frame.css')
+  const frameCss = await res.text()
+  check(
+    res.status === 200 &&
+      (res.headers.get('content-type') ?? '').startsWith('text/css') &&
+      res.headers.get('access-control-allow-origin') === '*' &&
+      !/same-(origin|site)/.test(res.headers.get('cross-origin-resource-policy') ?? '') &&
+      frameCss.includes('html[data-bg-look] .bg-fr .bg-fr-submit') &&
+      !/@import/.test(frameCss),
+    "/_backgold/frame.css serves the frames' skin (FRAME-SKINS.md's parts, nothing imported from another host) to any origin",
+  )
+  res = await get(origin, '/_backgold/fonts/s/nunito/v32/not-a-font.css')
+  check(res.status === 404, `/_backgold/fonts/ answers only a font file's path (got ${res.status})`)
 }
 
 // ── The candidate template (--template candidate) ────────────────────────────
