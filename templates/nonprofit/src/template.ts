@@ -1,7 +1,8 @@
 // The nonprofit template, as the kit (@backgold/template-kit) draws it: its
 // manifest, the kit's sections with its own (Services · programs, the layout
 // it proposes; EventsList · shifts, with seat dots and weeks; Issues · cards
-// and Pathways · doors with the row's icon as a doodle; Hero · split with its
+// and Pathways · doors with the row's icon as a doodle; Petition · none with
+// the petition's text beside the sheet when BackGold sends it; Hero · split with its
 // kicker; TeamGrid · grid as cards with open roles as invitations; Stories ·
 // spotlight with its soft field and wide rows; FormBlock · wide with an intro
 // column), the kit's entry layouts with its own post list and post (boards
@@ -30,6 +31,7 @@ import EventsListShifts from './components/sections/EventsList/shifts.astro'
 import FormBlockWide from './components/sections/FormBlock/wide.astro'
 import HeroSplit from './components/sections/Hero/split.astro'
 import IssuesCards from './components/sections/Issues/cards.astro'
+import PetitionWords from './components/sections/Petition/words.astro'
 import PathwaysDoors from './components/sections/Pathways/doors.astro'
 import ServicesPrograms from './components/sections/Services/programs.astro'
 import StoriesSpotlight from './components/sections/Stories/spotlight.astro'
@@ -48,6 +50,8 @@ export default defineTemplate({
     'EventsList:shifts': EventsListShifts,
     'FormBlock:wide': FormBlockWide,
     'Hero:split': HeroSplit,
+    Petition: PetitionWords,
+    'Petition:none': PetitionWords,
     Stories: StoriesSpotlight,
     'Stories:spotlight': StoriesSpotlight,
     TeamGrid: TeamGridGrid,

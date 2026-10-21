@@ -28,6 +28,9 @@
     filled in the second colour, as far as the spots taken.
   - Items, signer cards and a petition's sheet are hand-cut cards; a card
     the frame draws inside the site's card is no card of its own.
+  - A petition's collapsed text is a disclosure whose summary is an outline
+    sticker with the plus doodle (the minus when open); the text reads in
+    Nunito under it.
   - The message line's failure is the exclamation doodle and the sentence
     in the accent, never red.
   - Motion only under prefers-reduced-motion: no-preference: a sticker
@@ -48,6 +51,8 @@ html[data-bg-look] {
   --np-blob-pill: 30px 24px 28px 22px / 24px 30px 22px 28px;
   --np-off: 3px;
   --np-d-mail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M7 13.8C18.4 13.2 29.8 13.2 41.2 13.6C41.4 21 41.4 28.2 41 35.4C29.8 36 18.6 36 7.4 35.6C6.8 28.4 6.8 21 7 13.8ZM7.8 15C13.4 19.4 18.6 23.6 24 27.2C29.6 23.4 35 19.2 40.4 14.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.2 9.6C24 19.4 24 29 24.2 38.6M9.6 24.2C19.2 23.8 29 23.8 38.6 24.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-d-minus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M9.6 24.2C19.2 23.8 29 23.8 38.6 24.2' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --np-d-exclaim: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24.6 6.5C24 14.2 23.6 21.8 23.8 29.5M23.9 39.3L24.1 39.6' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
@@ -260,6 +265,60 @@ html[data-bg-look] .bg-fr .bg-fr-done :is(h1, h2, h3) {
   font-family: var(--np-display);
   font-variation-settings: var(--np-hand);
   font-weight: 800;
+}
+
+/* ── A petition's collapsed text: the summary an outline sticker with the plus doodle ── */
+
+html[data-bg-look] .bg-fr .bg-fr-text {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-text-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--bg-look-ink);
+  border-radius: var(--np-blob-pill);
+  background: var(--bg-look-surface);
+  color: var(--bg-look-ink);
+  box-shadow: 2px 2px 0 0 var(--bg-look-ink);
+  transform: rotate(-0.8deg);
+  font-family: var(--np-display);
+  font-variation-settings: var(--np-hand-calm);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-text-summary::-webkit-details-marker {
+  display: none;
+}
+html[data-bg-look] .bg-fr .bg-fr-text-summary::marker {
+  content: '';
+}
+html[data-bg-look] .bg-fr .bg-fr-text-summary::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.125em;
+  height: 1.125em;
+  background: currentColor;
+  -webkit-mask: var(--np-d-plus) center / contain no-repeat;
+  mask: var(--np-d-plus) center / contain no-repeat;
+}
+html[data-bg-look] .bg-fr .bg-fr-text[open] > .bg-fr-text-summary::after {
+  -webkit-mask-image: var(--np-d-minus);
+  mask-image: var(--np-d-minus);
+}
+html[data-bg-look] .bg-fr .bg-fr-text-summary:focus-visible {
+  outline: 3px dashed var(--bg-look-accent);
+  outline-offset: 5px;
+}
+html[data-bg-look] .bg-fr .bg-fr-text[open] > :not(.bg-fr-text-summary) {
+  margin-top: 0.875rem;
+  color: var(--bg-look-ink);
+  font-family: var(--np-font);
+  line-height: 1.6;
 }
 
 /* ── The message line: a failure is the exclamation doodle and the sentence in the accent ── */

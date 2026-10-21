@@ -26,6 +26,11 @@
 // Advocacy has no frame, only a container its script fills: it is placed as
 // BackGold sends it.
 //
+// `params` adds the frame's own options to its address beside the look, the
+// allowlisted keys only (FRAME_PARAMS: `text`, `full` or `collapsed`, a
+// petition sheet's text drawn whole or as a closed disclosure); any other key
+// or value is never sent.
+//
 // A Donate frame also carries the page address's donate names (an ask
 // amount, a donate place, `utm_*`, lib/donate-frame.ts) that its address from
 // BackGold does not already name.
@@ -55,9 +60,13 @@ interface Props {
   /** How tall the frame starts before it reports its own height. */
   height?: string
   class?: string
+  /** The frame's own options, appended to its address (FRAME_PARAMS keys and values only). */
+  params?: Record<string, string>
 }
 
-const { embed: sent, band: sectionBand, type, layout, card = false, title, height = '32rem', class: className } = Astro.props
+const { embed: sent, band: sectionBand, type, layout, card = false, title, height = '32rem', class: className, params = {} } = Astro.props
+/** The frame options a template may send, each with the values the frame takes. */
+const FRAME_PARAMS: Record<string, readonly string[]> = { text: ['full', 'collapsed'] }
 const bg = Astro.locals.backgold
 const brand = bg.setup === null ? bg.site.brand : null
 const theme = bg.setup === null ? bg.site.theme : null
@@ -97,6 +106,7 @@ function framed(iframe: string | null): string | null {
   url.searchParams.set('radius', String(radius))
   url.searchParams.set('font', font)
   if (skin) url.searchParams.set('skin', skin)
+  for (const [key, value] of Object.entries(params)) if (Object.hasOwn(FRAME_PARAMS, key) && FRAME_PARAMS[key]!.includes(value)) url.searchParams.set(key, value)
   return url.toString()
 }
 
