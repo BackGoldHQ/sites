@@ -235,6 +235,13 @@ export interface EntriesOptions extends VisitorOptions {
   limit?: number
   /** The `next_cursor` of the previous page. */
   cursor?: string
+  /**
+   * `'fields'` (`?include=fields`): each listed entry also carries its
+   * `fields`, resolved as the entry's own read resolves them, so a reader
+   * that needs every entry's fields lists them instead of reading each one.
+   * An api that predates it answers without `fields`; check for them.
+   */
+  include?: 'fields'
   /** Read drafts too (`?preview=1`; needs a secret key; never cached). */
   preview?: boolean
 }

@@ -73,13 +73,13 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
     <section class="ar-door u-grid" aria-labelledby="ar-title">
       <RunningHead mark="Read it yourself." title={showResults ? 'Search results' : 'BISD public data archive'} folio={showResults && queried ? `A / 01 / ${params.q}` : 'A / 01'} />
       {showResults ? (
-        <h1 id="ar-title">{title}</h1>
+        <h1 id="ar-title" data-u-decode>{title}</h1>
       ) : (
         <div class="ar-door-head">
           <Mark kind="wordmark" label="Unlabeled" />
           <div>
             <p class="ar-meta u-slash">BISD public data archive</p>
-            <h1 id="ar-title" style="margin-top:0.5rem">{title}</h1>
+            <h1 id="ar-title" data-u-decode style="margin-top:0.5rem">{title}</h1>
           </div>
         </div>
       )}

@@ -17,13 +17,17 @@ gallery offers it. Staff point her site at it with the template switch.
 | File | What it is |
 | --- | --- |
 | `template.json` | The manifest: the layouts the site uses (U-cat's table, default first; StatCards also lists `archive`, the archive's home door), Top banner and Above the footer, the kit's entry layouts, the `bar` header and `columns` footer, and the starter (below). |
-| `src/template.ts` | The config for the kit: every section key filed under a running head (`Filed.astro`), her faces, `defaultAppearance: 'dark'`, `frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`, and her own menu links (`menuLinks`: ARCHIVE in the header and the footer, Request a record in the footer). |
+| `src/template.ts` | The config for the kit: every section key filed under a running head (`Filed.astro`), her faces, `defaultAppearance: 'dark'`, her frames' face, corners and colours (`frameFont: 'ubuntu-sans-mono'`, `frameRadius: 0`, `frameColors`) and skin (`frameSkin`), her event page and 404 (`eventPage`, `notFound`), and her own menu links (`menuLinks`: ARCHIVE in the header and the footer, Request a record in the footer). |
+| `src/lib/frame-skin.ts`, `src/pages/[skin]/frame.css.ts` | Her skin for BackGold's frames, to the platform's FRAME-SKINS contract (`html[data-bg-look]`, the `bg-fr-*` parts, the `--bg-look-*` variables), served at `/_backgold/frame.css` to any origin and linked by each frame when the kit sends `skin`: labels in the meta line, square fields on the field edge, the white block submit, choices that invert, a petition's count huge. |
+| `src/components/EventPage.astro`, `src/lib/last-meeting.ts` | One event's page (U8): the day set huge, the title, the meta line, the halftoned photo, the description and map, the archive's door to the last board meeting for a board meeting, BackGold's RSVP in a hairline box. |
+| `src/components/NotFound.astro` | The 404 in her words: *Not on the record.*, the archive's search, the way home. |
+| `src/scripts/motion.ts`, `src/styles/template.css` § 6 | The motion: headings and running heads decode through her glyphs, inverts wipe, photos develop, the manifesto un-redacts, odometers on holdings, the live folio and reading rule, the stamp and the horns, the grid ruled per band, the archive's live marks and printed rows, view transitions between pages. The finished page is the base style; reduced motion and scripts off get it as is. |
 | `src/sections.ts` | Every section type and layout the template draws: the kit's, her own five and the archive's. |
 | `src/components/sections/Filed.astro`, `src/components/RunningHead.astro` | The running head every band opens with: `§ 02 // <kicker>`, the heading in the centre, the folio; in a band of its own over the section. |
 | `src/components/sections/About/letter.astro` | About · Letter: the chapter mark, then the letter as a dossier page (Filed under, read time, the heading, the role line in capitals, the body, the closing line across the grid). |
 | `src/components/sections/EventsList/agenda.astro`, `AgendaMonths.astro` | EventsList · Agenda: the kit's, its empty month carrying the section's first link as a button (Host Unlabeled). |
 | `src/styles/template.css` | Her look: her colours pinned on every band, the type scale, the grid, running heads and folios, buttons, the header, the footer, the photo treatment, every kit band restyled. |
-| `src/components/sections/Hero/cover.astro` | Hero · Cover: the headline as a cap stack, one sentence a line on its own black slab, over the photo through the halftone screen. |
+| `src/components/sections/Hero/cover.astro`, `framed.astro` | Hero · Cover: the headline (else the site's title) as a cap stack, one sentence a line on its own black slab, over the photo, or the video playing muted on a loop over its still, through the halftone screen. A centered Hero with a photo or a video draws as the cover (`framed.astro`). |
 | `src/components/sections/MovementTicker/index.astro` | The ticker: one line under the header, "Live //", BackGold's live feed when the api sends it, else her typed figures running at a reading pace, still under reduced motion. |
 | `src/components/sections/Petition/Sheet.astro` | Petition: the default layout puts the heading and her typed figures huge beside BackGold's sign sheet; map, coverage and image are the kit's. Every layout anchors at `#petition`. |
 | `src/components/Mark.astro` | Her mark inline in the text colour (`wordmark`, `skull`, `horns`), for markup that places it itself. |
@@ -54,8 +58,9 @@ colours and the greys between them, which no derivation from three colours
 reaches: from white, black and white the kit gives a blue-black page, a cream
 contrast band and a lighter muted grey. This template is hers alone, so
 `template.css` writes her verified values into every band's tokens, in every
-scheme the kit's layout writes (`:root:root:root`). The contrast band is the
-one white ground (black ink, a black button), used by the donate strip. No
+scheme the kit's layout writes (`:root:root:root`). The contrast band is
+black too (dark only); a call to action on it (the donate strip) is the one
+white ground (black ink, a black button). No
 colour appears anywhere else; the status colours live only inside BackGold's
 frames.
 

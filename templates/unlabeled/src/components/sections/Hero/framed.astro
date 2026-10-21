@@ -1,0 +1,26 @@
+---
+// Hero · Centered (and a Hero that names no layout), Unlabeled's: a Hero that
+// carries a video or a photo is the cover (cover.astro: the cap stack over
+// the halftoned photo or the playing video, board U1), since a centered
+// headline over a picture is what the cover draws in her look; without
+// either it is the kit's centered layout, under its running head.
+import type { ComponentProps } from 'astro/types'
+import KitHero from '@backgold/template-kit/components/sections/Hero/index.astro'
+import { media } from '@backgold/template-kit/lib/section'
+import { text } from '@backgold/template-kit/lib/format'
+import HeadedBand from '../HeadedBand.astro'
+import Cover from './cover.astro'
+
+type Props = ComponentProps<typeof KitHero>
+
+const { section } = Astro.props
+const pictured = media(section, 'videoUrl', 'imageUrl', 'photoUrl', 'videoPosterUrl') !== null
+const copy = section.copy ?? {}
+---
+{pictured ? (
+  <Cover {...Astro.props} />
+) : (
+  <HeadedBand kicker={text(copy.kicker)} title={text(copy.headline)} band={section.band ?? 'plain'}>
+    <KitHero {...Astro.props} />
+  </HeadedBand>
+)}

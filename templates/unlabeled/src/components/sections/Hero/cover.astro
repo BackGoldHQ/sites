@@ -5,44 +5,98 @@
 // screen (the type scale's mega, 54px on a phone); the line under it, then
 // the buttons (the first filled, the rest outlined). The photo fills the band
 // behind the words through the halftone screen (`.u-halftone`, two tones,
-// drawn at render time); its caption, when the section has one, sits at the
-// photo's upper right as a figure label ("Fig. 01 // A live candidate
-// forum"). The band opens with its running head on black slabs, the site's
-// name at the left. Without a photo the stack sits on the page's ground. The
-// page-opening Hero's headline is the page's <h1>, any other's an <h2>; a
-// Hero with its sign-up form on carries BackGold's form, framed under the
-// buttons, as the kit's does.
+// drawn at render time). A Hero with a video plays it there instead, under
+// the same screen: muted, looping, inline, no controls, hidden from
+// assistive technology, its poster (the section's video poster, else its
+// photo) drawn under it as the still; with no poster the video's own first
+// frame is the still. A visitor who asked for reduced motion gets the still
+// (the video's source is not even fetched when there is a poster; without
+// one, the script holds the video on its first frame), and with script a
+// Pause button sits at the band's lower right (WCAG 2.2.2). Its caption,
+// when the section has one, sits at the photo's upper right as a figure
+// label ("Fig. 01 // A live candidate forum"). The band opens with its
+// running head on black slabs, the site's name at the left. Without a photo
+// or a video the stack sits on the page's ground. The page-opening Hero's
+// headline is the page's <h1>, any other's an <h2>. A Hero with no headline
+// stacks the site's title (her "No red. No blue. Just Texans."): as the <h1>
+// when it opens the page, else as words under the page's own title, which
+// the stylesheet then keeps for screen readers only. A Hero with its sign-up form on carries
+// BackGold's form, framed under the buttons, as the kit's does.
 import type { ComponentProps } from 'astro/types'
 import { Embed } from '@backgold/astro/components'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
-import { heroPhoto, links } from '@backgold/template-kit/lib/section'
+import { heroPhoto, links, media } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 import RunningHead from '../../RunningHead.astro'
 
 type Props = ComponentProps<typeof Default>
 
 const { section, level = 2 } = Astro.props
-const Heading = level === 1 ? 'h1' : 'h2'
 const kicker = text(section.copy.kicker)
-const headline = text(section.copy.headline)?.trim() ?? null
+const bg = Astro.locals.backgold
+const siteTitle = bg.setup === null ? text(bg.site.seo.title)?.trim() || null : null
+const own = text(section.copy.headline)?.trim() || null
+const headline = own ?? siteTitle
+/** Her own headline is a heading; the site's title standing in for none is the page's <h1> only on the page-opening Hero, else words. */
+const Heading = level === 1 ? 'h1' : own ? 'h2' : 'p'
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
-const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const video = media(section, 'videoUrl')
+const picture = video ? heroPhoto(section, 'videoPosterUrl', 'imageUrl', 'photoUrl') : heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const framed = video !== null || picture !== null
 const buttons = links(section)
 /** One slab per sentence: the stack breaks after a full stop, a question or an exclamation. */
-const bg = Astro.locals.backgold
 const siteName = bg.setup === null ? (bg.site.name ?? bg.site.domain) : null
 const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line !== '') : []
 ---
-<Band section={section} class:list={['u-cover', picture && 'u-cover-photo']}>
+<Band section={section} class:list={['u-cover', framed && 'u-cover-photo']}>
   <RunningHead kicker={siteName} title={null} class="u-rh-onphoto" />
-  {picture && (
-    <div class="u-cover-photo-box u-halftone" aria-hidden={picture.alt ? undefined : 'true'}>
-      <img src={picture.url} alt={picture.alt} loading={level === 1 ? 'eager' : 'lazy'} fetchpriority={level === 1 ? 'high' : undefined} decoding="async" />
+  {framed && (
+    <div class="u-cover-photo-box u-halftone" aria-hidden={picture?.alt ? undefined : 'true'}>
+      {picture && <img src={picture.url} alt={picture.alt} loading={level === 1 ? 'eager' : 'lazy'} fetchpriority={level === 1 ? 'high' : undefined} decoding="async" />}
+      {video && (
+        <video class="u-cover-video" autoplay muted loop playsinline preload={picture ? 'none' : 'metadata'} poster={picture?.url} aria-hidden="true" tabindex="-1" disablepictureinpicture data-u-cover-video>
+          <source src={picture ? video.url : `${video.url}#t=0.1`} media={picture ? '(prefers-reduced-motion: no-preference)' : undefined} />
+        </video>
+      )}
     </div>
   )}
-  {picture && caption && <p class="u-cover-caption">{caption}</p>}
+  {framed && caption && <p class="u-cover-caption">{caption}</p>}
+  {video && (
+    <>
+      <button type="button" class="u-cover-toggle" data-u-cover-toggle hidden>Pause</button>
+      <script is:inline>
+        ;(function () {
+          var toggle = document.currentScript && document.currentScript.previousElementSibling
+          var band = toggle && toggle.closest('.bg-section')
+          var video = band && band.querySelector('[data-u-cover-video]')
+          if (!toggle || !video) return
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
+          var paused = false
+          function run() {
+            var go = !paused && !reduce.matches && !document.hidden
+            if (go && video.paused && video.currentSrc) video.play().catch(function () {})
+            if (!go && !video.paused) video.pause()
+            toggle.hidden = reduce.matches || !video.currentSrc
+            toggle.textContent = paused ? 'Play' : 'Pause'
+            toggle.setAttribute('aria-label', (paused ? 'Play' : 'Pause') + ' the background video')
+          }
+          toggle.addEventListener('click', function () {
+            paused = !paused
+            run()
+          })
+          video.addEventListener('loadedmetadata', run)
+          video.addEventListener('play', function () {
+            if (paused || reduce.matches) video.pause()
+          })
+          if (reduce.addEventListener) reduce.addEventListener('change', run)
+          document.addEventListener('visibilitychange', run)
+          run()
+        })()
+      </script>
+    </>
+  )}
   <div class="u-cover-words">
     {kicker && <p class="kicker">{kicker}</p>}
     {slabs.length > 0 && (
@@ -73,7 +127,16 @@ const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line 
     overflow: hidden;
   }
   :global(.bg-section.u-cover-photo) {
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(30rem, 72vh, 46rem);
     background-image: none;
+  }
+  :global(.bg-section.u-cover-photo) > :global(.bg-section-inner) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
   }
   /* The photo fills the band, so the band, not its column, is its box. */
   :global(.bg-section.u-cover) > :global(.bg-section-inner) {
@@ -102,6 +165,49 @@ const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line 
     inset: 0;
     z-index: -1;
   }
+  /* The video fills the box over its still, through the same screen. */
+  .u-cover-photo-box > img,
+  .u-cover-video {
+    position: absolute;
+    inset: 0;
+  }
+  :global(.u-halftone) .u-cover-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1) blur(1px) brightness(1.1) contrast(1.15);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .u-cover-photo-box > img + .u-cover-video {
+      display: none;
+    }
+  }
+  .u-cover-toggle {
+    position: absolute;
+    right: max(var(--gutter), 50% - var(--content) / 2);
+    bottom: var(--space);
+    z-index: 1;
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .u-cover-toggle:hover,
+  .u-cover-toggle:focus-visible {
+    background: var(--ink);
+    color: var(--page);
+  }
+  .u-cover-toggle[hidden] {
+    display: none;
+  }
   .u-cover-caption {
     position: absolute;
     top: calc(var(--space) + 2.75rem);
@@ -121,6 +227,9 @@ const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line 
     padding-top: clamp(4rem, 2rem + 8vw, 10rem);
   }
   .u-cover-stack {
+    font-family: var(--font-display);
+    font-weight: 500;
+    text-transform: uppercase;
     display: flex;
     flex-direction: column;
     align-items: flex-start;

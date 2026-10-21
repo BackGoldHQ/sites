@@ -104,19 +104,24 @@
   --band-wash-line: var(--u-line);
   --band-wash-line-strong: var(--u-line-strong);
 
-  /* The contrast band is the one white ground: black ink, a black button. */
-  --band-contrast: var(--u-ink);
-  --band-contrast-ink: var(--u-ground);
-  --band-contrast-muted: var(--u-ground);
-  --band-contrast-accent: var(--u-ground);
-  --band-contrast-link: var(--u-ground);
-  --band-contrast-button: var(--u-ground);
-  --band-contrast-button-ink: var(--u-ink);
-  --band-contrast-button-2: var(--u-ink);
-  --band-contrast-button-2-ink: var(--u-ground);
-  --band-contrast-surface: var(--u-ink);
-  --band-contrast-line: var(--u-ground);
-  --band-contrast-line-strong: var(--u-ground);
+  /*
+    The contrast band is black too (dark only, decision 8): a band an
+    organization marked to stand out stands out by its type, not a white
+    ground. The one white ground is a call to action's (the donate strip),
+    below.
+  */
+  --band-contrast: var(--u-ground);
+  --band-contrast-ink: var(--u-ink);
+  --band-contrast-muted: var(--u-muted);
+  --band-contrast-accent: var(--u-ink);
+  --band-contrast-link: var(--u-ink);
+  --band-contrast-button: var(--u-ink);
+  --band-contrast-button-ink: var(--u-ground);
+  --band-contrast-button-2: var(--u-ground);
+  --band-contrast-button-2-ink: var(--u-ink);
+  --band-contrast-surface: var(--u-ground);
+  --band-contrast-line: var(--u-line);
+  --band-contrast-line-strong: var(--u-line-strong);
 
   --band-brand-ink: var(--u-ink);
   --band-brand-muted: var(--u-muted);
@@ -141,6 +146,22 @@
   --band-photo-surface: var(--u-ground);
   --band-photo-line: var(--u-line);
   --band-photo-line-strong: var(--u-line-strong);
+}
+
+/* A call to action on the contrast band (the donate strip) is the one white ground: black ink, a black button. */
+.bg-section[data-type='Cta'].bg-band-contrast {
+  --band-contrast: var(--u-ink);
+  --band-contrast-ink: var(--u-ground);
+  --band-contrast-muted: var(--u-ground);
+  --band-contrast-accent: var(--u-ground);
+  --band-contrast-link: var(--u-ground);
+  --band-contrast-button: var(--u-ground);
+  --band-contrast-button-ink: var(--u-ink);
+  --band-contrast-button-2: var(--u-ink);
+  --band-contrast-button-2-ink: var(--u-ground);
+  --band-contrast-surface: var(--u-ink);
+  --band-contrast-line: var(--u-ground);
+  --band-contrast-line-strong: var(--u-ground);
 }
 
 /* ── 2. Type, rhythm, shape ── */
@@ -451,6 +472,13 @@ main .u-running-head {
 .u-rh-left::before {
   content: '§ ' counter(u-folio, decimal-leading-zero);
 }
+/* A long kicker (a record's address) keeps to one line. */
+.u-rh-left {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .u-rh-words::before {
   content: ' // ';
   white-space: pre;
@@ -489,7 +517,6 @@ main .u-running-head {
   --ink: var(--band-contrast-ink);
   --line: var(--band-contrast-line);
   background-color: var(--band-contrast);
-  background-image: none;
 }
 .u-rh-band > .u-running-head {
   margin-bottom: 0;
@@ -503,6 +530,69 @@ main .u-running-head {
 .bg-area .u-rh-band,
 .rail .u-rh-band {
   display: none;
+}
+/*
+  A page with no Hero (her events page, a form's page): its title is the
+  first band's running head, quiet (`§ 01 // EVENTS`, the folio at the
+  right), and the band's own heading leads under it at display size, as
+  U7 and U8 draw it. The band's own running head gives way to it.
+*/
+main .page-header:has(+ .u-rh-band) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  max-width: none;
+  margin: 0;
+  padding: var(--space) max(var(--gutter), (100% - var(--content)) / 2) 0.875rem;
+  border-bottom: 1px solid var(--line);
+  background-image: var(--u-grid);
+  background-size: min(var(--content), 100% - 2 * var(--gutter)) 100%;
+  background-position: center top;
+  background-repeat: no-repeat;
+  counter-increment: u-folio;
+}
+main .page-header:has(+ .u-rh-band) h1 {
+  max-width: none;
+  margin: 0;
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  font-weight: 400 !important;
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+}
+main .page-header:has(+ .u-rh-band) h1::before {
+  content: '§ ' counter(u-folio, decimal-leading-zero) ' // ';
+  white-space: pre;
+}
+main .page-header:has(+ .u-rh-band)::after {
+  content: counter(u-folio, decimal-leading-zero);
+  color: var(--ink);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+}
+main .page-header + .u-rh-band {
+  display: none;
+}
+main .page-header + .u-rh-band + .bg-section :is(.bg-section-inner > h2:first-child, .bg-section-inner > :first-child > h2:first-child) {
+  font-size: var(--u-d1);
+  line-height: 0.92;
+}
+/* The home page's title over a cover that stacks the site's title: for screen readers only, the stack says it on screen. */
+main .page-header:has(+ .bg-section.u-cover) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The white ground (the donate strip) carries no grid: black columns on white read as bars. */
+.bg-section[data-type='Cta'].bg-band-contrast {
+  background-image: none;
 }
 /* Bands that follow one another keep their own top padding, never none. */
 main .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
@@ -1024,7 +1114,7 @@ main .bg-section.cta-strip .strip-links a:hover {
 }
 
 /* Events: the date as a numeral, rows on hairlines, a row inverts on hover. */
-.bg-section[data-type='EventsList'] h3,
+.bg-section[data-type='EventsList'] h3:not(.agenda-heading),
 .bg-section[data-type='Event'] h3 {
   font-size: var(--u-d4);
 }
@@ -1141,22 +1231,62 @@ strong {
   background: var(--ink) !important;
   color: var(--page) !important;
 }
-/* EventsList · Agenda (U8): the day at 64px, the month under it in the meta face. */
+/*
+  EventsList · Agenda (U8): each month's rows on hairlines, no boxes; the day
+  at 64px set left, the weekday under it in the meta face, a rule after it;
+  the title in capitals, the time and place in the meta line.
+*/
 @media (min-width: 40rem) {
   .events-agenda .event-row {
-    grid-template-columns: 7rem minmax(0, 1fr) auto !important;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto !important;
   }
+}
+.events-agenda .event-rows {
+  gap: 0 !important;
+}
+.bg-section.events-agenda .event-row {
+  padding: 1.125rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+.events-agenda .event-day {
+  text-align: left !important;
+  border-right-color: var(--line-strong) !important;
 }
 .events-agenda .event-day b {
   font-family: var(--font-display);
-  font-size: clamp(2.75rem, 2rem + 2.5vw, 4rem) !important;
+  font-size: clamp(2.25rem, 1.6rem + 2.8vw, 4rem) !important;
   line-height: 0.95;
+  white-space: nowrap;
 }
-.events-agenda .event-row {
-  border-radius: 0 !important;
-  box-shadow: none !important;
+@media (max-width: 39.99rem) {
+  .events-agenda .event-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr) !important;
+  }
 }
-.events-agenda .event-row:hover {
+.events-agenda .event-day small {
+  color: var(--muted) !important;
+  font-family: var(--font-meta) !important;
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track) !important;
+}
+.events-agenda .event-title {
+  font-weight: 500 !important;
+  text-transform: uppercase;
+}
+.events-agenda .event-meta {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.events-agenda .event-action .button {
+  min-width: 6rem;
+}
+.bg-section.events-agenda .event-row:hover {
   background: var(--ink);
   color: var(--page);
   --ink: var(--page);
@@ -1306,6 +1436,273 @@ strong {
 }
 .footer-row a {
   color: var(--muted);
+}
+
+/*
+  ── 6. Motion ──
+
+  Every effect here is the "from" side of an animation or a transition, in
+  `prefers-reduced-motion: no-preference`: the page as the rules above draw
+  it is the finished page, which reduced motion, a browser without a
+  feature, and scripts off all get. Hard easing, short times, two tones at
+  every frame, nothing loops (the ticker is §3's). src/scripts/motion.ts
+  does the parts CSS cannot: the decode, the odometers, the redaction bars'
+  words and the live folio.
+*/
+:root {
+  --u-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The file closes, the next one opens: a same-site navigation cuts the old page away top to bottom; the header stays put; a record's title moves from its result row to its page's heading. */
+  @view-transition {
+    navigation: auto;
+  }
+  .site-header {
+    view-transition-name: u-header;
+  }
+  ::view-transition-old(root) {
+    animation: u-feed-out 280ms steps(7) both;
+  }
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 420ms;
+    animation-timing-function: var(--u-ease);
+  }
+  @keyframes u-feed-out {
+    to {
+      clip-path: inset(100% 0 0 0);
+    }
+  }
+
+  /* The invert wipes in from the left and out to the right; the type flips as the block passes its middle. */
+  :is(.button-quiet, .button-2, .section-head-more a, .text-link, .u-invert, .u-bracket, .header-bar-menu > ul > li > a, .header-bar-menu summary, .header-bar-menu details a, .footer-column a, .bg-section[data-type='Issues'] .issue-card, .bg-section.events-agenda .event-row, .bg-section.events-compact .compact-events > li, .ar-rows > li) {
+    background-image: linear-gradient(var(--u-ink), var(--u-ink)) !important;
+    background-repeat: no-repeat !important;
+    background-position: right center !important;
+    background-size: 0% 100% !important;
+    transition:
+      background-size 140ms var(--u-ease),
+      color 0s linear 70ms;
+  }
+  :is(.button-quiet, .button-2, .section-head-more a, .text-link, .u-invert, .u-bracket, .header-bar-menu > ul > li > a, .header-bar-menu summary, .header-bar-menu details a, .footer-column a, .bg-section[data-type='Issues'] .issue-card, .bg-section.events-agenda .event-row, .bg-section.events-compact .compact-events > li, .ar-rows > li):hover {
+    background-color: transparent !important;
+    background-position: left center !important;
+    background-size: 100% 100% !important;
+  }
+  /* The filled button wipes to black over its white. */
+  .button:not(.button-quiet):not(.button-2) {
+    background-image: linear-gradient(var(--button-ink), var(--button-ink));
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: 0% 100%;
+    transition:
+      background-size 140ms var(--u-ease),
+      color 0s linear 70ms;
+  }
+  .button:not(.button-quiet):not(.button-2):hover {
+    background-color: var(--button);
+    background-position: left center;
+    background-size: 100% 100%;
+  }
+  :is(.issue-card, .event-row, .compact-events > li, .ar-rows > li) * {
+    transition: color 0s linear 70ms;
+  }
+
+  /* The copier develops the photo: the halftone comes up in five hard threshold steps behind a white lamp line. */
+  .u-halftone :is(img, video) {
+    animation: u-develop 900ms steps(5, jump-end) both;
+  }
+  .u-halftone::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 2;
+    height: 2px;
+    background: var(--u-ink);
+    animation: u-lamp 900ms linear both;
+    pointer-events: none;
+  }
+  @keyframes u-develop {
+    from {
+      filter: grayscale(1) blur(1px) brightness(0) contrast(1.15);
+    }
+  }
+  @keyframes u-lamp {
+    from {
+      top: 0;
+    }
+    to {
+      top: 100%;
+      visibility: hidden;
+    }
+  }
+
+  /* Nothing redacted: the words start as white bars and the bars retract, in steps, once the paragraph is read (motion.ts adds .is-read). */
+  .u-redacted .u-redact {
+    background: linear-gradient(var(--u-ink), var(--u-ink)) right center / 100% 100% no-repeat;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-size 240ms steps(3) calc(var(--i) / var(--n) * 900ms);
+  }
+  .u-redacted.is-read .u-redact {
+    background-size: 0% 100%;
+  }
+
+  /* Odometers: each digit a wheel that rolls up to its value, rightmost first. */
+  .u-odo {
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+  }
+  .u-odo-d {
+    display: inline-block;
+    height: 1em;
+    overflow: hidden;
+    line-height: 1;
+  }
+  .u-odo-d > span {
+    display: flex;
+    flex-direction: column;
+    translate: 0 calc(var(--d, 0) * -1em);
+    transition: translate 600ms var(--u-ease) calc(var(--k) * 60ms);
+  }
+
+  /* Results print in, a teletype line each, 25 ms apart (the island sets --n; the results page's first ten on load). */
+  .ar-live li,
+  .ar-rows > li:nth-child(-n + 10) {
+    animation: u-print 160ms steps(6) both;
+    animation-delay: calc(var(--n, 0) * 25ms);
+  }
+  .ar-rows > li:nth-child(2) { --n: 1; }
+  .ar-rows > li:nth-child(3) { --n: 2; }
+  .ar-rows > li:nth-child(4) { --n: 3; }
+  .ar-rows > li:nth-child(5) { --n: 4; }
+  .ar-rows > li:nth-child(6) { --n: 5; }
+  .ar-rows > li:nth-child(7) { --n: 6; }
+  .ar-rows > li:nth-child(8) { --n: 7; }
+  .ar-rows > li:nth-child(9) { --n: 8; }
+  .ar-rows > li:nth-child(10) { --n: 9; }
+  @keyframes u-print {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+  }
+
+  /* The live folio's reading rule, scrubbed by the page's scroll (motion.ts places it on a long page). */
+  .u-reading {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 30;
+    height: 1px;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .u-reading.is-on {
+    visibility: visible;
+  }
+  .u-reading::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--u-ink);
+    transform-origin: left;
+  }
+  .u-reading > span {
+    position: absolute;
+    top: 1px;
+    right: var(--gutter);
+    padding: 0.25rem 0.5rem;
+    background: var(--u-ground);
+    border: 1px solid var(--u-line-strong);
+    border-top: 0;
+    color: var(--u-ink);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+  }
+
+  /* The mark arrives: the chapter skull and the 404's stamp land in three hard steps, no bounce. */
+  :is(.u-chapter > svg, .u-404-mark) {
+    animation: u-stamp 220ms steps(3) both;
+  }
+  @keyframes u-stamp {
+    0% {
+      translate: 3px -3px;
+      scale: 1.06;
+    }
+    40%,
+    100% {
+      translate: 0 0;
+      scale: 1;
+    }
+  }
+
+  @supports (animation-timeline: view()) {
+    .u-reading::before {
+      animation: u-read linear both;
+      animation-timeline: scroll(root);
+    }
+    @keyframes u-read {
+      from {
+        scale: 0 1;
+      }
+    }
+    /* Below the fold, the photo develops and the stamp lands as they scroll in rather than on load. */
+    .u-halftone :is(img, video),
+    .u-halftone::before {
+      animation-timeline: view();
+      animation-range: entry 10% entry 70%;
+    }
+    :is(.u-chapter > svg, .u-404-mark) {
+      animation-timeline: view();
+      animation-range: entry 60% entry 100%;
+    }
+    /* The horns spread out from the skull to both edges. */
+    :is(.ar-horns, .u-horns) {
+      animation: u-horns linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 40%;
+    }
+    @keyframes u-horns {
+      from {
+        clip-path: inset(0 50% 0 50%);
+      }
+    }
+    /* The grid gets ruled: each band's hairline columns drop from its top as it enters, and its running head's rule draws left to right. */
+    .bg-section,
+    .u-rh-band {
+      animation: u-ruled linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+    @keyframes u-ruled {
+      from {
+        background-size:
+          min(var(--content), 100% - 2 * var(--gutter)) 0%,
+          1px 0%;
+      }
+    }
+    main .u-running-head {
+      border-bottom-color: transparent;
+      background: linear-gradient(var(--line), var(--line)) left bottom / 100% 1px no-repeat;
+      animation: u-rule linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 50%;
+    }
+    @keyframes u-rule {
+      from {
+        background-size: 0% 1px;
+      }
+    }
+  }
+}
+
+/* What the archive's live search matched, as you type: her invert (the island marks it, src/components/archive/Island.astro). Information, not motion: it stays under reduced motion. */
+::highlight(u-match) {
+  background-color: var(--u-ink);
+  color: var(--u-ground);
 }
 
 /* ── 5. Nothing moves for a visitor who asked for less motion ── */
