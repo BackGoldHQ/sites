@@ -1,0 +1,30 @@
+---
+// `/form/<slug>`: the address of an organization's standalone form that its
+// flyers print. On a hosted site the api serves the form there and at
+// `/<slug>`; on a template site the Content API lists the form as the page
+// at `<slug>`, so this route answers a 301 to `/<slug>` (its query string
+// kept) whenever the site has a page at that slug, read through the content
+// client (GET /pages/<slug>). A slug with no page is the 404: the template's
+// `notFound`, else the kit's NotFound. `/form` alone and deeper addresses
+// (`/form/<slug>/…`) are not this route's.
+// The kit's integration serves it, for the template its `template` option
+// names (`virtual:backgold-template`).
+import Site from '../layouts/Site.astro'
+import NotFound from '../components/NotFound.astro'
+import template from 'virtual:backgold-template'
+
+Astro.locals.template = template
+const bg = Astro.locals.backgold
+if (bg.setup !== null) return new Response(null, { status: 503 })
+
+const { client, site } = bg
+const siteName = site.name ?? site.domain
+const slug = Astro.params.slug ?? ''
+const page = slug ? await client.page(slug) : null
+if (page) return Astro.redirect(`/${encodeURIComponent(slug)}${Astro.url.search}`, 301)
+Astro.response.status = 404
+const NotFoundLayout = template.notFound ?? NotFound
+---
+<Site template={template} title={`Page not found · ${siteName}`} canonicalPath={Astro.url.pathname} noindex page={null}>
+  <NotFoundLayout />
+</Site>
