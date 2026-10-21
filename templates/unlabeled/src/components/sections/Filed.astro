@@ -1,0 +1,35 @@
+---
+// Every section on this template, filed: the band's running head (its
+// kicker and heading, RunningHead.astro), then the band itself as its layout
+// draws it (src/sections.ts). The head stands in a band of its own over the
+// section's, on the same ground and grid (src/styles/template.css); it is
+// hidden in an area (Top banner, Above the footer, the Sidebar), and when the
+// layout draws nothing for want of content. The layouts in OWN_HEAD draw
+// their own head, or none.
+import type { Section } from '@backgold/content'
+import { text } from '@backgold/template-kit/lib/format'
+import { OWN_HEAD, drawn } from '../../sections'
+import HeadedBand from './HeadedBand.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+  level?: 1 | 2
+}
+
+const { section, variant } = Astro.props
+const own = (key: string) => (Object.hasOwn(drawn, key) ? drawn[key] : undefined)
+const key = variant && own(`${section.type}:${variant}`) ? `${section.type}:${variant}` : section.type
+const Layout = own(key)
+const headed = !OWN_HEAD.has(key)
+const copy = section.copy ?? {}
+const kicker = text(copy.kicker) ?? text(copy.eyebrow)
+const title = text(copy.heading) ?? text(copy.headline) ?? text(copy.storyHeadline)
+---
+{Layout && (headed ? (
+  <HeadedBand kicker={kicker} title={title} band={section.band ?? 'plain'}>
+    <Layout {...Astro.props} />
+  </HeadedBand>
+) : (
+  <Layout {...Astro.props} />
+))}

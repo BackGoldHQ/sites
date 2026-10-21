@@ -1,0 +1,15 @@
+---
+// `post:list` in this template: the list of an archive type (or one of its
+// terms) is drawn by its archive list layout (index.ts), any other list by
+// the kit's post list.
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { kitEntries } from '@backgold/template-kit/template'
+import { ARCHIVE_LIST_LAYOUTS } from './index'
+import { isArchiveKind } from '../../lib/archive/kinds'
+
+type Props = ListLayoutProps
+
+const key = Astro.props.type === 'blog' ? 'post' : Astro.props.type.key
+const Layout = isArchiveKind(key) ? ARCHIVE_LIST_LAYOUTS[key] : kitEntries['post:list']!
+---
+<Layout {...Astro.props} />

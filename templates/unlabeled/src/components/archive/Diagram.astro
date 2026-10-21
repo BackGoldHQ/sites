@@ -1,0 +1,49 @@
+---
+// A record's diagram (board U3): the mono re-render the import stores
+// (`<field>_mono`) when there is one; else the archive's colour original
+// turned to two tones, white lines on black: greyed, inverted and
+// thresholded (the SVG filter below), so no colour and no grey box reaches
+// the page; the original's dark headers come out as white blocks with black
+// type, the brand's one highlight. "Original diagram ↗" and its Mermaid source sit
+// beside it. An SVG is drawn as an image, so nothing inside it runs.
+import { httpUrl, fileUrl } from '../../lib/archive/record'
+
+interface Props {
+  fields: Record<string, unknown>
+  /** The field holding the original SVG: `timeline_diagram` or `sankey_diagram`. */
+  field: 'timeline_diagram' | 'sankey_diagram'
+  /** The field holding its Mermaid source. */
+  data: 'timeline_data' | 'sankey_data'
+  title: string
+}
+
+const { fields, field, data, title } = Astro.props
+const original = httpUrl(fields[field]) ?? fileUrl(fields[field])
+const mono = httpUrl(fields[`${field}_mono`]) ?? fileUrl(fields[`${field}_mono`])
+const source = httpUrl(fields[data])
+const shown = mono ?? original
+---
+{shown && (
+  <figure class="ar-figure">
+    {!mono && (
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <filter id="ar-two-tone" color-interpolation-filters="sRGB">
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="1 0" />
+            <feFuncG type="discrete" tableValues="1 0" />
+            <feFuncB type="discrete" tableValues="1 0" />
+          </feComponentTransfer>
+        </filter>
+      </svg>
+    )}
+    <figcaption class="ar-figure-head">
+      <span class="ar-meta">// The record’s diagram · {mono ? 're-rendered in the site’s ink' : 'the archive’s original, in the site’s ink'}</span>
+      <span class="ar-meta ar-row-links">
+        {original && <a href={original} rel="noopener">Original diagram ↗</a>}
+        {source && <a href={source} rel="noopener">.mmd ↗</a>}
+      </span>
+    </figcaption>
+    <img class:list={[!mono && 'ar-ink']} src={shown} alt={`Diagram: ${title}`} loading="lazy" decoding="async" />
+  </figure>
+)}

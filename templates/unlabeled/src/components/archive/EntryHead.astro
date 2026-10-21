@@ -1,0 +1,38 @@
+---
+// The top of an archive entry's page (board U3): the running head (its type
+// and address, its place in the category, the folio), the kind as a white
+// chip with the meta line, the title huge, then its text: the summary as
+// the archive wrote it, and the entry's full text after it. When the
+// summary is the start of the full text (the CMS cut it short), the full
+// text stands in its place.
+import { renderMarkdown } from '@backgold/astro/server'
+import RunningHead from './RunningHead.astro'
+
+interface Props {
+  /** "Decision GOV-D01". */
+  label: string
+  path: string
+  /** The running head's centre ("Governance · 1 of 10"). */
+  place?: string
+  kind: string
+  meta: Array<string | null | undefined | false>
+  title: string
+  summary?: string | null
+  markdown?: string | null
+}
+
+const { label, path, place = '', kind, meta, title, summary = null, markdown = null } = Astro.props
+const fold = (s: string) => s.replace(/[\s…]+$/u, '').replace(/\s+/g, ' ').trim()
+const full = markdown?.trim() ? markdown : null
+const continues = summary && full ? fold(full).startsWith(fold(summary)) : false
+const lede = continues ? null : summary
+const body = full ? renderMarkdown(full) : ''
+---
+<header class="ar-entry">
+  <RunningHead mark={`${label} // ${path}`} title={place} folio="R / 01" />
+  <p class="ar-entry-meta"><span class="ar-kind">{kind}</span> <span class="ar-meta">{meta.filter(Boolean).join(' · ')}</span></p>
+  <h1>{title}</h1>
+  {lede && <p class="ar-lede">{lede}</p>}
+  {body && <div class="ar-lede ar-prose" set:html={body} />}
+  <slot />
+</header>

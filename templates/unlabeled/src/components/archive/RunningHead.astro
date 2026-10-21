@@ -1,0 +1,15 @@
+---
+// A band's running head (U-cat §3, the template's `.u-running-head`): its
+// section mark and slug at the left, its title in the centre, its folio at
+// the right, over a hairline.
+interface Props {
+  /** "§ A2 // browse". */
+  mark: string
+  title?: string
+  /** "A / 02". */
+  folio: string
+}
+
+const { mark, title = '', folio } = Astro.props
+---
+<p class="u-running-head ar-running-head"><span>{mark}</span><span>{title}</span><span>{folio}</span></p>

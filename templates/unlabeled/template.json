@@ -1,0 +1,1379 @@
+{
+  "key": "unlabeled",
+  "name": "Unlabeled",
+  "audience": "hidden",
+  "version": 1,
+  "variants": {
+    "Hero": [
+      "centered",
+      "statement",
+      "cover"
+    ],
+    "MovementTicker": [
+      "ticker"
+    ],
+    "Issues": [
+      "cards",
+      "numbered",
+      "steps"
+    ],
+    "About": [
+      "right",
+      "letter"
+    ],
+    "EventsList": [
+      "list",
+      "compact",
+      "agenda"
+    ],
+    "Event": [
+      "detail"
+    ],
+    "Cta": [
+      "card",
+      "strip",
+      "banner"
+    ],
+    "SignupCapture": [
+      "card",
+      "band"
+    ],
+    "FormBlock": [
+      "card",
+      "wide"
+    ],
+    "PollBlock": [
+      "card"
+    ],
+    "Petition": [
+      "none",
+      "map",
+      "coverage"
+    ],
+    "StatCards": [
+      "row",
+      "archive"
+    ],
+    "ShareKit": [
+      "cards",
+      "strip"
+    ],
+    "Donate": [
+      "form",
+      "story"
+    ],
+    "Progress": [
+      "bar"
+    ],
+    "PlatformPlanks": [
+      "numbered",
+      "longread"
+    ],
+    "Faq": [
+      "accordion"
+    ],
+    "Collection": [
+      "cards",
+      "list"
+    ]
+  },
+  "areas": {
+    "top_banner": "Above the header",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": {
+      "entry": "article",
+      "list": "list"
+    },
+    "podcast": {
+      "entry": "episode",
+      "list": "list"
+    },
+    "video": {
+      "entry": "watch",
+      "list": "grid"
+    },
+    "newsletter": {
+      "entry": "issue",
+      "list": "list"
+    }
+  },
+  "chrome": {
+    "header": [
+      "bar"
+    ],
+    "footer": [
+      "columns"
+    ],
+    "takeoverBanner": true,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [
+      {
+        "slug": "",
+        "title": "Home",
+        "sections": [
+          {
+            "id": "Hero-home",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cover",
+            "copy": {
+              "headline": "No red. No blue. Just Texans.",
+              "subheadline": "Good people. Different views. Common ground.",
+              "ctaText": "Get involved",
+              "secondaryText": "Upcoming events",
+              "caption": "Fig. 01 // A live candidate forum",
+              "imageAlt": "A live Unlabeled candidate forum: the panel on stage, the room full."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Get involved",
+                "target": {
+                  "kind": "section",
+                  "slug": "",
+                  "anchor": "what-we-do"
+                },
+                "url": "/#what-we-do"
+              },
+              {
+                "label": "Upcoming events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ]
+          },
+          {
+            "id": "MovementTicker-home",
+            "type": "MovementTicker",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "ticker",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "kinds": "signatures",
+              "showTotal": false
+            }
+          },
+          {
+            "id": "Issues-home",
+            "type": "Issues",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "What we do",
+              "heading": "Four ways in.",
+              "lead": "Every one of them is open to you, whoever you voted for last time."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "what-we-do"
+            },
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Live candidate forums",
+                  "body": "Hear directly from candidates and use our interactive app to see where you agree before party affiliations are revealed. People and policy first."
+                },
+                {
+                  "title": "Community discussions",
+                  "body": "Real conversations with neighbors who bring different experiences and perspectives. A place to listen, speak honestly, and find common ground."
+                },
+                {
+                  "title": "Civic education",
+                  "body": "Understand how government works, who makes the decisions, and how to have a say. Clear information to help you show up informed and get involved."
+                },
+                {
+                  "title": "Town halls",
+                  "body": "Bring your questions & concerns. Hear from local leaders and get into the decisions affecting your schools, your neighborhood, and your everyday life."
+                }
+              ]
+            }
+          },
+          {
+            "id": "About-home",
+            "type": "About",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "letter",
+            "copy": {
+              "kicker": "Who we are",
+              "heading": "This ain\u2019t your grandma\u2019s nonprofit",
+              "role": "But she\u2019s welcome, too.",
+              "body": "Unlabeled is for Texans tired of being told who they are before anyone hears them. From the outlaws to the rule followers, everybody\u2019s got a place here.\n\nWe listen past the labels, ask hard questions, and make room for honest conversations about the things people actually live with: schools, property taxes, jobs, roads, health care, and the future we\u2019re handing our kids.\n\nWe\u2019re not here to tell you what to think or who to vote for. We\u2019re here to put people and policy ahead of party talking points. Texas works better when neighbors can talk honestly, disagree respectfully, and still move forward.\n\nThis is powered by people willing to give a damn. Follow us, show up, share your perspective, and help build a Texas conversation that puts listening first.",
+              "signature": "Leave the labels to the rest of the country. Just bring yourself."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "who-we-are"
+            },
+            "data": {
+              "source": "credentials",
+              "items": [
+                {
+                  "kind": "credential",
+                  "label": "Nonpartisan to the bone",
+                  "detail": "",
+                  "year": "",
+                  "href": ""
+                },
+                {
+                  "kind": "credential",
+                  "label": "Texas, all of it",
+                  "detail": "",
+                  "year": "",
+                  "href": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "StatCards-archive-home",
+            "type": "StatCards",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "archive",
+            "copy": {
+              "heading": "Read it yourself.",
+              "body": "The BISD public data archive lives here now. Board meetings and decisions, the money, the pay records, the source documents. Find the record. Read the source."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "the-record"
+            }
+          },
+          {
+            "id": "EventsList-home",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "compact",
+            "copy": {
+              "kicker": "Show up",
+              "heading": "Next up",
+              "allLabel": "All events",
+              "eventsEmptyCta": "Nothing on the calendar yet. Want Unlabeled in your town? Tell us where you call home."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "All events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ],
+            "options": {
+              "max": 3,
+              "actions": "buttons",
+              "anchorId": "show-up"
+            }
+          },
+          {
+            "id": "Cta-home",
+            "type": "Cta",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "strip",
+            "copy": {
+              "heading": "This is powered by people willing to give a damn.",
+              "donateButtonText": "Donate"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Donate",
+                "target": {
+                  "kind": "page",
+                  "slug": "donate"
+                },
+                "url": "/donate"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "events",
+        "title": "Events",
+        "sections": [
+          {
+            "id": "Hero-events",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "What\u2019s on",
+              "headline": "Upcoming events",
+              "subheadline": "Forums, town halls, board meetings worth sitting in on, and the days that count. Show up."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "EventsList-events",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "agenda",
+            "copy": {
+              "heading": "",
+              "eventsEmptyCta": "Nothing on the calendar yet. Want Unlabeled in your town? Host a forum or a town hall and tell us when."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Host Unlabeled",
+                "target": {
+                  "kind": "page",
+                  "slug": "contact"
+                },
+                "url": "/contact"
+              }
+            ],
+            "options": {
+              "actions": "buttons",
+              "anchorId": "the-calendar"
+            }
+          }
+        ]
+      },
+      {
+        "slug": "proof-your-vote-counts",
+        "title": "Proof: your vote counts",
+        "sections": [
+          {
+            "id": "Hero-vote",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "Early voting \u00b7 Jefferson County \u00b7 Oct. 19\u201330, 2026",
+              "headline": "Help us prove your vote counts",
+              "subheadline": "Check-in at your polling location, we will PROVE to you that your vote was counted!"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-vote",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Help us prove your vote counts"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "StatCards-vote",
+            "type": "StatCards",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "row",
+            "copy": {
+              "heading": ""
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "stats",
+              "items": [
+                {
+                  "label": "Early voting locations",
+                  "value": "11",
+                  "note": "Jefferson County",
+                  "accent": false
+                },
+                {
+                  "label": "Early voting",
+                  "value": "19\u201330",
+                  "note": "October 2026",
+                  "accent": false
+                },
+                {
+                  "label": "Election Day",
+                  "value": "Nov 3",
+                  "note": "7 AM to 7 PM",
+                  "accent": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "ShareKit-vote",
+            "type": "ShareKit",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "strip",
+            "copy": {
+              "kicker": "Pass it on",
+              "heading": "I voted. Prove yours counts too."
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "share",
+              "items": [
+                {
+                  "network": "Text it",
+                  "text": "I voted. Prove yours counts too: check in at your polling location and Unlabeled will prove your vote was counted. unlabeledtexas.com/proof-your-vote-counts",
+                  "href": ""
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "bisd-where-is-big-lando",
+        "title": "BISD: Where is Big Lando",
+        "sections": [
+          {
+            "id": "Hero-lando",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "BISD students want answers",
+              "headline": "Where is Big Lando?",
+              "subheadline": "Greg Landry, AKA \u201cBig Lando,\u201d was removed from class on October 16 and did not return to campus on October 19. His removal and failure to return have students and families very concerned, and they are asking BISD for the fullest lawful explanation of what happened and what comes next.",
+              "ctaText": "Sign the petition"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Sign the petition \u2193",
+                "target": {
+                  "kind": "section",
+                  "slug": "bisd-where-is-big-lando",
+                  "anchor": "petition"
+                },
+                "url": "/bisd-where-is-big-lando#petition"
+              }
+            ]
+          },
+          {
+            "id": "Issues-lando",
+            "type": "Issues",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "numbered",
+            "copy": {
+              "kicker": "The asks",
+              "heading": "",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "the-asks"
+            },
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Explain what happened",
+                  "body": "Provide the fullest explanation allowed by law for why this teacher was removed from the classroom."
+                },
+                {
+                  "title": "Answer the teaching question",
+                  "body": "Clarify whether the removal was connected to how or what he was teaching."
+                },
+                {
+                  "title": "Protect student learning",
+                  "body": "Tell students what happens next and how BISD will protect classroom stability."
+                },
+                {
+                  "title": "Protect student voices",
+                  "body": "Ensure no student faces retaliation for respectfully asking questions or signing."
+                }
+              ]
+            }
+          },
+          {
+            "id": "Petition-lando",
+            "type": "Petition",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "none",
+            "copy": {
+              "kicker": "Put your name on it",
+              "heading": "Sign the petition",
+              "goalNote": "This petition asks for the fullest explanation allowed by law and does not request confidential personnel information.",
+              "volunteerPrompt": "I\u2019d also like to help."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "volunteerAsk": "on",
+              "recognition": false,
+              "anchorId": "petition"
+            },
+            "data": {
+              "source": "petition",
+              "items": [
+                {
+                  "title": "Explain what happened",
+                  "body": "Provide the fullest explanation allowed by law for why this teacher was removed from the classroom."
+                },
+                {
+                  "title": "Answer the teaching question",
+                  "body": "Clarify whether the removal was connected to how or what he was teaching."
+                },
+                {
+                  "title": "Protect student learning",
+                  "body": "Tell students what happens next and how BISD will protect classroom stability."
+                },
+                {
+                  "title": "Protect student voices",
+                  "body": "Ensure no student faces retaliation for respectfully asking questions or signing."
+                }
+              ]
+            }
+          },
+          {
+            "id": "ShareKit-lando",
+            "type": "ShareKit",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "strip",
+            "copy": {
+              "kicker": "Pass it on",
+              "heading": "Students are watching who shows up."
+            },
+            "media": {},
+            "links": [],
+            "data": {
+              "source": "share",
+              "items": [
+                {
+                  "network": "Text it",
+                  "text": "BISD students want answers. Where is Big Lando? Sign the petition: unlabeledtexas.com/bisd-where-is-big-lando",
+                  "href": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "EventsList-lando",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "compact",
+            "copy": {
+              "kicker": "Show up",
+              "heading": "Show up in person",
+              "allLabel": "All events",
+              "eventsEmptyCta": "Nothing on the calendar yet. Board meetings and forums show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "All events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ],
+            "options": {
+              "max": 3,
+              "actions": "buttons",
+              "anchorId": "show-up"
+            }
+          }
+        ]
+      },
+      {
+        "slug": "petition-drive",
+        "title": "Flock Blockers",
+        "sections": [
+          {
+            "id": "Petition-flock",
+            "type": "Petition",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "map",
+            "copy": {
+              "heading": "Add your name: put it on the record",
+              "addressedTo": "Your city council, its oversight committees, and the agencies that answer to them.",
+              "goalNote": "Goal set for the next public hearing.",
+              "volunteerPrompt": "I\u2019d also like to help."
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "datasetPreset": "alpr",
+              "datasetArea": "US-TX",
+              "badgeNoun": "cameras",
+              "uncategorizedLabel": "Unattributed",
+              "volunteerAsk": "on",
+              "recognition": false,
+              "anchorId": "petition"
+            },
+            "data": {
+              "source": "petition",
+              "items": [
+                {
+                  "title": "Publish a full inventory.",
+                  "body": "Everything in operation \u2014 what it is, who runs it, and what it costs \u2014 in a public dataset, updated on a regular schedule."
+                },
+                {
+                  "title": "Require a public vote",
+                  "body": "before any new deployment, contract, or renewal. No more decisions made by purchase order, out of public view."
+                },
+                {
+                  "title": "Cap how long data is kept",
+                  "body": "and end bulk sharing with outside agencies for anything not tied to an active, named investigation."
+                },
+                {
+                  "title": "Publish an independent audit",
+                  "body": "every year \u2014 who accessed what, under what authority, and whether it was justified."
+                },
+                {
+                  "group": "tile",
+                  "label": "Sites mapped",
+                  "value": "auto:total",
+                  "note": ""
+                },
+                {
+                  "group": "tile",
+                  "label": "Signatures",
+                  "value": "auto:signatures",
+                  "note": ""
+                },
+                {
+                  "group": "tile",
+                  "label": "Public votes taken",
+                  "value": "0",
+                  "note": "On the decisions that put this network here. That is what we are changing."
+                }
+              ]
+            }
+          },
+          {
+            "id": "Cta-flock",
+            "type": "Cta",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "banner",
+            "copy": {
+              "eyebrow": "Put it on the record",
+              "heading": "They did it quietly. We\u2019re doing it in the open.",
+              "body": "Every entry on that map is there because a neighbor added it. The public record we build together is the reason the next decision will have to be made in daylight.",
+              "volunteerButtonText": "Sign the petition"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Sign the petition",
+                "target": {
+                  "kind": "section",
+                  "slug": "petition-drive",
+                  "anchor": "petition"
+                },
+                "url": "/petition-drive#petition"
+              }
+            ]
+          },
+          {
+            "id": "EventsList-flock",
+            "type": "EventsList",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "compact",
+            "copy": {
+              "kicker": "Show up",
+              "heading": "Show up in person",
+              "allLabel": "All events",
+              "eventsEmptyCta": "Nothing on the calendar yet. Mapping walks and public hearings show here as soon as they are posted."
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "All events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ],
+            "options": {
+              "max": 3,
+              "actions": "buttons",
+              "anchorId": "show-up"
+            }
+          }
+        ]
+      },
+      {
+        "slug": "bisd-students-lets-be-real",
+        "title": "BISD students: let\u2019s be real",
+        "sections": [
+          {
+            "id": "Hero-poll",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "BISD students",
+              "headline": "BISD students: let\u2019s be real",
+              "subheadline": "You\u2019re the ones in the classrooms. Tell us what it\u2019s actually like."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "PollBlock-poll",
+            "type": "PollBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "BISD students: let\u2019s be real"
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-poll",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "BISD students: your voice matters"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "nisd-prop-a-2026",
+        "title": "Nederland ISD: Prop A explained",
+        "sections": [
+          {
+            "id": "Hero-nisd",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "Nederland ISD",
+              "headline": "NISD: Prop A explained",
+              "subheadline": "A neutral, source-linked reader on Nederland ISD\u2019s 2026 Proposition A: ballot language, funding context, salary records, and research notes."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "PlatformPlanks-nisd",
+            "type": "PlatformPlanks",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "longread",
+            "copy": {
+              "kicker": "Prop A explained",
+              "heading": "What voters are deciding"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "prop-a"
+            },
+            "data": {
+              "source": "platform",
+              "items": [
+                {
+                  "title": "What voters are deciding",
+                  "ethos": "Proposition A asks voters whether to ratify Nederland ISD\u2019s 2026 ad valorem tax rate. It is a Voter-Approval Tax Rate Election for the district\u2019s Maintenance & Operations budget. It is not a bond and does not authorize new debt.",
+                  "planks": [
+                    {
+                      "headline": "Proposed total tax rate",
+                      "plain": "$0.928409 per $100 valuation."
+                    },
+                    {
+                      "headline": "Ballot-stated M&O increase",
+                      "plain": "15.33%, compared with the preceding year."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "Faq-nisd",
+            "type": "Faq",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "accordion",
+            "copy": {
+              "kicker": "Before you vote",
+              "heading": "The questions people ask"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "firstOpen": true,
+              "anchorId": "questions"
+            },
+            "data": {
+              "source": "faq",
+              "items": [
+                {
+                  "question": "Election dates and estimated tax impact",
+                  "answer": "Registration deadline: October 5, 2026. Early voting: October 19\u201330. Election Day: November 3, 2026, 7 a.m.\u20137 p.m.",
+                  "topic": ""
+                },
+                {
+                  "question": "Primary sources",
+                  "answer": "Link the district\u2019s order of election, its adopted budget and its tax rate notice here, each to the original.",
+                  "topic": ""
+                },
+                {
+                  "question": "Official ballot language",
+                  "answer": "Paste the proposition exactly as it appears on the ballot here.",
+                  "topic": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "Cta-nisd",
+            "type": "Cta",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "banner",
+            "copy": {
+              "eyebrow": "Read it yourself",
+              "heading": "Don\u2019t take our word for it.",
+              "body": "Every number on this page links back to the district\u2019s own documents. Read them, then vote however you see fit.",
+              "volunteerButtonText": "Upcoming events"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Upcoming events",
+                "target": {
+                  "kind": "page",
+                  "slug": "events"
+                },
+                "url": "/events"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "slug": "donate",
+        "title": "Donate",
+        "sections": [
+          {
+            "id": "Donate-donate",
+            "type": "Donate",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "story",
+            "copy": {
+              "heading": "Make a donation",
+              "storyHeadline": "This is powered by people willing to give a damn.",
+              "storyBody": "Forums need a room, a mic and a livestream. Records requests take hours. The archive needs a home. Your money keeps every bit of it free and open to every Texan, whoever they voted for."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "Issues-donate",
+            "type": "Issues",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "cards",
+            "copy": {
+              "kicker": "No money? No problem",
+              "heading": "Other ways in",
+              "lead": ""
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "anchorId": "other-ways-in"
+            },
+            "data": {
+              "source": "issues",
+              "items": [
+                {
+                  "title": "Roll your sleeves up",
+                  "body": "Events, outreach, photos, video. Tell us where you call home."
+                },
+                {
+                  "title": "Host Unlabeled",
+                  "body": "Bring a forum or a town hall to your community."
+                },
+                {
+                  "title": "Sponsor",
+                  "body": "Put your business behind conversations that put listening first."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "slug": "newsletters",
+        "title": "Newsletters",
+        "sections": [
+          {
+            "id": "Collection-newsletters",
+            "type": "Collection",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "list",
+            "copy": {
+              "heading": "BISD: Newsletter",
+              "pluralLabel": "Every issue"
+            },
+            "media": {},
+            "links": [],
+            "options": {
+              "type": "newsletter",
+              "limit": 12,
+              "anchorId": "issues"
+            }
+          }
+        ]
+      },
+      {
+        "slug": "submit-documents",
+        "title": "Submit documents",
+        "sections": [
+          {
+            "id": "Hero-submit",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "The record",
+              "headline": "Submit documents",
+              "subheadline": "Got a BISD or HISD record we should have? Send it here. Every file is read by the team before anything goes in the archive, and the original is kept as it came."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-submit",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "card",
+            "copy": {
+              "heading": "Send us the document"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      },
+      {
+        "slug": "contact",
+        "title": "Contact",
+        "sections": [
+          {
+            "id": "Hero-contact",
+            "type": "Hero",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "statement",
+            "copy": {
+              "kicker": "Contact",
+              "headline": "Talk to us",
+              "subheadline": "Questions, tips, a forum you want in your town. Write to contact@unlabeledtexas.com, or send it here and the team reads every one."
+            },
+            "media": {},
+            "links": []
+          },
+          {
+            "id": "FormBlock-contact",
+            "type": "FormBlock",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "wide",
+            "copy": {
+              "heading": "Send us a message"
+            },
+            "media": {},
+            "links": []
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "primary": [
+        {
+          "label": "Home",
+          "kind": "page",
+          "target": {
+            "slug": ""
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Events",
+          "kind": "page",
+          "target": {
+            "slug": "events"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Vote",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Proof: your vote counts",
+              "kind": "page",
+              "target": {
+                "slug": "proof-your-vote-counts"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "BISD",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "BISD: Where is Big Lando",
+              "kind": "page",
+              "target": {
+                "slug": "bisd-where-is-big-lando"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "BISD students: Poll",
+              "kind": "page",
+              "target": {
+                "slug": "bisd-students-lets-be-real"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "BISD: Newsletter",
+              "kind": "page",
+              "target": {
+                "slug": "newsletters"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Nederland ISD",
+          "kind": "page",
+          "target": {
+            "slug": "nisd-prop-a-2026"
+          },
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": []
+        },
+        {
+          "label": "Petition",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Flock Blockers",
+              "kind": "page",
+              "target": {
+                "slug": "petition-drive"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Donate",
+          "kind": "donate",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": true,
+          "children": []
+        }
+      ],
+      "footer": [
+        {
+          "label": "Unlabeled",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Home",
+              "kind": "page",
+              "target": {
+                "slug": ""
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Events",
+              "kind": "page",
+              "target": {
+                "slug": "events"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Newsletters",
+              "kind": "page",
+              "target": {
+                "slug": "newsletters"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Contact",
+              "kind": "page",
+              "target": {
+                "slug": "contact"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "The record",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Submit documents",
+              "kind": "page",
+              "target": {
+                "slug": "submit-documents"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Nederland ISD",
+              "kind": "page",
+              "target": {
+                "slug": "nisd-prop-a-2026"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "label": "Show up",
+          "kind": "group",
+          "target": {},
+          "shows_on": {
+            "rule": "every_page"
+          },
+          "header_button": false,
+          "children": [
+            {
+              "label": "Proof: your vote counts",
+              "kind": "page",
+              "target": {
+                "slug": "proof-your-vote-counts"
+              },
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            },
+            {
+              "label": "Donate",
+              "kind": "donate",
+              "target": {},
+              "shows_on": {
+                "rule": "every_page"
+              },
+              "header_button": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    "sections": [
+      {
+        "key": "early-voting",
+        "label": "Early voting",
+        "kind": "announcement",
+        "document": [
+          {
+            "id": "Cta-early-voting",
+            "type": "Cta",
+            "band": "plain",
+            "bleed": "full",
+            "variant": "strip",
+            "copy": {
+              "heading": "Early voting \u2014 Jefferson County \u2014 Oct. 19\u201330, 2026",
+              "body": "// Check in at your polling location",
+              "donateButtonText": "Proof: your vote counts \u2192"
+            },
+            "media": {},
+            "links": [
+              {
+                "label": "Proof: your vote counts \u2192",
+                "target": {
+                  "kind": "page",
+                  "slug": "proof-your-vote-counts"
+                },
+                "url": "/proof-your-vote-counts"
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "top_banner",
+            "shows_on": "every_page_except",
+            "pages": [
+              "donate"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "the-newsletter",
+        "label": "The newsletter",
+        "kind": "pre_footer",
+        "document": [
+          {
+            "id": "SignupCapture-newsletter",
+            "type": "SignupCapture",
+            "band": "tint",
+            "bleed": "full",
+            "variant": "band",
+            "copy": {
+              "kicker": "The newsletter",
+              "heading": "What the board did. Where to show up."
+            },
+            "media": {},
+            "links": []
+          }
+        ],
+        "rules": [
+          {
+            "area_key": "above_footer",
+            "shows_on": "every_page"
+          }
+        ]
+      }
+    ]
+  }
+}

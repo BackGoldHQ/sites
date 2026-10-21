@@ -1,0 +1,1321 @@
+/*
+  Unlabeled's look: "a court record set by a punk zine". What this template
+  draws differently from the kit's stylesheet (@backgold/template-kit's
+  src/styles/site.css and entries.css), which this file loads after on every
+  page. Boards U1, U6–U9, U11 and U-cat in the platform repository's
+  docs/design/unlabeled-site-2026-10/mockups.
+
+  The archive's pages (src/pages/archive/**, src/components/archive/**) wear
+  the same classes; the README lists the ones they reuse (`u-` prefixed).
+
+  1. Her colours, pinned. Every other template takes its colours from the
+     band tokens the kit derives from an organization's three brand colours
+     (src/lib/brand.ts). Hers are two (white, black) and the greys between
+     them, which no derivation from three colours reaches (the kit gives a
+     blue-black page, a cream contrast band and a #b8b8b8 muted). This
+     template is hers alone, so it writes her verified values into every
+     band's tokens, in every scheme the kit's layout writes: the selector
+     `:root:root:root` outranks the layout's `:root`, `:root[data-gg-mode]`
+     and `:root:not(…)` rules, wherever the two land in the head.
+  2. Mono everywhere: Ubuntu Sans Mono 500 in capitals for display, JetBrains
+     Mono for text, Office Code Pro (falling back to JetBrains Mono) for the
+     meta line, tracked .1em.
+  3. Radius 0 (decision 2), density .7, a hairline grid on every band, running
+     heads and folios, `[ ]` brackets and `//` rules, hover that inverts.
+  4. Photographs in two tones: greyscale and contrast at render time on every
+     image, and a 45° dot screen (`.u-halftone`) where the template draws the
+     photo's frame. Nothing is processed at upload.
+  5. Dark only: the header's switch is hidden (decision 8).
+*/
+
+/* ── 1. Her colours ── */
+
+:root:root:root {
+  color-scheme: dark;
+  --u-ground: #000000;
+  --u-ink: #ffffff;
+  --u-muted: #949494;
+  --u-faint: #737373;
+  --u-line: #1a1a1a;
+  --u-line-strong: #616161;
+  --u-surface-2: #080808;
+  --page: var(--u-ground);
+  --shadow-ink: var(--u-ground);
+  --shadow: none;
+  --bg-brand-primary: var(--u-ink);
+  --bg-brand-secondary: var(--u-ground);
+  --bg-brand-accent: var(--u-ink);
+
+  /* The page, the panel, the brand ground (the footer, the top banner) and the photo scrim: black. */
+  --band-plain: var(--u-ground);
+  --band-panel: var(--u-ground);
+  --band-brand: var(--u-ground);
+  --band-photo: var(--u-ground);
+  /* The tint and the wash: the second surface (the disclaimer band, reading panes). */
+  --band-tint: var(--u-surface-2);
+  --band-wash: var(--u-surface-2);
+}
+:root:root:root {
+  --band-plain-ink: var(--u-ink);
+  --band-plain-muted: var(--u-muted);
+  --band-plain-accent: var(--u-ink);
+  --band-plain-link: var(--u-ink);
+  --band-plain-button: var(--u-ink);
+  --band-plain-button-ink: var(--u-ground);
+  --band-plain-button-2: var(--u-ground);
+  --band-plain-button-2-ink: var(--u-ink);
+  --band-plain-surface: var(--u-ground);
+  --band-plain-line: var(--u-line);
+  --band-plain-line-strong: var(--u-line-strong);
+
+  --band-tint-ink: var(--u-ink);
+  --band-tint-muted: var(--u-muted);
+  --band-tint-accent: var(--u-ink);
+  --band-tint-link: var(--u-ink);
+  --band-tint-button: var(--u-ink);
+  --band-tint-button-ink: var(--u-ground);
+  --band-tint-button-2: var(--u-ground);
+  --band-tint-button-2-ink: var(--u-ink);
+  --band-tint-surface: var(--u-ground);
+  --band-tint-line: var(--u-line);
+  --band-tint-line-strong: var(--u-line-strong);
+
+  --band-panel-ink: var(--u-ink);
+  --band-panel-muted: var(--u-muted);
+  --band-panel-accent: var(--u-ink);
+  --band-panel-link: var(--u-ink);
+  --band-panel-button: var(--u-ink);
+  --band-panel-button-ink: var(--u-ground);
+  --band-panel-button-2: var(--u-ground);
+  --band-panel-button-2-ink: var(--u-ink);
+  --band-panel-surface: var(--u-ground);
+  --band-panel-line: var(--u-line);
+  --band-panel-line-strong: var(--u-line-strong);
+
+  --band-wash-ink: var(--u-ink);
+  --band-wash-muted: var(--u-muted);
+  --band-wash-accent: var(--u-ink);
+  --band-wash-link: var(--u-ink);
+  --band-wash-button: var(--u-ink);
+  --band-wash-button-ink: var(--u-ground);
+  --band-wash-button-2: var(--u-ground);
+  --band-wash-button-2-ink: var(--u-ink);
+  --band-wash-surface: var(--u-ground);
+  --band-wash-line: var(--u-line);
+  --band-wash-line-strong: var(--u-line-strong);
+
+  /* The contrast band is the one white ground: black ink, a black button. */
+  --band-contrast: var(--u-ink);
+  --band-contrast-ink: var(--u-ground);
+  --band-contrast-muted: var(--u-ground);
+  --band-contrast-accent: var(--u-ground);
+  --band-contrast-link: var(--u-ground);
+  --band-contrast-button: var(--u-ground);
+  --band-contrast-button-ink: var(--u-ink);
+  --band-contrast-button-2: var(--u-ink);
+  --band-contrast-button-2-ink: var(--u-ground);
+  --band-contrast-surface: var(--u-ink);
+  --band-contrast-line: var(--u-ground);
+  --band-contrast-line-strong: var(--u-ground);
+
+  --band-brand-ink: var(--u-ink);
+  --band-brand-muted: var(--u-muted);
+  --band-brand-accent: var(--u-ink);
+  --band-brand-link: var(--u-ink);
+  --band-brand-button: var(--u-ink);
+  --band-brand-button-ink: var(--u-ground);
+  --band-brand-button-2: var(--u-ground);
+  --band-brand-button-2-ink: var(--u-ink);
+  --band-brand-surface: var(--u-ground);
+  --band-brand-line: var(--u-line);
+  --band-brand-line-strong: var(--u-line-strong);
+
+  --band-photo-ink: var(--u-ink);
+  --band-photo-muted: var(--u-ink);
+  --band-photo-accent: var(--u-ink);
+  --band-photo-link: var(--u-ink);
+  --band-photo-button: var(--u-ink);
+  --band-photo-button-ink: var(--u-ground);
+  --band-photo-button-2: var(--u-ground);
+  --band-photo-button-2-ink: var(--u-ink);
+  --band-photo-surface: var(--u-ground);
+  --band-photo-line: var(--u-line);
+  --band-photo-line-strong: var(--u-line-strong);
+}
+
+/* ── 2. Type, rhythm, shape ── */
+
+:root {
+  --font: var(--site-font-body, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  --font-display: var(--site-font-heading, 'Ubuntu Sans Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Office Code Pro is BackGold's built-in; Google does not serve it, so JetBrains Mono stands in. */
+  --font-meta: 'Office Code Pro', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --u-meta-size: 0.6875rem;
+  --u-meta-track: 0.1em;
+  /* The type scale, phone (375) → desktop (1440), as U-cat §2 sets it. */
+  --u-mega: clamp(3.375rem, 1.92rem + 6.2vw, 7.5rem); /* 54 → 120 */
+  --u-d1: clamp(2.75rem, 1.78rem + 4.13vw, 5.5rem); /* 44 → 88 */
+  --u-d2: clamp(2.125rem, 1.64rem + 2.07vw, 3.5rem); /* 34 → 56 */
+  --u-d3: clamp(1.5625rem, 1.364rem + 0.845vw, 2.125rem); /* 25 → 34 */
+  --u-d4: clamp(1.125rem, 1.037rem + 0.376vw, 1.375rem); /* 18 → 22 */
+  --u-d5: 1.0625rem; /* 17 */
+  --u-numeral: clamp(4.5rem, 3rem + 6.2vw, 8.25rem); /* 72 → 132: a count set huge */
+  --text: clamp(0.875rem, 0.853rem + 0.094vw, 0.9375rem); /* 14 → 15 */
+  --text-lg: clamp(0.9375rem, 0.894rem + 0.188vw, 1.0625rem); /* 15 → 17 */
+  --text-sm: 0.8125rem;
+  --text-xs: var(--u-meta-size);
+  --h1: var(--u-d1);
+  --h2: var(--u-d2);
+  --h3: var(--u-d4);
+  --measure: 64ch;
+  /* Compact (her site style): bands are tight, type is big, air comes from negative space. */
+  --gg-density: 0.7;
+  --space: calc(var(--gg-density) * clamp(2.75rem, 1.5rem + 3vw, 4.5rem));
+  --content: 80rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  /* Square corners everywhere (decision 2). */
+  --radius: 0;
+  --radius-card: 0;
+  --pill: 0;
+  --header-height: 4.75rem;
+}
+
+body {
+  font-size: var(--text);
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+/* Her display weight is 500 everywhere: the kit's layouts set their own heavier weights on their headings, so this one wins. */
+:is(h1, h2, h3, h4) {
+  font-weight: 500 !important;
+}
+h1 {
+  font-size: var(--h1);
+}
+h2 {
+  font-size: var(--h2);
+  font-weight: 500;
+}
+h3 {
+  font-size: var(--h3);
+  font-weight: 500;
+  line-height: 1.1;
+}
+::selection {
+  background: var(--ink);
+  color: var(--page);
+}
+a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 0;
+}
+
+/*
+  The meta line (U-cat §2): running heads, kickers, labels, dates and
+  citations, in the meta face, capitals, tracked .1em. A kicker carries the
+  `//` rule before it.
+*/
+.u-meta,
+.kicker,
+.footer-heading,
+.chip,
+.badge {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  font-weight: 400;
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.kicker {
+  color: var(--muted);
+  margin-bottom: 0.875rem;
+}
+.kicker::before,
+.u-slash::before {
+  content: '// ';
+  color: var(--ink);
+  white-space: pre;
+}
+.chip,
+.badge {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.lede,
+.statement-lede,
+.cover-lede {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  line-height: 1.6;
+}
+.muted,
+.fine {
+  color: var(--muted);
+}
+.u-faint {
+  color: var(--u-faint);
+}
+/* `[ label ]`: a link set in brackets, the meta face's only ornament with the `//` rule. */
+.u-bracket {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+}
+.u-bracket::before {
+  content: '[ ';
+  white-space: pre;
+}
+.u-bracket::after {
+  content: ' ]';
+  white-space: pre;
+}
+/* A row of slashes run to the edge of its box: the `//` rule between parts of a band. */
+.u-rule {
+  overflow: hidden;
+  color: var(--line-strong);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: 0.1em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.u-rule::before {
+  content: '////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////';
+}
+/* A numeral set huge in the display face (the holdings, a count, a date). */
+.u-numeral {
+  font-family: var(--font-display);
+  font-size: var(--u-numeral);
+  font-weight: 500;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Buttons: filled white (the ask, one per view), outline, text; hover inverts ── */
+
+.button {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--button);
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.button:hover {
+  text-decoration: none;
+  background: var(--button-ink);
+  border-color: var(--button);
+  color: var(--button);
+}
+.button-small {
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+}
+.button-quiet,
+.button-2 {
+  border-color: var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+.button-quiet:hover,
+.button-2:hover {
+  background: var(--ink);
+  color: var(--bg-band-background, var(--page));
+}
+.button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+/* Text links that are a line's call (the section's "more" links, a text link): a white block on hover. */
+.section-head-more a,
+.text-link,
+.strip-links a {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.section-head-more a:hover,
+.text-link:hover,
+.u-invert:hover,
+.u-bracket:hover {
+  background: var(--ink);
+  color: var(--bg-band-background, var(--page));
+  text-decoration: none;
+}
+
+/* Every other button a layout draws (share, copy, tabs): the display face in capitals, square, outlined. */
+.bg-section button:not([class*='module']) {
+  border-radius: 0 !important;
+  font-family: var(--font-display) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── 3. The page's skeleton: bands on a hairline grid, each opened by a running head ── */
+
+/*
+  The grid: twelve hairline columns across the content width, drawn on every
+  band behind its words (U-cat §3). `.u-grid` gives the same to any box of the
+  archive's.
+*/
+.bg-section,
+.u-rh-band,
+.u-grid {
+  --u-grid: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px calc(100% / 12));
+  background-image: var(--u-grid), linear-gradient(var(--line), var(--line));
+  background-size:
+    min(var(--content), 100% - 2 * var(--gutter)) 100%,
+    1px 100%;
+  background-position:
+    center top,
+    calc(50% + min(var(--content), 100% - 2 * var(--gutter)) / 2) top;
+  background-repeat: no-repeat;
+}
+/* Below 760px the grid drops to four columns (U11). */
+@media (max-width: 47.49rem) {
+  .bg-section,
+  .u-rh-band,
+  .u-grid {
+    --u-grid: repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px calc(100% / 4));
+  }
+}
+.bg-section {
+  position: relative;
+  border-top: 1px solid var(--line);
+}
+.bg-section-inner {
+  position: relative;
+}
+:root {
+  --bg-content-width: var(--content);
+}
+
+/*
+  The running head (U-cat §3, RunningHead.astro): every section opens with
+  its section mark and its kicker at the left (`§ 02 // What we do`), its
+  heading in the centre and its folio at the right in white, over a hairline,
+  in the meta face. The mark and the folio count the page's running heads.
+  Filed.astro sets it in a band of its own over the section's (`.u-rh-band`),
+  on the same ground and grid; a layout that draws its own sets it inline.
+  It is hidden in an area and when the layout after it drew nothing.
+*/
+main {
+  counter-reset: u-folio;
+}
+.u-running-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 1rem;
+  max-width: var(--bg-content-width);
+  margin: 0 auto var(--u-head-gap, clamp(1.25rem, 1rem + 1vw, 2rem));
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+main .u-running-head {
+  counter-increment: u-folio;
+}
+.u-rh-left::before {
+  content: '§ ' counter(u-folio, decimal-leading-zero);
+}
+.u-rh-words::before {
+  content: ' // ';
+  white-space: pre;
+}
+.u-rh-centre {
+  text-align: center;
+}
+.u-rh-folio {
+  color: var(--ink);
+  text-align: right;
+}
+.u-rh-folio::before {
+  content: counter(u-folio, decimal-leading-zero);
+}
+/* On a phone the centre title gives way: the mark and kicker, then the folio. */
+@media (max-width: 47.49rem) {
+  .u-running-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .u-rh-centre {
+    display: none;
+  }
+}
+/* The running head's own band: the section's ground and grid, the band's top padding, then the section under it. */
+.u-rh-band {
+  position: relative;
+  padding: var(--space) var(--gutter) 0;
+  border-top: 1px solid var(--line);
+  background-color: var(--page);
+}
+.u-rh-band.u-rh-tint,
+.u-rh-band.u-rh-wash {
+  background-color: var(--band-tint);
+}
+.u-rh-band.u-rh-contrast {
+  --ink: var(--band-contrast-ink);
+  --line: var(--band-contrast-line);
+  background-color: var(--band-contrast);
+  background-image: none;
+}
+.u-rh-band > .u-running-head {
+  margin-bottom: 0;
+}
+.u-rh-band + .bg-section,
+.u-rh-band + .ar {
+  border-top: 0 !important;
+  padding-top: var(--u-head-gap, clamp(1.25rem, 1rem + 1vw, 2rem)) !important;
+}
+.u-rh-band:not(:has(+ .bg-section, + .ar)),
+.bg-area .u-rh-band,
+.rail .u-rh-band {
+  display: none;
+}
+/* Bands that follow one another keep their own top padding, never none. */
+main .bg-bleed-full.bg-band-plain + .bg-bleed-full.bg-band-plain,
+main .bg-bleed-full.bg-band-tint + .bg-bleed-full.bg-band-tint,
+main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
+  padding-top: var(--space);
+}
+/* A contained band is a box on the grid, square, edged with the strong rule. */
+.bg-bleed-contained:not(.bg-band-plain) {
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+}
+
+/*
+  The chapter mark (U1 between the programs and the manifesto, U-cat §4): the
+  skull and horns on a strong rule between bands, the next band's section
+  mark and kicker beside it (`§ 03 — Who we are`). The letter
+  (About/letter.astro) opens with one; `.u-chapter` draws it anywhere, with
+  <Mark kind="skull" /> inside.
+*/
+.u-chapter-band {
+  padding: var(--space) var(--gutter) 0;
+  border-top: 1px solid var(--line);
+  background-color: var(--page);
+}
+.u-chapter-band + .bg-section {
+  border-top: 0;
+}
+.u-chapter {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: var(--bg-content-width);
+  margin: 0 auto;
+  color: var(--ink);
+}
+.u-chapter::before,
+.u-chapter::after {
+  content: '';
+  height: 1px;
+  background: var(--line-strong);
+}
+.u-chapter > svg {
+  grid-column: 2;
+  grid-row: 1;
+  width: clamp(8rem, 6rem + 6vw, 13rem);
+  height: auto;
+}
+.u-chapter::after {
+  grid-column: 3;
+  grid-row: 1;
+}
+.u-chapter-mark {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  margin-left: 1rem;
+  padding: 0 0.75rem;
+  background: var(--page);
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+  white-space: nowrap;
+  counter-increment: u-folio;
+}
+.u-chapter-mark::before {
+  content: '§ ' counter(u-folio, decimal-leading-zero) ' — ';
+  white-space: pre;
+}
+/* The letter's running head counts with its chapter mark, not again. */
+.u-chapter-band + .bg-section .u-running-head {
+  counter-increment: none;
+}
+
+/* The horns alone, drawn out to a rule: a divider (U-cat §4). */
+.u-horns {
+  display: block;
+  width: 100%;
+  height: clamp(1.25rem, 1rem + 1vw, 2rem);
+  background: var(--line-strong);
+  -webkit-mask: url('../assets/horns.svg') center / 100% 100% no-repeat;
+  mask: url('../assets/horns.svg') center / 100% 100% no-repeat;
+}
+/* The skull as a watermark, in the hairline grey, behind a box (the archive's citation). */
+.u-watermark {
+  position: relative;
+  isolation: isolate;
+}
+.u-watermark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--u-line);
+  -webkit-mask: url('../assets/skull.svg') right center / auto 140% no-repeat;
+  mask: url('../assets/skull.svg') right center / auto 140% no-repeat;
+  pointer-events: none;
+}
+
+/* ── 4. Photographs in two tones ── */
+
+/* Every photograph on the page: greyscale, contrast up, at render time. */
+main img,
+.site-footer img:not(.brand-logo) {
+  filter: grayscale(1) contrast(1.35);
+}
+/*
+  The halftone screen (U-cat §5): a box holding a photograph, the photograph
+  greyscaled and softened, a 45° 7px dot field over it at half strength, and
+  the whole thresholded into two tones, so a bright area becomes large white
+  dots and a dark one small ones. The words over a photo sit outside this box.
+*/
+.u-halftone {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--u-ground);
+  filter: contrast(20);
+}
+.u-halftone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) blur(1px) brightness(1.1) contrast(1.15);
+}
+.u-halftone::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle, var(--u-ink) 0, var(--u-ground) 70%) 0 0 / 7px 7px;
+  opacity: 0.5;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* ── The header: the mark, her menu in capitals, DONATE as the one filled button ── */
+
+.site-header {
+  background: var(--page);
+  border-bottom: 1px solid var(--line);
+}
+.site-header-inner {
+  max-width: calc(var(--content) + 2 * var(--gutter));
+  min-height: 3.75rem;
+  gap: 0.5rem 1.5rem;
+}
+/*
+  The brand is her mark (src/assets/mark.svg) at 168 × 46 (118 on a phone),
+  drawn as a mask in the ink; the name, and the logo BackGold holds, stay in
+  the link for screen readers.
+*/
+.site-header .brand,
+.site-footer .brand {
+  position: relative;
+  display: block;
+  width: clamp(7.375rem, 6.4rem + 3.2vw, 10.5rem);
+  aspect-ratio: 1118 / 304;
+  color: var(--ink);
+}
+.site-header .brand::before,
+.site-footer .brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  -webkit-mask: url('../assets/mark.svg') center / contain no-repeat;
+  mask: url('../assets/mark.svg') center / contain no-repeat;
+}
+.site-header .brand > *,
+.site-footer .brand > * {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.header-bar-menu > ul > li > a,
+.header-bar-menu > ul > li > span,
+.header-bar-menu summary {
+  padding: 0.4375rem 0.625rem;
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.header-bar-menu > ul > li > a:hover,
+.header-bar-menu summary:hover,
+.header-bar-menu details[open] > summary,
+.header-bar-menu a[aria-current='page'],
+.header-bar-menu .menu-group-current > summary {
+  background: var(--ink);
+  color: var(--page);
+  text-decoration: none;
+}
+.header-bar-menu details > ul {
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--page);
+  box-shadow: none;
+}
+.header-bar-menu details a,
+.header-bar-menu details span {
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.header-bar-menu details a:hover,
+.header-bar-menu details a[aria-current='page'] {
+  background: var(--ink);
+  color: var(--page);
+}
+.site-header .header-button {
+  font-size: 0.875rem;
+}
+/* DONATE on its own page: an outline, so the form's DONATE is the one filled ask (U9). */
+.site-header .button[aria-current='page'] {
+  border-color: var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+.header-sheet > summary {
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.header-sheet > summary:hover,
+.header-sheet[open] > summary {
+  background: var(--ink);
+  color: var(--page);
+}
+.header-sheet-panel nav > ul > li > a,
+.header-sheet-panel nav > ul > li > span {
+  font-family: var(--font-display);
+  font-size: var(--u-d3);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.header-sheet-panel .menu-group ul a,
+.header-sheet-panel .menu-group ul span {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.header-sheet-panel nav a[aria-current='page'] {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.header-sheet-legal {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+/* On a phone the header reads the mark, DONATE, then MENU (U11). */
+@media (max-width: 55.99rem) {
+  .site-header .header-button {
+    order: 1;
+  }
+  .site-header .header-sheet {
+    order: 2;
+  }
+}
+/* Dark only (decision 8): no switch. */
+.mode-toggle {
+  display: none !important;
+}
+
+/* ── The top banner: a black strip with a white NOW block, her line, and a link to the left of the edge ── */
+
+.bg-area .bg-section.cta-strip {
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+  background-image: none;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bg-area .cta-strip .bg-section-inner {
+  max-width: var(--content);
+}
+.bg-area .cta-strip .strip-dot {
+  width: auto;
+  height: auto;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--page);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  line-height: 1.2;
+}
+.bg-area .cta-strip .strip-dot::before {
+  content: 'Now';
+}
+.bg-area .cta-strip .strip-words b {
+  font-weight: 500;
+}
+.bg-area .cta-strip .strip-links {
+  margin-left: auto;
+}
+
+/* ── The donate strip in a page: the one white band, her line huge, a black DONATE ── */
+
+main .bg-section.cta-strip {
+  --bg-band-background: var(--band-contrast);
+  --bg-band-color: var(--band-contrast-ink);
+  --ink: var(--band-contrast-ink);
+  --muted: var(--band-contrast-muted);
+  --link: var(--band-contrast-link);
+  --button: var(--band-contrast-button);
+  --button-ink: var(--band-contrast-button-ink);
+  --line: var(--band-contrast-line);
+  --line-strong: var(--band-contrast-line-strong);
+  --bg-section-padding: clamp(2rem, 1.5rem + 2vw, 3.5rem) var(--gutter);
+  background-image: none;
+  border-top: 0;
+}
+main .cta-strip .strip {
+  justify-content: space-between;
+  gap: 1.5rem 2.5rem;
+}
+main .cta-strip .strip-dot {
+  display: none;
+}
+main .cta-strip .strip-words {
+  max-width: 18em;
+  font-family: var(--font-display);
+  font-size: var(--u-d2);
+  font-weight: 500;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+main .cta-strip .strip-words b {
+  font-weight: 500;
+}
+main .bg-section.cta-strip .strip-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: 0 1.75rem;
+  border: 1px solid var(--u-ground);
+  background: var(--u-ground);
+  color: var(--u-ink);
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+main .bg-section.cta-strip .strip-links a:hover {
+  background: var(--u-ink);
+  color: var(--u-ground);
+}
+
+/* ── The bands, section by section ── */
+
+/* A section's head: the kicker over a big heading, the "more" link to its right. */
+.section-head h2,
+.bg-section-inner > h2 {
+  font-size: var(--u-d2);
+}
+.section-head-more {
+  font-size: var(--text-sm);
+}
+
+/* Hero · Statement (U6–U8): the headline at D1, the lede in white under it. */
+.statement-headline {
+  font-size: var(--u-mega) !important;
+  font-weight: 500 !important;
+  line-height: 0.95 !important;
+  max-width: 16em;
+}
+.bg-section .statement .statement-lede {
+  max-width: 34em;
+  color: var(--ink);
+}
+
+/* Issues · Cards (U1 programs, U9 other ways in): numbered boxes on one strong rule, the box inverts on hover. */
+.bg-section[data-type='Issues'] .issue-cards {
+  gap: 0;
+  border: 1px solid var(--line-strong);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  counter-reset: u-card;
+}
+.bg-section[data-type='Issues'] .issue-card {
+  counter-increment: u-card;
+  gap: 0.75rem;
+  margin: 0 -1px -1px 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--page);
+  box-shadow: none;
+}
+.bg-section[data-type='Issues'] .issue-card::before {
+  content: counter(u-card, decimal-leading-zero);
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 2.2rem + 2vw, 4rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+.bg-section[data-type='Issues'] .issue-num {
+  display: none;
+}
+.bg-section[data-type='Issues'] .issue-title {
+  font-size: var(--u-d4);
+}
+.bg-section[data-type='Issues'] .issue-card:hover {
+  background: var(--ink);
+  color: var(--page);
+  --muted: var(--page);
+  --ink: var(--page);
+}
+/* Issues · Numbered (U6's asks): four columns on hairlines, STEP 0n over the numeral. */
+.bg-section[data-type='Issues'] .numbered {
+  gap: 0;
+  border-top: 1px solid var(--line-strong);
+}
+.bg-section[data-type='Issues'] .numbered-item {
+  padding: 1.25rem 1.25rem 1.5rem 0;
+  border-top: 0;
+}
+.bg-section[data-type='Issues'] .numbered-numeral {
+  color: var(--ink);
+  font-size: clamp(2.75rem, 2.2rem + 2vw, 4rem);
+  font-weight: 500;
+}
+@media (min-width: 60rem) {
+  .bg-section[data-type='Issues'] .numbered {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .bg-section[data-type='Issues'] .numbered-item + .numbered-item {
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--line);
+  }
+}
+
+/* StatCards · Row (U7): figures huge in capitals on one strong rule, labels in the meta face, cells split by hairlines. */
+.bg-section[data-type='StatCards'] .stat-list {
+  gap: 0 !important;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+.bg-section[data-type='StatCards'] .stat {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.25rem 1.25rem 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.bg-section[data-type='StatCards'] .stat + .stat {
+  padding-left: 1.25rem !important;
+  border-left: 1px solid var(--line) !important;
+}
+.bg-section[data-type='StatCards'] .stat > * {
+  margin: 0;
+}
+.bg-section[data-type='StatCards'] .stat-value {
+  order: 2;
+  margin: 0.5rem 0 !important;
+  color: var(--ink) !important;
+  font-size: clamp(2.75rem, 2rem + 3vw, 4.5rem) !important;
+  font-weight: 500 !important;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.bg-section[data-type='StatCards'] .stat-label {
+  order: 1;
+}
+.bg-section[data-type='StatCards'] .stat-note {
+  order: 3;
+}
+.bg-section[data-type='StatCards'] :is(.stat-label, .stat-note) {
+  color: var(--muted) !important;
+  font-family: var(--font-meta) !important;
+  font-size: var(--u-meta-size) !important;
+  font-weight: 400 !important;
+  letter-spacing: var(--u-meta-track) !important;
+  text-transform: uppercase;
+}
+
+/* Progress · Bar (U9): the bar a white fill on hatching, square. */
+.bg-section[data-type='Progress'] :is(.bar, .progress-bar, .meter) {
+  border-radius: 0;
+}
+
+/* Faq · Accordion: questions in capitals on hairlines. */
+.bg-section[data-type='Faq'] summary {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* BackGold's frames sit on hairline boxes: their own fields draw in her faces (frameFont) with square corners (frameRadius). */
+.module-card {
+  border-color: var(--line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--page) !important;
+  box-shadow: none !important;
+}
+.module-unavailable-line {
+  border-radius: 0 !important;
+  font-family: var(--font-meta);
+  letter-spacing: 0.04em;
+}
+
+/* Events: the date as a numeral, rows on hairlines, a row inverts on hover. */
+.bg-section[data-type='EventsList'] h3,
+.bg-section[data-type='Event'] h3 {
+  font-size: var(--u-d4);
+}
+/* EventsList · Compact (U1 "Next up"): one row per event, the day huge, the month under it, the title and its time and place beside. */
+.bg-section.events-compact .compact-events {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  border-top: 1px solid var(--line-strong);
+}
+.bg-section.events-compact .compact-events > li {
+  display: grid !important;
+  grid-template-columns: clamp(4.5rem, 3.5rem + 3vw, 7rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem !important;
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.bg-section.events-compact .compact-events > li:hover {
+  background: var(--ink) !important;
+  color: var(--page);
+  --ink: var(--page);
+  --link: var(--page);
+  --muted: var(--page);
+}
+.bg-section.events-compact .compact-day {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding: 0 0 0 0.25rem;
+  border-right: 1px solid var(--line-strong);
+}
+.bg-section.events-compact .compact-day b {
+  font-family: var(--font-display);
+  font-size: var(--u-d2) !important;
+  font-weight: 500 !important;
+  line-height: 0.95;
+}
+.bg-section.events-compact .compact-day span:not(.visually-hidden) {
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size) !important;
+  letter-spacing: var(--u-meta-track);
+  color: var(--muted);
+}
+.bg-section.events-compact .compact-events h3 {
+  margin: 0 0 0.25rem;
+  font-size: var(--u-d4);
+}
+.bg-section.events-compact .compact-events h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.bg-section.events-compact .compact-events p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.bg-section.events-compact .compact-more a {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/*
+  Every label a kit layout sets in its own heavier weight, in hers: 500, in
+  the display face's capitals. Buttons, the agenda's tabs, the top banner's
+  words, an event's day, the share links, chips.
+*/
+.button,
+.agenda-tabs a,
+.strip-words b,
+.strip-links a,
+.event-day b,
+.event-day small,
+.compact-day b,
+.compact-day span,
+.donate-share a,
+.share-tile-network .chip,
+.event-closed,
+.event-live,
+.longread-planks a,
+.longread-share,
+.faq-question,
+.section-head-more a,
+.text-link,
+.brand-name,
+.skip-link,
+b,
+strong {
+  font-weight: 500 !important;
+}
+.faq-question,
+.event-day small {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+}
+.agenda-tabs a,
+.donate-share a,
+.event-closed {
+  border-radius: 0 !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.agenda-tabs a[aria-current='page'],
+.agenda-tabs a:hover,
+.donate-share a:hover {
+  background: var(--ink) !important;
+  color: var(--page) !important;
+}
+/* EventsList · Agenda (U8): the day at 64px, the month under it in the meta face. */
+@media (min-width: 40rem) {
+  .events-agenda .event-row {
+    grid-template-columns: 7rem minmax(0, 1fr) auto !important;
+  }
+}
+.events-agenda .event-day b {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 2rem + 2.5vw, 4rem) !important;
+  line-height: 0.95;
+}
+.events-agenda .event-row {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.events-agenda .event-row:hover {
+  background: var(--ink);
+  color: var(--page);
+  --ink: var(--page);
+  --muted: var(--page);
+  --link: var(--page);
+}
+/* Donate · Story (U9): her line as the headline, about 70px. */
+.bg-section[data-type='Donate'] .donate-story h2 {
+  font-size: clamp(2.5rem, 1.6rem + 3.2vw, 4.375rem) !important;
+  line-height: 0.95;
+}
+/* PlatformPlanks · Longread: its figure bars square. */
+.longread-bar {
+  border-radius: 0 !important;
+}
+
+/* ── Above the footer: the sign-up band in one line on the second surface ── */
+
+#above-the-footer .bg-section {
+  --bg-band-background: var(--band-tint);
+  border-top: 1px solid var(--line);
+  background-image: none;
+}
+
+/* ── The footer: the wordmark across the content column, four groups, her socials, the legal line ── */
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.site-footer-inner {
+  max-width: calc(var(--content) + 2 * var(--gutter));
+  padding-top: clamp(2.5rem, 2rem + 2vw, 4rem);
+}
+/* The wordmark at the full width of the content column, then the groups under a hairline. */
+.site-footer-inner::before {
+  content: '';
+  display: block;
+  width: 100%;
+  aspect-ratio: 1118 / 304;
+  margin-bottom: clamp(2rem, 1.5rem + 2vw, 3rem);
+  background: var(--ink);
+  -webkit-mask: url('../assets/mark.svg') center / contain no-repeat;
+  mask: url('../assets/mark.svg') center / contain no-repeat;
+}
+.site-footer .footer-grid {
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+}
+/* The brand cell already stands at the top as the wordmark: here it keeps only the line and the socials. */
+.site-footer .footer-brand .brand {
+  display: none;
+}
+.footer-description {
+  margin-top: 0;
+  color: var(--muted);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.footer-heading {
+  color: var(--muted);
+}
+.footer-heading::before {
+  content: '// ';
+  white-space: pre;
+}
+.footer-column a {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.footer-column a:hover,
+.footer-column a[aria-current='page'] {
+  background: var(--ink);
+  color: var(--page);
+  text-decoration: none;
+}
+/* Her six socials as words, not circles: INSTAGRAM ↗. */
+.social a {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  padding: 0.25rem 0.375rem;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  font-weight: 400;
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.social a::before {
+  content: attr(aria-label);
+}
+.social a::after {
+  content: ' ↗';
+  white-space: pre;
+}
+.social a {
+  font-size: 0;
+}
+.social a::before,
+.social a::after {
+  font-size: var(--u-meta-size);
+}
+.social a:hover {
+  background: var(--ink);
+  color: var(--page);
+}
+/* The legal line, on every page, set small in the meta face under a hairline (the disclaimer band's style). */
+.disclaimer,
+.u-disclaimer {
+  margin-top: 2rem;
+}
+.disclaimer p,
+.u-disclaimer {
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--muted);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+.u-disclaimer-band {
+  padding: 1.25rem var(--gutter);
+  background: var(--u-surface-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+.footer-row {
+  color: var(--u-faint);
+  font-family: var(--font-meta);
+  font-size: var(--u-meta-size);
+  letter-spacing: var(--u-meta-track);
+  text-transform: uppercase;
+}
+.footer-row a {
+  color: var(--muted);
+}
+
+/* ── 5. Nothing moves for a visitor who asked for less motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

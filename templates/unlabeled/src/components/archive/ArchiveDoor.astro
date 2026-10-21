@@ -1,0 +1,52 @@
+---
+// The archive's door on Home (board U1, a designer's call): "Read it
+// yourself.", the line under it, a search field that sends to /archive,
+// Request a record, and four live counts (board meetings, board
+// decisions, data buckets, pay records). Registered as StatCards'
+// `archive` layout (src/archive.ts); the section's own heading and body
+// replace the defaults when the operator writes them. With none of the
+// archive's types published it draws nothing.
+import type { ComponentProps } from 'astro/types'
+import type Default from '@backgold/template-kit/components/sections/StatCards/index.astro'
+import { text } from '@backgold/template-kit/lib/format'
+import './archive.css'
+import { browsePath, loadArchive, sourceOf } from '../../lib/archive/index'
+
+type Props = ComponentProps<typeof Default>
+
+const COUNTED = ['board_meeting', 'board_decision', 'data_bucket', 'pay_record'] as const
+
+const { section } = Astro.props
+const source = sourceOf(Astro.locals)
+const data = source ? await loadArchive(source) : null
+const counts = (data?.types ?? []).filter((t) => t.present && (COUNTED as readonly string[]).includes(t.key)).map((t) => ({ type: t, count: data!.docs.filter((d) => d.kind === t.key).length }))
+const requests = data?.types.find((t) => t.key === 'information_request' && t.present) ?? null
+const heading = text(section.copy.heading) ?? 'Read it yourself.'
+const body = text(section.copy.body) ?? 'The BISD public data archive lives here now. Board meetings and decisions, the money, the pay records, the source documents. Find the record. Read the source.'
+---
+{counts.length > 0 && (
+  <section class="ar" id={section.id} aria-labelledby={`${section.id}-head`}>
+    <div class="ar-wrap ar-band">
+      <div class="ar-two">
+        <div>
+          <h2 id={`${section.id}-head`} style="font-size:clamp(2rem,1rem + 4vw,4.5rem)">{heading}</h2>
+          <p class="ar-intro">{body}</p>
+          <form class="ar-search" action="/archive" method="get" role="search">
+            <label class="visually-hidden" for={`${section.id}-q`}>Search the archive</label>
+            <div class="ar-field">
+              <span aria-hidden="true">/</span>
+              <input id={`${section.id}-q`} name="q" type="search" placeholder="Try: AP, HVAC, superintendent, $68 million…" autocomplete="off" maxlength="200" />
+              <button class="ar-btn" type="submit">Search the archive</button>
+            </div>
+          </form>
+          {requests && <p class="ar-hint"><a href={`/${requests.base}#request-a-record`}>Request a record →</a></p>}
+        </div>
+        <div class="ar-holdings" style="margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr))">
+          {counts.map(({ type, count }) => (
+            <a href={browsePath(type)}><b>{count}</b><span class="ar-meta">{type.plural}</span></a>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+)}

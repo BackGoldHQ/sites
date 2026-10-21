@@ -1,0 +1,14 @@
+---
+// `post:article` in this template: an entry of an archive type is drawn by
+// its archive layout (index.ts), any other entry by the kit's post article.
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { kitEntries } from '@backgold/template-kit/template'
+import { ARCHIVE_ENTRY_LAYOUTS } from './index'
+import { isArchiveKind } from '../../lib/archive/kinds'
+
+type Props = EntryLayoutProps
+
+const key = Astro.props.entry.type
+const Layout = isArchiveKind(key) ? ARCHIVE_ENTRY_LAYOUTS[key] : kitEntries['post:article']!
+---
+<Layout {...Astro.props} />
