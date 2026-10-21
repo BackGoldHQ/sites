@@ -1,18 +1,20 @@
 ---
-// A board decision at /decisions/<slug> (board U3, frame 1): the meta line,
-// the title huge, the summary as the archive wrote it, the fact table
+// A board decision at /decisions/<slug> (board U3, frame 1): beside each
+// other, the head (meta line, title huge, the summary as the archive wrote
+// it and the entry's full text) over the fact table
 // (presenter, seconder, the vote as filed and, only from a "Yeas:" list,
-// the tally), the citation boxed, the diagram, the Context band (its
-// meeting, its category on a line, its campuses, the same item filed
-// twice, the buckets whose basis names it), Share and the neighbours in
-// its category.
+// the tally), and the citation boxed with Share under it; then the
+// diagram, the Context band (its meeting with this decision marked, its
+// category on a line, its campuses, the same item filed twice, the buckets
+// whose basis names it) and the neighbours in its category.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
-import Share from '@backgold/template-kit/components/entries/Share.astro'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
 import Citation from '../archive/Citation.astro'
 import Diagram from '../archive/Diagram.astro'
 import Timeline from '../archive/Timeline.astro'
+import Share from '../archive/Share.astro'
+import RunningHead from '../archive/RunningHead.astro'
 import { archiveFor } from '../../lib/archive/index'
 import { bucketsCiting, filedTwice, neighbours, tallyOf } from '../../lib/archive/views'
 import { list, str } from '../../lib/archive/record'
@@ -28,7 +30,11 @@ const { data, doc } = await archiveFor(Astro.locals, 'board_decision', entry, ba
 const docs = data?.docs ?? [doc]
 const f = doc.fields
 const meeting = docs.find((d) => d.kind === 'board_meeting' && d.slug === doc.meeting) ?? null
-const sameMeeting = docs.filter((d) => d.kind === 'board_decision' && d.meeting === doc.meeting && d.id !== doc.id).sort((a, b) => (a.mark ?? '').localeCompare(b.mark ?? ''))
+const atMeeting = docs.filter((d) => d.kind === 'board_decision' && d.meeting === doc.meeting).sort((a, b) => (a.mark ?? '').localeCompare(b.mark ?? ''))
+// Nine of its meeting's decisions, this one among them.
+const here = atMeeting.findIndex((d) => d.id === doc.id)
+const from = Math.max(0, Math.min(here - 4, atMeeting.length - 9))
+const meetingWindow = atMeeting.slice(from, from + 9)
 const inCategory = docs.filter((d) => d.kind === 'board_decision' && d.category === doc.category)
 const { previous, next, index, count } = neighbours(docs, doc)
 const twice = filedTwice(doc, docs)
@@ -41,53 +47,63 @@ const campusCounts = doc.campuses.map((c) => ({ campus: c, count: docs.filter((d
 const day = shortDay(doc.date)
 ---
 <ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Decisions', href: `/${base}` }, ...(doc.category ? [{ label: doc.category, href: hrefOf(REST, { kind: 'board_decision', category: doc.category }) }] : []), { label: doc.mark ?? entry.title }]}>
-  <EntryHead
-    label={`Decision ${doc.mark ?? ''}`.trim()}
-    path={`/${base}/${doc.slug}`}
-    meta={[type?.singular_label ?? 'Board decision', doc.category, day?.toUpperCase(), doc.meeting && `Meeting ${doc.meeting}`, ...doc.campuses, index >= 0 && doc.category && `${index + 1} of ${count} in ${doc.category}`]}
-    title={entry.title}
-    summary={entry.summary}
-  />
-  <dl class="ar-facts">
-    <div><dt>Presenter</dt><dd>{doc.presenter ?? <span class="ar-faint">Not named in the archive</span>}</dd></div>
-    {doc.seconder && <div><dt>Seconder</dt><dd>{doc.seconder}</dd></div>}
+  <div class="ar-record">
     <div>
-      <dt>Vote · {doc.vote ?? 'Not specified'}</dt>
-      <dd>
-        {doc.voteDetail ?? (doc.vote === 'Not specified' || !doc.vote ? <span class="ar-faint">The archive records no vote for this item.</span> : doc.vote)}
-        {tally && (
-          <>
-            <ul class="ar-tally" aria-label="Yeas">{tally.yeas.map((n) => <li>{n}</li>)}</ul>
-            <p class="ar-meta" style="margin-top:0.375rem">Nays · {tally.nays} · Abstain · {tally.abstain}</p>
-          </>
-        )}
-      </dd>
+      <EntryHead
+        label={`Decision ${doc.mark ?? ''}`.trim()}
+        path={`/${base}/${doc.slug}`}
+        place={index >= 0 && doc.category ? `${doc.category} · ${index + 1} of ${count}` : ''}
+        kind={type?.singular_label ?? 'Board decision'}
+        meta={[doc.category, day?.toUpperCase(), doc.meeting && `Meeting ${doc.meeting}`, ...doc.campuses]}
+        title={entry.title}
+        summary={entry.summary}
+        markdown={entry.body?.markdown}
+      />
+      <dl class="ar-facts">
+        <div><dt>Presenter</dt><dd>{doc.presenter ?? <span class="ar-faint">Not named in the archive</span>}</dd></div>
+        {doc.seconder && <div><dt>Seconder</dt><dd>{doc.seconder}</dd></div>}
+        <div>
+          <dt>Vote · {doc.vote ?? 'Not specified'}</dt>
+          <dd>
+            {doc.voteDetail ?? (doc.vote === 'Not specified' || !doc.vote ? <span class="ar-faint">The archive records no vote for this item.</span> : doc.vote)}
+            {tally && (
+              <>
+                <ul class="ar-tally" aria-label="Yeas">{tally.yeas.map((n) => <li>{n}</li>)}</ul>
+                <p class="ar-meta" style="margin-top:0.375rem">Nays · {tally.nays} · Abstain · {tally.abstain}</p>
+              </>
+            )}
+          </dd>
+        </div>
+        <div><dt>Decided on</dt><dd>{longDay(doc.date) ?? '—'}</dd></div>
+        {meeting && <div><dt>Meeting</dt><dd><a href={meeting.url}>{[str(meeting.fields.meeting_kind), shortDay(meeting.date), str(meeting.fields.meeting_time)].filter(Boolean).join(' · ')} →</a></dd></div>}
+        {str(f.agenda_item) && <div><dt>Agenda item</dt><dd>{str(f.agenda_item)}</dd></div>}
+        {doc.campuses.length > 0 && <div><dt>Campus</dt><dd class="ar-chips" style="margin-top:0.25rem">{doc.campuses.map((c) => <a class="ar-chip" href={hrefOf(REST, { category: c })}>{c}</a>)}</dd></div>}
+        {amounts.length > 0 && <div><dt>Dollar amounts named</dt><dd>{amounts.join(' · ')}</dd></div>}
+        {originalTitle && originalTitle !== entry.title && <div><dt>Title as filed · original_title</dt><dd class="ar-muted">{originalTitle}</dd></div>}
+      </dl>
     </div>
-    <div><dt>Decided on</dt><dd>{longDay(doc.date) ?? '—'}</dd></div>
-    {meeting && <div><dt>Meeting</dt><dd><a href={meeting.url}>{[str(meeting.fields.meeting_kind), shortDay(meeting.date), str(meeting.fields.meeting_time)].filter(Boolean).join(' · ')} →</a></dd></div>}
-    {str(f.agenda_item) && <div><dt>Agenda item</dt><dd>{str(f.agenda_item)}</dd></div>}
-    {doc.campuses.length > 0 && <div><dt>Campus</dt><dd>{doc.campuses.map((c, i) => <>{i > 0 && ' · '}<a href={hrefOf(REST, { category: c })}>{c}</a></>)}</dd></div>}
-    {amounts.length > 0 && <div><dt>Dollar amounts named</dt><dd>{amounts.join(' · ')}</dd></div>}
-    {originalTitle && originalTitle !== entry.title && <div><dt>Title as filed</dt><dd>{originalTitle}</dd></div>}
-  </dl>
-
-  <Citation lines={doc.citation} links={doc.links.filter((l) => l.label !== 'Diagram')}>
-    {sources.length > 0 && <p class="ar-meta" style="margin-top:0.5rem;position:relative">Source documents · {sources.map((s, i) => <>{i > 0 && ' · '}<a href={s.url}>{s.title}</a></>)}</p>}
-  </Citation>
+    <div>
+      <Citation lines={doc.citation} links={doc.links.filter((l) => l.label !== 'Diagram')}>
+        {sources.length > 0 && <p class="ar-meta" style="margin-top:0.5rem;position:relative">Source documents · {sources.map((s, i) => <>{i > 0 && ' · '}<a href={s.url}>{s.title}</a></>)}</p>}
+      </Citation>
+      <Share title={entry.title} path={doc.url} />
+    </div>
+  </div>
 
   <Diagram fields={f} field="timeline_diagram" data="timeline_data" title={entry.title} />
 
-  <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-context">
-    <p class="ar-meta">§ Context</p>
-    <h2 id="ar-context">Its meeting · its category · its campuses · what cites it</h2>
+  <span class="u-horns ar-horns" aria-hidden="true" />
+  <section class="ar-band u-grid" aria-labelledby="ar-context">
+    <RunningHead mark="§ Context" title="Its meeting · its category · its campuses · what cites it" folio="R / 02" />
+    <h2 id="ar-context" class="visually-hidden">Context</h2>
     <div class="ar-two" style="margin-top:1rem">
       {meeting && (
         <div>
-          <p class="ar-label">// Its meeting · <a href={meeting.url}>{meeting.url}</a> · {plural(sameMeeting.length + 1, 'decision')}</p>
+          <p class="ar-label">// Its meeting · <a href={meeting.url}>{meeting.url}</a> · {plural(atMeeting.length, 'decision')}</p>
           <ul class="ar-list-plain">
-            {sameMeeting.slice(0, 9).map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a></li>)}
+            {meetingWindow.map((d) => (d.id === doc.id ? <li aria-current="true"><span class="ar-mark">{d.mark ?? 'DEC'}</span> {d.title}</li> : <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a></li>))}
           </ul>
-          {sameMeeting.length > 9 && <p class="ar-meta ar-hint"><a href={meeting.url}>All {sameMeeting.length + 1} from this meeting →</a></p>}
+          {atMeeting.length > meetingWindow.length && <p class="ar-meta ar-hint"><a href={meeting.url}>All {atMeeting.length} from this meeting →</a></p>}
         </div>
       )}
       <div>
@@ -119,7 +135,6 @@ const day = shortDay(doc.date)
     </div>
   </section>
 
-  <div style="margin-top:1.5rem"><Share title={entry.title} path={doc.url} /></div>
 
   <nav class="ar-nextprev ar-meta" aria-label={`In ${doc.category ?? 'this category'}`}>
     <div>{previous ? <a href={previous.url}>← Previous in {doc.category}<br />{previous.title}</a> : <span class="ar-faint">First in this category</span>}</div>

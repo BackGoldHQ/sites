@@ -20,10 +20,10 @@
 import type { BackgoldContent, ContentTypeSummary, EntryDetail } from '@backgold/content'
 import { workerVars } from '@backgold/template-kit/lib/env'
 import { ARCHIVE_KINDS, type ArchiveKindKey } from './kinds'
-import { toDoc, type ArchiveDoc } from './record'
+import { httpUrl, list, toDoc, type ArchiveDoc } from './record'
 
 /** Bumped when ArchiveDoc's shape changes, so a deploy never reads an index an older build wrote. */
-export const ARCHIVE_FORMAT = 1
+export const ARCHIVE_FORMAT = 2
 
 /** How long a built index may live in KV; a version bump retires it sooner. */
 const INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -95,6 +95,19 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   return out
 }
 
+/**
+ * A decision's original is the first source document it cites, on
+ * BoardBook: its row and its citation carry "Open original" to it.
+ */
+function linkOriginals(docs: ArchiveDoc[]): void {
+  const boardbook = new Map(docs.filter((d) => d.kind === 'source_document').map((d) => [d.slug, httpUrl(d.fields.boardbook_link)]))
+  for (const doc of docs) {
+    if (doc.kind !== 'board_decision') continue
+    const href = list(doc.fields.source_documents).map((slug) => boardbook.get(slug)).find((h) => h)
+    if (href) doc.links.unshift({ label: 'Open original', href, external: true })
+  }
+}
+
 /** Reads every entry of the archive types and keeps each as an ArchiveDoc. */
 export async function buildArchive(client: BackgoldContent, version: number): Promise<ArchiveData> {
   const { types: all } = await client.types()
@@ -106,6 +119,7 @@ export async function buildArchive(client: BackgoldContent, version: number): Pr
     const details = await pool(slugs, DETAIL_CONCURRENCY, (slug) => client.entry(type.key, slug))
     for (const answer of details) if (answer) docs.push(toDoc(type.key, answer.entry as EntryDetail, type.base))
   }
+  linkOriginals(docs)
   return { format: ARCHIVE_FORMAT, version, builtAt: new Date().toISOString(), types, docs }
 }
 

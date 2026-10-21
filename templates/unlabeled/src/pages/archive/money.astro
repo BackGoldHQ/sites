@@ -3,14 +3,16 @@
 // the Financial family by fund (General Fund, Debt Service and bonds,
 // Capital projects, Child nutrition, Grants: the page's reading of each
 // bucket, not a field), each bucket a card with its total, its first line
-// items and its basis; a flow drawn only for a bucket whose lines add up to
-// its total; the staff and student counts as ramps.
+// items and its basis; a flow drawn from a bucket whose lines add up to its
+// total, else the fund's hub (its inflow buckets in, its outflow buckets
+// out, on one scale, saying whether they balance); the staff and student
+// counts as ramps scaled to the family's largest, each figure printed.
 import Site from '@backgold/template-kit/layouts/Site.astro'
 import template from '../../template'
 import ArchiveFrame from '../../components/archive/ArchiveFrame.astro'
 import Flow from '../../components/archive/Flow.astro'
 import { loadArchive, sourceOf } from '../../lib/archive/index'
-import { moneyView, type Bucket } from '../../lib/archive/money'
+import { bucketFlow, fundHub, moneyView, type Bucket } from '../../lib/archive/money'
 import { formatUsd } from '../../lib/archive/query'
 import { hrefOf, REST } from '../../lib/archive/search'
 import { plural } from '../../lib/archive/format'
@@ -47,7 +49,11 @@ const flows = view.funds.flatMap((f) => f.buckets).filter((b) => b.balanced)
             <p class="ar-meta">family · Financial · fund {i + 1} of {view.funds.length}</p>
             <h2 id={`fund-${fund.key}`}>{fund.name}</h2>
             <p class="ar-muted" style="margin-top:0.5rem">{fund.note} {plural(fund.buckets.length, 'bucket')}.</p>
-            {fund.buckets.filter((b) => b.balanced).slice(0, 1).map((b) => <Flow bucket={b} />)}
+            {fund.buckets.filter((b) => b.balanced).slice(0, 1).map((b) => <Flow caption={`One flow, from ${b.doc.mark ?? 'a bucket'}’s own lines · in = out: ${formatUsd(b.total!)}`} hub={b.doc.title} id={`flow-${fund.key}`} {...bucketFlow(b)} />)}
+            {!fund.buckets.some((b) => b.balanced) && (() => {
+              const hub = fundHub(fund.buckets)
+              return hub.left.length + hub.right.length > 1 && <Flow caption={`${fund.name}: its inflow buckets in, its outflow buckets out · ${hub.balanced ? 'in = out' : 'in and out do not balance: the buckets span different years'}`} hub={fund.name} id={`hub-${fund.key}`} left={hub.left} right={hub.right} />
+            })()}
             <div class="ar-cards">
               {fund.buckets.map((b) => (
                 <article class="ar-card">

@@ -1,65 +1,104 @@
 ---
-// A bucket's own flow (boards U3, U5): its line items on one side and its
-// total on the other, each band as wide as its figure, white for the
-// bucket, grey hatching for its lines. Drawn only for a bucket whose lines
-// add up to its total (money.ts `balanced`); an inflow's lines run into the
-// total, an outflow's total runs out to its lines.
-import type { Bucket } from '../../lib/archive/money'
+// A flow (boards U3, U5): what comes in on the left, the hub in the
+// middle, what goes out on the right, every band as tall as its figure on
+// one scale for the whole drawing, so a side that is larger shows as
+// larger. Labels sit outside the bands: the left side's to its left, the
+// right side's to its right, each side headed In or Out. White is the hub,
+// grey hatching the bands.
 import { formatUsd } from '../../lib/archive/query'
 
-interface Props {
-  bucket: Bucket
+interface Side {
+  label: string
+  value: number
+  href?: string
 }
 
-const { bucket } = Astro.props
+interface Props {
+  /** Over the drawing: what it is and whether it balances. */
+  caption: string
+  hub: string
+  left: Side[]
+  right: Side[]
+  /** Ids in one page must differ. */
+  id: string
+}
+
+const { caption, hub, left, right, id } = Astro.props
 const W = 1000
+const H = 300
 const GAP = 6
-const lines = bucket.lines.filter((l) => l.value !== null && l.value > 0)
-const total = bucket.total ?? 1
-const usable = 260 - GAP * (lines.length - 1)
-const H = 260
-const outflow = bucket.side === 'Outflow'
-const barX = outflow ? 40 : W - 60
-const linesX = outflow ? W - 60 : 40
-let y = 0
-const bands = lines.map((l) => {
-  const h = Math.max(2, (l.value! / total) * usable)
-  const band = { line: l, y, h }
-  y += h + GAP
-  return band
+const LX = 330
+const HX = 490
+const RX = 650
+const sumL = left.reduce((n, s) => n + s.value, 0)
+const sumR = right.reduce((n, s) => n + s.value, 0)
+const scale = (H - GAP * Math.max(left.length, right.length, 1)) / Math.max(sumL, sumR, 1)
+const column = (side: Side[]) => {
+  let y = 0
+  return side.map((s) => {
+    const h = Math.max(2, s.value * scale)
+    const at = { side: s, y, h }
+    y += h + GAP
+    return at
+  })
+}
+const L = column(left)
+const R = column(right)
+const hubH = Math.max(sumL, sumR) * scale
+const band = (x0: number, a0: number, a1: number, x1: number, b0: number, b1: number) => {
+  const mid = (x0 + x1) / 2
+  return `M${x0},${a0} C${mid},${a0} ${mid},${b0} ${x1},${b0} L${x1},${b1} C${mid},${b1} ${mid},${a1} ${x0},${a1} Z`
+}
+let hy = 0
+const inPaths = L.map((b) => {
+  const th = b.side.value * scale
+  const d = band(LX + 20, b.y, b.y + b.h, HX, hy, hy + th)
+  hy += th
+  return d
 })
-let ty = 0
-const paths = bands.map((b) => {
-  const th = (b.line.value! / total) * H
-  const from = outflow ? { x: barX + 20, y0: ty, y1: ty + th } : { x: linesX + 20, y0: b.y, y1: b.y + b.h }
-  const to = outflow ? { x: linesX, y0: b.y, y1: b.y + b.h } : { x: barX, y0: ty, y1: ty + th }
-  ty += th
-  const mid = (from.x + to.x) / 2
-  return `M${from.x},${from.y0} C${mid},${from.y0} ${mid},${to.y0} ${to.x},${to.y0} L${to.x},${to.y1} C${mid},${to.y1} ${mid},${from.y1} ${from.x},${from.y1} Z`
+hy = 0
+const outPaths = R.map((b) => {
+  const th = b.side.value * scale
+  const d = band(HX + 20, hy, hy + th, RX, b.y, b.y + b.h)
+  hy += th
+  return d
 })
-// Labels sit beside their bands, pushed down so none overlaps the one above.
-let floor = -Infinity
-const labels = bands.map((b) => {
-  const y = Math.max(b.y + Math.min(b.h, 24) / 2 + 4, floor + 14)
-  floor = y
-  return y
-})
-const id = `hatch-${bucket.doc.id.replace(/[^a-z0-9]/gi, '')}`
+// Labels stay beside their bands, pushed down so none overlaps the one above.
+const labelYs = (col: typeof L) => {
+  let floor = -Infinity
+  return col.map((b) => {
+    const y = Math.max(b.y + Math.min(b.h, 24) / 2 + 4, floor + 14)
+    floor = y
+    return y
+  })
+}
+const ly = labelYs(L)
+const ry = labelYs(R)
+const bottom = Math.max(H, ...ly, ...ry) + 30
+const short = (s: string) => (s.length > 44 ? `${s.slice(0, 43)}…` : s)
+/** A side's label and figure in the room beside its column (about 46 characters at this size). */
+const tag = (s: Side) => {
+  const figure = formatUsd(s.value)
+  const room = 46 - figure.length - 3
+  return `${s.label.length > room ? `${s.label.slice(0, room - 1)}…` : s.label} · ${figure}`
+}
 ---
 <div class="ar-flow">
-  <p class="ar-meta" style="margin-bottom:0.5rem">// The flow, from the bucket’s own lines · in = out: {formatUsd(total)}</p>
-  <svg viewBox={`0 -10 ${W} ${Math.max(H, (labels.at(-1) ?? 0) + 10) + 40}`} role="img" aria-label={`${bucket.doc.title}: ${lines.map((l) => `${l.label} ${formatUsd(l.value!)}`).join('; ')}; total ${formatUsd(total)}`}>
+  <p class="ar-meta" style="margin-bottom:0.5rem">// {caption}</p>
+  <svg viewBox={`0 -24 ${W} ${bottom + 24}`} role="img" aria-label={`${caption}. In: ${left.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}. Out: ${right.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}.`}>
     <defs>
       <pattern id={id} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
         <rect width="2" height="6" fill="#616161" />
       </pattern>
     </defs>
-    {paths.map((d) => <path d={d} fill={`url(#${id})`} stroke="#616161" stroke-width="0.5" />)}
-    <rect x={barX} y="0" width="20" height={H} fill="#fff" />
-    {bands.map((b) => <rect x={linesX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
-    {bands.map((b, i) => (
-      <text x={outflow ? linesX - 8 : linesX + 28} y={labels[i]} fill="#fff" font-size="11" font-family="monospace" text-anchor={outflow ? 'end' : 'start'}>{b.line.label.slice(0, 60)} · {formatUsd(b.line.value!)}</text>
-    ))}
-    <text x={outflow ? barX : barX + 20} y={H + 22} fill="#949494" font-size="11" font-family="monospace" text-anchor={outflow ? 'start' : 'end'}>{formatUsd(total)}</text>
+    {left.length > 0 && <text x={LX + 20} y="-8" fill="#949494" font-size="11" font-family="monospace" text-anchor="end">IN · {formatUsd(sumL)}</text>}
+    {right.length > 0 && <text x={RX} y="-8" fill="#949494" font-size="11" font-family="monospace">OUT · {formatUsd(sumR)}</text>}
+    {[...inPaths, ...outPaths].map((d) => <path d={d} fill={`url(#${id})`} stroke="#616161" stroke-width="0.5" />)}
+    <rect x={HX} y="0" width="20" height={hubH} fill="#fff" />
+    <text x={HX + 10} y={hubH + 18} fill="#fff" font-size="11" font-family="monospace" text-anchor="middle">{short(hub)}</text>
+    {L.map((b) => <rect x={LX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
+    {R.map((b) => <rect x={RX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
+    {L.map((b, i) => <text x={LX - 8} y={ly[i]} fill="#fff" font-size="11" font-family="monospace" text-anchor="end">{tag(b.side)}</text>)}
+    {R.map((b, i) => <text x={RX + 28} y={ry[i]} fill="#fff" font-size="11" font-family="monospace">{tag(b.side)}</text>)}
   </svg>
 </div>

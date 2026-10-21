@@ -44,7 +44,7 @@ detail becomes an `ArchiveDoc` (`src/lib/archive/record.ts`). The whole set
 is kept in KV (`BACKGOLD_CACHE`) under
 
 ```
-bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT>
+bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT> (2 today)
 ```
 
 for seven days, so a publish in BackGold (a new content version) is a new
@@ -75,7 +75,8 @@ binding) right after a publish, timing `/archive` and checking it answers
 200 rather than a subrequest-limit error.
 
 The search (`src/lib/archive/search.ts`) is a MiniSearch index over title,
-summary, every field value, the people and the terms, built from the
+summary, the entry's full text (`body.markdown`, so a summary the CMS cut
+short hides nothing), every field value, the people and the terms, built from the
 documents once per isolate per version. The island
 (`src/components/archive/Island.astro`) loads `/archive/index.json`, builds
 the same index in the browser and runs the same module. The readable texts
@@ -125,7 +126,9 @@ defines them, plus her `information_request` type:
 
 A diagram field with a mono re-render stored beside it as
 `timeline_diagram_mono` / `sankey_diagram_mono` (link or file) is shown in
-its place; without one the colour original is shown in grey. Either way the
+its place; without one the colour original is drawn in two tones (an SVG
+filter greys, inverts and thresholds it: white lines on black, its dark
+headers as white blocks). Either way the
 original and its `.mmd` are linked. Entries are listed newest first by
 `publish_at`, so the import sets it to the meeting or decision date.
 

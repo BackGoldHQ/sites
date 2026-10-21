@@ -34,7 +34,7 @@ const items = [...new Set(citing.map((d) => str(d.fields.agenda_item)).filter((v
 const cited = text ? [...new Set(items.flatMap((i) => linesCiting(text, i)))].sort((a, b) => a - b) : []
 ---
 <ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Sources', href: `/${base}` }, ...(doc.category ? [{ label: doc.category }] : []), ...(doc.date ? [{ label: shortDay(doc.date)! }] : [])]}>
-  <EntryHead label="Source document" path={`/${base}/${doc.slug}`} meta={[type?.singular_label ?? 'Source document', doc.category, shortDay(doc.date)?.toUpperCase(), doc.category && `${sameKind} in the archive`]} title={entry.title} summary={entry.summary} />
+  <EntryHead label="Source document" path={`/${base}/${doc.slug}`} kind={type?.singular_label ?? 'Source document'} meta={[doc.category, shortDay(doc.date)?.toUpperCase(), doc.category && `${sameKind} in the archive`]} title={entry.title} summary={entry.summary} markdown={entry.body?.markdown} />
   <div class="ar-two" style="margin-top:1.5rem">
     <div>
       {textUrl ? (

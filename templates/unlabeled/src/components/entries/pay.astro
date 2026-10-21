@@ -35,8 +35,8 @@ const citation = [...doc.citation, 'field EMP_ASGN_PAY_HIST_A_NRML_PAY']
   <div class="ar-unit" style="margin-top:1.25rem" role="note">
     <b>Read the unit first.</b> {unit} It is not labeled a salary here for that reason.
   </div>
-  <EntryHead label="Pay record" path={`/${base}/${doc.slug}`} meta={[type?.singular_label ?? 'Pay record', office]} title={entry.title}>
-    {value && <p style="margin-top:1.25rem"><span class="ar-meta">Reported normal-pay value · unit not defined</span><br /><span class="ar-big">{value}</span></p>}
+  <EntryHead label="Pay record" path={`/${base}/${doc.slug}`} kind={type?.singular_label ?? 'Pay record'} meta={[office]} title={entry.title} markdown={entry.body?.markdown}>
+    {value && <p style="margin-top:1.25rem"><span class="ar-meta">Reported normal-pay value · unit not defined</span><br /><span class="u-numeral">{value}</span></p>}
   </EntryHead>
   <dl class="ar-facts">
     {office && <div><dt>District office</dt><dd>{office}</dd></div>}

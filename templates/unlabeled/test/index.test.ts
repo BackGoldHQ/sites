@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BackgoldContent, ContentTypeSummary, EntryDetail } from '@backgold/content'
-import { archiveKey, buildArchive } from '../src/lib/archive/index'
+import { ARCHIVE_FORMAT, archiveKey, buildArchive } from '../src/lib/archive/index'
 import { createSearcher, paramsOf } from '../src/lib/archive/search'
 
 const type = (key: string, url_base: string, singular: string): ContentTypeSummary => ({
@@ -57,6 +57,7 @@ const ENTRIES: Record<string, EntryDetail[]> = {
       },
       {
         summary: 'The administration recommended Apex Alliance, LLC for the project in the amount of $562,143.00.',
+        body: { markdown: 'The administration recommended Apex Alliance, LLC for the project. **Four responses** were received from [Trane](https://example.org) dealers.' },
         terms: [
           { taxonomy: 'decision_category', slug: 'facilities', label: 'Facilities' },
           { taxonomy: 'campus', slug: 'odom-academy', label: 'Odom Academy' },
@@ -149,7 +150,7 @@ describe('the index build', () => {
   })
 
   it('names its KV key by site, content version and format', () => {
-    expect(archiveKey('site_1', 184)).toBe('bg-archive:site_1:v184:f1')
+    expect(archiveKey('site_1', 184)).toBe(`bg-archive:site_1:v184:f${ARCHIVE_FORMAT}`)
   })
 })
 
@@ -192,6 +193,10 @@ describe('the search over the built index', async () => {
 
   it('answers a lone or empty quote without throwing', () => {
     for (const q of ['"', '""', 'foo "', '"a" ""', 'x ""']) expect(() => run(`q=${encodeURIComponent(q)}`)).not.toThrow()
+  })
+
+  it('searches the entry\'s own text, not just its summary', () => {
+    expect(run('q=trane+dealers').hits.map((h) => h.doc.mark)).toEqual(['FAC-D26'])
   })
 
   it('counts a smaller query for the empty result', () => {

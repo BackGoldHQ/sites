@@ -6,7 +6,7 @@
 // what came back, the records provided, the response PDF, the request
 // email she attached, Share.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
-import Share from '@backgold/template-kit/components/entries/Share.astro'
+import Share from '../archive/Share.astro'
 import Prose from '@backgold/template-kit/components/Prose.astro'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
@@ -32,9 +32,11 @@ const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((s) => s.
   <EntryHead
     label={type?.singular_label ?? 'Records request'}
     path={`/${base}/${doc.slug}`}
-    meta={[type?.singular_label ?? 'Records request', str(f.requested_from), requested && `Requested ${shortDay(requested)?.toUpperCase()}`, responded && `Responded ${shortDay(responded)?.toUpperCase()}`, status]}
+    kind={type?.singular_label ?? 'Records request'}
+    meta={[str(f.requested_from), requested && `Requested ${shortDay(requested)?.toUpperCase()}`, responded && `Responded ${shortDay(responded)?.toUpperCase()}`, status]}
     title={entry.title}
     summary={entry.summary}
+    markdown={entry.body?.markdown}
   />
   <dl class="ar-facts">
     <div><dt>// Status</dt><dd>{status ? <span class="ar-status" data-status={status}>{status}</span> : '—'}</dd></div>
@@ -58,5 +60,5 @@ const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((s) => s.
       {email && <div><p class="ar-label">// The request as sent · request_email</p><img src={email} alt="The email the request went out in" style="max-width:100%;height:auto;border:1px solid #616161" loading="lazy" /></div>}
     </section>
   )}
-  <div style="margin-top:1.5rem"><Share title={entry.title} path={doc.url} /></div>
+  <Share title={entry.title} path={doc.url} />
 </ArchiveFrame>

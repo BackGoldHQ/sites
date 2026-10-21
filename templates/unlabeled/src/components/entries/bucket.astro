@@ -5,7 +5,7 @@
 // where it flows, its own flow when its lines add up to its total, and its
 // Sankey diagram.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
-import Share from '@backgold/template-kit/components/entries/Share.astro'
+import Share from '../archive/Share.astro'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
 import Citation from '../archive/Citation.astro'
@@ -13,7 +13,7 @@ import Diagram from '../archive/Diagram.astro'
 import Flow from '../archive/Flow.astro'
 import { archiveFor } from '../../lib/archive/index'
 import { basisOf } from '../../lib/archive/views'
-import { bucketOf } from '../../lib/archive/money'
+import { bucketFlow, bucketOf } from '../../lib/archive/money'
 import { str } from '../../lib/archive/record'
 import { formatUsd } from '../../lib/archive/query'
 import { shortDay } from '../../lib/archive/format'
@@ -29,9 +29,9 @@ const f = doc.fields
 const basis = basisOf(doc, docs)
 ---
 <ArchiveFrame crumbs={[{ label: 'Money', href: '/archive/money' }, { label: bucket.family }, { label: doc.mark ?? entry.title }]}>
-  <EntryHead label="Data bucket" path={`/${base}/${doc.slug}`} meta={[type?.singular_label ?? 'Data bucket', bucket.family, bucket.side, bucket.basis && `Basis ${bucket.basis}`]} title={entry.title} summary={entry.summary}>
+  <EntryHead label="Data bucket" path={`/${base}/${doc.slug}`} kind={type?.singular_label ?? 'Data bucket'} meta={[bucket.family, bucket.side, bucket.basis && `Basis ${bucket.basis}`]} title={entry.title} summary={entry.summary} markdown={entry.body?.markdown}>
     {bucket.total !== null ? (
-      <p style="margin-top:1.25rem"><span class="ar-meta">Total · total_value</span><br /><span class="ar-big">{formatUsd(bucket.total)}</span></p>
+      <p style="margin-top:1.25rem"><span class="ar-meta">Total · total_value</span><br /><span class="u-numeral">{formatUsd(bucket.total)}</span></p>
     ) : (
       str(f.total_label) && <p class="ar-meta" style="margin-top:1rem">{str(f.total_label)}</p>
     )}
@@ -62,7 +62,7 @@ const basis = basisOf(doc, docs)
     </dl>
   )}
 
-  {bucket.balanced && <Flow bucket={bucket} />}
+  {bucket.balanced && bucket.total !== null && <Flow caption={`The flow, from the bucket’s own lines · in = out: ${formatUsd(bucket.total)}`} hub={entry.title} id={`flow-${doc.slug}`} {...bucketFlow(bucket)} />}
   <Diagram fields={f} field="sankey_diagram" data="sankey_data" title={entry.title} />
-  <div style="margin-top:1.5rem"><Share title={entry.title} path={doc.url} /></div>
+  <Share title={entry.title} path={doc.url} />
 </ArchiveFrame>

@@ -42,7 +42,7 @@ export interface ArchiveDoc {
   /** A pay record's reported value. */
   pay: number | null
   links: ArchiveLink[]
-  /** Every field value and term name, as text. */
+  /** The entry's own text, every field value and term name, as text. */
   body: string
   publishAt: string | null
   /** The raw field values, for the views that draw them (the money and pay pages, the meeting strip). */
@@ -149,6 +149,16 @@ function payCitation(f: Record<string, unknown>): string[] {
   return workbook ? [row ? `${workbook}, ${row}` : workbook] : []
 }
 
+/** Markdown as plain words: marks, links' addresses and HTML left out. */
+export function plainMarkdown(markdown: string): string {
+  return markdown
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[#>*_`~|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** The entry detail as the archive keeps it. */
 export function toDoc(kind: ArchiveKindKey, entry: EntryDetail, urlBase: string): ArchiveDoc {
   const f = entry.fields ?? {}
@@ -194,7 +204,9 @@ export function toDoc(kind: ArchiveKindKey, entry: EntryDetail, urlBase: string)
       break
   }
   amounts.push(...figuresIn(entry.summary ?? ''))
-  const body = [...Object.values(f).flatMap(textOf), ...entry.terms.map((t) => t.label)].join(' · ')
+  // The entry's own text (a summary the CMS cut short continues there) is searched like its fields.
+  const text = plainMarkdown(entry.body?.markdown ?? '')
+  const body = [text, ...Object.values(f).flatMap(textOf), ...entry.terms.map((t) => t.label)].filter(Boolean).join(' · ')
   return {
     id: entry.id,
     kind,

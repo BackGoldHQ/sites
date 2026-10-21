@@ -9,6 +9,8 @@ import type { EntryLayoutProps } from '@backgold/template-kit/components/entries
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import MeetingStrip from '../archive/MeetingStrip.astro'
 import ReadingPane from '../archive/ReadingPane.astro'
+import RunningHead from '../archive/RunningHead.astro'
+import { renderMarkdown } from '@backgold/astro/server'
 import { archiveFor, sourceOf } from '../../lib/archive/index'
 import { meetingMarks } from '../../lib/archive/views'
 import { fileUrl, httpUrl, str } from '../../lib/archive/record'
@@ -67,10 +69,12 @@ const noMinutes = !httpUrl(f.minutes_link) && !minutesDoc
 const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not specified'}${(d.vote ?? 'Not specified') === 'Not specified' && noMinutes ? ' · no minutes posted for this meeting' : ''}`
 ---
 <ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Meetings', href: `/${base}` }, { label: shortDay(doc.date) ?? entry.title }]}>
-  <header class="ar-entry" style="margin-top:1.25rem">
-    <p class="ar-meta">Meeting // /{base}/{doc.slug} · {str(f.meeting_kind) ?? 'Board meeting'}{at >= 0 ? ` · ${at + 1} of ${marks.length} in the archive` : ''}</p>
-    <p class="ar-meta ar-entry-meta">{[weekday(doc.date), str(f.meeting_kind)].filter(Boolean).join(' · ')}</p>
-    {p ? <h1>{p.month} {p.day} {p.year}{str(f.meeting_time) && <span class="ar-muted"> · {str(f.meeting_time)}</span>}</h1> : <h1>{entry.title}</h1>}
+  <header class="ar-entry">
+    <RunningHead mark={`Meeting // /${base}/${doc.slug}`} title={[str(f.meeting_kind) ?? 'Board meeting', at >= 0 ? `${at + 1} of ${marks.length} in the archive` : null].filter(Boolean).join(' · ')} folio={at >= 0 ? `M / ${String(at + 1).padStart(2, '0')}` : 'M'} />
+    <p class="ar-entry-meta"><span class="ar-kind">{type?.singular_label ?? 'Board meeting'}</span> <span class="ar-meta">{[weekday(doc.date), str(f.meeting_kind)].filter(Boolean).join(' · ')}</span></p>
+    {p ? <h1 class="ar-date">{p.month} {p.day} {p.year}</h1> : <h1>{entry.title}</h1>}
+    {str(f.meeting_time) && <p class="ar-display" style="font-size:var(--u-d3, 2rem);margin-top:0.25rem">{str(f.meeting_time)}</p>}
+    {entry.body?.markdown?.trim() && <div class="ar-lede ar-prose" set:html={renderMarkdown(entry.body.markdown)} />}
   </header>
 
   <dl class="ar-facts">
@@ -114,8 +118,9 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
   </nav>
   <MeetingStrip marks={marks} current={doc.slug} />
 
-  <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-spine">
-    <p class="ar-meta">§ The meeting, in agenda order</p>
+  <span class="u-horns ar-horns" aria-hidden="true" />
+  <section class="ar-band u-grid" aria-labelledby="ar-spine">
+    <RunningHead mark="§ The meeting, in agenda order" title="Every decision with its vote" folio="M / 02" />
     <h2 id="ar-spine">Every decision with its vote</h2>
     {decisions.length === 0 && <p class="ar-faint" style="margin-top:1rem">The archive files no decision from this meeting.</p>}
     {decisions.length > 0 && sections.length === 0 && <p class="ar-faint" style="margin-top:1rem">{agendaTextUrl ? (agendaText ? 'The agenda’s text names no numbered items.' : 'The agenda’s text could not be read just now, so the decisions are listed by mark.') : 'The archive has no agenda text for this meeting, so the decisions are listed by mark.'}</p>}
@@ -162,8 +167,8 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
   </section>
 
   {agendaTextUrl && (
-    <section class="ar-band" aria-labelledby="ar-pane">
-      <p class="ar-meta">§ Reading pane</p>
+    <section class="ar-band u-grid" aria-labelledby="ar-pane">
+      <RunningHead mark="§ Reading pane" title="Agenda text" folio="M / 03" />
       <h2 id="ar-pane">The agenda, as the archive extracted it</h2>
       <ReadingPane text={agendaText} href={agendaTextUrl} cited={cited} limit={PANE_LINES} wholeHref={agendaDoc?.url ?? agendaTextUrl} label="Agenda text" />
     </section>

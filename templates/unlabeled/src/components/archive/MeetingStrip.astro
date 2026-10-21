@@ -1,6 +1,8 @@
 ---
-// The meetings as a horizontal strip (boards U2, U4): each column is one
-// board meeting, its date, a bar for the decisions that reference it (— for
+// The meetings as a horizontal strip (boards U2, U4), all of them across
+// a desktop page; where they do not fit the strip scrolls and starts at
+// this page's meeting (inverted) or the newest. Each column is one board
+// meeting, its date, a bar for the decisions that reference it (— for
 // none), and its A / M / R marks (agenda, minutes, resolutions on BoardBook).
 import type { MeetingMark } from '../../lib/archive/views'
 import { dayParts } from '../../lib/archive/format'
@@ -40,3 +42,10 @@ const most = Math.max(1, ...marks.map((m) => m.decisions))
     <p class="ar-meta ar-hint">A Agenda on BoardBook · M Minutes on BoardBook · R Resolutions on BoardBook · Bar = decisions referencing the meeting · — = none filed</p>
   </>
 )}
+<script>
+  // A strip wider than its box starts scrolled to this page's meeting, else the newest.
+  for (const strip of document.querySelectorAll<HTMLElement>('.ar-strip')) {
+    const at = strip.querySelector<HTMLElement>('[aria-current="page"]')?.parentElement ?? strip.lastElementChild
+    if (at instanceof HTMLElement && at.offsetLeft + at.offsetWidth > strip.clientWidth) strip.scrollLeft = at.offsetLeft + at.offsetWidth - strip.clientWidth + 8
+  }
+</script>

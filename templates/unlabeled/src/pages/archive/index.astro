@@ -20,6 +20,8 @@ import SearchBox from '../../components/archive/SearchBox.astro'
 import RecordRow from '../../components/archive/RecordRow.astro'
 import MeetingStrip from '../../components/archive/MeetingStrip.astro'
 import Island from '../../components/archive/Island.astro'
+import RunningHead from '../../components/archive/RunningHead.astro'
+import Mark from '../../components/Mark.astro'
 import { browsePath, loadArchive, sourceOf } from '../../lib/archive/index'
 import { ARCHIVE_QUERY_NAMES, asksAnything, closestSmaller, hrefOf, paramsOf, searcherFor, SORTS } from '../../lib/archive/search'
 import { HOLDINGS, kindOf } from '../../lib/archive/kinds'
@@ -68,9 +70,19 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
 ---
 <Site template={template} title={showResults ? `${title} · Archive` : 'Read it yourself · Archive'} description="Search the BISD public data archive: board meetings, decisions, data buckets, pay records, source documents and records requests." canonicalPath={showResults ? hrefOf(params) : '/archive'} page={null}>
   <ArchiveFrame crumbs={showResults ? [{ label: 'Search results' }] : []}>
-    <section class="ar-door" aria-labelledby="ar-title">
-      <p class="ar-meta" style="margin-top:1.25rem">BISD public data archive{showResults && queried ? ` / ${params.q}` : ''}</p>
-      <h1 id="ar-title" style="margin-top:0.5rem">{title}</h1>
+    <section class="ar-door u-grid" aria-labelledby="ar-title">
+      <RunningHead mark="Read it yourself." title={showResults ? 'Search results' : 'BISD public data archive'} folio={showResults && queried ? `A / 01 / ${params.q}` : 'A / 01'} />
+      {showResults ? (
+        <h1 id="ar-title">{title}</h1>
+      ) : (
+        <div class="ar-door-head">
+          <Mark kind="wordmark" label="Unlabeled" />
+          <div>
+            <p class="ar-meta u-slash">BISD public data archive</p>
+            <h1 id="ar-title" style="margin-top:0.5rem">{title}</h1>
+          </div>
+        </div>
+      )}
       {!showResults && (
         <>
           <p class="ar-intro">Search the full archive by topic, date, school, program, person, salary or pay value, dollar amount or policy. Every summary links back to the original diagram, workbook or source material included in the archive.</p>
@@ -80,7 +92,7 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
                 const t = types.find((x) => x.key === k)!
                 return (
                   <a href={browsePath(t)}>
-                    <b>{counted(k)}</b>
+                    <b class="u-numeral">{counted(k)}</b>
                     <span class="ar-meta">{t.plural} · /{t.base}</span>
                   </a>
                 )
@@ -226,54 +238,53 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
 
     {!showResults && present.length > 0 && (
       <>
-        <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-browse">
-          <p class="ar-meta">§ // Browse</p>
-          <h2 id="ar-browse">By category · by meeting</h2>
+        <span class="u-horns ar-horns" aria-hidden="true" />
+        <section class="ar-band u-grid" aria-labelledby="ar-browse">
+          <RunningHead mark="§ A2 // browse" title="By category · by meeting" folio="A / 02" />
+          <h2 id="ar-browse" class="visually-hidden">By category · by meeting</h2>
           <div class="ar-browse">
-            {decisionCategories.length > 0 && (
-              <div>
-                <p class="ar-label">Decision category · {plural(decisionCategories.length, 'term')}</p>
-                <ul class="ar-terms">{decisionCategories.map((c) => <li><a href={hrefOf(params, { category: c.value, kind: 'board_decision' })}><span>{c.value}</span><span>{c.count}</span></a></li>)}</ul>
-              </div>
-            )}
-            {campuses.length > 0 && (
-              <div>
-                <p class="ar-label">Campus · {plural(campuses.length, 'term')}</p>
-                <ul class="ar-terms">{campuses.map((c) => <li><a href={hrefOf(params, { category: c.value })}><span>{c.value}</span><span>{c.count}</span></a></li>)}</ul>
-              </div>
-            )}
-          </div>
-          {marks.length > 0 && (
-            <div style="margin-top:2rem">
-              <p class="ar-label">// {plural(marks.length, 'board meeting')} · {longDay(marks[0]!.doc.date)} → {longDay(marks.at(-1)!.doc.date)}</p>
-              <MeetingStrip marks={marks} />
+            <div>
+              <p class="ar-label u-slash">Terms · decision_category and campus</p>
+              {decisionCategories.length > 0 && (
+                <>
+                  <p class="ar-label">Decision category · {plural(decisionCategories.length, 'term')}</p>
+                  <ul class="ar-terms">{decisionCategories.map((c) => <li><a href={hrefOf(params, { category: c.value, kind: 'board_decision' })}><span>{c.value}<span class="ar-tick" style={`width:${Math.max(2, Math.round((c.count / decisionCategories[0]!.count) * 100))}%`} aria-hidden="true" /></span><span>{c.count}</span></a></li>)}</ul>
+                </>
+              )}
+              {campuses.length > 0 && (
+                <>
+                  <p class="ar-label" style="margin-top:1.25rem">Campus · {plural(campuses.length, 'term')}</p>
+                  <ul class="ar-terms">{campuses.map((c) => <li><a href={hrefOf(params, { category: c.value })}><span>{c.value}<span class="ar-tick" style={`width:${Math.max(2, Math.round((c.count / campuses[0]!.count) * 100))}%`} aria-hidden="true" /></span><span>{c.count}</span></a></li>)}</ul>
+                </>
+              )}
             </div>
-          )}
-        </section>
-
-        {(latest.requests.length > 0 || latest.decisions.length > 0) && (
-          <section class="ar-band" aria-labelledby="ar-latest">
-            <h2 id="ar-latest">Latest</h2>
-            <div class="ar-two" style="margin-top:1rem">
+            <div>
+              {marks.length > 0 && (
+                <>
+                  <p class="ar-label u-slash">{plural(marks.length, 'board meeting')} · {longDay(marks[0]!.doc.date)} → {longDay(marks.at(-1)!.doc.date)}</p>
+                  <MeetingStrip marks={marks} />
+                </>
+              )}
               {latest.requests.length > 0 && requests && (
-                <div>
-                  <p class="ar-label">Latest records requests · <a href={`/${requests.base}`}>The ledger →</a></p>
+                <div style="margin-top:2rem">
+                  <h2 class="ar-subhead">Latest records requests · /{requests.base} <a class="ar-meta" href={`/${requests.base}`}>The ledger →</a></h2>
                   <ul class="ar-rows">{latest.requests.map((d) => <RecordRow doc={d} types={types} compact />)}</ul>
                 </div>
               )}
               {latest.meeting && latest.decisions.length > 0 && (
-                <div>
-                  <p class="ar-label">From the latest meeting · {shortDay(latest.meeting.doc.date)} · <a href={latest.meeting.doc.url}>The meeting →</a></p>
+                <div style="margin-top:2rem">
+                  <h2 class="ar-subhead">From the latest meeting · {shortDay(latest.meeting.doc.date)} <a class="ar-meta" href={latest.meeting.doc.url}>{latest.meeting.doc.url} →</a></h2>
                   <ul class="ar-rows">{latest.decisions.map((d) => <RecordRow doc={d} types={types} compact />)}</ul>
                 </div>
               )}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        <section class="ar-band" aria-labelledby="ar-take">
-          <p class="ar-meta">§ // Take it with you</p>
-          <h2 id="ar-take">Downloads · documents · requests</h2>
+        <span class="u-horns ar-horns" aria-hidden="true" />
+        <section class="ar-band u-grid" aria-labelledby="ar-take">
+          <RunningHead mark="§ A3 // take it with you" title="Downloads · documents · requests" folio="A / 03" />
+          <h2 id="ar-take">Take it with you</h2>
           <div class="ar-doors">
             <div>
               <p class="ar-label">Download the whole thing</p>

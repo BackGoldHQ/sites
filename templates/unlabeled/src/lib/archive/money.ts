@@ -82,6 +82,25 @@ export function countOf(doc: ArchiveDoc): number | null {
   return m ? Number(m[1]!.replace(/,/g, '')) : null
 }
 
+/** The flow a bucket's own lines draw: an inflow's lines run into its total, an outflow's total runs out to its lines. */
+export function bucketFlow(b: Bucket): { left: Array<{ label: string; value: number }>; right: Array<{ label: string; value: number }> } {
+  const lines = b.lines.filter((l) => l.value !== null && l.value > 0).map((l) => ({ label: l.label, value: l.value! }))
+  return b.side === 'Outflow' ? { left: [], right: lines } : { left: lines, right: [] }
+}
+
+/**
+ * A fund's hub: its inflow buckets in, its outflow buckets out, each at its
+ * own total. The two sides need not balance (the buckets span years); the
+ * drawing shows each side at its true size and says whether they do.
+ */
+export function fundHub(buckets: Bucket[]): { left: Array<{ label: string; value: number; href: string }>; right: Array<{ label: string; value: number; href: string }>; balanced: boolean } {
+  const side = (s: string) => buckets.filter((b) => b.side === s && b.total !== null).map((b) => ({ label: b.doc.title, value: b.total!, href: b.doc.url }))
+  const left = side('Inflow')
+  const right = side('Outflow')
+  const sum = (x: typeof left) => x.reduce((n, s) => n + s.value, 0)
+  return { left, right, balanced: left.length > 0 && Math.abs(sum(left) - sum(right)) < 1 }
+}
+
 export interface MoneyView {
   families: Array<{ name: string; count: number }>
   funds: Array<{ key: FundKey; name: string; note: string; buckets: Bucket[] }>

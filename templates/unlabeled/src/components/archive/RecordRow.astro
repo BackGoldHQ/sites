@@ -1,8 +1,10 @@
 ---
-// One record as a row in the dossier (board U2): its mark, the meta line
-// (kind · category · date · meeting · campuses), the title as filed, the
+// One record as a row in the dossier (board U2): its mark, its kind as a
+// white chip and the meta line (category · date · meeting · campuses), its
+// date at the right, the title as filed, the
 // summary with the match in context, presenter and vote or the reported
-// value when present, the citation, and its links.
+// value when present, the citation boxed, and its links (Open original
+// first when it has one). Hover inverts the whole row.
 import type { Context, SearchDoc } from '../../lib/archive/search'
 import type { ArchiveType } from '../../lib/archive/index'
 import { shortDay } from '../../lib/archive/format'
@@ -21,14 +23,14 @@ interface Props {
 const { doc, types, context = null, compact = false } = Astro.props
 const singular = types.find((t) => t.key === doc.kind)?.singular ?? doc.kind
 const day = shortDay(doc.date)
-const meta = [singular, doc.category, day?.toUpperCase(), doc.meeting && doc.kind !== 'board_meeting' ? `Meeting ${doc.meeting}` : null, ...doc.campuses].filter(Boolean)
+const meta = [doc.category, doc.meeting && doc.kind !== 'board_meeting' ? `Meeting ${doc.meeting}` : null, ...doc.campuses].filter(Boolean)
 const fieldHit = context?.where === 'field'
 const summary = doc.summary || null
 ---
 <li>
   <span class="ar-mark">{doc.mark ?? kindOf(doc.kind).code}</span>
   <div class="ar-row-body">
-    <p class="ar-meta">{meta.join(' · ')}</p>
+    <p><span class="ar-kind">{singular}</span> <span class="ar-meta">{meta.join(' · ')}</span></p>
     <h3 class="ar-row-title"><a href={doc.url}>{doc.title}</a></h3>
     {!compact && summary && <p class="ar-row-summary"><Marked text={summary} context={fieldHit ? null : context} /></p>}
     {!compact && !summary && !fieldHit && doc.kind !== 'board_meeting' && <p class="ar-row-summary ar-faint">No summary in the archive for this record. Read the source.</p>}
@@ -49,4 +51,5 @@ const summary = doc.summary || null
       </p>
     )}
   </div>
+  <span class="ar-row-date">{day?.toUpperCase() ?? ''}</span>
 </li>

@@ -8,9 +8,10 @@
 // numbered how-to.
 import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
+import RunningHead from '../archive/RunningHead.astro'
 import { loadArchive, sourceOf } from '../../lib/archive/index'
 import { fileUrl, str } from '../../lib/archive/record'
-import { shortDay } from '../../lib/archive/format'
+import { dayParts, shortDay } from '../../lib/archive/format'
 
 type Props = ListLayoutProps
 
@@ -31,35 +32,40 @@ const nonBusinessDays = docs.find((d) => d.kind === 'board_decision' && d.mark =
 const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
 ---
 <ArchiveFrame crumbs={[{ label: type === 'blog' ? 'Records requests' : type.plural_label }]}>
-  <header class="ar-entry" style="margin-top:1.25rem">
-    <p class="ar-meta">Records requests // /{base} · BISD public information requests</p>
+  <header class="ar-entry">
+    <RunningHead mark={`Records requests // /${base}`} title="BISD public information requests" folio="Q / 01" />
     <h1>{type === 'blog' ? 'Records requests' : type.plural_label}</h1>
     <p class="ar-lede">Every public information request the team has filed, newest first, with what came back. The archive’s search covers every one.</p>
   </header>
   <div class="ar-holdings">
-    <a href="#ledger"><b>{all.length}</b><span class="ar-meta">Published</span></a>
-    {STATUSES.map((s) => <a href="#ledger"><b>{count(s)}</b><span class="ar-meta">{s}</span></a>)}
+    <a href="#ledger"><b class="u-numeral">{all.length}</b><span class="ar-meta">Published</span></a>
+    {STATUSES.map((s) => <a href="#ledger"><b class="u-numeral">{count(s)}</b><span class="ar-meta">{s}</span></a>)}
   </div>
   <p class="ar-chips" aria-label="Status key">{STATUSES.map((s) => <span class="ar-status" data-status={s}>{s}</span>)}</p>
 
-  <ul class="ar-rows" id="ledger" style="margin-top:1.5rem">
+  <ul class="ar-rows ar-ledger" id="ledger" style="margin-top:1.5rem">
     {rows.map((d) => {
       const f = d.fields
       const pdf = fileUrl(f.response_document)
       const requested = str(f.requested_on)
       const responded = str(f.responded_on)
+      const published = d.publishAt ? dayParts(d.publishAt.slice(0, 10)) : null
+      const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((x) => x.trim()).filter(Boolean)
       return (
         <li>
           <div>
-            <p class="ar-meta">{day(d.publishAt)} · published</p>
-            {str(f.status) && <p style="margin-top:0.375rem"><span class="ar-status" data-status={str(f.status)}>{str(f.status)}</span></p>}
+            {published && <p class="ar-ledger-date"><b>{published.month} {published.day}</b><span class="ar-meta">{published.year} · published</span></p>}
+            {str(f.status) && <p style="margin-top:0.5rem"><span class="ar-status" data-status={str(f.status)}>{str(f.status)}</span></p>}
           </div>
           <div class="ar-row-body">
-            <p class="ar-meta">{['REQ', str(f.requested_from), requested && `Requested ${day(requested)}`, responded && `Responded ${day(responded)}`].filter(Boolean).join(' · ')}</p>
+            <p><span class="ar-kind">REQ</span> <span class="ar-meta">{[str(f.requested_from), requested && `Requested ${day(requested)}`, responded && `Responded ${day(responded)}`].filter(Boolean).join(' · ')}</span></p>
             <h3 class="ar-row-title"><a href={d.url}>{d.title}</a></h3>
             {d.summary && <p class="ar-row-summary">{d.summary}</p>}
-            {str(f.records_provided) && <p class="ar-row-cite">// Records provided · {str(f.records_provided)}</p>}
             <p class="ar-row-links">{pdf && <a href={pdf} rel="noopener">Response PDF ↓</a>}<a href={d.url}>The request →</a></p>
+          </div>
+          <div>
+            <p class="ar-label">// Records provided</p>
+            {provided.length > 0 ? <ul class="ar-list-plain">{provided.map((x) => <li class="ar-row-cite" style="display:block">{x}</li>)}</ul> : <p class="ar-faint">—</p>}
           </div>
         </li>
       )
@@ -68,16 +74,17 @@ const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
   {rows.length === 0 && <p class="ar-faint" style="margin-top:1.5rem">No records request is published yet.</p>}
 
   {submit && (
-    <section class="ar-band" style="margin-top:2rem" aria-labelledby="ar-submit">
-      <p class="ar-meta">§ Submit</p>
+    <section class="ar-band u-grid" aria-labelledby="ar-submit">
+      <RunningHead mark="§ Submit" title="Submit BISD or HISD documents" folio="Q / 02" />
       <h2 id="ar-submit">Got documents? Submit BISD or HISD documents</h2>
       <p class="ar-lede">Got something back from a request? A board packet, a spreadsheet, a letter? Send it in. Originals stay as they are; we add the source and put it on the record.</p>
       <p style="margin-top:1rem"><a class="ar-btn" href={submit.url}>Submit documents</a></p>
     </section>
   )}
 
-  <section class="ar-band" style="margin-top:2rem" id="request-a-record" aria-labelledby="ar-request">
-    <p class="ar-meta">§ Request a record</p>
+  <span class="u-horns ar-horns" aria-hidden="true" />
+  <section class="ar-band u-grid" id="request-a-record" aria-labelledby="ar-request">
+    <RunningHead mark="§ Request a record" title="How to ask BISD for public information" folio="Q / 03" />
     <h2 id="ar-request">Not here yet? Request a record.</h2>
     <p class="ar-lede">Anybody can ask. It takes a few lines in writing. Here’s how, start to finish.</p>
     <ol class="ar-steps">

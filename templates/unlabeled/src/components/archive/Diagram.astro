@@ -1,8 +1,11 @@
 ---
 // A record's diagram (board U3): the mono re-render the import stores
-// (`<field>_mono`) when there is one, else the archive's colour original
-// shown in grey, always with the original and its Mermaid source a click
-// away. An SVG is drawn as an image, so nothing inside it runs.
+// (`<field>_mono`) when there is one; else the archive's colour original
+// turned to two tones, white lines on black: greyed, inverted and
+// thresholded (the SVG filter below), so no colour and no grey box reaches
+// the page; the original's dark headers come out as white blocks with black
+// type, the brand's one highlight. "Original diagram ↗" and its Mermaid source sit
+// beside it. An SVG is drawn as an image, so nothing inside it runs.
 import { httpUrl, fileUrl } from '../../lib/archive/record'
 
 interface Props {
@@ -22,11 +25,25 @@ const shown = mono ?? original
 ---
 {shown && (
   <figure class="ar-figure">
-    <p class="ar-meta" style="margin-bottom:0.75rem">// The record’s diagram{mono ? '' : ' · the archive’s original, in grey'}</p>
-    <img class:list={[!mono && 'ar-gray']} src={shown} alt={`Diagram: ${title}`} loading="lazy" decoding="async" />
-    <figcaption class="ar-meta">
-      {original && <a href={original} rel="noopener">Original diagram ↗</a>}
-      {source && <a href={source} rel="noopener">Mermaid source (.mmd) ↗</a>}
+    {!mono && (
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <filter id="ar-two-tone" color-interpolation-filters="sRGB">
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="1 0" />
+            <feFuncG type="discrete" tableValues="1 0" />
+            <feFuncB type="discrete" tableValues="1 0" />
+          </feComponentTransfer>
+        </filter>
+      </svg>
+    )}
+    <figcaption class="ar-figure-head">
+      <span class="ar-meta">// The record’s diagram · {mono ? 're-rendered in the site’s ink' : 'the archive’s original, in the site’s ink'}</span>
+      <span class="ar-meta ar-row-links">
+        {original && <a href={original} rel="noopener">Original diagram ↗</a>}
+        {source && <a href={source} rel="noopener">.mmd ↗</a>}
+      </span>
     </figcaption>
+    <img class:list={[!mono && 'ar-ink']} src={shown} alt={`Diagram: ${title}`} loading="lazy" decoding="async" />
   </figure>
 )}
