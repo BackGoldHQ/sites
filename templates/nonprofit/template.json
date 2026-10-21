@@ -286,10 +286,10 @@
               {
                 "label": "Volunteer a shift",
                 "target": {
-                  "kind": "page",
-                  "slug": "get-involved"
+                  "kind": "surface",
+                  "path": "/volunteer"
                 },
-                "url": "/get-involved"
+                "url": "/volunteer"
               },
               {
                 "label": "See our programs",
@@ -398,10 +398,10 @@
               {
                 "label": "All shifts",
                 "target": {
-                  "kind": "page",
-                  "slug": "get-involved"
+                  "kind": "surface",
+                  "path": "/volunteer"
                 },
-                "url": "/get-involved"
+                "url": "/volunteer"
               }
             ],
             "options": {
@@ -795,11 +795,10 @@
               {
                 "label": "Find a shift",
                 "target": {
-                  "kind": "section",
-                  "slug": "get-involved",
-                  "anchor": "shifts"
+                  "kind": "surface",
+                  "path": "/volunteer"
                 },
-                "url": "/get-involved#shifts"
+                "url": "/volunteer"
               }
             ]
           },
@@ -1278,10 +1277,10 @@
               {
                 "label": "Find a shift",
                 "target": {
-                  "kind": "page",
-                  "slug": "get-involved"
+                  "kind": "surface",
+                  "path": "/volunteer"
                 },
-                "url": "/get-involved"
+                "url": "/volunteer"
               }
             ]
           }

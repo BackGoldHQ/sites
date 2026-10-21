@@ -38,7 +38,11 @@ export interface TemplateConfig {
    * (src/components/sections/index.ts).
    */
   sections: Record<string, AstroComponent>
-  /** The entry and list layouts, as '<type>:<layout>' (src/components/entries/index.ts). */
+  /**
+   * The entry and list layouts, as '<type>:<layout>', with the lesson
+   * (`course:lesson`) and the volunteer pages (`volunteer:list`,
+   * `volunteer:detail`) under those names (src/components/entries/index.ts).
+   */
   entries: Record<string, AstroComponent>
   /**
    * The template's own faces, as Google Fonts family specs

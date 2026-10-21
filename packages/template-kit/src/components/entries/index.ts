@@ -13,6 +13,12 @@
 // of its own: it is drawn by the template's `course:lesson` (the kit's is
 // the Lesson section's Player layout), given LessonLayoutProps
 // (lessonLayoutFor).
+//
+// The volunteer pages are not a type's either: `/volunteer` is drawn by the
+// template's `volunteer:list` and `/volunteer/<slug>` by its
+// `volunteer:detail` (the kit's components/volunteer, when the template
+// registers none), given VolunteerListProps and VolunteerDetailProps
+// (volunteerLayoutFor).
 
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
 import type { TemplateConfig } from '../../template'
@@ -27,6 +33,8 @@ import PostArticle from './post/article.astro'
 import PostList from './post/list.astro'
 import VideoGrid from './video/grid.astro'
 import VideoWatch from './video/watch.astro'
+import VolunteerDetail from '../volunteer/detail.astro'
+import VolunteerList from '../volunteer/list.astro'
 
 export const entries = {
   'post:article': PostArticle,
@@ -40,6 +48,8 @@ export const entries = {
   'newsletter:list': NewsletterList,
   'course:classroom': CourseClassroom,
   'course:lesson': CourseLesson,
+  'volunteer:list': VolunteerList,
+  'volunteer:detail': VolunteerDetail,
 }
 
 function pick(template: TemplateConfig, key: string, which: 'entry' | 'list', fallback: AstroComponentFactory): AstroComponentFactory {
@@ -59,3 +69,9 @@ export const listLayoutFor = (template: TemplateConfig, key: string) => pick(tem
 /** The template's lesson layout: the `course:lesson` its entries register, else the kit's. */
 export const lessonLayoutFor = (template: TemplateConfig): AstroComponentFactory =>
   Object.hasOwn(template.entries, 'course:lesson') ? template.entries['course:lesson']! : CourseLesson
+
+/** The template's volunteer layout: the `volunteer:list` (or `volunteer:detail`) its entries register, else the kit's. */
+export function volunteerLayoutFor(template: TemplateConfig, which: 'list' | 'detail'): AstroComponentFactory {
+  const name = `volunteer:${which}`
+  return Object.hasOwn(template.entries, name) ? template.entries[name]! : which === 'list' ? VolunteerList : VolunteerDetail
+}
