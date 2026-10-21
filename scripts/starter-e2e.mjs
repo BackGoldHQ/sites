@@ -4491,7 +4491,7 @@ async function checkNonprofit(origin) {
     "home's EventsList · shifts draws its three rows in one run, each with its live slot and Sign up for this shift",
   )
   const programs = sectionsOf(html).find((s) => s.type === 'Issues')?.html ?? ''
-  check((programs.match(/<use href="#d-(basket|book|wrench)">/g) ?? []).length === 3 && (programs.match(/class="np-when"/g) ?? []).length === 3, "home's Issues · cards draws each row's icon as a doodle and its note")
+  check((programs.match(/<use href="#d-(sprout|book|wrench)">/g) ?? []).length === 3 && (programs.match(/class="np-when"/g) ?? []).length === 3, "home's Issues · cards draws each row's icon as a doodle and its note")
   res = await get(origin, at('programs'))
   html = await res.text()
   const services = sectionsOf(html).find((s) => s.type === 'Services')?.html ?? ''
