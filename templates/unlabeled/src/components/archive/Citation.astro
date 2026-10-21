@@ -1,7 +1,8 @@
 ---
 // A record's source citation, set as a citation (board U3): monospace,
 // boxed, selected whole on a click so it copies, the record's links beside
-// it, and the archive's mark as a watermark behind it.
+// it, and her skull mark as a watermark behind it.
+import Mark from '../Mark.astro'
 import type { ArchiveLink } from '../../lib/archive/record'
 
 interface Props {
@@ -14,7 +15,7 @@ const { lines, links = [], heading = '// Source citation · as the archive gives
 ---
 {(lines.length > 0 || links.length > 0) && (
   <section class="ar-cite" aria-label="Source citation">
-    <span class="ar-watermark" aria-hidden="true">UNLABELED</span>
+    <Mark kind="skull" class="ar-watermark" />
     <p class="ar-meta">{heading}</p>
     {lines.length > 0 ? <pre>{lines.join('\n')}</pre> : <p class="ar-faint" style="margin-top:0.5rem">The archive gives no citation for this record.</p>}
     <slot />

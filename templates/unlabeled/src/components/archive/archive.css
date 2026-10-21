@@ -7,16 +7,17 @@
 */
 
 .ar {
-  --ar-bg: #000;
-  --ar-surface: #080808;
-  --ar-ink: #fff;
-  --ar-muted: #949494;
-  --ar-faint: #737373;
-  --ar-line: #1a1a1a;
-  --ar-line-strong: #616161;
-  --ar-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --ar-display: 'Ubuntu Sans Mono', var(--ar-mono);
-  --ar-meta: 'Office Code Pro', var(--ar-mono);
+  /* The template's tokens (src/styles/template.css), with her values for a page drawn without them. */
+  --ar-bg: var(--u-ground, #000);
+  --ar-surface: var(--u-surface-2, #080808);
+  --ar-ink: var(--u-ink, #fff);
+  --ar-muted: var(--u-muted, #949494);
+  --ar-faint: var(--u-faint, #737373);
+  --ar-line: var(--u-line, #1a1a1a);
+  --ar-line-strong: var(--u-line-strong, #616161);
+  --ar-mono: var(--font, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  --ar-display: var(--font-display, 'Ubuntu Sans Mono', 'JetBrains Mono', ui-monospace, monospace);
+  --ar-meta: var(--font-meta, 'Office Code Pro', 'JetBrains Mono', ui-monospace, monospace);
   --ar-gutter: clamp(1rem, 3vw, 2rem);
   --ar-width: 90rem;
   background: var(--ar-bg);
@@ -162,7 +163,7 @@
 }
 .ar-holdings {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   border-top: 1px solid var(--ar-line);
   border-left: 1px solid var(--ar-line);
   margin-top: 1.5rem;
@@ -654,14 +655,11 @@
 .ar-watermark {
   position: absolute;
   right: -1rem;
-  bottom: -1.5rem;
-  font-family: var(--ar-display);
-  font-weight: 500;
-  font-size: 7rem;
-  line-height: 1;
+  bottom: -2rem;
+  width: 11rem;
+  height: auto;
   color: var(--ar-line);
   pointer-events: none;
-  user-select: none;
 }
 .ar-list-plain li {
   border-bottom: 1px solid var(--ar-line);
