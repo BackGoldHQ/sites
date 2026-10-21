@@ -38,9 +38,12 @@ Every archive page wears the three disclaimers in a band above the footer
 ## The index and its cache key
 
 `src/lib/archive/index.ts` reads every entry of the six types through the
-site's Content API client: the list pages (50 a page), then each entry's
-detail (the list route carries no field values), eight at a time. Each
-detail becomes an `ArchiveDoc` (`src/lib/archive/record.ts`). The whole set
+site's Content API client: the list pages (50 a page) with
+`include=fields`, which carries each entry's fields (platform MR !1790), so
+each listed entry becomes an `ArchiveDoc` (`src/lib/archive/record.ts`) as
+it is. An entry listed without fields (an api from before !1790) and every
+records request (whose response is a prose body the list never sends) is
+read on its own, eight at a time. The whole set
 is kept in KV (`BACKGOLD_CACHE`) under
 
 ```
@@ -56,18 +59,16 @@ the same value.
 ### What a cold build costs
 
 The first request after a publish builds the index inside that one
-request. Each entry costs one Content API call (a service-binding call
-first-party, an HTTP fetch with a site key) plus the client's KV get and,
-on a miss, KV put of that read; the type lists add one call per 50 entries.
-At 421 entries that is about 1.3k subrequests in one request (431 api calls
-and about 860 KV operations), plus the index's own KV read and write. The
-bound is the Workers per-request subrequest limit and the service-binding
-invocation ceiling for that request, whichever the plan sets lower. It fits
-today with little room: at about 5,000 entries this build cannot complete
-in one request at all. Measured: 12.6 s reading staging's api from Node
-(eight reads at a time, memory cache), 67 s in `astro dev` (local KV per
-read). The real fix is the platform follow-up below, a list option that
-returns field values, which makes the build one list call per 50 entries.
+request. With `include=fields` that is one Content API call (a
+service-binding call first-party, an HTTP fetch with a site key) per 50
+entries plus the 12 records requests read on their own: about 25 api calls
+for the 421 entries, each with the client's KV get and, on a miss, put.
+Against an api without `include=fields` every entry costs its own read:
+about 431 api calls and 860 KV operations, 1.3k subrequests in one request,
+which fits the Workers per-request subrequest limit today with little room
+and cannot complete at about 5,000 entries. Measured before
+`include=fields`: 12.6 s reading staging's api from Node, 67 to 120 s in
+`astro dev` (local KV per read).
 
 **Owed after deploy:** a first cold hit on the deployed staging Worker
 (`template-unlabeled` in `sites-staging`, first-party through the service
@@ -153,11 +154,11 @@ the archive door.
 
 ## Follow-ups for the platform
 
-- **A list option that returns field values** (`GET /entries/:type?fields=1`
-  or similar). This is the real fix for the cold build's cost (above):
-  without it a cold build reads every entry's detail, about 431 api calls
-  and 1.3k subrequests per content version for this archive, and an archive
-  of about 5,000 entries cannot be built in one request.
+- **`include=fields` on `GET /entries/:type`** (platform MR !1790): the
+  build already asks for it and falls back to one read per entry without
+  it. Once !1790 is on the platform's main, re-pull the vendored contract
+  (`node scripts/contract-pull.mjs <platform checkout>`) so the `fields`
+  on a listed entry are typed.
 - **Custom type keys in `entryLayouts`.** The contract's manifest schema
   takes only the built-in type keys, so the archive's layouts ride on the
   `post:article` / `post:list` dispatchers instead of being named per type

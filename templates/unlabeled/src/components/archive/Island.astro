@@ -46,6 +46,35 @@
       input.removeAttribute('aria-activedescendant')
     }
 
+    // What the query matched in the live rows, in her invert (the CSS Custom
+    // Highlight API, ::highlight(u-match) in template.css): each plain word
+    // of the query, case aside; operators (ch(…), pay:…, $…) and quotes are
+    // left out. Without the API the rows are as they were.
+    const mark = (root: HTMLElement, q: string) => {
+      const registry = (CSS as unknown as { highlights?: Map<string, unknown> }).highlights
+      const HighlightOf = (window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight
+      if (!registry || !HighlightOf) return
+      const terms = q
+        .replace(/"/g, ' ')
+        .split(/\s+/)
+        .filter((t) => t.length > 1 && !/[:($]/.test(t))
+        .map((t) => t.toLowerCase())
+      const ranges: Range[] = []
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const lower = (node.textContent ?? '').toLowerCase()
+        for (const term of terms) {
+          for (let at = lower.indexOf(term); at >= 0; at = lower.indexOf(term, at + term.length)) {
+            const range = new Range()
+            range.setStart(node, at)
+            range.setEnd(node, at + term.length)
+            ranges.push(range)
+          }
+        }
+      }
+      registry.set('u-match', new HighlightOf(...ranges))
+    }
+
     const render = () => {
       if (!searcher) return
       const q = input.value.trim()
@@ -76,6 +105,7 @@
             a.append(p)
           }
           li.append(a)
+          li.style.setProperty('--n', String(i))
           list.append(li)
         })
       const footer = document.createElement('footer')
@@ -89,6 +119,7 @@
       parse.style.padding = '0 0.875rem 0.5rem'
       for (const c of chips) parse.append(text('span', c, 'ar-chip ar-chip-parse'))
       live.replaceChildren(list, ...(chips.length ? [parse] : []), footer)
+      mark(list, q)
       live.hidden = false
       selected = -1
       input.setAttribute('aria-expanded', 'true')
