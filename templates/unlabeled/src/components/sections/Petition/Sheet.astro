@@ -1,0 +1,106 @@
+---
+// Petition, every layout, Unlabeled's (board U6). The image, map and coverage
+// layouts are the kit's (their header, the photo, the live map or the county
+// coverage, carries the title, and BackGold's frame draws the rest in her
+// look). The default layout, `none`, is hers: the section's kicker and its
+// heading set large at the left with the figures the organization typed for
+// it as huge numerals under it, and BackGold's sign sheet on a hairline box at
+// the right (under it on a phone), where the frame draws the live count, the
+// goal and the note under it (her legal note goes in that note). The site
+// never draws the live count itself: the Content API sends it only inside
+// the frame, and a figure BackGold fills in live is left out here
+// (literalStat). Every layout is anchored at `petition` when the section
+// names no anchor, as a hosted BackGold page's Petition is, so "Sign the
+// petition ↓" lands on it.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
+import PetitionImage from '@backgold/template-kit/components/sections/Petition/image.astro'
+import PetitionMap from '@backgold/template-kit/components/sections/Petition/map.astro'
+import PetitionCoverage from '@backgold/template-kit/components/sections/Petition/coverage.astro'
+import { rows } from '@backgold/template-kit/lib/section'
+import { literalStat, text } from '@backgold/template-kit/lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section, variant } = Astro.props
+const LAYOUTS = { image: PetitionImage, map: PetitionMap, coverage: PetitionCoverage } as const
+const Kit = variant && Object.hasOwn(LAYOUTS, variant) ? LAYOUTS[variant as keyof typeof LAYOUTS] : null
+const anchored: Section = { ...section, options: { anchorId: 'petition', ...section.options } }
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const figures = rows(section)
+  .filter((row) => row.group === 'tile')
+  .map((row) => ({ value: literalStat(row.value), label: text(row.label), note: text(row.note) }))
+  .filter((figure): figure is { value: string; label: string | null; note: string | null } => figure.value !== null)
+---
+{Kit ? (
+  <Kit section={anchored} variant={variant} />
+) : (
+  <Band section={anchored} class="u-petition">
+    <div class="u-petition-grid">
+      <div class="u-petition-words">
+        {kicker && <p class="kicker">{kicker}</p>}
+        {heading && <h2 class="u-petition-heading">{heading}</h2>}
+        {figures.length > 0 && (
+          <dl class="u-petition-figures">
+            {figures.map((figure) => (
+              <div>
+                <dt class="u-meta">{figure.label}</dt>
+                <dd class="u-numeral">{figure.value}</dd>
+                {figure.note && <dd class="u-petition-note">{figure.note}</dd>}
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+      <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="none" card title={heading ?? 'Sign the petition'} height="40rem" />
+    </div>
+  </Band>
+)}
+
+<style>
+  .u-petition-grid {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+  .u-petition-heading {
+    margin: 0;
+    font-size: var(--u-d1);
+    line-height: 0.95;
+  }
+  .u-petition-figures {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0 0;
+  }
+  .u-petition-figures div {
+    padding-top: 1rem;
+    border-top: 1px solid var(--line-strong);
+  }
+  .u-petition-figures dt {
+    color: var(--muted);
+  }
+  .u-petition-figures dd {
+    margin: 0;
+  }
+  .u-petition-figures .u-numeral {
+    margin-top: 0.5rem;
+  }
+  .u-petition-note {
+    margin-top: 0.75rem !important;
+    max-width: 30em;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  @media (min-width: 60rem) {
+    .u-petition-grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      gap: 3rem;
+    }
+  }
+</style>

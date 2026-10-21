@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "BackGold's petition drive template: a one-page Astro site on Cloudflare Workers that draws an organization's petition drive (the live map, the sign sheet, the ways to help) through the Content API.",
+  "description": "Unlabeled's own site (unlabeledtexas.com): a one-of-one Astro template on BackGold's template kit, white on black in mono capitals, a court record set by a punk zine, with the BISD public data archive searchable at /archive. Hidden from every other organization's gallery.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",

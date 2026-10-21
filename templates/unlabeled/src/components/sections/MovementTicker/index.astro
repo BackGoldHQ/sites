@@ -1,0 +1,150 @@
+---
+// MovementTicker, Unlabeled's (board U1, section 2): one line across the page
+// under a hairline, "Live //" in a white block at its left, then what is
+// happening. When the api sends the live feed (the people signing, RSVPing
+// and giving, BackGold's frame), the frame fills the line in her look. With
+// no frame, the figures the organization typed run along it, each a value
+// over its label, at a reading pace (a full pass every 60 seconds or slower),
+// and hold still for a visitor who asked for reduced motion; the run is drawn
+// twice so it loops without a gap, the second copy hidden from screen
+// readers. A figure BackGold fills in live is left out of that list
+// (literalStat), and a ticker with neither a frame nor a typed figure draws
+// nothing, as the kit's does.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
+import { rows } from '@backgold/template-kit/lib/section'
+import { literalStat, text } from '@backgold/template-kit/lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const heading = text(section.copy.heading)
+const framed = !!section.embed
+const stats = framed
+  ? []
+  : rows(section)
+      .map((row) => ({ value: literalStat(row.value), label: text(row.label) }))
+      .filter((stat): stat is { value: string; label: string | null } => stat.value !== null)
+/** Seconds for one pass: slow enough to read, never under a minute. */
+const seconds = Math.max(60, stats.length * 12)
+---
+{(framed || stats.length > 0) && (
+  <Band section={section} class="u-ticker">
+    <div class="u-ticker-line">
+      <p class="u-ticker-label">Live //{heading && <span class="u-ticker-heading"> {heading}</span>}</p>
+      {framed ? (
+        <div class="u-ticker-frame">
+          <ModuleFrame embed={section.embed} band={section.band} type={section.type} layout="ticker" title={heading || 'Activity'} height="3rem" />
+        </div>
+      ) : (
+        <div class="u-ticker-window">
+          <div class="u-ticker-run" style={`--u-ticker-seconds:${seconds}s`}>
+            {[0, 1].map((copy) => (
+              <ul class="u-ticker-items" role={copy === 0 ? 'list' : undefined} aria-hidden={copy === 0 ? undefined : 'true'}>
+                {stats.map((stat) => (
+                  <li>
+                    <b>{stat.value}</b>
+                    {stat.label && <span>{stat.label}</span>}
+                  </li>
+                ))}
+              </ul>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </Band>
+)}
+
+<style>
+  :global(.bg-section.u-ticker) {
+    --bg-section-padding: 0 var(--gutter);
+    background-image: none;
+    border-bottom: 1px solid var(--line);
+  }
+  :global(.bg-section.u-ticker) > :global(.bg-section-inner) {
+    max-width: none;
+  }
+  .u-ticker-line {
+    display: flex;
+    align-items: stretch;
+    min-height: 2.75rem;
+  }
+  .u-ticker-label {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0 0.875rem;
+    background: var(--ink);
+    color: var(--page);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .u-ticker-heading {
+    margin-left: 0.375rem;
+  }
+  .u-ticker-frame {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .u-ticker-window {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .u-ticker-run {
+    display: flex;
+    width: max-content;
+  }
+  .u-ticker-items {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .u-ticker-items li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0 1.5rem;
+    border-right: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .u-ticker-items b {
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .u-ticker-items span {
+    color: var(--muted);
+    font-family: var(--font-meta);
+    font-size: var(--u-meta-size);
+    letter-spacing: var(--u-meta-track);
+    text-transform: uppercase;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .u-ticker-run {
+      animation: u-ticker var(--u-ticker-seconds, 60s) linear infinite;
+    }
+    .u-ticker-window:hover .u-ticker-run,
+    .u-ticker-window:focus-within .u-ticker-run {
+      animation-play-state: paused;
+    }
+  }
+  @keyframes u-ticker {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+</style>
