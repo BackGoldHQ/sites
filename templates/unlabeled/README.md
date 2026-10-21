@@ -128,11 +128,11 @@ BISD: Public info, Submit documents and Nederland ISD. ARCHIVE is not a
 menu link in BackGold: `/archive` is this template's own route, which no menu
 link kind can name (a nav kind for a template's routes is a platform ask), so
 the template adds it itself (`menuLinks` in `src/template.ts`, drawn by the
-kit's header): last at the top level, after PETITION, and first in the BISD
-group, in the bar and the phone sheet, current on `/archive` and under it and
+kit's header): last at the top level, after PETITION, and in no group (BISD
+holds only her own rows), in the bar and the phone sheet, current on `/archive` and under it and
 on each record type's address (`/meetings`, `/decisions`, `/data`, `/pay`,
 `/sources`, `/records`). The footer's *The record* opens with The archive and
-Request a record (`/records#request-a-record`), the same way. Her other pages
+BISD: Public info, then Request a record (`/records#request-a-record`). Her other pages
 (I voted, the BISD petition, Texas THC and the forms not in the menu) are
 hers already and are not starter pages.
 
