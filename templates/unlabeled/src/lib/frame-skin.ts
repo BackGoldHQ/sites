@@ -11,8 +11,10 @@
 // square fields on the field edge, white when focused; the white block
 // submit in capitals that inverts on hover; choices and items as hairline
 // boxes that invert when picked; a petition's count set huge over a
-// hairline meter, a shift's spots in the meta line over the same meter;
-// cards as hairline boxes. It never hides a required field,
+// hairline meter, a shift's spots in the meta line over the same meter; a
+// petition's collapsed text as a hairline-ruled disclosure whose summary is
+// the meta line with a `[ + ]` bracket (`[ – ]` open) and whose text reads in
+// the mono body; cards as hairline boxes. It never hides a required field,
 // a consent row, a legal line, an error or the submit, and every state
 // (focus, invalid, picked, disabled) still reads as what it is. The frame
 // may refuse the skin (a preview host): the look alone then draws them.
@@ -171,6 +173,36 @@ html[data-bg-look] [data-bg-fr='shift'] .bg-fr-progress > * {
   height: 100%;
   background: var(--bg-look-ink);
   border-radius: 0;
+}
+
+/* A petition's collapsed text: a hairline-ruled disclosure, the summary in capitals with the bracket glyph, the text in the mono body. */
+html[data-bg-look] .bg-fr-text {
+  border-top: 1px solid var(--bg-look-line-strong);
+  border-bottom: 1px solid var(--bg-look-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-bg-look] .bg-fr-text-summary {
+  ${META}
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  color: var(--bg-look-ink);
+  cursor: pointer;
+  list-style: none;
+}
+html[data-bg-look] .bg-fr-text-summary::-webkit-details-marker { display: none; }
+html[data-bg-look] .bg-fr-text-summary::marker { content: ''; }
+html[data-bg-look] .bg-fr-text-summary::after { content: '[ + ]'; white-space: pre; color: var(--bg-look-ink); }
+html[data-bg-look] .bg-fr-text[open] > .bg-fr-text-summary::after { content: '[ \\2013 ]'; }
+html[data-bg-look] .bg-fr-text-summary:focus-visible { outline: 2px solid var(--bg-look-link); outline-offset: 3px; }
+html[data-bg-look] .bg-fr-text[open] > :not(.bg-fr-text-summary) {
+  color: var(--bg-look-ink);
+  font-family: var(--bg-look-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 /* The live feed's total: her display weight. */
