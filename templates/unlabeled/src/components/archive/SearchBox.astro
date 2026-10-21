@@ -26,12 +26,13 @@ const present = types.filter((t) => t.present)
   <label class="visually-hidden" for="ar-q">Search the archive</label>
   <div class="ar-field">
     <span aria-hidden="true">/</span>
-    <input id="ar-q" name="q" type="search" value={params.q} placeholder="Try: AP, HVAC, superintendent, $68 million…" autocomplete="off" maxlength="200" data-ar-input />
+    <input id="ar-q" name="q" type="search" value={params.q} placeholder="Try: AP, HVAC, superintendent, $68 million…" autocomplete="off" maxlength="200" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ar-live-list" data-ar-input />
     <button class="ar-btn" type="submit">Search</button>
   </div>
   {params.kind && <input type="hidden" name="kind" value={params.kind} />}
   {params.sort !== 'relevance' && <input type="hidden" name="sort" value={params.sort} />}
   <div class="ar-live" hidden data-ar-live></div>
+  <p class="visually-hidden" role="status" aria-live="polite" data-ar-status></p>
   <p class="ar-meta ar-hint">Press / to search · words, "a phrase", CH(LOCAL), $68 million, pay:90000-125000, february 2026</p>
   {chips.length > 0 && (
     <p class="ar-chips" aria-label="Read as">

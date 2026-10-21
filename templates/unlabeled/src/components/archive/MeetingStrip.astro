@@ -16,23 +16,27 @@ const most = Math.max(1, ...marks.map((m) => m.decisions))
 ---
 {marks.length > 0 && (
   <>
-    <div class="ar-strip" role="list">
+    <ul class="ar-strip">
       {marks.map((m) => {
         const p = dayParts(m.doc.date!)
+        const docs = [m.agenda ? 'agenda' : null, m.minutes ? 'minutes' : null, m.resolutions ? 'resolutions' : null].filter(Boolean)
         return (
-          <a role="listitem" href={m.doc.url} aria-current={m.doc.slug === current ? 'page' : undefined} aria-label={`${m.doc.title}: ${m.decisions} decisions`}>
-            <span class="ar-faint">{p.year}</span>
-            <span>{p.month}</span>
-            <b>{p.day}</b>
-            <span class="ar-bar" style={`height:${m.decisions ? Math.max(8, Math.round((m.decisions / most) * 100)) : 0}%`} />
-            <span>{m.decisions || '—'}</span>
-            <span class="ar-marks" aria-hidden="true">
-              <span data-on={m.agenda ? '' : undefined}>A</span><span data-on={m.minutes ? '' : undefined}>M</span><span data-on={m.resolutions ? '' : undefined}>R</span>
-            </span>
-          </a>
+          <li>
+            <a href={m.doc.url} aria-current={m.doc.slug === current ? 'page' : undefined}>
+              <span class="ar-faint">{p.year}</span>
+              <span>{p.month}</span>
+              <b>{p.day}</b>
+              <span class="ar-bar" style={`height:${m.decisions ? Math.max(8, Math.round((m.decisions / most) * 100)) : 0}%`} />
+              <span>{m.decisions || '—'}<span class="visually-hidden"> {m.decisions === 1 ? 'decision' : 'decisions'}</span></span>
+              <span class="ar-marks">
+                <span aria-hidden="true" data-on={m.agenda ? '' : undefined}>A</span><span aria-hidden="true" data-on={m.minutes ? '' : undefined}>M</span><span aria-hidden="true" data-on={m.resolutions ? '' : undefined}>R</span>
+                <span class="visually-hidden">{docs.length ? `On BoardBook: ${docs.join(', ')}` : 'Nothing on BoardBook'}</span>
+              </span>
+            </a>
+          </li>
         )
       })}
-    </div>
+    </ul>
     <p class="ar-meta ar-hint">A Agenda on BoardBook · M Minutes on BoardBook · R Resolutions on BoardBook · Bar = decisions referencing the meeting · — = none filed</p>
   </>
 )}

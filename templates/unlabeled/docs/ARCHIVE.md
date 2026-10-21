@@ -26,6 +26,12 @@ under those two keys that draw the six archive types with their own layouts
 post layouts. Home's door to the archive is StatCards' `archive` layout
 (`src/components/archive/ArchiveDoor.astro`).
 
+The search field is a combobox over the island's list of options, with a
+status line that says how many records match; the meetings strip's marks
+and the reading pane's cited lines carry their words for screen readers.
+`/archive/archive.csv` prefixes a `'` to any cell a spreadsheet would read
+as a formula (`src/lib/archive/csv.ts`).
+
 Every archive page wears the three disclaimers in a band above the footer
 (`src/lib/archive/disclaimers.ts`), never collapsed.
 
@@ -45,9 +51,28 @@ for seven days, so a publish in BackGold (a new content version) is a new
 key and the next request builds it; nothing rebuilds it before. For the 421
 entries the value is about 0.9 MB. Concurrent requests in one isolate share
 one build; two isolates that miss on a new version both build it and write
-the same value. A cold build costs one list read per 50 entries and one
-detail read per entry (about 431 reads for 421 entries), each cached by the
-client under the same version.
+the same value.
+
+### What a cold build costs
+
+The first request after a publish builds the index inside that one
+request. Each entry costs one Content API call (a service-binding call
+first-party, an HTTP fetch with a site key) plus the client's KV get and,
+on a miss, KV put of that read; the type lists add one call per 50 entries.
+At 421 entries that is about 1.3k subrequests in one request (431 api calls
+and about 860 KV operations), plus the index's own KV read and write. The
+bound is the Workers per-request subrequest limit and the service-binding
+invocation ceiling for that request, whichever the plan sets lower. It fits
+today with little room: at about 5,000 entries this build cannot complete
+in one request at all. Measured: 12.6 s reading staging's api from Node
+(eight reads at a time, memory cache), 67 s in `astro dev` (local KV per
+read). The real fix is the platform follow-up below, a list option that
+returns field values, which makes the build one list call per 50 entries.
+
+**Owed after deploy:** a first cold hit on the deployed staging Worker
+(`template-unlabeled` in `sites-staging`, first-party through the service
+binding) right after a publish, timing `/archive` and checking it answers
+200 rather than a subrequest-limit error.
 
 The search (`src/lib/archive/search.ts`) is a MiniSearch index over title,
 summary, every field value, the people and the terms, built from the
@@ -126,8 +151,10 @@ the archive door.
 ## Follow-ups for the platform
 
 - **A list option that returns field values** (`GET /entries/:type?fields=1`
-  or similar). Without it a cold index build reads every entry's detail,
-  about 431 reads per content version for this archive.
+  or similar). This is the real fix for the cold build's cost (above):
+  without it a cold build reads every entry's detail, about 431 api calls
+  and 1.3k subrequests per content version for this archive, and an archive
+  of about 5,000 entries cannot be built in one request.
 - **Custom type keys in `entryLayouts`.** The contract's manifest schema
   takes only the built-in type keys, so the archive's layouts ride on the
   `post:article` / `post:list` dispatchers instead of being named per type

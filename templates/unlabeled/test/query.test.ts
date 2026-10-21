@@ -78,6 +78,27 @@ describe('words, phrases and codes', () => {
     expect(parseQuery('"west brook').phrases).toEqual(['west brook'])
   })
 
+  it.each(['"', '""', 'foo "', '"a" ""', 'x ""'])('drops a lone or empty quote in %s', (q) => {
+    const parsed = parseQuery(q)
+    expect(parsed.phrases.every((p) => p.length > 0)).toBe(true)
+    expect(parsed.pieces.every((p) => p !== '"' && p !== '""')).toBe(true)
+  })
+
+  it('never throws, whatever is typed', () => {
+    const alphabet = 'a "$.,:-0123456789kKmM '
+    let seed = 7
+    const next = () => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31
+      return seed
+    }
+    for (let i = 0; i < 2000; i++) {
+      const length = next() % 24
+      let q = ''
+      for (let j = 0; j < length; j++) q += alphabet[next() % alphabet.length]
+      expect(() => parseQuery(q), JSON.stringify(q)).not.toThrow()
+    }
+  })
+
   it('reads an empty query as nothing', () => {
     expect(parseQuery('   ').pieces).toEqual([])
   })

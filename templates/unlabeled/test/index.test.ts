@@ -190,6 +190,10 @@ describe('the search over the built index', async () => {
     expect(run('q=august+2026').kinds).toMatchObject({ board_meeting: 1, board_decision: 1 })
   })
 
+  it('answers a lone or empty quote without throwing', () => {
+    for (const q of ['"', '""', 'foo "', '"a" ""', 'x ""']) expect(() => run(`q=${encodeURIComponent(q)}`)).not.toThrow()
+  })
+
   it('counts a smaller query for the empty result', () => {
     expect(run('q=flock+hvac').total).toBe(0)
     expect(search.count('hvac').count).toBe(1)

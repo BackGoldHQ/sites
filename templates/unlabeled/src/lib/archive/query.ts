@@ -108,7 +108,7 @@ function payFigure(raw: string): number | null {
 }
 
 // Tokens are read left to right by these patterns, first match wins.
-const PHRASE = /^"([^"]+)"?/
+const PHRASE = /^"([^"]*)"?/
 const PAY = /^pay:\s*(\$?[\d.,]+[km]?)?\s*(?:-|–|to)\s*(\$?[\d.,]+[km]?)?(?=\s|$)/i
 const PAREN_CODE = /^([a-z]{1,4})\s?\((local|legal|exhibit|regulation)\)/i
 const DOT_CODE = /^([a-z]{2,5})\s?(\d{1,3}\.\d{1,3})(?![\d.])/i
@@ -119,7 +119,7 @@ const MONTH_YEAR = /^([a-z]{3,9})\.?,?\s+(\d{4})(?!\d)/i
 const MONEY = /^(\$)?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s?(k|m|mm|mil|million|thousand|b|bn|billion)?(?![a-z\d])/i
 const WORD = /^[^\s"]+/
 
-/** The query, read. Never throws; anything unrecognized is a word. */
+/** The query, read. Total: it never throws, and anything unrecognized is a word. */
 export function parseQuery(input: string | null | undefined): ParsedQuery {
   const raw = (input ?? '').trim().replace(/\s+/g, ' ')
   const out: ParsedQuery = { raw, words: [], phrases: [], codes: [], amounts: [], pay: null, dates: [], pieces: [] }
@@ -133,9 +133,13 @@ export function parseQuery(input: string | null | undefined): ParsedQuery {
       rest = rest.slice(n)
     }
     if ((m = PHRASE.exec(rest))) {
+      // A lone or empty quote asks for nothing and is dropped.
       const phrase = m[1]!.trim().toLowerCase().replace(/\s+/g, ' ')
-      if (phrase) out.phrases.push(phrase)
-      take(m[0].length, m[0].endsWith('"') ? m[0] : `${m[0]}"`)
+      if (phrase) {
+        out.phrases.push(phrase)
+        out.pieces.push(m[0].length > 1 && m[0].endsWith('"') ? m[0] : `"${m[1]!.trim()}"`)
+      }
+      rest = rest.slice(m[0].length)
       continue
     }
     if ((m = PAY.exec(rest))) {
@@ -212,8 +216,9 @@ export function parseQuery(input: string | null | undefined): ParsedQuery {
         }
       }
     }
-    m = WORD.exec(rest)!
-    const word = m[0]
+    // Every other run of characters up to a space or a quote is a word; a
+    // quote is always taken above, so this always consumes something.
+    const word = WORD.exec(rest)?.[0] ?? rest.charAt(0)
     // A dangling `$` or punctuation on its own says nothing.
     if (/[\p{L}\p{N}]/u.test(word)) out.words.push(word)
     take(word.length, word)

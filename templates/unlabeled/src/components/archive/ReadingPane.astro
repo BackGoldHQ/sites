@@ -34,7 +34,7 @@ const shown = limit !== null ? lines.slice(0, limit) : lines
     <div class="ar-pane">
       <ol>
         {shown.map((line, i) => (
-          <li id={`L${i + 1}`} data-cited={marked.has(i + 1) ? '' : undefined}><span>{i + 1}</span><span>{line || ' '}</span></li>
+          <li id={`L${i + 1}`} data-cited={marked.has(i + 1) ? '' : undefined}><span>{i + 1}{marked.has(i + 1) && <span class="visually-hidden"> {cited.includes(i + 1) ? 'cited' : 'found'}</span>}</span><span>{line || ' '}</span></li>
         ))}
       </ol>
     </div>

@@ -2,7 +2,8 @@
 // The archive's one script (board U2, frame 3): it loads /archive/index.json
 // (the same documents the server searches), answers each keystroke in the
 // search field without a round trip, shows the best few with the query's
-// parse, and writes the URL as it goes. Enter, or "All results", opens the
+// parse, and writes the URL as it goes. The field is a combobox over the
+// list of options; a status line says how many records match. Enter, or "All results", opens the
 // server's results page; with scripts off the form does exactly that.
 ---
 <script>
@@ -13,6 +14,7 @@
   const form = document.querySelector<HTMLFormElement>('[data-ar-search]')
   const input = form?.querySelector<HTMLInputElement>('[data-ar-input]')
   const live = form?.querySelector<HTMLElement>('[data-ar-live]')
+  const status = form?.querySelector<HTMLElement>('[data-ar-status]')
 
   const text = (tag: string, value: string, className?: string) => {
     const el = document.createElement(tag)
@@ -40,6 +42,8 @@
       live.hidden = true
       live.replaceChildren()
       selected = -1
+      input.setAttribute('aria-expanded', 'false')
+      input.removeAttribute('aria-activedescendant')
     }
 
     const render = () => {
@@ -58,10 +62,12 @@
         .slice(0, SHOWN)
         .forEach((hit, i) => {
           const li = document.createElement('li')
+          li.id = `ar-live-${i}`
+          li.setAttribute('role', 'option')
+          li.setAttribute('aria-selected', 'false')
           const a = document.createElement('a')
           a.href = hit.doc.url
-          a.id = `ar-live-${i}`
-          a.setAttribute('role', 'option')
+          a.tabIndex = -1
           a.append(text('span', [hit.doc.mark, hit.doc.category, hit.doc.date].filter(Boolean).join(' · '), 'ar-meta'), document.createElement('br'), text('strong', hit.doc.title))
           if (hit.context) {
             const p = document.createElement('span')
@@ -85,7 +91,9 @@
       live.replaceChildren(list, ...(chips.length ? [parse] : []), footer)
       live.hidden = false
       selected = -1
-      input.setAttribute('aria-controls', list.id)
+      input.setAttribute('aria-expanded', 'true')
+      input.removeAttribute('aria-activedescendant')
+      if (status) status.textContent = result.total === 0 ? `No records for ${q}` : `${result.total} ${result.total === 1 ? 'record' : 'records'}; up and down arrows move through the first ${Math.min(SHOWN, result.total)}`
     }
 
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -95,13 +103,13 @@
       timer = setTimeout(() => void load().then(render), 60)
     })
     input.addEventListener('keydown', (event) => {
-      const options = [...live.querySelectorAll<HTMLAnchorElement>('[role="option"]')]
+      const options = [...live.querySelectorAll<HTMLElement>('[role="option"]')]
       if (event.key === 'Escape') return close()
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return
       if (event.key === 'Enter') {
         if (selected >= 0 && options[selected]) {
           event.preventDefault()
-          location.href = options[selected].href
+          location.href = options[selected].querySelector('a')!.href
         }
         return
       }

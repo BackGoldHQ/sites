@@ -77,7 +77,12 @@ const flows = view.funds.flatMap((f) => f.buckets).filter((b) => b.balanced)
                   <p class="ar-meta">{[b.side, b.doc.mark].filter(Boolean).join(' · ')}</p>
                   <a href={b.doc.url}>{b.doc.title}</a>
                   {b.doc.summary && <p class="ar-muted">{b.doc.summary}</p>}
-                  {b.count !== null && <div class="ar-ramp" data-fill={fill(b)} style={`width:${Math.max(1, Math.round((b.count / family.max) * 100))}%`} title={b.count.toLocaleString('en-US')} />}
+                  {b.count !== null && (
+                    <>
+                      <p class="ar-ramp-count">{b.count.toLocaleString('en-US')}</p>
+                      <div class="ar-ramp" data-fill={fill(b)} style={`width:${Math.max(1, Math.round((b.count / family.max) * 100))}%`} aria-hidden="true" />
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
