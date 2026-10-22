@@ -19,6 +19,7 @@ const doc = (slug: string, title: string, summary: string | null, fields: Record
   mark,
   presenter: null,
   seconder: null,
+  request: null,
   vote: null,
   voteDetail: null,
   citation: [],
