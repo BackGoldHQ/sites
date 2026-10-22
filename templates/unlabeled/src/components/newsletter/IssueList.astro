@@ -15,7 +15,7 @@ type Props = ListLayoutProps
 
 const props = Astro.props
 const bg = Astro.locals.backgold
-const numbers = bg.setup === null && props.type !== 'blog' ? await issueNumbers(bg.client, props.type.key) : new Map<string, number>()
+const numbers = bg.setup === null && props.type !== 'blog' ? (await issueNumbers(bg.client, props.type.key)).byId : new Map<string, number>()
 const issues = props.entries.map((entry) => {
   const n = numbers.get(entry.id)
   return { entry, href: entry.url ? safeHref(entry.url) : null, day: formatDay(entry.publish_at), number: n ? issueLabel(n) : null }

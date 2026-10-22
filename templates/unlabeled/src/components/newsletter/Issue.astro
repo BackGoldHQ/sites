@@ -13,7 +13,7 @@ type Props = EntryLayoutProps
 
 const { entry, type } = Astro.props
 const bg = Astro.locals.backgold
-const n = bg.setup === null ? (await issueNumbers(bg.client, entry.type)).get(entry.id) : undefined
+const n = bg.setup === null ? (await issueNumbers(bg.client, entry.type)).byId.get(entry.id) : undefined
 const line = text(entry.fields?.issue) ?? type?.singular_label ?? 'Newsletter'
 const numbered = n ? { ...entry, fields: { ...entry.fields, issue: `${line} · ${issueLabel(n)}` } } : entry
 ---

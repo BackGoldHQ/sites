@@ -15,9 +15,9 @@
 // petition's collapsed text as a hairline-ruled disclosure whose summary is
 // the meta line with a `[ + ]` bracket (`[ – ]` open) and whose text reads in
 // the mono body; cards as hairline boxes; what a visitor types in JetBrains
-// Mono, her text face, loaded from Google Fonts by the skin's first line (the
-// frame loads only the look's face, Ubuntu Sans Mono; its CSP admits Google
-// Fonts); and a failure's line in red, #DC2626, the one place her brand lets
+// Mono, her text face, whose @font-face rules the route puts before these on
+// this site's own addresses (src/frame/faces.ts; the frame itself loads only
+// the look's face, Ubuntu Sans Mono); and a failure's line in red, #DC2626, the one place her brand lets
 // a status colour in (U7 note 4, U-cat §1). No frame part marks a send as
 // done (the `ok` tone is progress, "Sending…"), so the green has no place yet. It never hides a required field,
 // a consent row, a legal line, an error or the submit, and every state
@@ -29,8 +29,7 @@ const META = `font-size: 11px; line-height: 1.45; font-weight: 400; letter-spaci
 /** The status red: inside BackGold's frames only, for a failure only (U-cat §1). */
 const ERROR_RED = '#DC2626'
 
-export const FRAME_SKIN_CSS = `@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-/* Unlabeled: BackGold's frames in her look (FRAME-SKINS contract). */
+export const FRAME_SKIN_CSS = `/* Unlabeled: BackGold's frames in her look (FRAME-SKINS contract). */
 html[data-bg-look] { color-scheme: dark; }
 html[data-bg-look] body { background: transparent; }
 
