@@ -17,7 +17,9 @@
 //                    menu centred under it with the switch and the button at
 //                    the row's right. On a phone both are the bar: the menu
 //                    opens as a sheet under it (its groups open in place, the
-//                    header button again full width, the legal line under it)
+//                    header button again full width, the social links when
+//                    the template asks for them (`menuSheet.socials`), the
+//                    legal line under it)
 //                    and the button stays beside Menu in the bar until the
 //                    sheet opens. The account links (VisitorAccount, board
 //                    D1) sit before the switch: a signed-in visitor's first
@@ -271,6 +273,11 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
                 </nav>
                 <MenuButton items={headerItems} page={page} class="button header-sheet-button" />
                 {account && <VisitorAccount visitor={visitor} mode="sheet" />}
+                {template.menuSheet?.socials && social.length > 0 && (
+                  <ul class="social header-sheet-social" aria-label="Social media">
+                    {social.map((s) => <li><a href={s.href} rel={s.rel} aria-label={s.label}>{s.short}</a></li>)}
+                  </ul>
+                )}
                 <div class="header-sheet-legal"><Disclaimer legal={legal} /></div>
               </div>
             </details>
