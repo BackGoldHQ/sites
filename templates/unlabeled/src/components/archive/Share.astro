@@ -5,16 +5,18 @@ import Copy from './Copy.astro'
 
 interface Props {
   title: string
+  /** The group's words: "Share this record", "Share this request". */
+  label?: string
   /** The record's path on this site. */
   path: string
 }
 
-const { title, path } = Astro.props
+const { title, path, label = 'Share this record' } = Astro.props
 const bg = Astro.locals.backgold
 const url = new URL(path, bg.setup === null ? bg.siteUrl : Astro.url.origin).href
 ---
-<div class="ar-share" role="group" aria-label="Share this record">
-  <span class="ar-meta">Share this record</span>
+<div class="ar-share" role="group" aria-label={label}>
+  <span class="ar-meta">{label}</span>
   <button type="button" class="ar-btn" data-ar-copy="url" hidden>Copy link</button>
   <a class="ar-btn ar-btn-outline" href={`https://x.com/intent/post?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`} rel="noopener">X</a>
   <a class="ar-btn ar-btn-outline" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} rel="noopener">Facebook</a>
