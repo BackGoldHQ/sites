@@ -33,6 +33,8 @@ gallery offers it. Staff point her site at it with the template switch.
 | `src/components/Mark.astro` | Her mark inline in the text colour (`wordmark`, `skull`, `horns`), for markup that places it itself. |
 | `src/assets/mark.svg`, `skull.svg`, `horns.svg` | The mark: a trace of her `unlabeled-logo.png`, all `currentColor`. The header, footer, chapter mark, watermark and divider draw them as CSS masks. |
 | `src/archive.ts`, `src/pages/archive/**`, `src/lib/archive/**`, `src/components/archive/**`, `src/components/entries/**` | The archive (boards U2–U5, U10): its routes, index and record layouts. |
+| `src/middleware.ts` | Names a source document's query names (`find`, `all`) to BackGold's edge cache, so a stored bare page never answers them (docs/ARCHIVE.md). |
+| `src/lib/next-meeting.ts` | The next board meeting on Events, for the latest meeting in the archive to point forward to (board U4). |
 | `astro.config.mjs`, `wrangler.jsonc`, `package.json` | The Worker (`template-unlabeled` in BackGold's namespaces) and its dependencies. |
 
 `node scripts/check-manifests.mjs` parses the manifest with the contract's

@@ -1,13 +1,17 @@
 ---
 // One board meeting at /meetings/<date> (board U4): the date huge, its time
-// and kind, the agenda, minutes and resolutions cells (BoardBook, the
-// archived copies, the text), the meetings strip with this one marked, the
-// agenda's own outline as the spine with each decision hung on the item it
-// cites (`agenda_item`), those that cite none under "No item cited", and
-// the agenda's text in a reading pane.
+// and kind, where it was held (the agenda's head), the agenda, minutes and
+// resolutions cells (BoardBook, the archived copies, the text), the meetings
+// strip with this one marked (the latest pointing forward to the next board
+// meeting on Events when there is one), the agenda's own outline as the
+// spine with each decision hung on the item it cites (`agenda_item`) or,
+// citing none, the item its title matches (agenda.ts `itemFor`), the rest
+// under "No item cited", and the meeting's texts in a reading pane, a tab
+// each: Agenda, Resolution(s), Minutes, each only when the archive has it.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import MeetingStrip from '../archive/MeetingStrip.astro'
+import PaneTabs from '../archive/PaneTabs.astro'
 import ReadingPane from '../archive/ReadingPane.astro'
 import RunningHead from '../archive/RunningHead.astro'
 import { renderMarkdown } from '@backgold/astro/server'
@@ -15,12 +19,13 @@ import { archiveFor, sourceOf } from '../../lib/archive/index'
 import { meetingMarks } from '../../lib/archive/views'
 import { fileUrl, httpUrl, str } from '../../lib/archive/record'
 import { dayParts, plural, shortDay, weekday } from '../../lib/archive/format'
-import { agendaOutline, itemKey, linesCiting } from '../../lib/archive/agenda'
+import { agendaOutline, agendaVenue, itemFor, linesCiting } from '../../lib/archive/agenda'
 import { readableText } from '../../lib/archive/text'
+import { nextBoardMeeting } from '../../lib/next-meeting'
 
 type Props = EntryLayoutProps
 
-/** The agenda lines the pane shows before "Read the whole text". */
+/** The lines each pane shows before "Read the whole text". */
 const PANE_LINES = 400
 
 const { entry, type } = Astro.props
@@ -38,20 +43,31 @@ const agendaDoc = documents.find((d) => d.category === 'Agenda') ?? null
 const minutesDoc = documents.find((d) => d.category === 'Minutes') ?? null
 const resolutions = documents.filter((d) => d.category === 'Resolution')
 const agendaTextUrl = httpUrl(f.agenda_text)
+const minutesTextUrl = httpUrl(f.minutes_text) ?? httpUrl(minutesDoc?.fields.readable_text)
 const source = sourceOf(Astro.locals)
-const agendaText = agendaTextUrl && source ? await readableText(agendaTextUrl, source) : null
+const read = (url: string | null) => (url && source ? readableText(url, source) : Promise.resolve(null))
+const resolutionUrls = resolutions.flatMap((r) => {
+  const url = httpUrl(r.fields.readable_text)
+  return url ? [{ doc: r, url }] : []
+})
+const [agendaText, minutesText, resolutionTexts] = await Promise.all([
+  read(agendaTextUrl),
+  read(minutesTextUrl),
+  Promise.all(resolutionUrls.map(async (r) => ({ ...r, text: await read(r.url) }))),
+])
 const outline = agendaText ? agendaOutline(agendaText) : []
+const venue = agendaText ? agendaVenue(agendaText) : null
 const categories = new Set(decisions.map((d) => d.category).filter(Boolean)).size
-const itemOf = (d: (typeof decisions)[number]) => {
-  const item = str(d.fields.agenda_item)
-  return item ? itemKey(item) : null
-}
+const items = new Map(decisions.map((d) => [d, itemFor({ title: d.title, agendaItem: str(d.fields.agenda_item) }, outline)]))
+const itemOf = (d: (typeof decisions)[number]) => items.get(d) ?? null
 const placed = new Set(outline.map((i) => i.number))
 const onItems = decisions.filter((d) => {
   const item = itemOf(d)
   return item !== null && placed.has(item)
 })
 const unplaced = decisions.filter((d) => !onItems.includes(d))
+/** The decisions on an item that name none in the data: hung on the item their title matches. */
+const byTitle = new Set(onItems.filter((d) => !str(d.fields.agenda_item)))
 // The outline's sections (II.E) with their items (II.E.8), each item with the decisions citing it.
 const sections = outline
   .filter((i) => i.depth === 2)
@@ -63,7 +79,17 @@ const sections = outline
 // Sections with no record on any item are folded into one line (board U4).
 const shown = sections.filter((s) => s.items.some((i) => i.records.length > 0))
 const folded = sections.filter((s) => !shown.includes(s))
-const cited = agendaText ? [...new Set(onItems.flatMap((d) => linesCiting(agendaText, itemOf(d)!)))].sort((a, b) => a - b) : []
+/** The lines of a text that cite the items the meeting's decisions hang on. */
+const citedIn = (text: string | null) => (text ? [...new Set(onItems.flatMap((d) => linesCiting(text, itemOf(d)!)))].sort((a, b) => a - b) : [])
+// The reading pane's tabs: each document whose text the archive has.
+const tabs = [
+  ...(agendaTextUrl ? [{ key: 'agenda', label: 'Agenda' }] : []),
+  ...(resolutionTexts.length > 0 ? [{ key: 'resolutions', label: resolutionTexts.length === 1 ? 'Resolution' : 'Resolutions' }] : []),
+  ...(minutesTextUrl ? [{ key: 'minutes', label: 'Minutes' }] : []),
+]
+// The latest meeting in the archive points forward to the next board meeting on Events.
+const bg = Astro.locals.backgold
+const upcoming = !next && bg.setup === null ? await nextBoardMeeting(bg.client, Astro.request) : null
 const p = doc.date ? dayParts(doc.date) : null
 const noMinutes = !httpUrl(f.minutes_link) && !minutesDoc
 const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not specified'}${(d.vote ?? 'Not specified') === 'Not specified' && noMinutes ? ' · no minutes posted for this meeting' : ''}`
@@ -74,6 +100,7 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     <p class="ar-entry-meta"><span class="ar-kind">{type?.singular_label ?? 'Board meeting'}</span> <span class="ar-meta">{[weekday(doc.date), str(f.meeting_kind)].filter(Boolean).join(' · ')}</span></p>
     {p ? <h1 class="ar-date">{p.month} {p.day} {p.year}</h1> : <h1>{entry.title}</h1>}
     {str(f.meeting_time) && <p class="ar-display" style="font-size:var(--u-d3, 2rem);margin-top:0.25rem">{str(f.meeting_time)}</p>}
+    {venue && <p class="ar-meta" style="margin-top:0.75rem;text-transform:none;letter-spacing:0.02em">{venue} <span class="ar-faint">· from the agenda</span></p>}
     {entry.body?.markdown?.trim() && <div class="ar-lede ar-prose" set:html={renderMarkdown(entry.body.markdown)} />}
   </header>
 
@@ -108,13 +135,13 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     </div>
     <div>
       <dt>// Decisions</dt>
-      <dd><span class="ar-big">{decisions.length}</span>{decisions.length > 0 && <p class="ar-meta">Filed in {plural(categories, 'category', 'categories')} · {onItems.length} on agenda items, {unplaced.length} with no item cited</p>}</dd>
+      <dd><span class="ar-big">{decisions.length}</span>{decisions.length > 0 && <p class="ar-meta">Filed in {plural(categories, 'category', 'categories')} · {onItems.length} on agenda items{unplaced.length > 0 && `, ${unplaced.length} with no item cited`}</p>}</dd>
     </div>
   </dl>
 
   <nav class="ar-nextprev ar-meta" aria-label="Meetings" style="margin-top:1rem">
     <div>{previous ? <a href={previous.doc.url}>← {shortDay(previous.doc.date)} · previous meeting</a> : <span class="ar-faint">First in the archive</span>}</div>
-    <div>{next ? <a href={next.doc.url}>{shortDay(next.doc.date)} · next meeting →</a> : <span class="ar-faint">Latest in the archive</span>}</div>
+    <div>{next ? <a href={next.doc.url}>{shortDay(next.doc.date)} · next meeting →</a> : upcoming ? <span><span class="ar-faint">Latest in the archive</span> · next meeting {upcoming.date} is on <a href={upcoming.href}>Events</a>{'\u00a0'}→</span> : <span class="ar-faint">Latest in the archive</span>}</div>
   </nav>
   <MeetingStrip marks={marks} current={doc.slug} />
 
@@ -125,6 +152,7 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     {decisions.length === 0 && <p class="ar-faint" style="margin-top:1rem">The archive files no decision from this meeting.</p>}
     {decisions.length > 0 && sections.length === 0 && <p class="ar-faint" style="margin-top:1rem">{agendaTextUrl ? (agendaText ? 'The agenda’s text names no numbered items.' : 'The agenda’s text could not be read just now, so the decisions are listed by mark.') : 'The archive has no agenda text for this meeting, so the decisions are listed by mark.'}</p>}
     {folded.length > 0 && <p class="ar-faint ar-meta" style="margin-top:1rem">{folded.map((f) => `${f.section.number} (${f.section.title.toLowerCase()})`).join(', ')}: no record in the archive on {folded.length === 1 ? 'its items' : 'their items'}, folded.</p>}
+    {byTitle.size > 0 && <p class="ar-faint ar-meta" style="margin-top:0.5rem">Item numbers are the agenda’s. {byTitle.size === 1 ? 'One record names' : `${byTitle.size} records name`} no item in the data and {byTitle.size === 1 ? 'hangs' : 'hang'} on the item {byTitle.size === 1 ? 'its' : 'their'} title matches.</p>}
     {shown.length > 0 && (
       <ol class="ar-spine" style="margin-top:1rem">
         {shown.map(({ section, items }) => (
@@ -138,7 +166,7 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
                     <p>{item.title}</p>
                     {records.length > 0 ? (
                       <ul class="ar-item-records" style="margin-top:0.375rem">
-                        {records.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a><p class="ar-meta">{d.category} · {voteLine(d)}</p></li>)}
+                        {records.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a><p class="ar-meta">{[d.category, byTitle.has(d) && 'matched to the item by title', voteLine(d)].filter(Boolean).join(' · ')}</p></li>)}
                       </ul>
                     ) : (
                       <p class="ar-faint ar-meta">No record in the archive for this item</p>
@@ -166,11 +194,32 @@ const voteLine = (d: (typeof decisions)[number]) => `Vote · ${d.vote ?? 'Not sp
     )}
   </section>
 
-  {agendaTextUrl && (
+  {tabs.length > 0 && (
     <section class="ar-band u-grid" aria-labelledby="ar-pane">
-      <RunningHead mark="§ Reading pane" title="Agenda text" folio="M / 03" />
-      <h2 id="ar-pane">The agenda, as the archive extracted it</h2>
-      <ReadingPane text={agendaText} href={agendaTextUrl} cited={cited} limit={PANE_LINES} wholeHref={agendaDoc?.url ?? agendaTextUrl} label="Agenda text" />
+      <RunningHead mark="§ Reading pane" title={tabs.map((t) => t.label).join(' · ')} folio="M / 03" />
+      <h2 id="ar-pane">The meeting’s texts, as the archive extracted them</h2>
+      <PaneTabs name="ar-meeting-pane" head="// Reading pane" tabs={tabs}>
+        {agendaTextUrl && (
+          <div slot="agenda">
+            <ReadingPane text={agendaText} href={agendaTextUrl} cited={citedIn(agendaText)} limit={PANE_LINES} wholeHref={agendaDoc?.url ?? agendaTextUrl} label="Agenda text" />
+          </div>
+        )}
+        {resolutionTexts.length > 0 && (
+          <div slot="resolutions">
+            {resolutionTexts.map(({ doc: r, url, text }, i) => (
+              <>
+                <p class="ar-label" style="margin-top:1rem"><a href={r.url}>{r.title}</a></p>
+                <ReadingPane text={text} href={url} cited={citedIn(text)} limit={PANE_LINES} wholeHref={r.url} label="Resolution text" idPrefix={`R${i + 1}-L`} />
+              </>
+            ))}
+          </div>
+        )}
+        {minutesTextUrl && (
+          <div slot="minutes">
+            <ReadingPane text={minutesText} href={minutesTextUrl} cited={citedIn(minutesText)} limit={PANE_LINES} wholeHref={minutesDoc?.url ?? minutesTextUrl} label="Minutes text" idPrefix="M-L" />
+          </div>
+        )}
+      </PaneTabs>
     </section>
   )}
 </ArchiveFrame>
