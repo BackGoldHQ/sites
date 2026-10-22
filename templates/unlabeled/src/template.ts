@@ -4,9 +4,11 @@
 // running head (Filed.astro) and drawn by the kit's layouts, five of its own
 // (the home cover, the ticker, the petition's sheet, the letter, the agenda)
 // and the archive's (src/sections.ts); the archive's entry layouts
-// (src/archive.ts, after the kit's so they win); its faces, its frames' face
-// and corners, its own menu links, and its dark look. astro.config.mjs names this file to the kit's integration, whose
-// routes draw every page with it.
+// (src/archive.ts, after the kit's so they win) and the newsletter's,
+// numbered (src/components/newsletter); its faces, its frames' face and
+// corners, its own menu links, its menu sheet's socials, and its dark look.
+// astro.config.mjs names this file to the kit's integration, whose routes
+// draw every page with it.
 //
 // The faces, from Google Fonts: Ubuntu Sans Mono at 500 for every heading,
 // numeral and button (set in capitals by src/styles/template.css), and
@@ -23,6 +25,8 @@ import manifest from '../template.json'
 import { archiveEntries } from './archive'
 import EventPage from './components/EventPage.astro'
 import NotFound from './components/NotFound.astro'
+import Issue from './components/newsletter/Issue.astro'
+import IssueList from './components/newsletter/IssueList.astro'
 import Filed from './components/sections/Filed.astro'
 import { drawn } from './sections'
 import './styles/template.css'
@@ -53,7 +57,9 @@ const ARCHIVE_BASES = ['/meetings', '/decisions', '/data', '/pay', '/sources', '
 export default defineTemplate({
   manifest: siteTemplateManifestSchema.parse(manifest),
   sections: Object.fromEntries(Object.keys(drawn).map((key) => [key, Filed])),
-  entries: { ...kitEntries, ...archiveEntries },
+  // The newsletter's list and issue number each issue from the oldest
+  // ("Issue 02", U-cat's Collection · list specimen).
+  entries: { ...kitEntries, ...archiveEntries, 'newsletter:list': IssueList, 'newsletter:issue': Issue },
   fonts: {
     heading: 'Ubuntu+Sans+Mono:wght@500',
     body: 'JetBrains+Mono:wght@400;500',
@@ -76,6 +82,9 @@ export default defineTemplate({
   // capitals in the meta face for labels, hairline square fields, the white
   // block submit, the count set huge.
   frameSkin: true,
+  // The phone's menu sheet carries her socials between DONATE and the legal
+  // line (U11 note 3).
+  menuSheet: { socials: true },
   // One event's page as U8 draws it, and the 404 in her words.
   eventPage: EventPage,
   notFound: NotFound,
