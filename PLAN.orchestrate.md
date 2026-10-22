@@ -26,7 +26,7 @@ Tasks (worktrees under ~/Code/backgold-sites-wt/<slug>, branch task/<slug>):
 - [x] T1 `sites-money-records` — ramps + count parse, cross-bucket flow, money
       page balanced flows only, line-item sign, "filed twice" copy, pay
       workbook block
-- [ ] T2 `sites-meeting-sources` — agenda spine title fallback, venue line,
+- [x] T2 `sites-meeting-sources` — agenda spine title fallback, venue line,
       next-meeting link, Agenda/Resolution tabs, source Text/PDF tabs, windowed
       pane, find stepper
 - [ ] T3 `sites-archive-door-records` — Clear filters, phone filter sheet,
