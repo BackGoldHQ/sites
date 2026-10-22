@@ -6,8 +6,10 @@
 // `agenda_item`, or on an agenda the item their title matches) set in white,
 // the pane windowed around the first of them (the first lines when none is
 // cited) with the whole text at `?all=1`; `?find=` shows the whole text with
-// every hit marked and counted, a stepper walking them. PDF is the archived
-// PDF in a hairline box with "Open the PDF ↗" beside it. At the side: its
+// every hit marked and counted, a stepper walking them. PDF is a hairline
+// box with "Open the PDF ↗" (and the file's size when the record states
+// one); with scripts on, the archived PDF is drawn in the box the first time
+// the tab is chosen, so a page never loads the PDF unasked. At the side: its
 // meeting, BoardBook and the archived copy, the source note, and the
 // decisions that cite it.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
@@ -41,6 +43,15 @@ const outline = text && doc.category === 'Agenda' ? agendaOutline(text) : []
 const items = [...new Set(citing.map((d) => itemFor({ title: d.title, agendaItem: str(d.fields.agenda_item) }, outline)).filter((v): v is string => v !== null))]
 const cited = text ? [...new Set(items.flatMap((i) => linesCiting(text, i)))].sort((a, b) => a - b) : []
 const pdf = fileUrl(f.archived_file) ?? httpUrl(f.archived_file)
+/** The archived file's size, when its record states one (a file value's `size` or `bytes`): "20.5 MB". */
+const pdfSize = (() => {
+  const file = f.archived_file
+  if (!file || typeof file !== 'object' || Array.isArray(file)) return null
+  const value = (file as Record<string, unknown>).size ?? (file as Record<string, unknown>).bytes
+  const bytes = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+  if (bytes === null) return null
+  return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`
+})()
 const tabs = [...(textUrl ? [{ key: 'text', label: 'Text' }] : []), ...(pdf ? [{ key: 'pdf', label: 'PDF' }] : [])]
 const wholeHref = (() => {
   const url = new URL(Astro.url)
@@ -67,8 +78,9 @@ const wholeHref = (() => {
           )}
           {pdf && (
             <div slot="pdf">
-              <p class="ar-meta" style="margin-top:1rem">{str(f.original_filename) ?? 'The archived PDF'} · <a href={pdf} rel="noopener">Open the PDF ↗</a></p>
-              <iframe class="ar-pdf" src={pdf} title={`${entry.title}, the archived PDF`} loading="lazy" />
+              <div class="ar-pdf" data-ar-pdf={pdf} data-ar-pdf-tab="ar-source-pane-pdf" data-ar-pdf-title={`${entry.title}, the archived PDF`}>
+                <p class="ar-meta">{[str(f.original_filename) ?? 'The archived PDF', pdfSize].filter(Boolean).join(' · ')} · <a href={pdf} rel="noopener">Open the PDF ↗</a></p>
+              </div>
             </div>
           )}
         </PaneTabs>
@@ -93,3 +105,21 @@ const wholeHref = (() => {
     </div>
   </div>
 </ArchiveFrame>
+
+<script>
+  // The PDF tab draws the archived PDF in its box the first time it is
+  // chosen (or at once when it is the tab already chosen), never before.
+  for (const box of document.querySelectorAll<HTMLElement>('[data-ar-pdf]')) {
+    const tab = document.getElementById(box.dataset.arPdfTab ?? '') as HTMLInputElement | null
+    if (!tab) continue
+    const draw = () => {
+      if (box.querySelector('iframe')) return
+      const frame = document.createElement('iframe')
+      frame.src = box.dataset.arPdf ?? ''
+      frame.title = box.dataset.arPdfTitle ?? 'The archived PDF'
+      box.append(frame)
+    }
+    if (tab.checked) draw()
+    else tab.addEventListener('change', () => tab.checked && draw(), { once: true })
+  }
+</script>

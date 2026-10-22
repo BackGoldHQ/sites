@@ -119,14 +119,15 @@ document's `readable_text`) and Minutes (`minutes_text`, else the minutes
 document's `readable_text`), the first 400 lines of each.
 
 A source (`src/components/entries/source.astro`, board U3 frame 4) has Text
-and PDF tabs (`archived_file` in a hairline box, Open the PDF beside it).
-Its pane shows 36 lines from just before the first cited line (the first 80
-when nothing is cited), with Show the whole text at `?all=1`; `?find=` shows
-the whole text with every hit marked, and with scripts on a stepper walks
-the marks. Every tab is a radio and a label (`PaneTabs.astro`,
-`reading.css`), so the tabs work with scripts off; a browser with scripts
-off loads the PDF with the page, since it lazy-loads frames only with
-scripts on.
+and PDF tabs. Its pane shows 36 lines from just before the first cited line
+(the first 80 when nothing is cited), with Show the whole text at `?all=1`;
+`?find=` shows the whole text with every hit marked, and with scripts on a
+stepper walks the marks. The PDF tab is a hairline box with Open the PDF
+(and the file's size when the record states one); with scripts on, the
+`archived_file` is drawn in the box the first time the tab is chosen, so no
+page loads the PDF unasked, and with scripts off it never does. Every tab is
+a radio and a label (`PaneTabs.astro`, `reading.css`), so the tabs work with
+scripts off.
 
 ## Query grammar (`src/lib/archive/query.ts`)
 
