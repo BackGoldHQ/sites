@@ -29,7 +29,7 @@ Tasks (worktrees under ~/Code/backgold-sites-wt/<slug>, branch task/<slug>):
 - [x] T2 `sites-meeting-sources` — agenda spine title fallback, venue line,
       next-meeting link, Agenda/Resolution tabs, source Text/PDF tabs, windowed
       pane, find stepper
-- [ ] T3 `sites-archive-door-records` — Clear filters, phone filter sheet,
+- [x] T3 `sites-archive-door-records` — Clear filters, phone filter sheet,
       parse lines, request row meta, kind labels, /records head + Show more,
       request reader + running head, disclaimer copy, DownloadLinks.csv +
       README.txt
