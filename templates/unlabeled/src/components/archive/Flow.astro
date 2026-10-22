@@ -2,23 +2,22 @@
 // A flow (boards U3, U5): what comes in on the left, the hub in the
 // middle, what goes out on the right, every band as tall as its figure on
 // one scale for the whole drawing, so a side that is larger shows as
-// larger. Labels sit outside the bands: the left side's to its left, the
-// right side's to its right, each side headed In or Out. White is the hub,
-// grey hatching the bands.
+// larger. Labels sit outside the bands, the left side's to its left, the
+// right side's to its right, each side headed In or Out, the hub named
+// over it between the two heads: the label on one
+// line (a link when the side is a bucket), its figure and note under it.
+// The hub is white, a side marked solid is white (the bucket the page is
+// about), every other band grey hatching.
 import { formatUsd } from '../../lib/archive/query'
-
-interface Side {
-  label: string
-  value: number
-  href?: string
-}
+import type { FlowSide } from '../../lib/archive/money'
+import './money.css'
 
 interface Props {
   /** Over the drawing: what it is and whether it balances. */
   caption: string
   hub: string
-  left: Side[]
-  right: Side[]
+  left: FlowSide[]
+  right: FlowSide[]
   /** Ids in one page must differ. */
   id: string
 }
@@ -30,10 +29,14 @@ const GAP = 6
 const LX = 330
 const HX = 490
 const RX = 650
+/** The room a label has beside its column, in characters at this size. */
+const ROOM = 46
+/** A label's two lines take this much height; labels never overlap. */
+const LABEL = 30
 const sumL = left.reduce((n, s) => n + s.value, 0)
 const sumR = right.reduce((n, s) => n + s.value, 0)
 const scale = (H - GAP * Math.max(left.length, right.length, 1)) / Math.max(sumL, sumR, 1)
-const column = (side: Side[]) => {
+const column = (side: FlowSide[]) => {
   let y = 0
   return side.map((s) => {
     const h = Math.max(2, s.value * scale)
@@ -52,14 +55,14 @@ const band = (x0: number, a0: number, a1: number, x1: number, b0: number, b1: nu
 let hy = 0
 const inPaths = L.map((b) => {
   const th = b.side.value * scale
-  const d = band(LX + 20, b.y, b.y + b.h, HX, hy, hy + th)
+  const d = { d: band(LX + 20, b.y, b.y + b.h, HX, hy, hy + th), solid: b.side.solid === true }
   hy += th
   return d
 })
 hy = 0
 const outPaths = R.map((b) => {
   const th = b.side.value * scale
-  const d = band(HX + 20, hy, hy + th, RX, b.y, b.y + b.h)
+  const d = { d: band(HX + 20, hy, hy + th, RX, b.y, b.y + b.h), solid: b.side.solid === true }
   hy += th
   return d
 })
@@ -67,38 +70,40 @@ const outPaths = R.map((b) => {
 const labelYs = (col: typeof L) => {
   let floor = -Infinity
   return col.map((b) => {
-    const y = Math.max(b.y + Math.min(b.h, 24) / 2 + 4, floor + 14)
+    const y = Math.max(b.y + Math.min(b.h, 24) / 2, floor + LABEL)
     floor = y
     return y
   })
 }
 const ly = labelYs(L)
 const ry = labelYs(R)
-const bottom = Math.max(H, ...ly, ...ry) + 30
-const short = (s: string) => (s.length > 44 ? `${s.slice(0, 43)}…` : s)
-/** A side's label and figure in the room beside its column (about 46 characters at this size). */
-const tag = (s: Side) => {
-  const figure = formatUsd(s.value)
-  const room = 46 - figure.length - 3
-  return `${s.label.length > room ? `${s.label.slice(0, room - 1)}…` : s.label} · ${figure}`
-}
+const bottom = Math.max(H, ...ly.map((y) => y + LABEL), ...ry.map((y) => y + LABEL)) + 24
+const fit = (s: string, room: number) => (s.length > room ? `${s.slice(0, room - 1)}…` : s)
+const figureLine = (s: FlowSide) => fit([formatUsd(s.value), s.note].filter(Boolean).join(' · '), ROOM)
 ---
-<div class="ar-flow">
+<div class="ar-flow mr-flow">
   <p class="ar-meta" style="margin-bottom:0.5rem">// {caption}</p>
   <svg viewBox={`0 -24 ${W} ${bottom + 24}`} role="img" aria-label={`${caption}. In: ${left.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}. Out: ${right.map((s) => `${s.label} ${formatUsd(s.value)}`).join('; ') || 'none'}.`}>
     <defs>
       <pattern id={id} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="2" height="6" fill="#616161" />
+        <rect class="mr-flow-hatch" width="2" height="6" />
       </pattern>
     </defs>
-    {left.length > 0 && <text x={LX + 20} y="-8" fill="#949494" font-size="11" font-family="monospace" text-anchor="end">IN · {formatUsd(sumL)}</text>}
-    {right.length > 0 && <text x={RX} y="-8" fill="#949494" font-size="11" font-family="monospace">OUT · {formatUsd(sumR)}</text>}
-    {[...inPaths, ...outPaths].map((d) => <path d={d} fill={`url(#${id})`} stroke="#616161" stroke-width="0.5" />)}
-    <rect x={HX} y="0" width="20" height={hubH} fill="#fff" />
-    <text x={HX + 10} y={hubH + 18} fill="#fff" font-size="11" font-family="monospace" text-anchor="middle">{short(hub)}</text>
-    {L.map((b) => <rect x={LX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
-    {R.map((b) => <rect x={RX} y={b.y} width="20" height={b.h} fill="#000" stroke="#fff" stroke-width="1" />)}
-    {L.map((b, i) => <text x={LX - 8} y={ly[i]} fill="#fff" font-size="11" font-family="monospace" text-anchor="end">{tag(b.side)}</text>)}
-    {R.map((b, i) => <text x={RX + 28} y={ry[i]} fill="#fff" font-size="11" font-family="monospace">{tag(b.side)}</text>)}
+    {left.length > 0 && <text class="mr-flow-head" x={LX + 20} y="-8" text-anchor="end">IN · {formatUsd(sumL)}</text>}
+    {right.length > 0 && <text class="mr-flow-head" x={RX} y="-8">OUT · {formatUsd(sumR)}</text>}
+    {[...inPaths, ...outPaths].map((p) => <path class={p.solid ? 'mr-flow-band is-solid' : 'mr-flow-band'} d={p.d} fill={p.solid ? undefined : `url(#${id})`} />)}
+    <rect class="mr-flow-hub" x={HX} y="0" width="20" height={hubH} />
+    <text class="mr-flow-label" x={HX + 10} y="-8" text-anchor="middle">{fit(hub, 40)}</text>
+    {[...L, ...R].map((b) => <rect class="mr-flow-end" x={L.includes(b) ? LX : RX} y={b.y} width="20" height={b.h} />)}
+    {[...L.map((b, i) => ({ b, y: ly[i]!, x: LX - 8, anchor: 'end' })), ...R.map((b, i) => ({ b, y: ry[i]!, x: RX + 28, anchor: 'start' }))].map(({ b, y, x, anchor }) => (
+      <>
+        {b.side.href ? (
+          <a href={b.side.href}><text class="mr-flow-label" x={x} y={y} text-anchor={anchor}>{fit(b.side.label, ROOM)}</text></a>
+        ) : (
+          <text class="mr-flow-label" x={x} y={y} text-anchor={anchor}>{fit(b.side.label, ROOM)}</text>
+        )}
+        <text class="mr-flow-figure" x={x} y={y + 14} text-anchor={anchor}>{figureLine(b.side)}</text>
+      </>
+    ))}
   </svg>
 </div>
