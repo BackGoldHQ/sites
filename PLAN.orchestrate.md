@@ -33,7 +33,7 @@ Tasks (worktrees under ~/Code/backgold-sites-wt/<slug>, branch task/<slug>):
       parse lines, request row meta, kind labels, /records head + Show more,
       request reader + running head, disclaimer copy, DownloadLinks.csv +
       README.txt
-- [ ] T4 `sites-shell-chrome` — phone sheet bleed-through, sheet socials /
+- [x] T4 `sites-shell-chrome` — phone sheet bleed-through, sheet socials /
       inverted current / Close ×, trailing empty month, Issues grid + numerals,
       cover running head, footer socials column, newsletter Issue nn, frame
       skin error red + JetBrains fields
