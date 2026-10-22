@@ -2,11 +2,13 @@
 // /archive, the reader's door and the archive's search (boards U2, U11).
 // At rest: the head, the five holdings numerals (live counts), the search
 // field, the kind chips, the term rail, the meeting strip, the latest
-// records, the downloads and the two doors. With a query
+// records, the downloads (archive.csv, DownloadLinks.csv, READ_ME.txt) and
+// the two doors. With a query
 // (`?q&kind&category&meeting&from&to&pay_min&pay_max&sort&page`): the
-// results grouped by kind with counts, the filter rail (a sheet on a
-// phone), sort and pager; the URL is the state, and the page works with
-// scripts off. An empty result says what was searched and where to go next.
+// results grouped by kind with counts, the filter rail (on a phone a
+// bottom sheet: Filters · n, Close ×, the rail, Sort, Clear filters,
+// Show n records; a <details>, no script), sort and pager; the URL is the
+// state, and the page works with scripts off. An empty result says what was searched and where to go next.
 //
 // The index is the request's (src/lib/archive/index.ts), read under the
 // content version. A response to any of the query's names is never stored
@@ -26,7 +28,7 @@ import { browsePath, loadArchive, sourceOf } from '../../lib/archive/index'
 import { ARCHIVE_QUERY_NAMES, asksAnything, closestSmaller, hrefOf, paramsOf, searcherFor, SORTS } from '../../lib/archive/search'
 import { HOLDINGS, kindOf } from '../../lib/archive/kinds'
 import { countBy, latestRecords, meetingMarks } from '../../lib/archive/views'
-import { isEmptyQuery } from '../../lib/archive/query'
+import { isEmptyQuery, matchedLine } from '../../lib/archive/query'
 import { longDay, plural, shortDay } from '../../lib/archive/format'
 
 const source = sourceOf(Astro.locals)
@@ -47,6 +49,7 @@ const present = types.filter((t) => t.present)
 const counted = (key: (typeof HOLDINGS)[number]) => docs.filter((d) => d.kind === key).length
 const totalEntries = docs.length
 const marks = meetingMarks(docs)
+const meetingCount = docs.filter((d) => d.kind === 'board_meeting').length
 const latest = latestRecords(docs, marks)
 const decisionCategories = countBy(docs.filter((d) => d.kind === 'board_decision').map((d) => d.category))
 const campuses = countBy(docs.filter((d) => d.kind === 'board_decision' || d.kind === 'data_bucket').flatMap((d) => d.campuses))
@@ -67,6 +70,11 @@ const requestHowTo = requests ? `/${requests.base}#request-a-record` : null
 const title = showResults ? (queried ? `${plural(result.total, 'record')} for ‘${params.q}’` : plural(result.total, 'record')) : 'Find the record. Read the source.'
 const groups = present.map((t) => ({ type: t, hits: result.hits.filter((h) => h.doc.kind === t.key) })).filter((g) => g.hits.length > 0)
 const filters = [params.kind, params.category, params.meeting, params.from, params.to, params.payMin, params.payMax].filter((v) => v !== null).length
+// The query with every filter dropped, its words and sort kept.
+const clearHref = hrefOf({ ...params, kind: null, category: null, meeting: null, from: null, to: null, payMin: null, payMax: null, page: 1 })
+const sortLinks = SORTS.map((s) => ({ s, label: s === 'relevance' ? 'Relevance' : s === 'newest' ? 'Newest' : 'Oldest' }))
+// Where the query was found across everything it matched, for the line under the field.
+const matched = showResults && !isEmptyQuery(result.parsed) ? matchedLine(searcher.matching(params), result.parsed) : null
 ---
 <Site template={template} title={showResults ? `${title} · Archive` : 'Read it yourself · Archive'} description="Search the BISD public data archive: board meetings, decisions, data buckets, pay records, source documents and records requests." canonicalPath={showResults ? hrefOf(params) : '/archive'} page={null}>
   <ArchiveFrame crumbs={showResults ? [{ label: 'Search results' }] : []}>
@@ -103,13 +111,16 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
           )}
         </>
       )}
-      <SearchBox params={params} types={types} counts={result.kinds} total={Object.values(result.kinds).reduce((a, b) => a + b, 0)} />
+      <SearchBox params={params} types={types} counts={result.kinds} total={Object.values(result.kinds).reduce((a, b) => a + b, 0)} matched={matched} />
     </section>
 
     {showResults && !empty && (
       <section class="ar-results" aria-label="Results">
         <details class="ar-sheet">
-          <summary>Filters{filters ? ` · ${filters}` : ''}</summary>
+          <summary>
+            <span class="ar-sheet-closed">Filters{filters ? ` · ${filters}` : ''}</span>
+            <span class="ar-sheet-open"><b>Filters</b><span>Close ×</span></span>
+          </summary>
           <div class="ar-rail">
             <div>
               <p class="ar-label">// Kind</p>
@@ -141,7 +152,7 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
                 </ul>
               </div>
             )}
-            <form method="get" action="/archive">
+            <form method="get" action="/archive" id="ar-rail-form">
               {params.q && <input type="hidden" name="q" value={params.q} />}
               {params.kind && <input type="hidden" name="kind" value={params.kind} />}
               {params.category && <input type="hidden" name="category" value={params.category} />}
@@ -162,20 +173,26 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
                   <input type="number" name="pay_max" min="0" step="any" value={params.payMax ?? ''} placeholder="max" aria-label="Pay value at most" />
                 </div>
               </fieldset>
-              <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+              <p class="ar-rail-actions">
                 <button class="ar-btn ar-btn-outline" type="submit">Apply</button>
-                {filters > 0 && <a class="ar-btn ar-btn-outline" href={hrefOf({ ...params, kind: null, category: null, meeting: null, from: null, to: null, payMin: null, payMax: null, page: 1 })}>Clear filters</a>}
+                {filters > 0 && <a class="ar-btn ar-btn-outline" href={clearHref}>Clear filters</a>}
               </p>
             </form>
+            <div class="ar-sheet-sort">
+              <p class="ar-label">// Sort</p>
+              <nav class="ar-sorts" aria-label="Sort">{sortLinks.map(({ s, label }) => <a class="ar-chip" href={hrefOf(params, { sort: s, page: 1 })} aria-current={params.sort === s ? 'true' : undefined}>{label}</a>)}</nav>
+            </div>
+            <p class="ar-sheet-foot">
+              {filters > 0 && <a class="ar-btn ar-btn-outline" href={clearHref}>Clear filters</a>}
+              <button class="ar-btn" type="submit" form="ar-rail-form">Show {plural(result.total, 'record')}</button>
+            </p>
           </div>
         </details>
 
         <div>
           <div class="ar-result-head">
             <p class="ar-meta">Searched titles, summaries, every field and term of {plural(present.length, 'type')} · grouped by type</p>
-            <nav class="ar-sorts" aria-label="Sort">
-              {SORTS.map((s) => <a class="ar-chip" href={hrefOf(params, { sort: s, page: 1 })} aria-current={params.sort === s ? 'true' : undefined}>{s === 'relevance' ? 'Relevance' : s === 'newest' ? 'Newest' : 'Oldest'}</a>)}
-            </nav>
+            <nav class="ar-sorts" aria-label="Sort">{sortLinks.map(({ s, label }) => <a class="ar-chip" href={hrefOf(params, { sort: s, page: 1 })} aria-current={params.sort === s ? 'true' : undefined}>{label}</a>)}</nav>
           </div>
           {groups.map((g) => (
             <section class="ar-group" aria-label={g.type.plural}>
@@ -211,7 +228,7 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
           {filters > 0 && (
             <div>
               <dt>Without the filters</dt>
-              <dd><a href={hrefOf({ ...params, kind: null, category: null, meeting: null, from: null, to: null, payMin: null, payMax: null, page: 1 })}>Search ‘{params.q}’ across everything</a></dd>
+              <dd><a href={clearHref}>Search ‘{params.q}’ across everything</a></dd>
             </div>
           )}
           {nearestCategory && (
@@ -285,11 +302,13 @@ const filters = [params.kind, params.category, params.meeting, params.from, para
         <section class="ar-band u-grid" aria-labelledby="ar-take">
           <RunningHead mark="§ A3 // take it with you" title="Downloads · documents · requests" folio="A / 03" />
           <h2 id="ar-take">Take it with you</h2>
+          <p class="ar-downloads">
+            <span class="ar-downloads-label">Download the whole thing</span>
+            <a href="/archive/archive.csv" download="archive.csv">archive.csv <span class="ar-faint">{plural(totalEntries, 'row')}</span></a>
+            {meetingCount > 0 && <a href="/archive/download-links.csv" download="DownloadLinks.csv">DownloadLinks.csv <span class="ar-faint">{plural(meetingCount, 'meeting')}</span></a>}
+            <a href="/archive/README.txt" download="READ_ME.txt">READ_ME.txt</a>
+          </p>
           <div class="ar-doors">
-            <div>
-              <p class="ar-label">Download the whole thing</p>
-              <p><a href="/archive/archive.csv" download>archive.csv</a> <span class="ar-faint">· {plural(totalEntries, 'row')}, one per record</span></p>
-            </div>
             {submitPage && (
               <div>
                 <p class="ar-label">// Got documents?</p>

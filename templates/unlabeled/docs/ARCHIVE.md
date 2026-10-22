@@ -12,6 +12,8 @@ on her domain (design: the platform repository's
 | `/archive` | The door, and the search across all six types: `?q&kind&category&meeting&from&to&pay_min&pay_max&sort&page` | `src/pages/archive/index.astro` |
 | `/archive/index.json` | The documents the search runs over, for the island | `src/pages/archive/index.json.ts` |
 | `/archive/archive.csv` | The whole archive, a row per record | `src/pages/archive/archive.csv.ts` |
+| `/archive/download-links.csv` | DownloadLinks.csv: a row per board meeting, its BoardBook links and archived PDFs | `src/pages/archive/download-links.csv.ts` |
+| `/archive/README.txt` | READ_ME.txt: what the archive is, the three disclaimers, the kinds and their counts, the downloads, from the index | `src/pages/archive/README.txt.ts` |
 | `/archive/money` | The data buckets by family, the Financial family by fund | `src/pages/archive/money.astro` |
 | `/archive/pay` | The pay records: histogram, offices, table (`?q&sort&office`) | `src/pages/archive/pay.astro` |
 | `/data`, `/pay` | Redirect (301) to `/archive/money` and `/archive/pay` | `src/pages/data/index.ts`, `src/pages/pay/index.ts` |
@@ -47,7 +49,7 @@ read on its own, eight at a time. The whole set
 is kept in KV (`BACKGOLD_CACHE`) under
 
 ```
-bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT> (2 today)
+bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT> (3 today)
 ```
 
 for seven days, so a publish in BackGold (a new content version) is a new
@@ -106,7 +108,10 @@ separators, or five or more digits; a four-digit number from 1900 to 2099 is
 a year. Dollar amounts match the figures a record states: a decision's
 `amounts` and `largest_amount`, a bucket's `total_value` and line-item
 figures, a pay record's `pay_value`, and any `$` figure in a summary. The
-parse shows as dashed chips under the field. An empty result names what was
+parse shows as dashed chips under the field: what the query was read as,
+for a dollar amount the other spellings that give the same answer (each
+parsed back to the same range), and the parts of the records it matched in
+(titles, summaries, people, terms, details, pay values, dates). An empty result names what was
 searched, the closest smaller query with its count, the nearest decision
 category, a page on the site whose title holds a word of the query, and the
 door to request a record.
@@ -132,6 +137,12 @@ filter greys, inverts and thresholds it: white lines on black, its dark
 headers as white blocks). Either way the
 original and its `.mmd` are linked. Entries are listed newest first by
 `publish_at`, so the import sets it to the meeting or decision date.
+
+Every archive page calls the six types by the archive's own labels
+(`src/lib/archive/kinds.ts`), whatever the organization named them in
+BackGold: her `information_request` type ("Information requests" there) is
+Records requests on the chips, the rail, the crumbs and the heads; only its
+address comes from her type.
 
 A type the organization does not have is left out everywhere (its count, its
 chip, its rail); with none of them the door says the archive has nothing
