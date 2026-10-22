@@ -946,6 +946,17 @@
 .ar-facts dd {
   margin: 0.25rem 0 0;
 }
+/* Chips in a fact's cell (a decision's campuses) wrap inside it at every width; a long name breaks within its chip. */
+.ar-facts .ar-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.ar-facts .ar-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
 .ar-tally {
   display: flex;
   flex-wrap: wrap;
