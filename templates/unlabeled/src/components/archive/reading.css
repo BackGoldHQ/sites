@@ -1,0 +1,134 @@
+/*
+  The reading pane's parts (boards U3 frame 4, U4 note 6): the tabs over a
+  pane (Agenda · Resolution · Minutes on a meeting, Text · PDF on a source
+  document), the find's marks and stepper, and the PDF in its hairline box.
+  Her tokens only, through the archive's --ar-* names (archive.css); radius
+  0; the tabs are radio inputs and labels, so they switch with scripts off.
+*/
+
+/* Tabs: `.ar-tabs` holds the radios first, then their labels, then one
+   `.ar-tab-panel` per radio, in the same order. The checked radio's label
+   inverts and its panel shows; the rest stay hidden. */
+.ar-tabs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin-top: 1rem;
+}
+.ar-tabs > input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+.ar-tabs > label {
+  font-family: var(--ar-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+  border: 1px solid var(--ar-line-strong);
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  user-select: none;
+}
+.ar-tabs > label + label {
+  border-left: 0;
+}
+.ar-tabs > label:hover {
+  background: var(--ar-ink);
+  color: var(--ar-bg);
+}
+.ar-tabs > .ar-tab-panel {
+  display: none;
+  flex: 1 0 100%;
+  min-width: 0;
+}
+.ar-tabs > input:nth-of-type(1):checked ~ label:nth-of-type(1),
+.ar-tabs > input:nth-of-type(2):checked ~ label:nth-of-type(2),
+.ar-tabs > input:nth-of-type(3):checked ~ label:nth-of-type(3) {
+  background: var(--ar-ink);
+  color: var(--ar-bg);
+}
+.ar-tabs > input:nth-of-type(1):focus-visible ~ label:nth-of-type(1),
+.ar-tabs > input:nth-of-type(2):focus-visible ~ label:nth-of-type(2),
+.ar-tabs > input:nth-of-type(3):focus-visible ~ label:nth-of-type(3) {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+}
+.ar-tabs > input:nth-of-type(1):checked ~ .ar-tab-panel:nth-of-type(1),
+.ar-tabs > input:nth-of-type(2):checked ~ .ar-tab-panel:nth-of-type(2),
+.ar-tabs > input:nth-of-type(3):checked ~ .ar-tab-panel:nth-of-type(3) {
+  display: block;
+}
+/* The tabs' head: what the pane is, at the left of the tabs. */
+.ar-tabs > .ar-tabs-head {
+  flex: 1 1 auto;
+  align-self: center;
+  margin: 0;
+  padding-right: 1rem;
+}
+@media (max-width: 47.99rem) {
+  .ar-tabs > .ar-tabs-head {
+    flex-basis: 100%;
+    padding: 0 0 0.5rem;
+  }
+  .ar-tabs > label {
+    flex: 1 1 0;
+    text-align: center;
+  }
+}
+/* The find: each hit a white block, the one the stepper is on outlined. */
+.ar-pane mark {
+  background: var(--ar-ink);
+  color: var(--ar-bg);
+}
+.ar-pane li[data-cited] mark {
+  background: var(--ar-bg);
+  color: var(--ar-ink);
+}
+.ar-pane mark[data-current] {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+}
+.ar-find-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.ar-find-step[hidden] {
+  display: none;
+}
+.ar-find-step button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--ar-ink);
+  background: none;
+  border: 1px solid var(--ar-line-strong);
+  padding: 0.375rem 0.625rem;
+  cursor: pointer;
+}
+.ar-find-step button:hover,
+.ar-find-step button:focus-visible {
+  background: var(--ar-ink);
+  color: var(--ar-bg);
+}
+.ar-find-step [data-ar-find-at] {
+  color: var(--ar-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The archived PDF in a hairline box, its link out beside it. */
+.ar-pdf {
+  display: block;
+  width: 100%;
+  height: min(48rem, 80vh);
+  margin-top: 1rem;
+  border: 1px solid var(--ar-line-strong);
+  background: var(--ar-surface);
+}

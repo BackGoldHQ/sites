@@ -1,0 +1,24 @@
+---
+// Tabs over the reading pane (boards U3 frame 4, U4 note 6): a radio and a
+// label per tab, the first checked, and the panel each tab's slot fills
+// (`<div slot="<key>">`), drawn by reading.css. They switch with scripts
+// off; the first tab's panel is what a page with no choice made shows.
+import './reading.css'
+
+interface Props {
+  /** The radios' group name, unique on the page. */
+  name: string
+  /** The words at the left of the tabs. */
+  head: string
+  tabs: { key: string; label: string }[]
+}
+
+const { name, head, tabs } = Astro.props
+const panels = await Promise.all(tabs.map((t) => Astro.slots.render(t.key)))
+---
+<div class="ar-tabs">
+  {tabs.map((t, i) => <input type="radio" name={name} id={`${name}-${t.key}`} value={t.key} checked={i === 0} />)}
+  <p class="ar-meta ar-tabs-head"><strong>{head}</strong></p>
+  {tabs.map((t) => <label for={`${name}-${t.key}`}>{t.label}</label>)}
+  {panels.map((html) => <div class="ar-tab-panel" set:html={html} />)}
+</div>

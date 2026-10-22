@@ -86,9 +86,47 @@ links and kept in KV under `bg-archive-text:<site id>:v<version>:<hash of
 the address>` (`src/lib/archive/text.ts`).
 
 `/archive` with any query name, `/archive/pay` with `q`, `sort` or `office`,
-and a source with `?find=` answer `Cache-Control: no-store`, and `/archive`
-names its query names in `X-Backgold-Reads-Query`, so the edge cache never
-answers a query with the bare page's copy.
+and a source with `?find=` or `?all=1` answer `Cache-Control: no-store`, and
+`/archive` and every source name their query names in
+`X-Backgold-Reads-Query`, so the edge cache never answers a query with the
+bare page's copy. A source's page is an entry the kit's catch-all draws, and
+a header its layout sets arrives after the response has started, so the
+template's middleware (`src/middleware.ts`) sets both on every address under
+`/sources/`.
+
+## The meeting and source pages
+
+A meeting (`src/components/entries/meeting.astro`, board U4) hangs each
+decision on the agenda item it names in `agenda_item`; a decision naming
+none hangs on the item whose title its own title matches
+(`src/lib/archive/agenda.ts`, `matchItem`): both titles cut to stemmed words,
+each word weighted by how few of the agenda's items use it, scored as a
+weighted Dice coefficient. The best item must score at least 0.3 and 1.3
+times the next best, and an item naming a different procurement number
+(`CSP 25.11` against `CSP 25.15`) or policy code (`CW(LOCAL)` against
+`DEC (Local)`) is out, so a decision is never guessed between two items; it
+then sits under "No item cited". Tried on the archive's 25 agenda texts
+against the 88 decisions whose `agenda_item` is on their agenda's outline,
+the title alone puts 82 on that item, 6 on none and none on another. A matched decision says so on its row.
+
+The meeting's head carries where it was held, read from the agenda's head
+(the lines after the date and time line), and the latest meeting in the
+archive points forward to the soonest upcoming event on Events that is a
+board meeting (a Hearing, or a title naming a board meeting:
+`src/lib/next-meeting.ts`). Its reading pane has a tab for each text the
+archive has: Agenda (`agenda_text`), Resolution(s) (each resolution
+document's `readable_text`) and Minutes (`minutes_text`, else the minutes
+document's `readable_text`), the first 400 lines of each.
+
+A source (`src/components/entries/source.astro`, board U3 frame 4) has Text
+and PDF tabs (`archived_file` in a hairline box, Open the PDF beside it).
+Its pane shows 36 lines from just before the first cited line (the first 80
+when nothing is cited), with Show the whole text at `?all=1`; `?find=` shows
+the whole text with every hit marked, and with scripts on a stepper walks
+the marks. Every tab is a radio and a label (`PaneTabs.astro`,
+`reading.css`), so the tabs work with scripts off; a browser with scripts
+off loads the PDF with the page, since it lazy-loads frames only with
+scripts on.
 
 ## Query grammar (`src/lib/archive/query.ts`)
 
@@ -118,8 +156,8 @@ defines them, plus her `information_request` type:
 
 | Type (`url_base`) | Fields read | Terms |
 | --- | --- | --- |
-| `board_meeting` (`meetings`) | `meeting_date`, `meeting_time`, `meeting_kind`, `agenda_link`, `minutes_link`, `resolutions_link`, `agenda_download`, `minutes_download`, `agenda_pdf`, `minutes_pdf`, `agenda_text` (the agenda's text extraction, read for the outline and the reading pane) | — |
-| `board_decision` (`decisions`) | `meeting` (reference: its slug), `decided_on`, `agenda_item` (`II.E.8`, hangs the decision on the agenda's outline), `presenter`, `seconder`, `vote_outcome`, `vote_detail` (the tally is drawn only from its `Yeas:` list), `amounts`, `largest_amount`, `source_citation`, `source_documents` (slugs), `timeline_diagram`, `timeline_data`, `archive_id` (`<folder>/<number>`, the row mark's number), `original_title` | `decision_category` (the row mark's prefix), `campus` |
+| `board_meeting` (`meetings`) | `meeting_date`, `meeting_time`, `meeting_kind`, `agenda_link`, `minutes_link`, `resolutions_link`, `agenda_download`, `minutes_download`, `agenda_pdf`, `minutes_pdf`, `agenda_text` (the agenda's text extraction, read for the outline, the place and the reading pane), `minutes_text` (the minutes' tab) | — |
+| `board_decision` (`decisions`) | `meeting` (reference: its slug), `decided_on`, `agenda_item` (`II.E.8`, hangs the decision on the agenda's outline; without it the title is matched), `presenter`, `seconder`, `vote_outcome`, `vote_detail` (the tally is drawn only from its `Yeas:` list), `amounts`, `largest_amount`, `source_citation`, `source_documents` (slugs), `timeline_diagram`, `timeline_data`, `archive_id` (`<folder>/<number>`, the row mark's number), `original_title` | `decision_category` (the row mark's prefix), `campus` |
 | `data_bucket` (`data`) | `family`, `flow_side`, `total_value`, `total_label`, `basis`, `basis_decisions` (slugs), `line_items`, `notes`, `fed_by`, `flows_to`, `sankey_diagram`, `sankey_data`, `archive_id` | `campus` |
 | `pay_record` (`pay`) | `person`, `position`, `pay_value`, `pay_display`, `workbook`, `workbook_row`, `workbook_file`, `unit_note`, `archive_id` | `district_office` |
 | `source_document` (`sources`) | `document_kind`, `meeting` (reference), `boardbook_link`, `archived_file`, `readable_text`, `original_filename`, `source_note`, `archive_id` | — |
@@ -165,6 +203,7 @@ the archive door.
   in template.json.
 - **StatCards `archive` in the contract's `SECTION_LAYOUTS`** (and in
   template.json's variants) so an operator can place the Home door.
-- **`agenda_item` filled at import** for every decision (8 of 192 carry one
-  today); a decision without one sits under "No item cited" on its meeting.
+- **`agenda_item` filled at import** for every decision (98 of 192 carry
+  one); a decision without one hangs on the item its title matches, else
+  sits under "No item cited" on its meeting.
 - **Mono diagrams** at import as `<field>_mono`.

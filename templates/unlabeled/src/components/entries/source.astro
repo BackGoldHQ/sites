@@ -1,18 +1,24 @@
 ---
 // One source document at /sources/<slug> (board U3, frame 4): the meta
-// line, the title, the readable text in the reading pane (exactly as the
-// archive extracted it, OCR noise and all; the lines citing the items its
-// decisions name set in white; `?find=` sets and counts the lines holding
-// those words), its meeting, BoardBook and the archived copy, the source
-// note, and the decisions that cite it.
+// line, the title, then Text · PDF tabs (CSS only, Text first). Text is the
+// readable text in the reading pane, exactly as the archive extracted it,
+// OCR noise and all: the lines citing the items its decisions hang on (their
+// `agenda_item`, or on an agenda the item their title matches) set in white,
+// the pane windowed around the first of them (the first lines when none is
+// cited) with the whole text at `?all=1`; `?find=` shows the whole text with
+// every hit marked and counted, a stepper walking them. PDF is the archived
+// PDF in a hairline box with "Open the PDF ↗" beside it. At the side: its
+// meeting, BoardBook and the archived copy, the source note, and the
+// decisions that cite it.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
+import PaneTabs from '../archive/PaneTabs.astro'
 import ReadingPane from '../archive/ReadingPane.astro'
 import { archiveFor, sourceOf } from '../../lib/archive/index'
-import { httpUrl, list, str } from '../../lib/archive/record'
+import { fileUrl, httpUrl, list, str } from '../../lib/archive/record'
 import { shortDay } from '../../lib/archive/format'
-import { itemKey, linesCiting } from '../../lib/archive/agenda'
+import { agendaOutline, itemFor, linesCiting } from '../../lib/archive/agenda'
 import { readableText } from '../../lib/archive/text'
 
 type Props = EntryLayoutProps
@@ -23,31 +29,51 @@ const { data, doc } = await archiveFor(Astro.locals, 'source_document', entry, b
 const docs = data?.docs ?? [doc]
 const f = doc.fields
 const find = Astro.url.searchParams.get('find')?.slice(0, 80) ?? null
-if (find) Astro.response.headers.set('Cache-Control', 'no-store')
+// `find` and `all` are kept out of the edge cache by src/middleware.ts.
+const all = Astro.url.searchParams.get('all') === '1'
 const sameKind = docs.filter((d) => d.kind === 'source_document' && d.category === doc.category).length
 const meeting = docs.find((d) => d.kind === 'board_meeting' && d.slug === doc.meeting) ?? null
 const citing = docs.filter((d) => d.kind === 'board_decision' && list(d.fields.source_documents).includes(doc.slug)).sort((a, b) => (a.mark ?? '').localeCompare(b.mark ?? ''))
 const textUrl = httpUrl(f.readable_text)
 const source = sourceOf(Astro.locals)
 const text = textUrl && source ? await readableText(textUrl, source) : null
-const items = [...new Set(citing.map((d) => str(d.fields.agenda_item)).filter((v): v is string => v !== null).map(itemKey))]
+const outline = text && doc.category === 'Agenda' ? agendaOutline(text) : []
+const items = [...new Set(citing.map((d) => itemFor({ title: d.title, agendaItem: str(d.fields.agenda_item) }, outline)).filter((v): v is string => v !== null))]
 const cited = text ? [...new Set(items.flatMap((i) => linesCiting(text, i)))].sort((a, b) => a - b) : []
+const pdf = fileUrl(f.archived_file) ?? httpUrl(f.archived_file)
+const tabs = [...(textUrl ? [{ key: 'text', label: 'Text' }] : []), ...(pdf ? [{ key: 'pdf', label: 'PDF' }] : [])]
+const wholeHref = (() => {
+  const url = new URL(Astro.url)
+  url.searchParams.delete('find')
+  url.searchParams.set('all', '1')
+  return `${url.pathname}${url.search}`
+})()
 ---
 <ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Sources', href: `/${base}` }, ...(doc.category ? [{ label: doc.category }] : []), ...(doc.date ? [{ label: shortDay(doc.date)! }] : [])]}>
   <EntryHead label="Source document" path={`/${base}/${doc.slug}`} kind={type?.singular_label ?? 'Source document'} meta={[doc.category, shortDay(doc.date)?.toUpperCase(), doc.category && `${sameKind} in the archive`]} title={entry.title} summary={entry.summary} markdown={entry.body?.markdown} />
   <div class="ar-two" style="margin-top:1.5rem">
     <div>
-      {textUrl ? (
-        <>
-          <form method="get" class="ar-field" style="max-width:28rem" role="search">
-            <label class="visually-hidden" for="ar-find">Find in this document</label>
-            <input id="ar-find" name="find" type="search" value={find ?? ''} placeholder="Find in this document" style="font-size:1rem" />
-            <button class="ar-btn ar-btn-outline" type="submit">Find</button>
-          </form>
-          <ReadingPane text={text} href={textUrl} cited={cited} find={find} />
-        </>
+      {tabs.length > 0 ? (
+        <PaneTabs name="ar-source-pane" head="// Reading pane" tabs={tabs}>
+          {textUrl && (
+            <div slot="text">
+              <form method="get" class="ar-field" style="max-width:28rem;margin-top:1rem" role="search">
+                <label class="visually-hidden" for="ar-find">Find in this document</label>
+                <input id="ar-find" name="find" type="search" value={find ?? ''} placeholder="Find in this document" style="font-size:1rem" />
+                <button class="ar-btn ar-btn-outline" type="submit">Find</button>
+              </form>
+              <ReadingPane text={text} href={textUrl} cited={cited} find={find} windowed={!find && !all} wholeHref={wholeHref} wholeLabel="Show the whole text →" />
+            </div>
+          )}
+          {pdf && (
+            <div slot="pdf">
+              <p class="ar-meta" style="margin-top:1rem">{str(f.original_filename) ?? 'The archived PDF'} · <a href={pdf} rel="noopener">Open the PDF ↗</a></p>
+              <iframe class="ar-pdf" src={pdf} title={`${entry.title}, the archived PDF`} loading="lazy" />
+            </div>
+          )}
+        </PaneTabs>
       ) : (
-        <p class="ar-faint">The archive has no readable text for this document.</p>
+        <p class="ar-faint">The archive has no readable text or PDF for this document.</p>
       )}
     </div>
     <div>
