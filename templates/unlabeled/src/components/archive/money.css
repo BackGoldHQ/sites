@@ -1,0 +1,133 @@
+/*
+  The money and record pages' own drawing (boards U3, U5): the flow's
+  marks, the staff and student ramps, the dated list, the workbook block.
+  Her tokens only (the archive's --ar-* names, set on .ar in archive.css),
+  radius 0. Scoped under .ar like the rest of the archive.
+*/
+
+/* The flow: the hub and a solid band white, the other bands grey hatching, labels in the meta face. */
+.ar .mr-flow-hatch {
+  fill: var(--ar-line-strong);
+}
+.ar .mr-flow-band {
+  stroke: var(--ar-line-strong);
+  stroke-width: 0.5;
+}
+.ar .mr-flow-band.is-solid {
+  fill: var(--ar-ink);
+  stroke: var(--ar-ink);
+}
+.ar .mr-flow-hub {
+  fill: var(--ar-ink);
+}
+.ar .mr-flow-end {
+  fill: var(--ar-bg);
+  stroke: var(--ar-ink);
+  stroke-width: 1;
+}
+.ar .mr-flow text {
+  font-family: var(--ar-meta);
+  font-size: 11px;
+}
+.ar .mr-flow-head,
+.ar .mr-flow-figure {
+  fill: var(--ar-muted);
+}
+.ar .mr-flow-label {
+  fill: var(--ar-ink);
+}
+.ar .mr-flow a:hover .mr-flow-label,
+.ar .mr-flow a:focus-visible .mr-flow-label {
+  text-decoration: underline;
+}
+
+/* Counts as ramps: one scale per family, the count printed at the ramp's end. */
+.mr-ramps > li {
+  border-bottom: 1px solid var(--ar-line);
+  padding: 0.75rem 0;
+}
+.mr-ramp-track {
+  /* Room at the right for the largest ramp's count. */
+  padding-right: 8ch;
+  margin-top: 0.5rem;
+}
+.mr-ramp {
+  position: relative;
+  height: 0.75rem;
+  border: 1px solid var(--ar-ink);
+}
+.mr-ramp[data-fill='solid'] {
+  background: var(--ar-ink);
+}
+.mr-ramp[data-fill='hatched'] {
+  background: repeating-linear-gradient(135deg, var(--ar-ink) 0 2px, transparent 2px 5px);
+}
+.mr-ramp-count {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  font-family: var(--ar-display);
+  font-weight: 500;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ar-ink);
+}
+.mr-ramp-none {
+  margin-top: 0.5rem;
+}
+.mr-key {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+.mr-key span::before {
+  content: '';
+  display: inline-block;
+  width: 1.5rem;
+  height: 0.5rem;
+  margin-right: 0.375rem;
+  border: 1px solid var(--ar-ink);
+  vertical-align: middle;
+}
+.mr-key [data-fill='solid']::before {
+  background: var(--ar-ink);
+}
+.mr-key [data-fill='hatched']::before {
+  background: repeating-linear-gradient(135deg, var(--ar-ink) 0 2px, transparent 2px 5px);
+}
+
+/* The dated buckets: appointments and separations, a list by day. */
+.mr-dated {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  margin-top: 0.75rem;
+}
+.mr-dated > li {
+  border: 1px solid var(--ar-line-strong);
+  padding: 0.875rem 1rem;
+  display: grid;
+  gap: 0.375rem;
+  align-content: start;
+}
+
+
+/* The same agenda item, filed twice: the other entry inverted, as the board draws it. */
+.mr-twice li {
+  background: var(--ar-ink);
+  color: var(--ar-bg);
+  padding: 0.375rem 0.5rem;
+}
+.mr-twice li a,
+.mr-twice li .ar-mark {
+  color: var(--ar-bg);
+  border-color: var(--ar-bg);
+}
+.mr-twice li a:hover,
+.mr-twice li a:focus-visible {
+  background: var(--ar-bg);
+  color: var(--ar-ink);
+}
