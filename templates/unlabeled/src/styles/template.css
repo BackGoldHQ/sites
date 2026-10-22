@@ -896,6 +896,25 @@ main img,
   .site-header .header-sheet {
     order: 2;
   }
+  /*
+    The open sheet fills the window under the header and scrolls on its own,
+    whatever sits above the header (the top banner) and wherever the page is
+    scrolled (U11): the header holds the window's top while the sheet is open,
+    and the sheet runs from its bottom edge to the window's (100% is the
+    header's height, the sheet's containing block), its foot (DONATE, her
+    socials, the legal line) reached by scrolling the sheet alone. Header and
+    sheet cover the whole window, so the page that closes up behind them is
+    never seen moving.
+  */
+  .site-header:has(.header-sheet[open]) {
+    position: fixed;
+    inset: 0 0 auto;
+  }
+  .site-header .header-sheet-panel {
+    max-height: calc(100vh - 100%);
+    max-height: calc(100dvh - 100%);
+    overscroll-behavior: contain;
+  }
 }
 /* Dark only (decision 8): no switch. */
 .mode-toggle {

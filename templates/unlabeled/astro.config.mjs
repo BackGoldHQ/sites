@@ -11,6 +11,20 @@ export default defineConfig({
   // namespace. Turn either on here if you add a use for it.
   adapter: cloudflare({ imageService: 'passthrough' }),
   session: false,
-  // The kit draws every page (its routes) with this template's config.
-  integrations: [backgold(), templateKit({ template: './src/template.ts' })],
+  // The kit draws every page (its routes) with this template's config; the
+  // font files her frame stylesheet names (src/frame/) are a route of their
+  // own, since Astro routes no page whose path starts `_` (the stylesheet
+  // itself is src/pages/[skin]/frame.css.ts).
+  integrations: [
+    backgold(),
+    templateKit({ template: './src/template.ts' }),
+    {
+      name: 'unlabeled-frame-fonts',
+      hooks: {
+        'astro:config:setup': ({ injectRoute }) => {
+          injectRoute({ pattern: '/_backgold/fonts/[...path]', entrypoint: './src/frame/font.ts' })
+        },
+      },
+    },
+  ],
 })

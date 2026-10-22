@@ -1,0 +1,58 @@
+---
+// Collection · List, Unlabeled's: a list of the newsletter's issues (the
+// section's type `newsletter`, her starter's newsletters page) as U-cat's
+// specimen draws it, the rows the issue list draws (src/components/newsletter/
+// IssueList.astro): each issue's number counted from the oldest ("Issue 02",
+// src/lib/issues.ts), its title as the link, its date at the right; with no
+// issue, the kit's empty line. Any other type's list is the kit's.
+import type { ComponentProps } from 'astro/types'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import KitList from '@backgold/template-kit/components/sections/Collection/list.astro'
+import type Default from '@backgold/template-kit/components/sections/Collection/index.astro'
+import { entriesOf } from '@backgold/template-kit/components/sections/Collection/entries.ts'
+import { formatDay, text } from '@backgold/template-kit/lib/format'
+import { rows } from '@backgold/template-kit/lib/section'
+import { issueLabel, issueNumbers } from '../../../lib/issues'
+import '@backgold/template-kit/styles/entries.css'
+
+type Props = ComponentProps<typeof Default>
+
+const { section } = Astro.props
+const type = section.options?.type
+const issues = type === 'newsletter'
+const heading = text(section.copy.heading)
+const bg = Astro.locals.backgold
+const numbers = issues && bg.setup === null ? (await issueNumbers(bg.client, type)).bySlug : new Map<string, number>()
+/** The rows entriesOf keeps (those with a title), in its order, for their slugs. */
+const titled = rows(section).filter((row) => text(row.title))
+const issueRows = issues
+  ? entriesOf(section).map((entry, i) => {
+      const slug = text(titled[i]?.slug)
+      const n = slug ? numbers.get(slug) : undefined
+      return { ...entry, number: n ? issueLabel(n) : null, day: formatDay(entry.date) }
+    })
+  : []
+---
+{issues ? (
+  <Band section={section} class="entries list-issues">
+    {heading && <h2>{heading}</h2>}
+    {issueRows.length > 0 ? (
+      <ol class="issue-rows" role="list">
+        {issueRows.map((row) => (
+          <li class="issue-row">
+            {row.number && <span class="issue-row-number">{row.number}</span>}
+            {row.day && row.date && <time datetime={row.date}>{row.day}</time>}
+            <div>
+              <h3 class="issue-row-title">{row.href ? <a href={row.href}>{row.title}</a> : row.title}</h3>
+              {row.summary && <p>{row.summary}</p>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+  </Band>
+) : (
+  <KitList {...Astro.props} />
+)}
