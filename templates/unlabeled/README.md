@@ -134,8 +134,10 @@ the template adds it itself (`menuLinks` in `src/template.ts`, drawn by the
 kit's header): last at the top level, after PETITION, and in no group (BISD
 holds only her own rows), in the bar and the phone sheet, current on `/archive` and under it and
 on each record type's address (`/meetings`, `/decisions`, `/data`, `/pay`,
-`/sources`, `/records`). The footer's *The record* opens with The archive and
-BISD: Public info, then Request a record (`/records#request-a-record`). Her other pages
+`/sources`, `/records`). The footer's *The record* opens with The archive, The money
+(`/archive/money`) and The pay (`/archive/pay`), then BISD: Public info and
+Request a record (`/records#request-a-record`); the archive door names the two
+browsing views under its holdings. Her other pages
 (I voted, the BISD petition, Texas THC and the forms not in the menu) are
 hers already and are not starter pages.
 
