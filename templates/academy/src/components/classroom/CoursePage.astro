@@ -1,0 +1,15 @@
+---
+// The course entry layout, `syllabus` (board L2): the course's own page is
+// the template's Course section (Course) with the course pinned to this
+// entry, its title the page's <h1>; the lessons, this visitor's place and
+// the locks are read for the visitor by the kit (sections/Course/course.ts).
+import { academySection } from '@backgold/template-kit/components/entries/course/section.ts'
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import Course from './Course.astro'
+import '@backgold/template-kit/styles/entries.css'
+
+type Props = EntryLayoutProps
+
+const { entry } = Astro.props
+---
+<Course section={academySection('Course', 'syllabus', entry.slug)} lead />

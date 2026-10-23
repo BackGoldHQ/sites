@@ -1,0 +1,23 @@
+---
+// Lesson · Player (board L3): the lesson at this address, or the visitor's
+// next in the section's pinned course (the kit's sections/Lesson/lesson.ts),
+// drawn by Lesson with the player on the theater's stage beside the rail.
+// Nothing is drawn without a lesson. The template's default Lesson layout;
+// it draws `player` and any layout it has no file for.
+import type { Section } from '@backgold/content'
+import { lessonOf, type LessonView } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
+import Lesson from './Lesson.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+  /** Drawn as the lesson's own page: its title is the <h1>. */
+  lead?: boolean
+  /** The lesson, already read (the lesson route); left out, the section reads it. */
+  view?: LessonView | null
+}
+
+const { section, lead = false } = Astro.props
+const view = Astro.props.view !== undefined ? Astro.props.view : await lessonOf(section, Astro)
+---
+{view && <Lesson view={view} section={section} layout="player" lead={lead} />}

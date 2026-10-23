@@ -31,24 +31,47 @@ no donate button: an organization that takes donations adds the link itself.
 
 Lessons are video entries; a course is an entry of the built-in `course`
 type, at `/courses`, with its lessons in order in the course editor. The
-template draws them with the kit's own layouts, as `template.json` names
-them:
+template draws them with its own layouts over the kit's (`src/classroom.ts`,
+the components under `src/components/classroom/`), under the names
+`template.json` gives them:
 
 | Address | What draws it |
 | --- | --- |
-| `/courses` | The course type's list layout, `classroom`: every course as a card, from `GET /courses`. |
-| `/courses/<course>` | The course type's entry layout, `syllabus`: the course head, every lesson in order, About this course. |
-| `/courses/<course>/<lesson>` | The kit's `course:lesson` layout: the player, the notes, Mark complete, previous and next, the course's rail; a locked lesson's teaser and its door. |
+| `/courses` | The course type's list layout, `classroom`: every course as a card with its cover, the ember line at its foot, the access chip and, for a signed-in visitor, its progress ring; from `GET /courses`. |
+| `/courses/<course>` | The course type's entry layout, `syllabus`: the course head on the hearth band (the ring, the bar, Start or Continue), the ruled syllabus with numerals, About this course. |
+| `/courses/<course>/<lesson>` | The `course:lesson` layout: the theater (the player, the lesson's numeral, Mark complete, Up next, the course's rail with a still per lesson), the notes, previous and next; a locked lesson's teaser and its door. |
 
 A page can draw the same sections anywhere: Classroom (`grid`, `list`),
 Course (`syllabus`, `outline`, pinned to a course) and Lesson (`player`,
 `reading`), beside the kit's Hero, About (its `books` layout for an
 instructor and what they wrote), Pathways, Issues, StatCards, Faq, TeamGrid,
-VideoEmbed, Cta, QuoteStrip, SignupCapture, FormBlock and Map. A lesson's
+VideoEmbed, Cta, QuoteStrip, SignupCapture, FormBlock, Map and Collection. A lesson's
 video is the org's own upload in the browser's player, or an imported YouTube
 or Vimeo video in that player's frame. Who may open a lesson is the Content API's answer, never the
 site's: a locked lesson arrives without its video or notes, and its `lock`
 names the door (sign in, join, or ask).
+
+## What the academy draws itself
+
+The kit draws every section and page; the template draws some of them its
+own way (boards K1, K4 and K6 of the Kindling pass). Its sections are listed
+in `src/sections.ts`, each drawn through `src/components/sections/Kindled.astro`:
+
+| Where | What the academy draws |
+| --- | --- |
+| Hero · Field | The kit's field, the headline a size up, the second call as a link, and under the calls the proof line: "{courses} courses · {lessons} lessons · {videos} conversations and clips", each number counted from the Content API when the page is drawn (`src/lib/counts.ts`), never typed. |
+| Course · Outline | The free course as a feature card: "Start here", the course's title and summary, its cover with its facts (lessons, who can watch), its first four lessons (Free, the locks and what opens them), Play lesson 1 and See the syllabus. |
+| Collection (cards) | Conversations: the chapter mark (the site's icon on a hairline), "Watch", the heading, a line about who talks in them and "All conversations", then each entry's 16:9 still with a play mark, its title, its guest line, its length and date; three across, one on a phone. |
+| Pathways · Doors | Each door a title, a line and a link: "Start with <course>" when it opens a course, "Apply" when it opens `/join`, else the section's link label or "Start here". |
+| The video list, and a news list that holds videos alone | "Watch.": the videos grouped by their `series` term (Conversations, Training clips, Live sessions; a video with none is a training clip), each group counted, newest eight (four on a phone) with a link to the series' own list. A news list with a post or an episode in it is the kit's. |
+| A video's page | The theater: the player, the title, the summary, the series, length, date and byline, Watch on YouTube, the five newest videos of its series beside it, then the free course's feature card. |
+| The header's brand | The site's icon beside the name set in type ("Libertarian Leadership" / "ACADEMY"); the header's button an outline. |
+| The footer | On the page's ground; its closing call (the `closing` layout) as the site's closing line in the display face beside the icon. |
+
+Kickers sit over an ember rule and the heading under one rises as it comes
+into view, and the proof line's numbers roll up once; all of it is the
+stylesheet's § Motion and `src/scripts/motion.ts`, and none of it runs for a
+visitor who asked for reduced motion.
 
 ## Signing in
 

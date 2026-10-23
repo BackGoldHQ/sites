@@ -1,0 +1,22 @@
+---
+// The course list layout, `classroom` (board L1), at the course type's
+// address (`/courses`): one hearth band from the header down, the list's
+// name ("Courses") as the page's <h1> over the template's line, the tally,
+// the line under it and every course as a card (Courses), read from
+// `GET /courses` for this visitor (the kit's sections/Classroom/classroom.ts).
+import { classroomOf } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import { academySection } from '@backgold/template-kit/components/entries/course/section.ts'
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { listName } from '@backgold/template-kit/lib/entries'
+import Courses from './Courses.astro'
+import '@backgold/template-kit/styles/entries.css'
+
+type Props = ListLayoutProps
+
+const { type, base } = Astro.props
+const section = { ...academySection('Classroom', 'grid'), band: 'contrast' as const }
+const classroom = await classroomOf(section, Astro, 'read')
+---
+<div class="list-courses kc-courses">
+  <Courses section={section} classroom={classroom} layout="grid" name={listName(type, base, null)} />
+</div>

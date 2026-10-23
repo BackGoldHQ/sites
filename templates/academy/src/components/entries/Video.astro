@@ -1,0 +1,119 @@
+---
+// One video's page on the academy (board K4, "One conversation"): the
+// theater, a ground deeper than the page's, holding at the left the way back
+// (the list, then the video's series), the video in its player (the ember
+// line along its foot), its title, its summary, and a row of what it is: its
+// series as a chip, its length and date, who made it (their picture and
+// name) and "Watch on YouTube" for a YouTube video; then its description.
+// At the right, the rail: "More <series>", the five newest other videos of
+// its series with small stills, and a link to the series' own list. Under
+// the theater, the academy's free course as its feature card (CourseFeature,
+// the first course anyone signed in with their email can watch), the page's
+// main call. A video with no player draws its still with the play mark, or
+// says it is not up yet.
+import type { Entry, Section } from '@backgold/content'
+import { relFor, renderMarkdown, safeHref, safeSrc } from '@backgold/astro/server'
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { clockOf } from '@backgold/template-kit/lib/academy'
+import { listOf, playerOf, termPath, writers } from '@backgold/template-kit/lib/entries'
+import CourseFeature from '../sections/CourseFeature.astro'
+import { shortDate } from '../../lib/dates'
+import { SERIES, isLive } from '../../lib/watch'
+
+type Props = EntryLayoutProps
+
+/** How many other videos of the series the rail lists. */
+const RAIL = 5
+
+const { entry, type } = Astro.props
+const bg = Astro.locals.backgold
+const source = safeSrc(entry.media_url)
+const player = source ? playerOf(source) : null
+const still = entry.hero ? safeSrc(entry.hero.url) : null
+const youtube = source && /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//.test(source) ? source : null
+const list = listOf(type)
+const series = entry.terms.find((t) => t.taxonomy === SERIES) ?? null
+const seriesHref = list && series ? termPath(list.path, SERIES, series.slug) : null
+const lower = (label: string) => label.charAt(0).toLowerCase() + label.slice(1)
+const length = clockOf(entry.duration_seconds)
+const day = shortDate(entry.publish_at)
+const by = writers(entry.authors)[0] ?? entry.authors[0] ?? null
+const avatar = by ? safeSrc(by.avatar_url) : null
+const description = entry.body?.markdown ? renderMarkdown(entry.body.markdown) : ''
+const page = series && bg.setup === null ? await bg.client.entries(entry.type, { term: series.slug, limit: RAIL + 1 }).catch(() => null) : null
+const rail: Entry[] = (page?.entries ?? []).filter((e) => e.id !== entry.id && e.terms.some((t) => t.taxonomy === SERIES && t.slug === series?.slug)).slice(0, RAIL)
+const courses = bg.setup === null ? await bg.client.courses({ limit: 50 }).catch(() => null) : null
+const free = courses?.courses.find((c) => c.access === 'public' || c.access === 'signed_in') ?? null
+const feature: Section = { id: 'Course-free', type: 'Course', band: 'contrast', bleed: 'full', variant: 'outline', copy: {}, media: {}, links: [] }
+---
+<section class="bg-section bg-band-plain bg-bleed-full ak-theater">
+  <div class="bg-section-inner ak-theater-inner">
+    <article class="ak-watching">
+      {list && (
+        <nav class="ak-crumbs" aria-label="Breadcrumb">
+          <a href={list.path}>{list.name}</a>
+          {series && seriesHref && <><span aria-hidden="true">→</span><a href={seriesHref}>{series.label}</a></>}
+        </nav>
+      )}
+      <div class="ak-player">
+        {player ? (
+          <iframe src={player} title={entry.title} allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>
+        ) : source ? (
+          <video src={source} poster={still ?? undefined} controls preload="none" playsinline>
+            <a href={source} rel={relFor(source)}>Watch the video</a>
+          </video>
+        ) : still ? (
+          <>
+            <img src={still} alt="" />
+            <span class="ak-play ak-play-lg" aria-hidden="true"></span>
+          </>
+        ) : (
+          <p class="ak-player-missing">The video for this page is not up yet.</p>
+        )}
+      </div>
+      <h1 class="ak-watching-title">{entry.title}</h1>
+      {entry.summary && entry.summary.trim() !== entry.title.trim() && <p class="lede ak-watching-lede">{entry.summary}</p>}
+      <div class="ak-watching-meta">
+        {series && <span class:list={['ak-chip', 'ak-chip-gold', isLive(entry) && 'ak-chip-live']}>{isLive(entry) && <span class="ak-flame" aria-hidden="true"></span>}{series.label}</span>}
+        {(length || day) && (
+          <span class="ak-video-meta">
+            {length && <span class="ak-video-length"><span class="visually-hidden">Length </span>{length}</span>}
+            {length && day && <span aria-hidden="true"> · </span>}
+            {day && entry.publish_at && <time datetime={entry.publish_at}>{day}</time>}
+          </span>
+        )}
+        {by && (
+          <span class="ak-byline">
+            {avatar && <img src={avatar} alt="" width="32" height="32" loading="lazy" decoding="async" />}
+            <span><span class="ak-byline-name">{by.display_name}</span><span class="ak-byline-role">{by.role}</span></span>
+          </span>
+        )}
+        {youtube && <a class="ak-link" href={youtube} rel={relFor(youtube)}>Watch on YouTube</a>}
+      </div>
+      {description && <div class="prose ak-watching-body" set:html={description} />}
+    </article>
+    {series && rail.length > 0 && (
+      <aside class="ak-rail" aria-labelledby="more-in-series">
+        <h2 id="more-in-series" class="ak-rail-title">More {lower(series.label)}</h2>
+        <ul class="ak-rail-list" role="list">
+          {rail.map((e) => {
+            const href = e.url ? safeHref(e.url) : null
+            const thumb = e.hero ? safeSrc(e.hero.url) : null
+            const meta = [clockOf(e.duration_seconds), shortDate(e.publish_at)].filter(Boolean).join(' · ')
+            return (
+              <li class="ak-rail-item">
+                <span class="ak-rail-still">{thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" /> : <span class="ak-video-stand-in" aria-hidden="true">{e.title}</span>}</span>
+                <span class="ak-rail-words">
+                  {href ? <a href={href}>{e.title}</a> : e.title}
+                  {meta && <span class="ak-rail-meta">{meta}</span>}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+        {seriesHref && <p class="ak-rail-more"><a class="ak-link" href={seriesHref}>All {lower(series.label)}</a></p>}
+      </aside>
+    )}
+  </div>
+</section>
+{free && <CourseFeature section={feature} courseSlug={free.slug} />}

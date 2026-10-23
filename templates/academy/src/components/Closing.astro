@@ -1,0 +1,37 @@
+---
+// The footer's closing call on the academy (its `closing` layout): the
+// organization's closing line, the headline its footer editor holds
+// ("Liberty spreads the way fire does: one mind at a time."), set in the
+// display face over the columns with its mark beside it (Mark.astro), the
+// part after a colon in the accent's italic as the field hero sets it. The
+// line, the tagline and the buttons follow when the editor holds them; the
+// closing call's photo is not drawn here: the line is the whole call.
+import type { ClosingCall } from '@backgold/template-kit/lib/chrome'
+import Mark from './Mark.astro'
+
+interface Props {
+  call: ClosingCall
+}
+
+const { call } = Astro.props
+const line = call.headline.trim()
+const colon = /^(.*?:\s+)(\S.*)$/su.exec(line)
+const [lead, accent] = colon ? [colon[1]!, colon[2]!] : [line, null]
+---
+<div class="closing-call ak-closing">
+  <div class="closing-call-inner">
+    <div class="ak-closing-line">
+      <Mark />
+      <div class="closing-call-words">
+        <h2 class="closing-call-headline ak-closing-headline">{lead}{accent && <em>{accent}</em>}</h2>
+        {call.body && <p class="closing-call-body">{call.body}</p>}
+        {call.tagline && <p class="closing-call-tagline">{call.tagline}</p>}
+      </div>
+    </div>
+    {call.buttons.length > 0 && (
+      <p class="closing-call-actions">
+        {call.buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
+      </p>
+    )}
+  </div>
+</div>

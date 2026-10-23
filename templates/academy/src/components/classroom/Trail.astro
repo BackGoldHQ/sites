@@ -1,0 +1,22 @@
+---
+// The breadcrumb over a course and a lesson (board K3): "Courses →
+// Foundational Libertarian Leadership → Lesson 5", every step a link but
+// the last, which is the page itself.
+import Arrow from './Arrow.astro'
+
+interface Props {
+  steps: { label: string; href: string | null }[]
+}
+
+const { steps } = Astro.props
+---
+<nav class="kc-trail" aria-label="Breadcrumb">
+  <ol role="list">
+    {steps.map((step, i) => (
+      <li>
+        {i > 0 && <Arrow />}
+        {i < steps.length - 1 && step.href ? <a href={step.href}>{step.label}</a> : <span aria-current={i === steps.length - 1 ? 'page' : undefined}>{step.label}</span>}
+      </li>
+    ))}
+  </ol>
+</nav>

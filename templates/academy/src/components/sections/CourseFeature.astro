@@ -1,0 +1,131 @@
+---
+// Course · outline on the academy: one course as a feature card, the free
+// course a page leads visitors into (boards K1 and K4, "Start here"); the
+// Watch list's video pages draw it under every video too. The head: the
+// kicker "Start here" and the course's title at the left, its summary at the
+// right (the section's own kicker, heading and line in their place when it
+// carries them). The card: at the left the course's cover at its own
+// proportion with a play mark (to its first lesson) and, under it, the
+// course's facts as its page lists them (Lessons, Who can watch, and each
+// lesson whose rule is not the course's); at the right the course's title
+// (when the section's heading took the head), who can watch it as a chip and
+// its lesson count, its first four lessons as a ruled list (the number in
+// the accent, "Lesson N" over the title, and at the end Free, Done, Up next,
+// the lock and what opens it, or the length), then the main call, "Play
+// lesson 1" (for a visitor already under way, "Continue · Lesson N"), and
+// "See the syllabus" as a link. On a phone the cover sits over the list, the
+// facts drop, and a lock keeps its mark without its words.
+//
+// The course is `courseSlug` when one is given, else the section's pinned
+// course, else the one at this address, read for this visitor as the kit's
+// Course sections read it (their course.ts and lib/visitor.ts), so the locks
+// and the place are theirs. Nothing is drawn without a course.
+import type { Section } from '@backgold/content'
+import { safeHref } from '@backgold/astro/server'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { courseView, pinnedCourseOf, routeOf } from '@backgold/template-kit/components/sections/Course/course.ts'
+import { accessChipOf, clockOf, lessonsOf } from '@backgold/template-kit/lib/academy'
+import { text } from '@backgold/template-kit/lib/format'
+import { academyReads } from '@backgold/template-kit/lib/visitor'
+import Lock from '../Lock.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+  /** The course to draw, in place of the section's pin and the address's. */
+  courseSlug?: string
+}
+
+const { section, courseSlug } = Astro.props
+const reads = academyReads(Astro)
+const slug = courseSlug ?? pinnedCourseOf(section) ?? (await routeOf(Astro))?.course ?? null
+const found = slug ? await reads.course(slug) : null
+const view = found ? courseView(found.course, reads.visitor, Astro.url.pathname, reads.orgName) : null
+const courseHref = found ? safeHref(found.course.url) : null
+const kicker = text(section.copy.kicker) ?? 'Start here'
+const heading = text(section.copy.heading)
+const hasBody = text(section.copy.body) !== null
+const chip = found ? accessChipOf(found.course.access, found.course.lock?.tag_label ?? null) : null
+const free = found?.course.access === 'public' || found?.course.access === 'signed_in'
+const peek = view?.rows.slice(0, 4) ?? []
+const first = view?.rows[0] ?? null
+const call =
+  view?.progress && view.progress.completed > 0 && view.next?.row.href
+    ? { label: `Continue · Lesson ${view.next.row.n}`, href: view.next.row.href }
+    : first?.href
+      ? { label: 'Play lesson 1', href: first.href }
+      : null
+const two = (n: number) => String(n).padStart(2, '0')
+---
+{view && (
+  <Band section={section} class="ak-feature-band">
+    <div class="ak-head">
+      <div class="ak-head-title">
+        <p class="kicker">{kicker}</p>
+        <h2>{heading ?? view.title}</h2>
+      </div>
+      <div class="ak-head-aside">
+        {hasBody ? <Prose value={section.copy.body} class="lede" /> : view.summary && <p class="lede">{view.summary}</p>}
+      </div>
+    </div>
+    <article class="ak-feature">
+      <div class="ak-feature-media">
+        {call ? (
+          <a class="ak-feature-cover" href={call.href} tabindex="-1" aria-hidden="true">
+            {view.cover && <img src={view.cover} alt="" loading="lazy" decoding="async" />}
+            <span class="ak-play ak-play-lg"></span>
+          </a>
+        ) : (
+          <div class="ak-feature-cover" aria-hidden="true">
+            {view.cover && <img src={view.cover} alt="" loading="lazy" decoding="async" />}
+          </div>
+        )}
+        <dl class="ak-feature-facts">
+          <div><dt>Lessons</dt><dd>{view.lessons}</dd></div>
+          <div><dt>Who can watch</dt><dd>{view.whoCanWatch}</dd></div>
+          {view.exceptions.map((e) => <div><dt>Lesson {e.n}</dt><dd>{e.who}</dd></div>)}
+        </dl>
+      </div>
+      <div class="ak-feature-peek">
+        {heading && <h3 class="ak-feature-title">{courseHref ? <a href={courseHref}>{view.title}</a> : view.title}</h3>}
+        <p class="ak-feature-chips">
+          {chip && <span class:list={['ak-chip', free && 'ak-chip-gold']}>{!free && <Lock />}{chip}</span>}
+          <span class="ak-feature-count">{lessonsOf(view.lessons)}</span>
+        </p>
+        {peek.length > 0 && (
+          <ol class="ak-peek" role="list">
+            {peek.map((row) => (
+              <li class:list={['ak-peek-row', `is-${row.state}`]}>
+                <span class="ak-peek-n" aria-hidden="true">{two(row.n)}</span>
+                <span class="ak-peek-name">
+                  <span class="ak-peek-kicker">Lesson {row.n}<span class="visually-hidden">: </span></span>
+                  {row.href ? <a href={row.href}>{row.name}</a> : row.name}
+                </span>
+                <span class="ak-peek-end">
+                  {row.state === 'locked' ? (
+                    <><Lock /><span class="ak-peek-lock-word">{row.lockWord}</span></>
+                  ) : row.state === 'done' ? (
+                    'Done'
+                  ) : row.state === 'next' ? (
+                    <span class="ak-chip ak-chip-ember-line">Up next</span>
+                  ) : row.access === 'public' ? (
+                    <span class="ak-chip ak-chip-ember">Free</span>
+                  ) : (
+                    clockOf(row.seconds)
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {(call || courseHref) && (
+          <p class="ak-feature-calls">
+            {call && <a class="button" href={call.href}><span class="ak-play-glyph" aria-hidden="true"></span>{call.label}</a>}
+            {courseHref && <a class="ak-link" href={courseHref}>See the syllabus</a>}
+          </p>
+        )}
+      </div>
+    </article>
+  </Band>
+)}

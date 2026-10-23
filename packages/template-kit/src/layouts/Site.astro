@@ -13,6 +13,8 @@
 //                    repeats drawn once (src/lib/menu.ts); the
 //                    light and dark switch (ModeToggle, unless the site's
 //                    appearance is pinned); the header button at the right.
+//                    The template's `headerBrand` draws the brand in the kit's
+//                    place when it has one.
 //                    `centered`: the brand centred on a row of its own, the
 //                    menu centred under it with the switch and the button at
 //                    the row's right. On a phone both are the bar: the menu
@@ -55,7 +57,8 @@
 //                    BackGold". `columns`: the same with no strip.
 //                    `closing`: the columns under a closing call
 //                    (ClosingCall: the headline, line, tagline and buttons
-//                    the editor holds, over a photo when one is set).
+//                    the editor holds, over a photo when one is set; the
+//                    template's `closingCall` in its place when it has one).
 //                    `compact`: one row, the brand beside the social links,
 //                    then the legal line and the bottom row. The columns'
 //                    grid is as wide as the columns it has, so a footer with
@@ -208,6 +211,9 @@ const donateIn = (nodes: MenuNode[]): MenuNode | null => {
   return null
 }
 const donateLink = giving ? (donateIn(footerNodes) ?? donateIn(bottomRow) ?? (headerButton?.kind === 'donate' ? headerButton : null)) : null
+/** The footer's closing call and the header's brand: the template's own when it draws them, else the kit's. */
+const Closing = template.closingCall ?? ClosingCall
+const HeaderBrand = template.headerBrand ?? Brand
 /** Light, dark, or auto (the visitor's system, with the header's switch). */
 const appearance = appearanceOf(site.style)
 /** An auto site on a template that opens dark (src/template.ts `defaultAppearance`). */
@@ -259,7 +265,7 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
     <Area name="top_banner" areas={areas} components={sections} />
     <header class="site-header" data-layout={chrome.header.layout}>
       <div class="site-header-inner">
-        <Brand name={name} logoUrl={site.brand.logo_url} />
+        <HeaderBrand name={name} logoUrl={site.brand.logo_url} />
         {headerNodes.length > 0 && (
           <>
             <nav class="header-bar-menu" aria-label="Header menu">
@@ -299,7 +305,7 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
       <Area name="above_footer" areas={areas} components={aboveFooter} />
     </div>
     <footer class="site-footer" data-layout={chrome.footer.layout}>
-      {chrome.footer.closing && <ClosingCall call={chrome.footer.closing} />}
+      {chrome.footer.closing && <Closing call={chrome.footer.closing} />}
       <div class="site-footer-inner">
         {giving && <DonateStrip link={donateLink} />}
         {compact ? (

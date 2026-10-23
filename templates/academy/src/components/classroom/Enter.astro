@@ -1,0 +1,33 @@
+---
+// The classroom's two entrances (src/styles/classroom.css, its motion block):
+// a ring inside an element marked `data-kc-enter` draws its arc in from 0,
+// and a numeral marked `data-kc-enter` rises once. The stylesheet plays both
+// on the first paint, so what is on screen when the page opens moves then;
+// this script holds back what is below the fold (`data-kc-wait`, the start
+// of each entrance, with no animation) and lets it go as it scrolls into
+// view, once. Under prefers-reduced-motion: reduce the stylesheet plays
+// nothing and this script holds nothing back. Every component that draws a
+// ring or a numeral includes this file; Astro sends the script once.
+---
+<script>
+  const quiet = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!quiet && 'IntersectionObserver' in window) {
+    const below = [...document.querySelectorAll<HTMLElement>('[data-kc-enter]')].filter(
+      (el) => el.getBoundingClientRect().top > window.innerHeight,
+    )
+    const seen = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          entry.target.removeAttribute('data-kc-wait')
+          seen.unobserve(entry.target)
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    )
+    for (const el of below) {
+      el.setAttribute('data-kc-wait', '')
+      seen.observe(el)
+    }
+  }
+</script>
