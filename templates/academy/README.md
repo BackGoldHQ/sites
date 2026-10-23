@@ -54,24 +54,66 @@ names the door (sign in, join, or ask).
 ## What the academy draws itself
 
 The kit draws every section and page; the template draws some of them its
-own way (boards K1, K4 and K6 of the Kindling pass). Its sections are listed
-in `src/sections.ts`, each drawn through `src/components/sections/Kindled.astro`:
+own way (boards K1, K4 and K6 of the Kindling pass, turned up to full volume
+by its brief's §10). Its sections are listed in `src/sections.ts`, each drawn
+through `src/components/sections/Kindled.astro`.
+
+Every page alternates three grounds, mapped from the band an organization
+picks for a section: `plain` is night (the page), `tint` and `wash` are
+parchment (an ivory ground in night ink, with a paper grain, its calls
+filled in night), `panel` is smoke (the card ground) and `contrast` is the
+hearth (a deep ember-brown with a glow of the ember at a corner). Every
+color is mixed from the organization's theme (`src/styles/template.css` § 1;
+`src/lib/kindling.ts` for BackGold's frames on parchment), never pinned.
 
 | Where | What the academy draws |
 | --- | --- |
-| Hero · Field | The kit's field, the headline a size up, the second call as a link, and under the calls the proof line: "{courses} courses · {lessons} lessons · {videos} conversations and clips", each number counted from the Content API when the page is drawn (`src/lib/counts.ts`), never typed. |
+| Hero · Field | The kit's field on the night, burning three times as bright, the headline up to 7.5rem, the second call as a link, and under the calls the proof line: "{courses} courses · {lessons} lessons · {videos} conversations and clips", each number counted from the Content API when the page is drawn (`src/lib/counts.ts`), never typed. A Hero with a photo is a split: the words at the left and the photo at the right in an ember rim light (under the words on a phone). Under the page's opening hero, a strip of the ten newest conversations (`NEW · <title> · <length>`), carried across at reading pace, stopping for the pointer and the focus, still for reduced motion. |
 | Course · Outline | The free course as a feature card: "Start here", the course's title and summary, its cover with its facts (lessons, who can watch), its first four lessons (Free, the locks and what opens them), Play lesson 1 and See the syllabus. |
-| Collection (cards) | Conversations: the chapter mark (the site's icon on a hairline), "Watch", the heading, a line about who talks in them and "All conversations", then each entry's 16:9 still with a play mark, its title, its guest line, its length and date; three across, one on a phone. |
-| Pathways · Doors | Each door a title, a line and a link: "Start with <course>" when it opens a course, "Apply" when it opens `/join`, else the section's link label or "Start here". |
-| The video list, and a news list that holds videos alone | "Watch.": the videos grouped by their `series` term (Conversations, Training clips, Live sessions; a video with none is a training clip), each group counted, newest eight (four on a phone) with a link to the series' own list. A news list with a post or an episode in it is the kit's. |
+| Collection (cards) | Conversations: the chapter mark (the site's icon on a hairline), "Watch", the heading, a line about who talks in them and "All conversations", then each entry's 16:9 still with a play mark, its title, its guest line, its length and date: the newest across two thirds, the next two stacked beside it; one under another on a phone. |
+| Pathways · Doors | A ruled list: each pathway's number in the gold, its title, its line, and its link at the right: "Start with <course>" when it opens a course, "Apply" when it opens `/join`, else the section's link label or "Start here". |
+| Issues · Steps | Each step under its rule with its number at 6rem in the gold. |
+| The video list, and a news list that holds videos alone | "Watch.": the videos grouped by their `series` term (Conversations, Training clips, Live sessions; a video with none is a training clip), each group headed at 3rem and counted in a 4rem numeral, newest eight (four on a phone) with a link to the series' own list. A news list with a post or an episode in it is the kit's. |
 | A video's page | The theater: the player, the title, the summary, the series, length, date and byline, Watch on YouTube, the five newest videos of its series beside it, then the free course's feature card. |
 | The header's brand | The site's icon beside the name set in type ("Libertarian Leadership" / "ACADEMY"); the header's button an outline. |
 | The footer | On the page's ground; its closing call (the `closing` layout) as the site's closing line in the display face beside the icon. |
 
-Kickers sit over an ember rule and the heading under one rises as it comes
-into view, and the proof line's numbers roll up once; all of it is the
-stylesheet's § Motion and `src/scripts/motion.ts`, and none of it runs for a
-visitor who asked for reduced motion.
+On the hearth the classroom's course cards are paper with night ink, the
+ring in gold on a night disc. Kickers sit over an ember rule, every ember
+line glows, the heading under a kicker rises as it comes into view, and the
+proof line's numbers roll up once; all of it is the stylesheet's § Motion and
+`src/scripts/motion.ts`, and none of it runs for a visitor who asked for
+reduced motion.
+
+## Watch Live
+
+When the organization's connected YouTube channel is on the air, every
+template on the kit says so; the academy draws the page its own way.
+
+- **The header rule.** While the Content API's `GET /live` answers a stream
+  whose `status` is `live`, the header menu's last item, before the header
+  button, is **Watch Live** with a dot in the state red (`--live`, a state,
+  never an animation), current on `/live`; the phone sheet carries it too.
+  Nothing is drawn while a stream is only `upcoming` or the channel is off.
+- **The route.** `/live` is the kit's own (`routes/live.astro`, injected for
+  every template like `/volunteer`): live, the player (`embed_url` with
+  `autoplay=1&rel=0`), the title as the h1, "Live now · since <time>" in the
+  visitor's zone, the live chat beside the player (under the words on a
+  phone) and Open on YouTube; upcoming, the still with a play mark, "Next
+  live: <day and time>" and Open on YouTube; off, "Not live right now", one
+  line and the three newest videos. Above the footer (the Academy letter)
+  draws under it in every state; it is never blank.
+- **The hook.** A template draws the page its own way with `livePage` in
+  its `src/template.ts`, given `LivePageProps` from
+  `@backgold/template-kit/lib/stream`; the academy's is
+  `src/components/Live.astro`: the theater around the player, the chat in a
+  smoke panel, the kicker WATCH LIVE over the title, and the newest
+  conversations as its video cards while it is off.
+- **Freshness.** `GET /live` is read once a request and held for a minute
+  (`client.live()`, never under the content version), and the edge cache
+  keys every page on it, so the item and the page change within about a
+  minute of the stream starting or ending. Until the api serves `GET /live`
+  (a 404), the site draws nothing live.
 
 ## Signing in
 

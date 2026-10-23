@@ -28,6 +28,13 @@
 //                                         with its list's intro (newsBaseData);
 //                                         --template candidate serves at /news
 //                                         without it
+//   node scripts/starter-e2e.mjs --serve --live live
+//                                         the same, with the fixture's YouTube
+//                                         stream (GET /live) live (or
+//                                         `upcoming`; `off`, the default);
+//                                         change it while serving with
+//                                         POST <fixture>/__live?state=<state>,
+//                                         then the Worker's revalidate
 //   node scripts/starter-e2e.mjs --lighthouse
 //                                         also score home and an entry page with
 //                                         Lighthouse (performance, accessibility,
@@ -107,6 +114,13 @@ const SERVE = process.argv.includes('--serve')
 // --serve: the organization at /news (newsBaseData), always on the candidate template.
 const SERVE_NEWS = SERVE && (process.argv.includes('--news') || TEMPLATE_NAME === 'candidate')
 const KEEP = SERVE || process.argv.includes('--keep')
+// --serve --live <state>: the fixture's stream as the run starts (liveStream).
+const LIVE_FLAG = process.argv.indexOf('--live')
+const LIVE_AT_START = LIVE_FLAG === -1 ? 'off' : process.argv[LIVE_FLAG + 1]
+if (!['live', 'upcoming', 'off'].includes(LIVE_AT_START)) {
+  process.stderr.write('--live takes live, upcoming or off\n')
+  process.exit(2)
+}
 const LIGHTHOUSE = process.argv.includes('--lighthouse')
 const LIGHTHOUSE_VERSION = '13.5.0'
 const LIGHTHOUSE_MIN = 95
@@ -1264,6 +1278,11 @@ function fixtureData(ex, kitchenSections) {
   const { body: _b3, fields: _f3, ...endorsementSummary } = endorsement
   const { body: _b4, fields: _f4, ...quarryRoadSummary } = quarryRoad
   const { body: _b5, fields: _f5, ...issueSummary } = issue
+  // The video list (GET /entries/video) the /live page draws its newest three from while nothing is on.
+  const videoSummaries = ['Ask the treasurer', 'Reading the levy', 'The budget hearing', 'Door to door'].map((title, i) => {
+    const slug = title.toLowerCase().replace(/ /g, '-')
+    return { ...postSummary, id: `ci_video_${i + 1}`, slug, type: 'video', title, summary: null, url: `/videos/${slug}`, hero: null, terms: [], authors: [], publish_at: `2026-10-${20 - i}T18:00:00.000Z`, updated_at: `2026-10-${20 - i}T18:00:00.000Z` }
+  })
 
   const homeSections = (headline) => [
     { ...hero, band: 'plain', copy: { ...hero.copy, headline } },
@@ -1801,7 +1820,7 @@ function fixtureData(ex, kitchenSections) {
                   ? { ...boardPage('lp_a1', 'a1-home', 'A1 home', a1Sections), areas: a1Areas }
                   : null,
     entryAreas,
-    entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary, quarryRoadSummary], newsletter: [issueSummary] },
+    entries: { post: [postSummary, secondSummary], endorsement: [endorsementSummary, quarryRoadSummary], newsletter: [issueSummary], video: videoSummaries },
     pageSize: { endorsement: 1 },
     entry: { post: { [post.slug]: post, [secondPost.slug]: secondPost }, endorsement: { [endorsement.slug]: endorsement, [quarryRoad.slug]: quarryRoad }, newsletter: { [issue.slug]: issue } },
     terms: { tag: ex.TermsResponse },
@@ -1902,13 +1921,38 @@ function previewDraft(page) {
   }
 }
 
+/**
+ * What GET /live answers in each state: a past stream of the Libertarian
+ * Leadership Academy's channel (a real id: YouTube's frame draws its own
+ * answer for it, which for this video is that it plays only on YouTube),
+ * live since 42 minutes before the run or scheduled three days after it;
+ * null while the channel is off.
+ */
+const LIVE_VIDEO = 'J54IfAUoJdQ'
+const LIVE_RUN_AT = Date.now()
+function liveStream(status) {
+  if (status !== 'live' && status !== 'upcoming') return null
+  return {
+    status,
+    video_id: LIVE_VIDEO,
+    url: `https://www.youtube.com/watch?v=${LIVE_VIDEO}`,
+    embed_url: `https://www.youtube.com/embed/${LIVE_VIDEO}`,
+    title: status === 'live' ? 'Live from the levy hearing' : 'Thursday night live: the levy vote',
+    thumbnail_url: `https://i.ytimg.com/vi/${LIVE_VIDEO}/hqdefault.jpg`,
+    scheduled_start_at: status === 'upcoming' ? new Date(LIVE_RUN_AT + 3 * 86400000).toISOString().replace(/T.*/, 'T23:30:00.000Z') : null,
+    started_at: status === 'live' ? new Date(LIVE_RUN_AT - 42 * 60000).toISOString() : null,
+    channel_title: 'Pine Valley Liberty',
+  }
+}
+
 function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = false } = {}) {
   const plain = fixtureData(examples, kitchenSections)
   const based = blogBase === 'news' ? newsBaseData(plain, examples) : plain
   // `academy`: the organization is an academy on the academy template's starter (withAcademy).
   const data = academy ? withAcademy(based, examples) : withNonprofit(withCandidate(based, examples), examples)
   // `progress`: what the lesson pages saved, as the api took it; `done`, the lessons it marked finished.
-  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '', progress: [], done: new Set() }
+  // `live`: the organization's YouTube stream as GET /live answers it (liveStream), `live`, `upcoming` or `off`.
+  const state = { version: 184, headline: 'Keep more of what you earn.', requests: new Map(), seen: [], total: 0, origin: '', progress: [], done: new Set(), live: LIVE_AT_START }
   const MOUNT = '/api/content/v1'
   // The Content API answers every origin itself (a browser on the site reads
   // GET /events/live with the publishable key), as the api's contentApiCors does.
@@ -1931,7 +1975,10 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
   const answer = (req, res, rawBody) => {
     const url = new URL(req.url, 'http://fixture')
     const path = url.pathname.startsWith(MOUNT) ? url.pathname.slice(MOUNT.length) : null
-    state.total++
+    // The stream is read once a minute whatever the page (GET /live, outside
+    // the content version), so the request counts the caching checks read are
+    // of everything else.
+    if (path !== '/live') state.total++
     state.requests.set(url.pathname, (state.requests.get(url.pathname) ?? 0) + 1)
     const etag = `"v${state.version}"`
     const headers = { 'Content-Type': 'application/json', 'X-Content-Version': String(state.version), ETag: etag, ...CORS }
@@ -1944,6 +1991,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
     // Worker's /api/backgold/revalidate so the edge cache moves to a new version.
     if (url.pathname === '/__bump' && req.method === 'POST') {
       state.version++
+      res.writeHead(204)
+      return res.end()
+    }
+    // --serve: the stream's state (live, upcoming, off); the Worker holds its last answer a minute, or until its revalidate.
+    if (url.pathname === '/__live' && req.method === 'POST' && ['live', 'upcoming', 'off'].includes(url.searchParams.get('state'))) {
+      state.live = url.searchParams.get('state')
       res.writeHead(204)
       return res.end()
     }
@@ -2045,6 +2098,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
       const events = ids.filter((id) => Object.hasOwn(data.events.live, id)).map((id) => ({ id, ...data.events.live[id] }))
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30', ...CORS })
       return res.end(JSON.stringify({ events }))
+    }
+
+    // GET /live: the organization's YouTube stream in the run's state, outside the content version.
+    if (parts[0] === 'live' && parts.length === 1) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...CORS })
+      return res.end(JSON.stringify({ live: liveStream(state.live) }))
     }
 
     // GET /shifts/live?ids=: a volunteer shift's counts and state, outside the content version (an organization with a shift feed only).
@@ -4599,6 +4658,96 @@ async function checkVolunteer(origin, fixture) {
   check(res.status === 200 && (await res.text()).includes('data-bg-fr="shift"'), "the fixture's stand-in frame answers at /embed/shift/")
 }
 
+// ── Watch Live (every template on the kit) ───────────────────────────────────
+
+/**
+ * The organization's YouTube stream (GET /live): the header's Watch Live item
+ * while it is live and at no other time, and /live in each of its three
+ * states, drawn by the kit's page or the template's `livePage`. Each step
+ * moves the fixture's state and calls the Worker's revalidate, which drops
+ * the client's held answer, so the edge cache's key moves with the stream.
+ */
+async function checkWatchLive(origin, fixture) {
+  log('\nWatch Live: the header item while the stream is live, and /live live, upcoming and off')
+  const to = async (status) => {
+    fixture.state.live = status
+    const res = await get(origin, '/api/backgold/revalidate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${WEBHOOK_SECRET}` } })
+    await res.text()
+    if (res.status !== 204) throw new CheckFailed(`revalidate answered ${res.status}`)
+  }
+  const read = async (path) => {
+    const res = await get(origin, path)
+    return { res, html: await res.text() }
+  }
+  const header = (html) => /<header class="site-header"[\s\S]*?<\/header>/.exec(html)?.[0] ?? ''
+  const main = (html) => /<main\b[\s\S]*?<\/main>/.exec(html)?.[0] ?? ''
+  const h1 = (html) => plain(/<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(main(html))?.[1] ?? '')
+  const title = (html) => plain(/<title>([\s\S]*?)<\/title>/.exec(html)?.[1] ?? '')
+  const AMP = '(?:&amp;|&)'
+  const player = new RegExp(`<iframe\\b[^>]*src="https://www\\.youtube\\.com/embed/${LIVE_VIDEO}\\?autoplay=1${AMP}rel=0"[^>]*>`)
+  const watch = `https://www.youtube.com/watch?v=${LIVE_VIDEO}`
+
+  await to('off')
+  let { res, html } = await read('/')
+  check(res.status === 200 && !/href="\/live"/.test(header(html)), 'off the air, the header has no Watch Live')
+  ;({ res, html } = await read('/live'))
+  const newest = [...new Set([...main(html).matchAll(/href="(\/videos\/[^"]+)"/g)].map((m) => m[1]))]
+  check(
+    res.status === 200 && h1(html) === 'Not live right now' && plain(main(html)).includes('goes live, the stream plays here.') && !player.test(html),
+    `/live off the air: "Not live right now" as its h1, the line under it, no player (h1: ${h1(html)})`,
+  )
+  check(
+    newest.join(' ') === '/videos/ask-the-treasurer /videos/reading-the-levy /videos/the-budget-hearing',
+    `and the three newest videos as cards (${newest.join(' ')})`,
+  )
+  check(title(html).startsWith('Watch Live · ') && /public, max-age=60/.test(res.headers.get('cache-control') ?? ''), `its title is "${title(html)}", and a browser may keep it a minute (${res.headers.get('cache-control')})`)
+
+  await to('live')
+  ;({ res, html } = await read('/'))
+  const bar = /<nav class="header-bar-menu"[\s\S]*?<\/nav>/.exec(header(html))?.[0] ?? ''
+  const barLinks = [...bar.matchAll(/<a\b[^>]*href="([^"]+)"/g)].map((m) => m[1])
+  const sheet = /<div class="header-sheet-panel"[\s\S]*?<\/nav>/.exec(header(html))?.[0] ?? ''
+  check(
+    res.headers.get('x-backgold-cache') === 'MISS' && barLinks.at(-1) === '/live' && /<span class="live-dot"[^>]*><\/span>\s*Watch Live/.test(bar) && /href="\/live"/.test(sheet),
+    `live, home renders afresh (${res.headers.get('x-backgold-cache')}) with Watch Live, its dot, as the bar's last item (${barLinks.join(' ')}) and in the phone sheet`,
+  )
+  ;({ res, html } = await read('/live'))
+  const chat = new RegExp(`<iframe\\b[^>]*src="https://www\\.youtube\\.com/live_chat\\?v=${LIVE_VIDEO}${AMP}embed_domain=127\\.0\\.0\\.1(?:${AMP}dark_theme=1)?"`)
+  const frame = player.exec(html)?.[0] ?? ''
+  check(
+    res.status === 200 && /allow="[^"]*autoplay[^"]*picture-in-picture[^"]*fullscreen/.test(frame) && /\ballowfullscreen\b/.test(frame) && chat.test(html),
+    '/live live: the stream in YouTube\'s player (autoplay, fullscreen, picture in picture) and its live chat for this host',
+  )
+  const started = liveStream('live').started_at
+  check(
+    h1(html) === 'Live from the levy hearing' && new RegExp(`Live now · since <time datetime="${started}" data-bg-local="time"[^>]*>\\d{1,2}:\\d{2}\\s[AP]M UTC</time>`).test(main(html).replace(/ data-astro-[a-z-]+(="[^"]*")?/g, '')),
+    `its title as the h1 (${h1(html)}), "Live now · since" its start, written in UTC for the visitor's zone to replace`,
+  )
+  check(
+    new RegExp(`<a\\b[^>]*href="${watch.replace(/[?.]/g, '\\$&')}"[^>]*>\\s*Open on YouTube`).test(main(html)) && /<a href="\/live" aria-current="page"/.test(header(html)) && title(html).startsWith('Live now: Live from the levy hearing · '),
+    `Open on YouTube, Watch Live current in the header, and the title "${title(html)}"`,
+  )
+  ;({ res } = await read('/live'))
+  check(res.headers.get('x-backgold-cache') === 'HIT', `and the live page is served from its own stored copy next time (${res.headers.get('x-backgold-cache')})`)
+
+  await to('upcoming')
+  ;({ res, html } = await read('/'))
+  check(!/href="\/live"/.test(header(html)), 'upcoming, the header has no Watch Live: the item is for a stream on the air')
+  ;({ res, html } = await read('/live'))
+  check(
+    h1(html) === 'Thursday night live: the levy vote' &&
+      !player.test(html) &&
+      new RegExp(`<a\\b[^>]*href="${watch.replace(/[?.]/g, '\\$&')}"[^>]*>\\s*<img\\b[^>]*src="https://i\\.ytimg\\.com/vi/${LIVE_VIDEO}/hqdefault\\.jpg"`).test(main(html)) &&
+      /Next live: <time datetime="[^"]+T23:30:00\.000Z" data-bg-local="day"[^>]*>[A-Z][a-z]+day, [A-Z][a-z]+ \d{1,2} at 11:30\sPM UTC<\/time>/.test(main(html).replace(/ data-astro-[a-z-]+(="[^"]*")?/g, '')) &&
+      title(html).startsWith('Next live: '),
+    `/live upcoming: the still opening it on YouTube, its title as the h1, "Next live:" its day and time, no player (h1: ${h1(html)})`,
+  )
+
+  await to('off')
+  ;({ res, html } = await read('/'))
+  check(res.headers.get('x-backgold-cache') === 'HIT' && !/href="\/live"/.test(header(html)), `off again, home is its stored off-air copy (${res.headers.get('x-backgold-cache')}), with no Watch Live`)
+}
+
 // ── The nonprofit template (--template nonprofit) ────────────────────────────
 //
 // Its starter pages (templates/nonprofit/template.json) as the fixture serves
@@ -5777,6 +5926,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
   if (SERVE) {
     log(`\nServing ${configured.origin} (fixture api ${fixture.origin}). Ctrl-C to stop.`)
     log(`After rebuilding ${siteDir}: curl -X POST ${fixture.origin}/__bump && curl -X POST -H 'Authorization: Bearer ${WEBHOOK_SECRET}' ${configured.origin}/api/backgold/revalidate`)
+    log(`The stream (${fixture.state.live}): curl -X POST '${fixture.origin}/__live?state=live' (or upcoming, off), then the same revalidate`)
     await new Promise(() => {})
   }
   try {
@@ -5794,6 +5944,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
     if (CANDIDATE) await checkCandidateLook(configured.origin, chrome, fixture)
     if (NONPROFIT) await checkNonprofit(configured.origin)
     if (PARTY || NONPROFIT) await checkVolunteer(configured.origin, fixture)
+    if (ON_KIT) await checkWatchLive(configured.origin, fixture)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

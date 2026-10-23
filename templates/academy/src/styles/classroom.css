@@ -687,7 +687,10 @@
 .kc-row-n {
   grid-area: n;
   align-self: start;
+  /* Two figures on one line, in a cell as wide as the widest pair. */
+  min-width: 2.3ch;
   font-size: 2.5rem;
+  white-space: nowrap;
 }
 .kc-row-name {
   grid-area: name;

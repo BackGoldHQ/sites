@@ -2,7 +2,8 @@
 // § Motion holds the rest), loaded once a page from Kindled.astro. The page
 // as the server sends it is the finished page: nothing here runs for a
 // visitor who asked for reduced motion, and nothing it does hides a word for
-// good. Nothing loops (the field hero's motes are the kit's).
+// good. Nothing here loops (the field hero's motes are the kit's, the
+// strip under it the stylesheet's).
 //
 //   odometer  the field hero's proof line (`[data-ak-count]`): each count
 //             rolls up once on load, each digit in its cell from 0. Counts
@@ -14,9 +15,9 @@
 //             timeline as it comes in.
 //   kindle    elsewhere, from the visitor's first scroll, each section's
 //             kicker and the heading under it that are still below the fold
-//             wait (`ak-wait`) and play once as they come into view
-//             (`ak-lit`): the ember rule draws in under the kicker, the
-//             heading rises. Before that first scroll nothing waits, so a
+//             wait (`ak-wait`) and play once as the scroll brings them up,
+//             or past (`ak-lit`): the ember rule draws in under the kicker,
+//             the heading rises. Before that first scroll nothing waits, so a
 //             page read without scrolling is the finished page.
 
 /** Rolls a figure's digits up from 0 in their cells, the rightmost first. */
@@ -41,29 +42,32 @@ function seen(): void {
   document.documentElement.classList.add('ak-scroll')
 }
 
-/** The section kickers and the headings under them still below the fold wait, then play once as they come into view. */
+/** The section kickers and the headings under them still below the fold wait, then play once as the scroll brings them up (or past). */
 function kindle(): void {
-  const targets = [...document.querySelectorAll<HTMLElement>('main .bg-section .kicker + h2')].flatMap((h) => [h.previousElementSibling as HTMLElement, h])
-  const below = targets.filter((el) => el.getBoundingClientRect().top > innerHeight)
-  if (below.length === 0) return
-  const io = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue
-        io.unobserve(entry.target)
-        entry.target.classList.replace('ak-wait', 'ak-lit')
-      }
-    },
-    { rootMargin: '0px 0px -12% 0px' },
-  )
-  for (const el of below) {
-    el.classList.add('ak-wait')
-    io.observe(el)
+  const held = new Set([...document.querySelectorAll<HTMLElement>('main .bg-section .kicker + h2')].flatMap((h) => [h.previousElementSibling as HTMLElement, h]).filter((el) => el.getBoundingClientRect().top > innerHeight))
+  for (const el of held) el.classList.add('ak-wait')
+  let queued = false
+  const sweep = () => {
+    queued = false
+    const line = innerHeight * 0.88
+    for (const el of held) {
+      if (el.getBoundingClientRect().top >= line) continue
+      el.classList.replace('ak-wait', 'ak-lit')
+      held.delete(el)
+    }
+    if (held.size === 0) removeEventListener('scroll', onScroll)
   }
+  const onScroll = () => {
+    if (queued) return
+    queued = true
+    requestAnimationFrame(sweep)
+  }
+  addEventListener('scroll', onScroll, { passive: true })
+  onScroll()
 }
 
 if (matchMedia('(prefers-reduced-motion: no-preference)').matches) {
   document.querySelectorAll<HTMLElement>('.ak-proof [data-ak-count]').forEach(odometer)
   if (CSS.supports('animation-timeline: view()')) seen()
-  else if ('IntersectionObserver' in window) addEventListener('scroll', kindle, { once: true, passive: true })
+  else addEventListener('scroll', kindle, { once: true, passive: true })
 }

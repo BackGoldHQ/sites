@@ -27,18 +27,22 @@ interface Props {
   level?: 2 | 3
   /** Draw the play mark: the card is a video. */
   play?: boolean
+  /** The newest of the conversations (`lead`: the title at 2rem) or one beside it (`side`); left out, a card of a grid. */
+  size?: 'lead' | 'side'
+  /** Load the still with the page (a card near the fold); left out, it loads as it nears the window. */
+  eager?: boolean
 }
 
-const { card, level = 3, play = true } = Astro.props
+const { card, level = 3, play = true, size, eager = false } = Astro.props
 const Title = level === 2 ? 'h2' : 'h3'
 const length = clockOf(card.seconds)
 const day = shortDate(card.date)
 const words = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 const guest = card.summary && !words(card.summary).startsWith(words(card.title)) ? card.summary : null
 ---
-<article class:list={['ak-video', card.href && 'ak-video-linked']}>
+<article class:list={['ak-video', card.href && 'ak-video-linked', size && `ak-video-${size}`]}>
   <div class:list={['ak-video-still', !card.still && 'ak-video-still-bare']}>
-    {card.still ? <img src={card.still} alt="" loading="lazy" decoding="async" /> : <span class="ak-video-stand-in" aria-hidden="true">{card.title}</span>}
+    {card.still ? <img src={card.still} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" /> : <span class="ak-video-stand-in" aria-hidden="true">{card.title}</span>}
     {card.live && <span class="ak-chip ak-chip-live"><span class="ak-flame" aria-hidden="true"></span>Live</span>}
     {play && <span class="ak-play" aria-hidden="true"></span>}
   </div>

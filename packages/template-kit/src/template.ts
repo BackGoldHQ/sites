@@ -98,6 +98,13 @@ export interface TemplateConfig {
   /** The component that draws the 404 page's content. Left out, the kit's (components/NotFound.astro). */
   notFound?: AstroComponent
   /**
+   * The component that draws the /live page's content (the organization's
+   * YouTube stream: live, upcoming, or off the air), given LivePageProps
+   * (lib/stream.ts) under the site's header and footer. Left out, the kit's
+   * (components/live/LivePage.astro).
+   */
+  livePage?: AstroComponent
+  /**
    * The component that draws the footer's closing call on its `closing`
    * layout, given `{ call }` (a ClosingCall, lib/chrome.ts): a template's
    * own closing line over the columns. Left out, the kit's

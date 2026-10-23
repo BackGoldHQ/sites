@@ -2,24 +2,103 @@
   What the academy template draws differently from the kit's stylesheet
   (@backgold/template-kit's src/styles/site.css and entries.css): a classroom
   lit at night, in the vocabulary of fire (board set K, the Kindling brief
-  §6). Everything reads the kit's tokens, so the organization's theme owns
-  every colour: the "ember" is the band's main call (--button, its ink
-  --button-ink), the "gold" its accent (--accent), the "smoke" its card
-  ground (--surface); the template never pins a colour of its own. The
-  Classroom, Course and Lesson sections carry their own look (boards D1 to
-  D3, K2, K3). This file loads after the kit's on every page.
+  §6 and §10). Everything reads the kit's tokens or mixes them, so the
+  organization's theme owns every colour: the "ember" is the page's main
+  call, the "gold" its accent, the "smoke" its card ground; the template
+  never pins a colour of its own. The Classroom, Course and Lesson sections
+  carry their own look (boards K2, K3; src/styles/classroom.css), which this
+  file carries onto the grounds. It loads after the kit's and the
+  classroom's on every page.
 
-  1. Tokens and rhythm   2. The header   3. Bands and heads
-  4. The field hero and its proof line   5. Cards   6. The feature card
-  7. Conversations   8. The Watch list   9. A video's page   10. Doors
-  11. The letter   12. The footer   § Motion   then the kill switch.
+  At full volume (§10): three grounds alternate down every page, night (the
+  page), parchment (an ivory ground in night ink, with a paper grain) and
+  hearth (a deep ember-brown ground with a strong glow of the ember at a
+  corner); the type is set large; every ember line glows.
+
+  1. Tokens, grounds and rhythm   2. The header   3. Bands and heads
+  4. The field hero, its proof line and the strip under it   5. Cards
+  6. The feature card   7. Conversations   8. The Watch list
+  9. A video's page   10. The paths   11. The steps   12. The classroom on
+  the hearth   13. The letter   14. The footer   § Motion   then the kill
+  switch.
 */
 
-/* ── 1. Tokens and rhythm ── */
+/* ── 1. Tokens, grounds and rhythm ── */
 
 :root {
   /* The one easing: hard, never springy (MOTION.md rule 4). */
   --ak-ease: cubic-bezier(0.2, 0, 0, 1);
+  /*
+    The Kindling colors, every one the theme's or mixed from it (the page's
+    band, its accent and its call, the contrast band's ground):
+      gold       the page's accent: kickers, rings, numerals
+      ember      the page's call: the calls, every ember line and its glow
+      ink        the darkest ground the theme has (its contrast ground taken
+                 toward black): the ink on parchment and the night disc
+      parchment  white with a breath of the gold: the ivory ground
+      paper      the parchment whiter still: a card on the hearth
+      hearth     the ink with the ember stirred in: a deep ember-brown
+    src/lib/kindling.ts mixes the same for BackGold's frames.
+  */
+  --ak-gold: var(--band-plain-accent);
+  --ak-ember: var(--band-plain-button);
+  --ak-ember-ink: var(--band-plain-button-ink);
+  --ak-ink: color-mix(in srgb, var(--band-contrast) 60%, black);
+  --ak-parchment: color-mix(in srgb, var(--ak-gold) 13%, white);
+  --ak-paper: color-mix(in srgb, var(--ak-parchment) 40%, white);
+  --ak-hearth: color-mix(in srgb, var(--ak-ember) 18%, var(--ak-ink));
+  --ak-glow: 0 0 12px color-mix(in srgb, var(--ak-ember) 35%, transparent);
+  /* The ember as text: itself on a dark ground (parchment takes it toward the ink). */
+  --ak-ember-text: var(--ak-ember);
+  /* The paper's grain: fine noise, black at a few percent, tiled. */
+  --ak-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* The type at full size: body 17 px, ledes 20 px, section headings to 4rem. */
+  --text: 1.0625rem;
+  --text-lg: 1.25rem;
+  --h2: clamp(2.5rem, 1.6rem + 2.6vw, 4rem);
+}
+/* The grain is off for a visitor who asked for less motion and under forced colors. */
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  :root {
+    --ak-grain: none;
+  }
+}
+.prose h2 {
+  font-size: calc(var(--h2) * 0.6);
+}
+
+/*
+  The grounds, mapped from the bands an organization picks: plain is night
+  (the kit's own), tint and wash are parchment, panel is smoke (the kit's
+  card ground), contrast is the hearth. On parchment the ink is night, the
+  links are night, a button is night-filled with parchment ink, and the gold
+  and the ember are taken toward the ink until they read as text; the ember
+  of a line stays the ember.
+*/
+.bg-band-tint,
+.bg-band-wash {
+  --bg-band-background: var(--ak-parchment);
+  --bg-band-color: var(--ak-ink);
+  --ink: var(--ak-ink);
+  --muted: color-mix(in srgb, var(--ak-ink) 68%, var(--ak-parchment));
+  --accent: color-mix(in srgb, var(--ak-gold) 45%, var(--ak-ink));
+  --link: var(--ak-ink);
+  --button: var(--ak-ink);
+  --button-ink: var(--ak-parchment);
+  --button-2: var(--ak-ink);
+  --button-2-ink: var(--ak-parchment);
+  --surface: var(--ak-paper);
+  --line: color-mix(in srgb, var(--ak-ink) 14%, var(--ak-parchment));
+  --line-strong: color-mix(in srgb, var(--ak-ink) 35%, var(--ak-parchment));
+  --ak-ember-text: color-mix(in srgb, var(--ak-ember) 60%, var(--ak-ink));
+  background-color: var(--ak-parchment);
+  background-image: var(--ak-grain);
+}
+.bg-band-contrast {
+  --bg-band-background: var(--ak-hearth);
+  --surface: color-mix(in srgb, var(--ak-ember) 7%, var(--ak-hearth));
+  background-color: var(--ak-hearth);
+  background-image: radial-gradient(60rem 36rem at 0% 100%, color-mix(in srgb, var(--ak-ember) 18%, transparent), transparent 70%);
 }
 
 /* Headings in the display face at one weight: a theme's display face that has only a regular cut is never thickened. */
@@ -43,7 +122,8 @@ main .bg-section .kicker:has(+ :is(h1, h2))::after,
   height: 2px;
   margin-top: 0.625rem;
   border-radius: 1px;
-  background: var(--button);
+  background: var(--ak-ember);
+  box-shadow: var(--ak-glow);
   transform-origin: left center;
 }
 main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
@@ -64,7 +144,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   color: var(--ink);
   font-weight: 600;
   text-decoration: underline;
-  text-decoration-color: var(--button);
+  text-decoration-color: var(--ak-ember);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.35em;
 }
@@ -72,7 +152,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   content: '\00a0\2192';
   display: inline-block;
   margin-left: 0.25rem;
-  color: var(--button);
+  color: var(--ak-ember-text);
   text-decoration: none;
 }
 .ak-link:hover {
@@ -111,7 +191,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50% 0 50% 50%;
-  background: var(--button);
+  background: var(--ak-ember);
   rotate: -45deg;
 }
 /* The play glyph on a call ("Play lesson 1"). */
@@ -138,6 +218,10 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   background: transparent;
   box-shadow: none;
   border: 1px solid var(--line-strong);
+}
+/* On parchment a call is night, flat. */
+:is(.bg-band-tint, .bg-band-wash) .button:not(.button-quiet) {
+  background: var(--button);
 }
 .button.button-quiet:hover,
 .button.button-quiet:focus-visible {
@@ -181,7 +265,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   background: transparent;
   color: var(--ink);
   text-decoration: underline;
-  text-decoration-color: var(--button);
+  text-decoration-color: var(--ak-ember);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.65em;
 }
@@ -209,10 +293,6 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 .bg-section + .bg-section {
   border-top: 1px solid var(--line);
 }
-/* The hearth: the contrast band carries one still glow of the ember at its bottom left corner. */
-.bg-section.bg-band-contrast {
-  background-image: radial-gradient(52rem 30rem at 0% 100%, color-mix(in srgb, var(--button) 6%, transparent), transparent 70%);
-}
 /* A section's head as the academy sets it: the kicker and the heading at the left, the line under them (and its link) at the right. */
 .ak-head {
   display: grid;
@@ -226,8 +306,8 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 }
 .ak-head h2 {
   margin: 0;
-  font-size: clamp(2.25rem, 1.5rem + 2.4vw, 3.5rem);
-  line-height: 1.04;
+  font-size: var(--h2);
+  line-height: 1;
 }
 .ak-head .lede {
   margin: 0;
@@ -242,20 +322,90 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   }
 }
 
-/* ── 4. The field hero and its proof line ── */
+/* ── 4. The field hero, its proof line and the strip under it ── */
 
+/* The field is the night sky whatever band it was given, and burns three times as bright (its motes, its wisps, its trails). */
+.bg-section.hero-field {
+  --field-glow: 3;
+  background-color: var(--ak-ink);
+  background-image: none;
+}
 .bg-section.hero-field .field-words {
-  max-width: 56rem;
+  max-width: 60rem;
 }
 .bg-section.hero-field .field-headline {
-  font-size: clamp(2.75rem, 1.5rem + 4.6vw, 5.5rem);
+  font-size: clamp(3.25rem, 2rem + 5.2vw, 7.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.025em;
 }
 /* The clause after the colon, in the ember's italic. */
 .bg-section.hero-field .field-headline em {
-  color: var(--button);
+  color: var(--ak-ember);
 }
 .bg-section.hero-field .field-lede {
-  max-width: 36em;
+  max-width: 34em;
+  font-size: var(--text-lg);
+}
+/* The split (a hero with a photo): the words at the left, the portrait at the right. */
+/* The field burns dimmer behind the words, so the headline and the lede read over it. */
+.bg-section.hero-field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(60% 70% at 50% 45%, color-mix(in srgb, var(--ak-ink) 78%, transparent), transparent 75%);
+  pointer-events: none;
+}
+.bg-section.hero-field-split::after {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ak-ink) 80%, transparent) 0%, color-mix(in srgb, var(--ak-ink) 60%, transparent) 55%, transparent 80%);
+}
+@media (min-width: 56rem) {
+  .bg-section.hero-field-split::after {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ak-ink) 82%, transparent) 0%, color-mix(in srgb, var(--ak-ink) 62%, transparent) 42%, transparent 66%);
+  }
+}
+.bg-section.hero-field-split .field-headline {
+  font-size: clamp(3.25rem, 1.6rem + 4.2vw, 6.25rem);
+}
+.bg-section.hero-field-split .ak-proof {
+  justify-content: flex-start;
+}
+.bg-section.hero-field-split .ak-proof-figure:first-child {
+  padding-left: 0;
+}
+/* The portrait: an ember rim light along its right and bottom edges, and a soft glow of the ember behind it. */
+.ak-portrait {
+  position: relative;
+  margin: 0;
+}
+.ak-portrait::before {
+  content: '';
+  position: absolute;
+  inset: 10% -14% -12% 14%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ak-ember) 60%, transparent), transparent);
+  filter: blur(32px);
+}
+.ak-portrait img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-card);
+  object-fit: cover;
+}
+.ak-portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  box-shadow:
+    inset -2px -2px 0 var(--ak-ember),
+    6px 6px 24px -6px color-mix(in srgb, var(--ak-ember) 55%, transparent);
+  -webkit-mask-image: linear-gradient(135deg, transparent 42%, black 82%);
+  mask-image: linear-gradient(135deg, transparent 42%, black 82%);
+  pointer-events: none;
 }
 /* The second call is a link: the hero's one filled call is the first. */
 .bg-section.hero-field .actions {
@@ -268,7 +418,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   border: 0;
   border-radius: 0;
   /* The ember underline under the words, not under the arrow. */
-  background: linear-gradient(var(--button), var(--button)) left bottom / calc(100% - 1.75rem) 2px no-repeat;
+  background: linear-gradient(var(--ak-ember), var(--ak-ember)) left bottom / calc(100% - 1.75rem) 2px no-repeat;
   box-shadow: none;
   color: var(--ink);
   text-decoration: none;
@@ -276,7 +426,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 .bg-section.hero-field .actions .button.button-quiet::after {
   content: '\2192';
   margin-left: 0.25rem;
-  color: var(--button);
+  color: var(--ak-ember);
 }
 @media (max-width: 47.99rem) {
   .bg-section.hero-field {
@@ -288,6 +438,9 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   }
   .bg-section.hero-field .actions .button:not(.button-quiet) {
     align-self: stretch;
+  }
+  .bg-section.hero-field-split .actions .button-quiet {
+    align-self: flex-start;
   }
 }
 /* Three figures, each number over its words, hairlines between them, over one hairline of their own. */
@@ -337,13 +490,82 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   translate: 0 calc(var(--d, 0) * -1em);
 }
 
+/*
+  The strip under the hero (NewStrip.astro): the newest conversations in a
+  line on the night, NEW and the middots in the ember, faded at both edges.
+  § Motion carries it across; it stands still otherwise.
+*/
+.ak-strip {
+  overflow: hidden;
+  border-top: 1px solid color-mix(in srgb, var(--ak-ember) 35%, transparent);
+  border-bottom: 1px solid var(--line);
+  background: var(--ak-ink);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+.ak-strip-track {
+  display: flex;
+  width: max-content;
+}
+.ak-strip-run {
+  display: flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ak-strip-run > li {
+  display: flex;
+  align-items: center;
+}
+.ak-strip-run > li::after {
+  content: '\00b7';
+  padding: 0 1.75rem;
+  color: var(--ak-ember);
+  font-size: 1.25rem;
+}
+.ak-strip a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 1.125rem 0;
+  color: var(--ink);
+  font-size: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ak-strip a:hover .ak-strip-title,
+.ak-strip a:focus-visible .ak-strip-title {
+  text-decoration: underline;
+  text-decoration-color: var(--ak-ember);
+  text-underline-offset: 0.25em;
+}
+.ak-strip-new {
+  color: var(--ak-ember);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ak-strip-dot {
+  color: var(--ak-ember);
+}
+.ak-strip-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+}
+.ak-strip-length {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 5. Cards: the band's surface on a hairline that warms to the ember under the pointer ── */
 
 .bg-section[data-type] .card,
 .bg-section[data-type] .door,
 .bg-section[data-type] .issue-card,
 .ak-video,
-.ak-door,
 .ak-feature {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -351,10 +573,15 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 .bg-section[data-type] .card:hover,
 .bg-section[data-type] .door:hover,
 .bg-section[data-type] .issue-card:hover,
-.ak-video-linked:hover,
-.ak-door-linked:hover {
-  border-color: var(--button);
-  box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--button) 35%, transparent);
+.ak-video-linked:hover {
+  border-color: var(--ak-ember);
+  box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--ak-ember) 35%, transparent);
+}
+/* On the hearth a card stands lifted in a warm shadow. */
+.bg-band-contrast :is(.ak-feature, .ak-video, .kc-card, .card) {
+  box-shadow:
+    0 30px 60px -28px color-mix(in srgb, var(--ak-ember) 38%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ak-ink) 40%, transparent);
 }
 /* A play mark: a disc of the band's ground with the ink's triangle in it. */
 .ak-play {
@@ -383,7 +610,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   width: 4.5rem;
   height: 4.5rem;
 }
-/* The ember line along a cover's foot. */
+/* The ember line along a cover's foot, glowing. */
 .ak-video-still::after,
 .ak-feature-cover::after,
 .ak-player::after {
@@ -391,7 +618,8 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   position: absolute;
   inset: auto 0 0;
   height: 2px;
-  background: var(--button);
+  background: var(--ak-ember);
+  box-shadow: var(--ak-glow);
 }
 
 /* ── 6. The feature card (Course · outline): the cover and the course's facts at the left, the first lessons at the right ── */
@@ -572,7 +800,56 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   }
 }
 
-/* ── 7. Conversations: the chapter mark on its hairline, the head, the cards three across ── */
+/* ── 7. Conversations: the chapter mark on its hairline, the head, the newest large with two beside it ── */
+
+.ak-convos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.75rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ak-convos > li {
+  display: flex;
+  min-width: 0;
+}
+@media (min-width: 40rem) {
+  .ak-convos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ak-convos-lead {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 60rem) {
+  .ak-convos {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .ak-convos-lead {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+}
+.ak-video-lead .ak-video-body {
+  gap: 0.875rem;
+  padding: 1.5rem 1.75rem 1.75rem;
+}
+.ak-video-lead .ak-video-title {
+  font-size: 2rem;
+  line-height: 1.08;
+}
+.ak-video-lead .ak-video-guest {
+  font-size: var(--text);
+}
+.ak-video-lead .ak-play {
+  width: 5rem;
+  height: 5rem;
+}
+.ak-video-side .ak-video-guest {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
 
 .ak-cards {
   display: grid;
@@ -741,8 +1018,8 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: var(--button);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--button) 18%, transparent);
+  background: var(--ak-ember);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ak-ember) 18%, transparent);
 }
 
 /* ── 8. The Watch list: its head on the hearth, then each series under its running head, four across ── */
@@ -789,25 +1066,28 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 .ak-series-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 0.5rem 1rem;
   margin-bottom: 1.75rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--line);
 }
+/* A series' running head: its name at 3rem over the ember rule, its count a 4rem numeral in the gold. */
 .ak-series-title {
   margin: 0;
-  color: var(--accent);
-  font-family: var(--font);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 1.75rem + 1.6vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+}
+.ak-series-title::after {
+  margin-top: 1rem;
 }
 .ak-series-count .ak-numeral {
-  font-size: 2.25rem;
-  line-height: 1;
+  font-size: clamp(3rem, 2.25rem + 2.4vw, 4rem);
+  line-height: 0.85;
 }
 .ak-series-more {
   margin: 1.75rem 0 0;
@@ -929,7 +1209,8 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   width: 2.5rem;
   height: 2px;
   margin-top: 0.625rem;
-  background: var(--button);
+  background: var(--ak-ember);
+  box-shadow: var(--ak-glow);
 }
 .ak-rail-list {
   margin: 0;
@@ -950,7 +1231,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   overflow: hidden;
   border-radius: 0.375rem;
   background: color-mix(in srgb, var(--ink) 5%, var(--surface));
-  box-shadow: inset 0 -2px 0 var(--button);
+  box-shadow: inset 0 -2px 0 var(--ak-ember);
 }
 .ak-rail-still img {
   width: 100%;
@@ -996,97 +1277,192 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   }
 }
 
-/* ── 10. Doors: a title, a line and a link in the ember, as many across as there are up to five ── */
+/* ── 10. The paths: a ruled list, the number in the gold, the title large, the link at the right ── */
 
-.ak-doors {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+.ak-paths {
   margin: 0;
   padding: 0;
   list-style: none;
+  border-top: 2px solid var(--ink);
 }
-.ak-door {
+.ak-path {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-  padding: 1.5rem 1.375rem 1.5rem;
-  border-radius: var(--radius-card);
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.5rem 1.25rem;
+  align-items: baseline;
+  padding: 1.75rem 0;
+  border-bottom: 1px solid var(--line-strong);
 }
-.ak-door > * {
+.ak-path-n {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  line-height: 0.9;
+}
+.ak-path-words {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.ak-path-words > * {
   margin: 0;
 }
-.ak-door-title {
-  font-size: clamp(1.5rem, 1.3rem + 0.5vw, 1.75rem);
-  line-height: 1.1;
-  overflow-wrap: anywhere;
+.ak-path-title {
+  font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+  line-height: 1.05;
 }
-.ak-door-title a {
+.ak-path-title a {
   color: var(--ink);
   text-decoration: none;
 }
-.ak-door-title a::after {
+/* The title's link opens the whole row. */
+.ak-path-title a::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
 }
-.ak-door-title a:focus-visible {
+.ak-path-title a:focus-visible {
   outline: none;
 }
-.ak-door-linked:focus-within {
+.ak-path-linked:focus-within {
   outline: 3px solid var(--ink);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
-.ak-door-summary {
+.ak-path-line {
+  max-width: 40rem;
   color: var(--muted);
-  font-size: var(--text-sm);
-  line-height: 1.6;
+  font-size: var(--text);
 }
-.ak-door-more {
-  margin-top: auto !important;
-  padding-top: 1rem;
-  color: var(--button);
+.ak-path-more {
+  grid-column: 2;
+  margin: 0.25rem 0 0;
+  color: var(--ak-ember-text);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
-.ak-door-linked:hover .ak-door-more {
+.ak-path-linked:hover .ak-path-title a {
   text-decoration: underline;
-  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--ak-ember);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+.ak-path-linked:hover .ak-path-more {
+  text-decoration: underline;
   text-underline-offset: 0.25em;
 }
-@media (min-width: 40rem) {
-  .ak-doors {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (min-width: 56rem) {
+  .ak-path {
+    grid-template-columns: 6rem minmax(0, 1fr) minmax(12rem, 18rem);
+    gap: 1rem 2.5rem;
+    padding: 2.25rem 0;
   }
-  .ak-doors-1 {
-    grid-template-columns: minmax(0, 24rem);
+  .ak-path-n {
+    font-size: 4rem;
   }
-}
-@media (min-width: 60rem) {
-  .ak-doors-3,
-  .ak-doors-5 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .ak-doors-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-@media (min-width: 72rem) {
-  .ak-doors-5 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .ak-path-more {
+    grid-column: 3;
+    justify-self: end;
+    margin: 0;
+    text-align: right;
   }
 }
 
-/* ── 11. The letter: the sign-up's frame keeps its height before it has drawn ── */
+/* ── 11. The steps (Issues · steps): each under its rule, its number at 6rem in the gold ── */
+
+.bg-section.issues .steps {
+  gap: 2.5rem 2.5rem;
+  counter-reset: ak-step;
+}
+.bg-section.issues .steps .step {
+  counter-increment: ak-step;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--ink);
+}
+.bg-section.issues .steps .step::before {
+  content: counter(ak-step, decimal-leading-zero);
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 2.5rem + 4vw, 6rem);
+  line-height: 0.85;
+}
+/* "Step 1" stays for a screen reader; the number says it on screen. */
+.bg-section.issues .steps .step-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.bg-section.issues .steps .step-title {
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.05;
+}
+.bg-section.issues .steps .step-body {
+  margin-top: 0.75rem;
+  font-size: var(--text);
+}
+
+/* ── 12. The classroom on the hearth: the cards in paper with night ink, the ring in gold on a night disc ── */
+
+.bg-band-contrast .kc-card {
+  --surface: var(--ak-paper);
+  --ink: var(--ak-ink);
+  --muted: color-mix(in srgb, var(--ak-ink) 68%, var(--ak-paper));
+  --kc-faint: color-mix(in srgb, var(--ak-ink) 60%, var(--ak-paper));
+  --accent: color-mix(in srgb, var(--ak-gold) 45%, var(--ak-ink));
+  --link: var(--ak-ink);
+  --line: color-mix(in srgb, var(--ak-ink) 12%, var(--ak-paper));
+  --line-strong: color-mix(in srgb, var(--ak-ink) 30%, var(--ak-paper));
+  border-color: transparent;
+  color: var(--ink);
+}
+.bg-band-contrast .kc-card .kc-go {
+  color: color-mix(in srgb, var(--ak-ember) 60%, var(--ak-ink));
+}
+.bg-band-contrast .kc-card .kc-foot {
+  background: var(--ak-ember);
+  box-shadow: var(--ak-glow);
+}
+.bg-band-contrast .kc-card-place {
+  --ink: var(--band-plain-ink);
+  --muted: var(--band-plain-muted);
+  --accent: var(--ak-gold);
+  --ring-track: color-mix(in srgb, var(--band-plain-ink) 22%, var(--ak-ink));
+  background: var(--ak-ink);
+  box-shadow: 0 0 0 4px var(--ak-paper);
+}
+.bg-band-contrast .kc-card-place.kc-disc-finished {
+  background: var(--ak-gold);
+  color: var(--ak-ink);
+}
+.bg-band-contrast .kc-card:hover {
+  border-color: var(--ak-ember);
+}
+/* The classroom's heading and the syllabus's numerals at full size. */
+.kc-classroom .section-head h2 {
+  font-size: var(--h2);
+}
+@media (min-width: 56rem) {
+  .kc-row {
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr) auto auto;
+  }
+  .kc-row-n {
+    font-size: 6rem;
+  }
+}
+
+/* ── 13. The letter: the sign-up's frame keeps its height before it has drawn ── */
 
 #above-the-footer .bg-section[data-type='SignupCapture'] iframe {
   min-height: 15.5rem;
 }
 
-/* ── 12. The footer: on the page's ground, the closing line in the display face beside the mark, then the wordmark at its own size ── */
+/* ── 14. The footer: on the page's ground, the closing line in the display face beside the mark, then the wordmark at its own size ── */
 
 .site-footer {
   --bg-band-background: var(--band-plain);
@@ -1137,7 +1513,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   letter-spacing: -0.015em;
 }
 .ak-closing-headline em {
-  color: var(--button);
+  color: var(--ak-ember);
   font-style: italic;
 }
 .ak-closing .closing-call-body {
@@ -1171,7 +1547,8 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   `prefers-reduced-motion: no-preference` (MOTION.md rules 1 and 2): the page
   as the rules above draw it is the finished page, which reduced motion, a
   browser without a feature, scripts off and a screenshot all get. Hard
-  easing, short times, nothing loops (the field hero's motes are the kit's).
+  easing, short times; nothing loops but the field hero's motes (the kit's)
+  and the strip under it, which carries the newest conversations across.
 
   The ember rule draws in under a kicker from the left, and the heading after
   it rises (the field hero's rise), as they come up the window. Where the
@@ -1198,8 +1575,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   .bg-section[data-type] .card,
   .bg-section[data-type] .door,
   .bg-section[data-type] .issue-card,
-  .ak-video,
-  .ak-door {
+  .ak-video {
     transition:
       border-color 0.18s var(--ak-ease),
       box-shadow 0.25s var(--ak-ease),
@@ -1208,9 +1584,15 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
   .bg-section[data-type] .card:hover,
   .bg-section[data-type] .door:hover,
   .bg-section[data-type] .issue-card:hover,
-  .ak-video-linked:hover,
-  .ak-door-linked:hover {
+  .ak-video-linked:hover {
     transform: translateY(-2px);
+  }
+  /* The strip carries the newest conversations across, one pass a minute or more, and stops for the pointer or the focus. */
+  .ak-strip-track {
+    animation: ak-strip var(--ak-strip-s, 80s) linear infinite;
+  }
+  .ak-strip:is(:hover, :focus-within) .ak-strip-track {
+    animation-play-state: paused;
   }
 
   @supports (animation-timeline: view()) {
@@ -1243,6 +1625,11 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 
   .ak-odo-d > span {
     transition: translate 700ms var(--ak-ease) calc(var(--k, 0) * 70ms);
+  }
+}
+@keyframes ak-strip {
+  to {
+    transform: translateX(-50%);
   }
 }
 @keyframes ak-rule {

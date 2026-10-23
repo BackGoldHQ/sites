@@ -12,6 +12,14 @@
 // scrolled off-screen or the tab is hidden; with no JavaScript the words
 // stand on the band alone.
 //
+// With something in its `aside` slot (a template's portrait), the field is a
+// split: the words at the left, left-aligned, and the aside at the right; on
+// a phone the aside sits under the words at 60% of the width. How bright the
+// field burns is the band's `--field-glow` (1 when unset; a template's
+// stylesheet raises it): the motes' light at rest and lit, the sparks' and
+// wisps' light, how high a wisp rises and how long a spark's trail lingers
+// after it lands. How far fire leaps does not change.
+//
 // The words are the cover layout's: the kicker, the headline with its accent
 // in italic (the part after a colon when the headline has one, else the last
 // word), the line under it, the buttons (the first the main call, the rest
@@ -41,8 +49,9 @@ const buttons = links(section)
 const colon = headline ? /^(.*?:\s+)(\S.*)$/su.exec(headline) : null
 const split = colon ?? (headline ? /^(.*\s)(\S+)$/su.exec(headline) : null)
 const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
+const aside = Astro.slots.has('aside')
 ---
-<Band section={section} class="hero-field">
+<Band section={section} class={aside ? 'hero-field hero-field-split' : 'hero-field'}>
   <canvas class="field-canvas" aria-hidden="true"></canvas>
   <div class="field-words">
     {kicker && <p class="kicker">{kicker}</p>}
@@ -57,6 +66,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
     {note && <p class="field-note">{note}</p>}
     {section.embed && <Embed embed={section.embed} title="Sign up" />}
   </div>
+  {aside && <div class="field-aside"><slot name="aside" /></div>}
   <script is:inline>
     ;(function (root) {
       var canvas = root && root.querySelector('canvas.field-canvas')
@@ -79,6 +89,11 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
       var mix = function (a, b, t) {
         return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
       }
+      // How bright the field burns (1 unless the band's --field-glow says otherwise), and what follows from it.
+      var GLOW = Math.max(0.25, Math.min(4, parseFloat(style.getPropertyValue('--field-glow')) || 1))
+      var HOT = Math.min(1.6, GLOW)
+      var RISE = 1 + (GLOW - 1) * 0.5
+      var TRAIL = Math.max(0, (GLOW - 1) * 300)
       var COOL = mix(MUTED, [122, 140, 255], 0.55)
       var WARM = mix(ACCENT, [255, 190, 110], 0.35)
       var PALE = mix(ACCENT, [255, 255, 255], 0.72)
@@ -114,7 +129,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
         if (!m || now - m.lastLit < 1400) return
         m.heat = Math.max(m.heat, strength || 1)
         m.lastLit = now
-        wisps.push({ x: m.x, y: m.y, t0: now, life: 1400 + Math.random() * 900, size: 16 + Math.random() * 18 })
+        wisps.push({ x: m.x, y: m.y, t0: now, life: (1400 + Math.random() * 900) * RISE, size: 16 + Math.random() * 18 })
         var R = 120, leaps = 0
         for (var j = 0; j < motes.length && leaps < 4; j++) {
           if (j === i) continue
@@ -138,10 +153,10 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
         if (t >= 1) return false
         var a = t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8
         var s = w.size * (0.6 + 0.6 * Math.sin(t * Math.PI))
-        var x = w.x + Math.sin(now / 300 + w.t0) * 2, y = w.y - t * 26
+        var x = w.x + Math.sin(now / 300 + w.t0) * 2, y = w.y - t * 26 * RISE
         var g = ctx.createRadialGradient(x, y + s * 0.15, 0, x, y, s)
-        g.addColorStop(0, rgba(PALE, 0.75 * a))
-        g.addColorStop(0.35, rgba(WARM, 0.45 * a))
+        g.addColorStop(0, rgba(PALE, Math.min(1, 0.75 * a * HOT)))
+        g.addColorStop(0.35, rgba(WARM, Math.min(1, 0.45 * a * HOT)))
         g.addColorStop(0.7, rgba(COOL, 0.12 * a))
         g.addColorStop(1, 'rgba(0,0,0,0)')
         ctx.fillStyle = g
@@ -169,19 +184,23 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
           kindle(Math.floor(Math.random() * motes.length), now, 0.9)
           lastAuto = now
         }
-        ctx.lineWidth = 1
+        ctx.lineWidth = 1 + (HOT - 1) * 0.6
         for (var k = sparks.length - 1; k >= 0; k--) {
           var s = sparks[k], a = motes[s.from], b = motes[s.to], t = (now - s.t0) / s.dur
           if (!a || !b) { sparks.splice(k, 1); continue }
-          if (t >= 1) { sparks.splice(k, 1); kindle(s.to, now, 0.85); continue }
-          var x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - Math.sin(t * Math.PI) * 6
+          // A spark that has landed lights its mote once, and its trail lingers, fading, for TRAIL ms.
+          if (t >= 1 && !s.landed) { s.landed = now; kindle(s.to, now, 0.85) }
+          var fade = s.landed ? (TRAIL ? 1 - (now - s.landed) / TRAIL : 0) : 1
+          if (fade <= 0) { sparks.splice(k, 1); continue }
+          var u = Math.min(1, t)
+          var x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u - Math.sin(u * Math.PI) * 6
           var lg = ctx.createLinearGradient(a.x, a.y, x, y)
           lg.addColorStop(0, rgba(WARM, 0))
-          lg.addColorStop(1, rgba(PALE, 0.55))
+          lg.addColorStop(1, rgba(PALE, Math.min(1, 0.55 * HOT) * fade))
           ctx.strokeStyle = lg
           ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(x, y); ctx.stroke()
-          ctx.fillStyle = rgba(PALE, 0.9)
-          ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = rgba(PALE, 0.9 * fade)
+          ctx.beginPath(); ctx.arc(x, y, 1.4 * HOT, 0, Math.PI * 2); ctx.fill()
         }
         for (var i = 0; i < motes.length; i++) {
           var m = motes[i]
@@ -193,11 +212,11 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
           var tw = 0.5 + 0.5 * Math.sin(now / 900 + m.ph)
           var lit = Math.max(m.heat, m.warm * 0.6)
           var col = mix(COOL, WARM, lit)
-          var alpha = m.base * (0.7 + 0.3 * tw) + lit * 0.7
+          var alpha = m.base * GLOW * (0.7 + 0.3 * tw) + lit * 0.7
           var r = m.r + lit * 1.6
           if (lit > 0.05) {
             var rg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, r * 6)
-            rg.addColorStop(0, rgba(col, 0.35 * lit))
+            rg.addColorStop(0, rgba(col, Math.min(1, 0.35 * lit * HOT)))
             rg.addColorStop(1, 'rgba(0,0,0,0)')
             ctx.fillStyle = rg
             ctx.beginPath(); ctx.arc(m.x, m.y, r * 6, 0, Math.PI * 2); ctx.fill()
@@ -222,7 +241,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
             ctx.fillStyle = g
             ctx.beginPath(); ctx.arc(m.x, m.y, 14, 0, Math.PI * 2); ctx.fill()
           }
-          ctx.fillStyle = rgba(col, m.base + lit * 0.6)
+          ctx.fillStyle = rgba(col, Math.min(1, m.base * GLOW + lit * 0.6))
           ctx.beginPath(); ctx.arc(m.x, m.y, m.r + lit, 0, Math.PI * 2); ctx.fill()
         }
       }
@@ -318,6 +337,35 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
   }
   .field-words > :global(.bg-embed) {
     margin-top: 1.5rem;
+  }
+  /* The split: the words at the left, left-aligned, the aside at the right (under the words at 60% on a phone). */
+  :global(.bg-section.hero-field-split) > :global(.bg-section-inner) {
+    display: grid;
+    gap: 2.5rem 4rem;
+    align-items: center;
+  }
+  :global(.hero-field-split) .field-words {
+    align-items: flex-start;
+    max-width: none;
+    margin: 0;
+    text-align: left;
+  }
+  :global(.hero-field-split) .field-words .actions {
+    justify-content: flex-start;
+  }
+  .field-aside {
+    position: relative;
+    justify-self: center;
+    width: 60%;
+    min-width: 0;
+  }
+  @media (min-width: 56rem) {
+    :global(.bg-section.hero-field-split) > :global(.bg-section-inner) {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    }
+    .field-aside {
+      width: 100%;
+    }
   }
   @media (min-width: 48rem) {
     :global(.bg-section.hero-field) {

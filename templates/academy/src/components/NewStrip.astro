@@ -1,0 +1,57 @@
+---
+// The strip under the home hero (the Kindling brief §10.4, "the one loop"):
+// the newest conversations at reading pace, "NEW · <title> · <length>" with
+// ember middots between them, each a link to its video. Read from the
+// Content API when the page is drawn: the ten newest videos in the
+// `conversations` series, else the ten newest videos; with none published
+// there is no strip. The list is drawn twice side by side, the second copy
+// hidden from screen readers and from the keyboard, so the stylesheet can
+// carry it across in one unbroken pass of at least a minute (longer with
+// more items); it stops while the pointer or the focus is on it, and stands
+// still for a visitor who asked for reduced motion.
+import type { Entry } from '@backgold/content'
+import { safeHref } from '@backgold/astro/server'
+import { clockOf } from '@backgold/template-kit/lib/academy'
+import { SERIES } from '../lib/watch'
+
+/** How many videos the strip carries. */
+const ITEMS = 10
+/** Seconds the strip takes per item; one pass is never under a minute. */
+const PACE = 9
+
+const bg = Astro.locals.backgold
+const client = bg.setup === null ? bg.client : null
+const conversations = client ? await client.entries('video', { term: 'conversations', limit: ITEMS }).catch(() => null) : null
+const filed = (conversations?.entries ?? []).filter((e) => e.terms.some((t) => t.taxonomy === SERIES && t.slug === 'conversations'))
+const newest = filed.length > 0 || !client ? null : await client.entries('video', { limit: ITEMS }).catch(() => null)
+const items = (filed.length > 0 ? filed : (newest?.entries ?? [])).flatMap((e: Entry) => {
+  const href = e.url ? safeHref(e.url) : null
+  return href ? [{ href, title: e.title, length: clockOf(e.duration_seconds) }] : []
+})
+const seconds = Math.max(60, items.length * PACE)
+---
+{items.length > 0 && (
+  <aside class="ak-strip" aria-label="New conversations">
+    <div class="ak-strip-track" style={`--ak-strip-s: ${seconds}s`}>
+      {[0, 1].map((copy) => (
+        <ul class="ak-strip-run" role="list" aria-hidden={copy === 1 ? 'true' : undefined}>
+          {items.map((item) => (
+            <li>
+              <a href={item.href} tabindex={copy === 1 ? -1 : undefined}>
+                <b class="ak-strip-new">New</b>
+                <span class="ak-strip-dot" aria-hidden="true">·</span>
+                <span class="ak-strip-title">{item.title}</span>
+                {item.length && (
+                  <>
+                    <span class="ak-strip-dot" aria-hidden="true">·</span>
+                    <span class="ak-strip-length">{item.length}</span>
+                  </>
+                )}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </aside>
+)}
