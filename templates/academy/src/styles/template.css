@@ -1,7 +1,75 @@
 /*
   What the academy template draws differently from the kit's stylesheet
-  (@backgold/template-kit's src/styles/site.css and entries.css). Nothing:
-  the Classroom, Course and Lesson sections carry their own look (boards D1
-  to D3), in the kit's tokens. A template that restyles sets its own here;
-  this file loads after the kit's on every page.
+  (@backgold/template-kit's src/styles/site.css and entries.css): the warmth
+  of a classroom lit at night. The main call is a pill filled with a gradient
+  of the band's two button colours and carries a soft glow of the accent;
+  the quiet call is a pill too. A card lifts on a gradient of its surface
+  with a hairline of the accent when hovered. Kickers are set in the accent,
+  tracked. Everything reads the kit's tokens, so the organization's theme
+  still owns the colours; the Classroom, Course and Lesson sections carry
+  their own look (boards D1 to D3). This file loads after the kit's on every
+  page.
 */
+
+.button {
+  border-radius: var(--pill);
+  padding: 0.85rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--button) 82%, #000) 0%, var(--button) 55%, color-mix(in srgb, var(--button) 70%, #fff) 100%);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 28%, transparent);
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.15s ease;
+}
+.button:hover,
+.button:focus-visible {
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 0 64px color-mix(in srgb, var(--accent) 12%, transparent);
+  transform: translateY(-1px);
+}
+.button.button-quiet {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--line-strong);
+}
+.button.button-quiet:hover,
+.button.button-quiet:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.kicker {
+  color: var(--accent);
+  letter-spacing: 0.16em;
+}
+
+/* The cards the sections draw: the classroom's course cards, the pathway doors, the issue cards. */
+.bg-section[data-type] .card,
+.bg-section[data-type] .door,
+.bg-section[data-type] .issue-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--ink)) 0%, var(--surface) 100%);
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+.bg-section[data-type] .card:hover,
+.bg-section[data-type] .door:hover,
+.bg-section[data-type] .issue-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 24px 60px -30px color-mix(in srgb, var(--accent) 35%, transparent);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .bg-section[data-type] .card,
+  .bg-section[data-type] .door,
+  .bg-section[data-type] .issue-card {
+    transition: none;
+    transform: none;
+  }
+}
