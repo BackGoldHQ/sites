@@ -1,0 +1,10 @@
+---
+// The classroom's arrow (board K2's "Continue →", K3's breadcrumb and Up
+// next): it only points, so it is hidden from screen readers.
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props
+---
+<svg class:list={['kc-arrow', className]} viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 10h11.5M11 5.5l4.5 4.5-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>

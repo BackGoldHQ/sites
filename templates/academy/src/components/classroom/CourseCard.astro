@@ -1,0 +1,54 @@
+---
+// One course on the classroom's grid (board K2): the cover at the top with
+// the ember line along its foot (for a visitor, the course's bar, a real
+// <progress>) and, signed in, the disc on the foot at the right (Disc: the
+// ring with "4/12", the check once finished, the lock on a course they
+// cannot open); then the title (the whole card is the link to the course),
+// its line, and at the foot what this reader needs (card.ts): "4 of 12
+// lessons" and Continue, "Not started · 9 lessons" and Start, Finished and
+// "7 of 7", or signed out the chip and the count.
+import Bar from '@backgold/template-kit/components/sections/Course/Bar.astro'
+import type { CourseCard } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import Arrow from './Arrow.astro'
+import Chip from './Chip.astro'
+import Disc from './Disc.astro'
+import { cardWords } from './card'
+
+interface Props {
+  card: CourseCard
+  signedIn: boolean
+  /** The organization's name (the site's), for the members card's line. */
+  orgName: string | null
+  level: 2 | 3
+}
+
+const { card, signedIn, orgName, level } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const words = cardWords(card, signedIn, orgName)
+---
+<article class:list={['card', 'cr-card', 'kc-card', words.disc && 'kc-card-disc']}>
+  <div class="kc-cover">
+    {card.cover ? <img src={card.cover} alt="" loading="lazy" decoding="async" /> : <span class="kc-cover-blank" aria-hidden="true"></span>}
+    {words.tracked ? (
+      <Bar completed={words.tracked.completed} total={words.tracked.total} label={`${card.title}: ${words.tracked.completed} of ${words.tracked.total} lessons`} />
+    ) : (
+      <span class="kc-foot" aria-hidden="true"></span>
+    )}
+    {words.disc && <Disc state={words.disc.state} completed={words.disc.completed} total={words.disc.total} size={62} class="kc-card-place" />}
+  </div>
+  <div class="card-body kc-body">
+    <Title class="card-title kc-title">{card.href ? <a href={card.href}>{card.title}</a> : card.title}</Title>
+    {card.summary && <p class="kc-summary">{card.summary}</p>}
+    <div class="kc-card-foot">
+      <p class="kc-figures">
+        {words.chip ? <Chip chip={words.chip} /> : words.meta && <span class="kc-meta-strong">{words.meta}</span>}
+        {words.action ? (
+          <span class="kc-go">{words.action}<Arrow /></span>
+        ) : (
+          words.chip && words.meta && <span class="kc-meta">{words.meta}</span>
+        )}
+      </p>
+      {words.join && <p class="kc-join">{words.join}</p>}
+    </div>
+  </div>
+</article>

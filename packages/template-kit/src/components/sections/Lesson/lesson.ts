@@ -26,13 +26,18 @@ import { pinnedCourseOf, routeOf, type AcademyContext } from '../Course/course'
 
 export interface RailRow {
   n: number
+  slug: string
   name: string
   href: string | null
   seconds: number | null
+  /** The lesson's still (its cover), else the course's cover; null with neither, for a thumbnail beside the row. */
+  cover: string | null
   /** This lesson, the one on the page. */
   now: boolean
   done: boolean
   locked: boolean
+  /** Where this visitor stopped in it, in seconds; null signed out, once finished, or without a saved place. */
+  place: number | null
   /** The row's word: Done, Now, Members, a tag's name, Free, Sign in; null where the length stands alone. */
   word: string | null
 }
@@ -161,6 +166,7 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
   const position = visitor && !completed ? (row?.position_seconds ?? null) : null
   const free = lessons.flatMap((l, i) => (l.access === 'public' ? [String(i + 1)] : []))
   const notes = !locked && lesson.body.markdown.trim() ? renderMarkdown(lesson.body.markdown) : ''
+  const courseCover = course.hero ? safeSrc(course.hero.url) : null
   return {
     courseSlug: course.slug,
     slug: lesson.slug,
@@ -189,12 +195,15 @@ export function lessonView(answer: LessonResponse, visitor: Visitor | null, path
     rail: {
       rows: lessons.map((l, i) => ({
         n: i + 1,
+        slug: l.slug,
         name: l.title,
         href: safeHref(l.url),
         seconds: l.duration_seconds,
+        cover: (l.hero ? safeSrc(l.hero.url) : null) ?? courseCover,
         now: l.slug === lesson.slug,
         done: visitor !== null && l.completed,
         locked: l.locked,
+        place: visitor !== null && !l.completed && l.position_seconds !== null && l.position_seconds > 0 ? l.position_seconds : null,
         word: railWordOf(l, l.slug === lesson.slug, visitor !== null),
       })),
       progress: visitor ? course.progress : null,

@@ -1,0 +1,65 @@
+---
+// A lesson's frame (board L3), 16:9: the org's own file in the browser's
+// <video> (the 1080p copy, with the 720p one and the original beside it for
+// the lesson's script to pick from, the cover as its poster), or an
+// imported YouTube or Vimeo video in that player's frame (YouTube without
+// related videos, with its player API for a visitor, starting where they
+// stopped; Vimeo without tracking). Locked: the teaser, the cover dimmed
+// under the lock and the lock's word ("Sign in to watch"), the length on
+// it. With no video yet, the cover dimmed under a line that says so.
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import type { LessonView } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
+import { clockOf } from '@backgold/template-kit/lib/academy'
+
+interface Props {
+  view: LessonView
+}
+
+const { view } = Astro.props
+const tracks = view.visitor !== null && !view.locked
+const file = view.video?.kind === 'file' ? view.video : null
+const embed = view.video?.kind === 'embed' ? view.video : null
+const length = clockOf(view.seconds)
+const embedSrc = !embed
+  ? null
+  : embed.provider === 'youtube'
+    ? `${embed.src}?rel=0${tracks ? `&enablejsapi=1&origin=${encodeURIComponent(Astro.url.origin)}` : ''}${view.resumeAt !== null ? `&start=${Math.floor(view.resumeAt)}` : ''}`
+    : `${embed.src}?dnt=1`
+---
+{file && (
+  <div class="kc-frame">
+    <video
+      src={file.sources?.['1080'] ?? file.src}
+      poster={file.poster ?? undefined}
+      data-src-720={file.sources?.['720'] ?? undefined}
+      data-src-1080={file.sources?.['1080'] ?? undefined}
+      data-src-original={file.src}
+      controls
+      playsinline
+      preload="metadata"
+    >
+      <a href={file.src}>Watch the video</a>
+    </video>
+  </div>
+)}
+{embed && embedSrc && (
+  <div class="kc-frame">
+    <iframe src={embedSrc} title={view.name} data-provider={embed.provider} allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+  </div>
+)}
+{view.locked && (
+  <div class="kc-frame ls-teaser">
+    {view.cover && <img src={view.cover} alt="" decoding="async" />}
+    <div class="ls-veil">
+      <span class="kc-veil-lock"><Icon name="lock" /></span>
+      {view.lockWord && <p>{view.lockWord}</p>}
+    </div>
+    {length && <span class="kc-frame-length">{length}</span>}
+  </div>
+)}
+{!view.video && !view.locked && (
+  <div class="kc-frame kc-frame-missing">
+    {view.cover && <img src={view.cover} alt="" decoding="async" />}
+    <div class="ls-veil"><p>The video for this lesson is not up yet.</p></div>
+  </div>
+)}

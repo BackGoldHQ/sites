@@ -1,0 +1,64 @@
+---
+// Pathways · doors on the academy (board K1, "Which one is you?"): the head
+// (the kicker and the heading at the left, the line under them at the
+// right), then a door per pathway, as many across as there are up to five,
+// each a title, the line about who it is for, and its link at the foot in
+// the ember. A door whose address is a course's reads "Start with <the
+// course's title>", the title from the Content API; a door to the Apply page
+// (`/join`) reads "Apply"; any other reads the section's link label, else
+// "Start here". A pathway's outcome, programs and quiz statements are not
+// drawn here (the quiz layout still offers them). The whole door is one
+// link, named by its title; a pathway with no address is a door with no link.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { pathwaysOf } from '@backgold/template-kit/components/sections/Pathways/pathways.ts'
+import { JOIN_PATH } from '@backgold/template-kit/lib/academy'
+import { text } from '@backgold/template-kit/lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const bg = Astro.locals.backgold
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const label = text(section.copy.programsLabel) ?? 'Start here'
+const pathways = pathwaysOf(section)
+const linksCourse = pathways.some((p) => p.link?.href.startsWith('/'))
+const courses = linksCourse && bg.setup === null ? ((await bg.client.courses({ limit: 50 }).catch(() => null))?.courses ?? []) : []
+const pathOf = (href: string) => href.replace(/[?#].*$/, '').replace(/\/+$/, '')
+const titleAt = new Map(courses.map((c) => [pathOf(c.url), c.title]))
+const doors = pathways.map((p) => {
+  const at = p.link ? pathOf(p.link.href) : null
+  const course = at ? titleAt.get(at) : undefined
+  return { ...p, more: at === null ? null : course ? `Start with ${course}` : at === JOIN_PATH ? 'Apply' : label }
+})
+const across = Math.min(doors.length, 5)
+---
+{(doors.length > 0 || heading) && (
+  <Band section={section} class="pathways pathways-doors ak-doors-band">
+    {(kicker || heading || text(section.copy.body)) && (
+      <div class="ak-head">
+        <div class="ak-head-title">
+          {kicker && <p class="kicker">{kicker}</p>}
+          {heading && <h2>{heading}</h2>}
+        </div>
+        <div class="ak-head-aside"><Prose value={section.copy.body} class="lede" /></div>
+      </div>
+    )}
+    {doors.length > 0 && (
+      <ul class:list={['ak-doors', `ak-doors-${across}`]} role="list">
+        {doors.map((door) => (
+          <li class:list={['ak-door', door.link && 'ak-door-linked']}>
+            <h3 class="ak-door-title">{door.link ? <a href={door.link.href} rel={door.link.rel}>{door.title}</a> : door.title}</h3>
+            {door.summary && <p class="ak-door-summary">{door.summary}</p>}
+            {door.more && <p class="ak-door-more">{door.more}<span aria-hidden="true">{' →'}</span></p>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </Band>
+)}

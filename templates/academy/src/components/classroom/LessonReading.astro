@@ -1,0 +1,17 @@
+---
+// Lesson · Reading: the same lesson for one that is mostly its notes
+// (Lesson's `reading` layout): the theater keeps the breadcrumb, the head
+// and the door, and the player (when the lesson has one), the notes,
+// completion, Previous and Next and the rail follow in the reading column.
+// Nothing is drawn without a lesson.
+import type { ComponentProps } from 'astro/types'
+import type Player from './LessonPlayer.astro'
+import { lessonOf } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
+import Lesson from './Lesson.astro'
+
+type Props = ComponentProps<typeof Player>
+
+const { section, lead = false } = Astro.props
+const view = Astro.props.view !== undefined ? Astro.props.view : await lessonOf(section, Astro)
+---
+{view && <Lesson view={view} section={section} layout="reading" lead={lead} />}

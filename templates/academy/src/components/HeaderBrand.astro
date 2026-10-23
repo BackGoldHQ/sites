@@ -1,0 +1,34 @@
+---
+// The academy's brand in the header (board K1): the organization's mark (the
+// site's icon, Mark.astro) beside its name set in type, in the display face,
+// with "Academy" at the end of the name set apart on a line of its own,
+// small, tracked and in the accent ("Libertarian Leadership" / "ACADEMY"):
+// a wide logo's words read too small at header height. A name that does not
+// end in "Academy" is one line. A site with no icon has the kit's brand (its
+// logo, else the kit's mark and wordmark). The footer keeps the kit's brand.
+import { safeSrc } from '@backgold/astro/server'
+import Brand from '@backgold/template-kit/components/chrome/Brand.astro'
+import Mark from './Mark.astro'
+
+interface Props {
+  name: string
+  logoUrl: string | null
+  class?: string
+}
+
+const { name, logoUrl, class: className } = Astro.props
+const icon = safeSrc(Astro.locals.backgold.site?.favicon_url)
+const set = /^(.*\S)\s+(academy)$/iu.exec(name.trim())
+const [lead, tail] = set ? [set[1]!, set[2]!] : [name.trim(), null]
+---
+{icon ? (
+  <a class:list={['brand', 'ak-brand', className]} href="/">
+    <Mark />
+    <span class="ak-brand-words">
+      <span class="ak-brand-name">{lead}</span>
+      {tail && <span class="ak-brand-tail">{tail}</span>}
+    </span>
+  </a>
+) : (
+  <Brand name={name} logoUrl={logoUrl} class={className} />
+)}

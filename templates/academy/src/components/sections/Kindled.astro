@@ -1,0 +1,25 @@
+---
+// Every section on this template: the layout src/sections.ts names for its
+// type and layout ('<Type>:<layout>', else '<Type>'), drawn as it is, band
+// and all. The kicker's ember rule and the heading's rise are the
+// stylesheet's (src/styles/template.css § Motion); the script below loads
+// src/scripts/motion.ts, which Astro bundles once a page however many
+// sections draw it.
+import type { Section } from '@backgold/content'
+import { drawn } from '../../sections'
+
+interface Props {
+  section: Section
+  variant?: string
+  level?: 1 | 2
+}
+
+const { section, variant } = Astro.props
+const own = (key: string) => (Object.hasOwn(drawn, key) ? drawn[key] : undefined)
+const Layout = (variant ? own(`${section.type}:${variant}`) : undefined) ?? own(section.type)
+---
+{Layout && <Layout {...Astro.props} />}
+
+<script>
+  import '../../scripts/motion'
+</script>

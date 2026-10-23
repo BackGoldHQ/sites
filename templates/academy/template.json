@@ -84,6 +84,10 @@
       "directory",
       "map",
       "bar"
+    ],
+    "Collection": [
+      "cards",
+      "list"
     ]
   },
   "areas": {

@@ -1,0 +1,15 @@
+---
+// Hero · field on the academy: the kit's field (the words over the motes
+// that fire moves through), with the proof line under its buttons
+// (ProofLine.astro: the courses, lessons and videos counted from the
+// Content API). The headline a size up and the phone's shorter field are
+// the stylesheet's.
+import type { ComponentProps } from 'astro/types'
+import KitField from '@backgold/template-kit/components/sections/Hero/field.astro'
+import ProofLine from '../ProofLine.astro'
+
+type Props = ComponentProps<typeof KitField>
+---
+<KitField {...Astro.props}>
+  <ProofLine />
+</KitField>
