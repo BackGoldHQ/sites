@@ -31,14 +31,15 @@ no donate button: an organization that takes donations adds the link itself.
 
 Lessons are video entries; a course is an entry of the built-in `course`
 type, at `/courses`, with its lessons in order in the course editor. The
-template draws them with the kit's own layouts, as `template.json` names
-them:
+template draws them with its own layouts over the kit's (`src/classroom.ts`,
+the components under `src/components/classroom/`), under the names
+`template.json` gives them:
 
 | Address | What draws it |
 | --- | --- |
-| `/courses` | The course type's list layout, `classroom`: every course as a card, from `GET /courses`. |
-| `/courses/<course>` | The course type's entry layout, `syllabus`: the course head, every lesson in order, About this course. |
-| `/courses/<course>/<lesson>` | The kit's `course:lesson` layout: the player, the notes, Mark complete, previous and next, the course's rail; a locked lesson's teaser and its door. |
+| `/courses` | The course type's list layout, `classroom`: every course as a card with its cover, the ember line at its foot, the access chip and, for a signed-in visitor, its progress ring; from `GET /courses`. |
+| `/courses/<course>` | The course type's entry layout, `syllabus`: the course head on the hearth band (the ring, the bar, Start or Continue), the ruled syllabus with numerals, About this course. |
+| `/courses/<course>/<lesson>` | The `course:lesson` layout: the theater (the player, the lesson's numeral, Mark complete, Up next, the course's rail with a still per lesson), the notes, previous and next; a locked lesson's teaser and its door. |
 
 A page can draw the same sections anywhere: Classroom (`grid`, `list`),
 Course (`syllabus`, `outline`, pinned to a course) and Lesson (`player`,

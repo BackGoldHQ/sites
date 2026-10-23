@@ -22,6 +22,7 @@ import HeaderBrand from './components/HeaderBrand.astro'
 import Video from './components/entries/Video.astro'
 import Watch from './components/entries/Watch.astro'
 import Kindled from './components/sections/Kindled.astro'
+import { classroomEntries } from './classroom'
 import { drawn } from './sections'
 import './styles/template.css'
 
@@ -29,7 +30,7 @@ export default defineTemplate({
   manifest: siteTemplateManifestSchema.parse(manifest),
   sections: Object.fromEntries(Object.keys(drawn).map((key) => [key, Kindled])),
   // The Watch list draws the video list, and the news list of an academy whose blog is its videos; a video's page is the theater.
-  entries: { ...kitEntries, 'video:grid': Watch, 'post:list': Watch, 'video:watch': Video },
+  entries: { ...kitEntries, ...classroomEntries, 'video:grid': Watch, 'post:list': Watch, 'video:watch': Video },
   fonts: {
     heading: 'Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,500',
     body: 'Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400',
