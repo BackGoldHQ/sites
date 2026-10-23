@@ -1,0 +1,32 @@
+---
+// A visitor's place in a course as a disc (board K2): the ring in gold on
+// the card's ground with the fraction in it ("4/12", the track alone at
+// zero), the gold disc with the check once finished, or the lock on a
+// course they cannot open. It repeats the words printed on the card, so it
+// is hidden from screen readers; the ring draws in once (Enter). Its width
+// is the stylesheet's (--kc-disc, by where it sits); `size` is the ring's
+// drawn width before the stylesheet loads.
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import Ring from '@backgold/template-kit/components/sections/Course/Ring.astro'
+
+interface Props {
+  state: 'progress' | 'finished' | 'locked'
+  completed?: number
+  total?: number
+  size: number
+  stroke?: number
+  class?: string
+}
+
+const { state, completed = 0, total = 0, size, stroke = 3.4, class: className } = Astro.props
+---
+<span class:list={['kc-disc', `kc-disc-${state}`, className]} aria-hidden="true" data-kc-enter={state === 'progress' ? '' : undefined}>
+  {state === 'progress' && (
+    <>
+      <Ring value={completed} max={total} size={size} stroke={stroke} />
+      <b class="kc-disc-n">{completed}<small>/{total}</small></b>
+    </>
+  )}
+  {state === 'finished' && <Icon name="check" />}
+  {state === 'locked' && <Icon name="lock" />}
+</span>

@@ -2,7 +2,7 @@
 // One lesson (board D3), for both layouts. The breadcrumb, then:
 //   the player  an uploaded file in the browser's own <video>
 //               (preload="metadata", the cover as its poster) over the api's
-//               Range-served file: the 1080p copy, which the script below
+//               Range-served file: the 1080p copy, which the lesson's script
 //               trades for the 720p one on a viewport 768px wide or narrower,
 //               before it plays; the original until the copies are ready, and
 //               always behind the fallback link. An imported YouTube or Vimeo
@@ -18,14 +18,15 @@
 //   completion  for a visitor: Mark complete, a real form posting to the
 //               site's progress path, with "Or watch to the end and the
 //               Academy marks it for you."; once done, "Completed" and Mark
-//               as not done. The script below sends both through fetch and
-//               swaps them in place, saves the place on pause and every 15
-//               seconds of play, and marks the lesson at the video's end: the
-//               file through the <video> events, YouTube through its player
-//               API (loaded only for a visitor on a YouTube lesson). Vimeo's
-//               player says nothing back, so a Vimeo lesson is marked by the
-//               button alone and the "watch to the end" line is left off.
-//               Without the script the forms post and the page comes back.
+//               as not done. The lesson's script (Tracker.astro) sends both
+//               through fetch and swaps them in place, saves the place on
+//               pause and every 15 seconds of play, and marks the lesson at
+//               the video's end: the file through the <video> events,
+//               YouTube through its player API (loaded only for a visitor on
+//               a YouTube lesson). Vimeo's player says nothing back, so a
+//               Vimeo lesson is marked by the button alone and the "watch to
+//               the end" line is left off. Without the script the forms post
+//               and the page comes back.
 //   the notes   the lesson's body under "Notes".
 //   Previous and Next, then the course's rail (Rail.astro).
 // `layout` is the section's: `player` puts the rail at the right on a wide
@@ -36,6 +37,7 @@ import Crumbs from '../Course/Crumbs.astro'
 import Icon from '../Course/Icon.astro'
 import Door from './Door.astro'
 import Rail from './Rail.astro'
+import Tracker from './Tracker.astro'
 import type { LessonView } from './lesson'
 import { clockOf, lessonTitle } from '../../../lib/academy'
 
@@ -181,128 +183,7 @@ const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: 
     </div>
     <Rail view={view} section={section} level={sub} />
   </div>
-  {(tracks || narrow) && (
-    <script is:inline>
-      ;(function (root) {
-        if (!root) return
-        var video = root.querySelector('video')
-        var tube = root.querySelector('iframe[data-provider="youtube"]')
-        var resume = Number(root.getAttribute('data-resume')) || 0
-        // The resume listener is on before the copy below loads, so the saved place applies to it.
-        if (video && resume > 0) {
-          video.addEventListener('loadedmetadata', function () {
-            if (!video.duration || resume < video.duration - 3) video.currentTime = resume
-          })
-        }
-        // The 720p copy on a narrow viewport, picked once at load; a resize mid-play keeps what is playing.
-        var narrow = video && video.getAttribute('data-src-720')
-        if (narrow && window.matchMedia && window.matchMedia('(max-width: 768px)').matches && video.currentSrc !== narrow && video.getAttribute('src') !== narrow) {
-          video.src = narrow
-          video.load()
-        }
-        if (!root.hasAttribute('data-lesson') || !window.fetch) return
-        var path = root.getAttribute('data-progress')
-        var course = root.getAttribute('data-course-slug')
-        var lesson = root.getAttribute('data-lesson-slug')
-        var forms = root.querySelectorAll('.ls-complete form')
-        var send = function (body, keep) {
-          body.course = course
-          body.lesson = lesson
-          return fetch(path, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify(body),
-            keepalive: !!keep,
-          })
-        }
-        var show = function (done) {
-          forms[0].hidden = done
-          forms[1].hidden = !done
-        }
-        for (var f = 0; f < forms.length; f++) {
-          forms[f].addEventListener('submit', function (event) {
-            var form = event.currentTarget
-            var done = form.getAttribute('data-complete') === 'true'
-            event.preventDefault()
-            send({ completed: done })
-              .then(function (res) {
-                if (!res.ok) throw new Error(String(res.status))
-                show(done)
-                forms[done ? 1 : 0].querySelector('button').focus()
-              })
-              .catch(function () {
-                form.submit()
-              })
-          })
-        }
-        var finish = function () {
-          send({ completed: true })
-            .then(function (res) {
-              if (res.ok) show(true)
-            })
-            .catch(function () {})
-        }
-        if (video) {
-          var last = 0
-          var save = function (keep) {
-            var at = Math.floor(video.currentTime)
-            last = Date.now()
-            if (at > 0 && !video.ended) send({ position_seconds: at }, keep).catch(function () {})
-          }
-          video.addEventListener('play', function () {
-            last = Date.now()
-          })
-          video.addEventListener('timeupdate', function () {
-            if (!video.paused && Date.now() - last >= 15000) save(false)
-          })
-          video.addEventListener('pause', function () {
-            if (!video.ended) save(true)
-          })
-          video.addEventListener('ended', finish)
-          return
-        }
-        if (!tube) return
-        // YouTube's player API (enablejsapi=1 on the frame): the place on pause and every 15 seconds of play, the lesson at the end.
-        var player = null
-        var timer = null
-        var saveTube = function (keep) {
-          if (!player || typeof player.getCurrentTime !== 'function') return
-          var at = Math.floor(player.getCurrentTime())
-          if (at > 0) send({ position_seconds: at }, keep).catch(function () {})
-        }
-        var onState = function (event) {
-          var YT = window.YT
-          if (!YT) return
-          if (timer) {
-            clearInterval(timer)
-            timer = null
-          }
-          if (event.data === YT.PlayerState.PLAYING) timer = setInterval(function () { saveTube(false) }, 15000)
-          else if (event.data === YT.PlayerState.PAUSED) saveTube(true)
-          else if (event.data === YT.PlayerState.ENDED) finish()
-        }
-        var start = function () {
-          player = new window.YT.Player(tube, { events: { onStateChange: onState } })
-        }
-        if (window.YT && window.YT.Player) {
-          start()
-        } else {
-          var queue = (window.__bgYouTubeReady = window.__bgYouTubeReady || [])
-          queue.push(start)
-          if (queue.length === 1) {
-            window.onYouTubeIframeAPIReady = function () {
-              for (var q = 0; q < queue.length; q++) queue[q]()
-            }
-            var tag = document.createElement('script')
-            tag.src = 'https://www.youtube.com/iframe_api'
-            tag.async = true
-            document.head.appendChild(tag)
-          }
-        }
-      })(document.currentScript.closest('.ls'))
-    </script>
-  )}
+  {(tracks || narrow) && <Tracker />}
 </div>
 
 <style>

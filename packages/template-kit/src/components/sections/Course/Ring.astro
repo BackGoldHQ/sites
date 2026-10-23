@@ -1,0 +1,62 @@
+---
+// A course's ring (board L1's cards, L2's course head, L3's rail): a circle
+// whose arc is `value` of `max`, drawn at its value. The arc has a
+// pathLength of 100, so its dash offset is the share left to go and a
+// template can draw it in from 0 by animating `stroke-dashoffset` from 100
+// on `.ac-ring-arc`. It only repeats the words printed beside it ("4 of 12"),
+// so it is hidden from screen readers. `size` is its width in pixels and
+// `stroke` the line's width as a share of it (out of 40); the track reads
+// --ring-track (else the ink at 16%) and the arc --ring-arc (else the
+// accent). With nothing done, only the track is drawn.
+interface Props {
+  value: number
+  max: number
+  size?: number
+  stroke?: number
+  class?: string
+}
+
+const { value, max, size = 56, stroke = 3.5, class: className } = Astro.props
+const share = max > 0 && Number.isFinite(value) ? Math.min(Math.max(value / max, 0), 1) : 0
+const percent = Math.round(share * 1000) / 10
+const r = 20 - stroke / 2
+---
+<svg class:list={['ac-ring', className]} viewBox="0 0 40 40" width={size} height={size} aria-hidden="true" focusable="false">
+  <circle class="ac-ring-track" cx="20" cy="20" r={r} fill="none" stroke-width={stroke} />
+  {percent > 0 && (
+    <circle
+      class="ac-ring-arc"
+      cx="20"
+      cy="20"
+      r={r}
+      fill="none"
+      stroke-width={stroke}
+      stroke-linecap={percent < 100 ? 'round' : 'butt'}
+      pathLength="100"
+      stroke-dasharray="100 100"
+      stroke-dashoffset={100 - percent}
+      transform="rotate(-90 20 20)"
+    />
+  )}
+</svg>
+
+<style>
+  .ac-ring {
+    display: block;
+    flex: none;
+  }
+  .ac-ring-track {
+    stroke: var(--ring-track, color-mix(in srgb, var(--ink) 16%, transparent));
+  }
+  .ac-ring-arc {
+    stroke: var(--ring-arc, var(--accent));
+  }
+  @media (forced-colors: active) {
+    .ac-ring-track {
+      stroke: GrayText;
+    }
+    .ac-ring-arc {
+      stroke: CanvasText;
+    }
+  }
+</style>

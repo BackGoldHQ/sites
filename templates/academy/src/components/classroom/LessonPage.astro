@@ -1,0 +1,18 @@
+---
+// A lesson's own page (board L3), at `/<courses base>/<course>/<lesson>`:
+// the template's Lesson · Player drawn from the lesson the route already
+// read for this visitor (`lesson`, LessonLayoutProps), its title the page's
+// <h1>.
+import { academySection } from '@backgold/template-kit/components/entries/course/section.ts'
+import type { LessonLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { lessonView } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
+import { orgNameOf, visitorOf } from '@backgold/template-kit/lib/visitor'
+import LessonPlayer from './LessonPlayer.astro'
+import '@backgold/template-kit/styles/entries.css'
+
+type Props = LessonLayoutProps
+
+const { lesson } = Astro.props
+const view = lessonView(lesson, visitorOf(Astro.locals), Astro.url.pathname, orgNameOf(Astro.locals))
+---
+<LessonPlayer section={academySection('Lesson', 'player', lesson.course.slug)} view={view} lead />

@@ -3,7 +3,8 @@
 // teaser and the lesson's head. The lock's reason picks it (lesson.ts):
 //   sign-in  "Sign in with your email to watch": a real form to the site's
 //            sign-in door, coming back here and naming the lesson
-//            ("Lesson 3: Read a budget, in Foundations"), with the newsletter box
+//            ("Lesson 3: Read a budget, in Foundations"), with the box for the
+//            site's letter, by its name ("Also send me the Academy letter"),
 //            unticked; ticked, it rides along as `newsletter=1`.
 //   join     "Join to watch": See how to join (the site's Join page, which
 //            says what joining costs), and for a member under another email
@@ -38,9 +39,9 @@ const tagName = door.kind === 'tag' ? door.tag : null
         <button class="button" type="submit">Sign in with your email</button>
         <label class="ls-check">
           <input type="checkbox" name="newsletter" value="1" />
-          <span>Also send me the newsletter</span>
+          <span>Also send me {door.newsletter}</span>
         </label>
-        <p class="fine">Signing in does not sign you up for any email. Tick this if you want {door.newsletter} too.</p>
+        <p class="fine">Signing in does not sign you up for any email. Unsubscribe from {door.newsletter} in one click, any time.</p>
       </form>
     </>
   )}
