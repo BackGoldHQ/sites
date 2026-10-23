@@ -3984,7 +3984,7 @@ async function checkPartyChrome(origin) {
   check(/<section class="bg-section[^"]*\btakeover\b/.test(html), "home's TakeoverBanner is drawn as the full-screen takeover")
   check(/<a class="brand[^"]*" href="\/"[^>]*>\s*<img src="[^"]*" alt="Pine Valley for Liberty" class="brand-logo"/.test(html), 'the header brand is the logo, linking home, when the site has one')
   check(/<a href="https:\/\/facebook\.com\/pinevalleyliberty"[^>]*aria-label="Facebook"[^>]*>Fb<\/a>/.test(html), 'a social link is a circle with its short name and its full name for screen readers')
-  check(/<span class="footer-powered"[^>]*>Powered by BackGold<\/span>/.test(html), 'the bottom row ends with Powered by BackGold')
+  check(/<a class="footer-powered" href="https:\/\/backgold\.com"[^>]*>Powered by BackGold<\/a>/.test(html), 'the bottom row ends with Powered by BackGold, a link to backgold.com')
   check(/<summary[^>]*><span class="sheet-open"[^>]*>Menu<\/span><span class="sheet-close"[^>]*>Close<\/span><\/summary>/.test(html), 'the phone sheet opens from Menu and reads Close while open')
   check(
     /<button class="mode-toggle"[^>]*data-mode-toggle[^>]*aria-pressed="false"[^>]*hidden/.test(html) &&
