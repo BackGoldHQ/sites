@@ -98,6 +98,8 @@ export default defineTemplate({
   menuLinks: [
     { label: 'Archive', href: '/archive', match: 'prefix', also: ARCHIVE_BASES },
     { label: 'The archive', href: '/archive', menu: 'footer', group: 'The record', match: 'prefix', also: ARCHIVE_BASES },
+    { label: 'The money', href: '/archive/money', menu: 'footer', group: 'The record' },
+    { label: 'The pay', href: '/archive/pay', menu: 'footer', group: 'The record' },
     { label: 'BISD: Public info', href: '/records', menu: 'footer', group: 'The record', match: 'prefix' },
     { label: 'Request a record', href: '/records#request-a-record', menu: 'footer', group: 'The record' },
   ],
