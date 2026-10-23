@@ -1,0 +1,35 @@
+---
+// The field hero's proof line, under its buttons (boards K1, K6): three
+// figures, each number in the display face in the accent over its words,
+// hairlines between them: "8 courses · 41 lessons · 200 conversations and
+// clips". The words are the template's; every number is the Content API's,
+// counted when the page is drawn (lib/counts.ts). A count of nothing is left
+// out, and with no count at all (or a read that failed) there is no line.
+// Each digit sits in a cell of its own, one width for every figure (the
+// display face has no tabular figures), the column src/scripts/motion.ts
+// rolls it up in, once, on load; without the script the numbers stand.
+import { countsOf } from '../lib/counts'
+
+const bg = Astro.locals.backgold
+const counts = bg.setup === null ? await countsOf(bg.client) : null
+const figures = counts
+  ? [
+      { n: counts.courses, words: counts.courses === 1 ? 'course' : 'courses' },
+      { n: counts.lessons, words: counts.lessons === 1 ? 'lesson' : 'lessons' },
+      { n: counts.videos, words: counts.videos === 1 ? 'conversation or clip' : 'conversations and clips' },
+    ].filter((f) => f.n > 0)
+  : []
+---
+{figures.length > 0 && (
+  <dl class="ak-proof">
+    {figures.map((f) => (
+      <div class="ak-proof-figure">
+        <dt class="ak-proof-words">{f.words}</dt>
+        <dd class="ak-proof-n ak-numeral" data-ak-count>
+          <span class="visually-hidden">{f.n.toLocaleString('en-US')}</span>
+          <span class="ak-digits" aria-hidden="true">{[...f.n.toLocaleString('en-US')].map((c) => (/\d/.test(c) ? <span class="ak-digit">{c}</span> : <span>{c}</span>))}</span>
+        </dd>
+      </div>
+    ))}
+  </dl>
+)}

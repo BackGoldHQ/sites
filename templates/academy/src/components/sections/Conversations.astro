@@ -1,0 +1,81 @@
+---
+// A Collection's cards on the academy, as conversations (board K1, "People
+// who ran"): the organization's mark on a hairline at the band's head (the
+// chapter mark), the kicker and the heading at the left, the line under them
+// and the link to the whole list at the right, then each entry as a
+// VideoCard (its 16:9 still with a play mark, its title, its guest line, its
+// length and date), three across, two on a tablet, one on a phone: a grid,
+// never a strip.
+//
+// A Collection carries a heading and no other words, so a Collection of
+// videos draws the template's own around it: the chapter mark, the kicker
+// "Watch", the line about who talks in the conversations, and "All
+// conversations" to the video list (the section's own kicker and line win
+// when it carries them). Any other Collection draws its heading and "See all
+// <plural>" alone, and its cards without the play mark.
+//
+// The entries are the Collection's own rows, as BackGold baked them. A
+// Collection of videos also reads the newest fifty videos from the Content
+// API at request time for what the rows do not carry, each one's length and
+// whether it is a live session; a row that read does not list has neither.
+import type { Entry, Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { entriesOf, seeAllOf } from '@backgold/template-kit/components/sections/Collection/entries.ts'
+import { text } from '@backgold/template-kit/lib/format'
+import { linkOf, rows } from '@backgold/template-kit/lib/section'
+import Mark from '../Mark.astro'
+import VideoCard, { type VideoCardData } from '../VideoCard.astro'
+import { isLive } from '../../lib/watch'
+
+/** The line under a video Collection's heading, when the section carries none. */
+const LINE = 'Candidates, councilmembers, party officers and organizers, talking about what actually happened: the filing, the doors, the money, the count. New conversations go up as they are recorded.'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const bg = Astro.locals.backgold
+const options = section.options ?? {}
+const type = typeof options.type === 'string' && options.type ? options.type : 'post'
+const videos = type === 'video'
+const baked = entriesOf(section)
+const slugs = rows(section).flatMap((row) => (text(row.title) ? [text(row.slug)] : []))
+const live = videos && baked.length > 0 && bg.setup === null ? await bg.client.entries(type, { limit: 50 }).catch(() => null) : null
+const bySlug = new Map<string, Entry>((live?.entries ?? []).map((e) => [e.slug, e]))
+const cards: VideoCardData[] = baked.map((e, i) => {
+  const found = bySlug.get(slugs[i] ?? '')
+  return { title: e.title, href: e.href, summary: e.summary, still: e.image, seconds: found?.duration_seconds ?? null, date: e.date, live: found ? isLive(found) : false }
+})
+const kicker = text(section.copy.kicker) ?? (videos ? 'Watch' : null)
+const heading = text(section.copy.heading)
+const body = text(section.copy.body) !== null ? section.copy.body : videos ? LINE : null
+const all = videos && cards.length > 0 ? linkOf('All conversations', section.links?.[0]?.url) : null
+const more = all ? [all] : seeAllOf(section, baked)
+---
+{(cards.length > 0 || heading) && (
+  <Band section={section} class:list={['ak-conversations', videos && 'ak-conversations-videos']}>
+    {videos && <div class="ak-chapter" aria-hidden="true"><Mark /></div>}
+    <div class="ak-head">
+      <div class="ak-head-title">
+        {kicker && <p class="kicker">{kicker}</p>}
+        {heading && <h2>{heading}</h2>}
+      </div>
+      <div class="ak-head-aside">
+        <Prose value={body} class="lede" />
+        {more.map((link) => <p class="ak-head-more"><a class="ak-link" href={link.href} rel={link.rel}>{link.label}</a></p>)}
+      </div>
+    </div>
+    {cards.length > 0 ? (
+      <ul class="ak-cards ak-cards-3" role="list">
+        {cards.map((card) => (
+          <li><VideoCard card={card} level={heading ? 3 : 2} play={videos} /></li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+  </Band>
+)}

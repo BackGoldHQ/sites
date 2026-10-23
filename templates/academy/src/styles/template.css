@@ -1,31 +1,138 @@
 /*
   What the academy template draws differently from the kit's stylesheet
-  (@backgold/template-kit's src/styles/site.css and entries.css): the warmth
-  of a classroom lit at night. The main call is a pill filled with a gradient
-  of the band's two button colours and carries a soft glow of the accent;
-  the quiet call is a pill too. A card lifts on a gradient of its surface
-  with a hairline of the accent when hovered. Kickers are set in the accent,
-  tracked. Everything reads the kit's tokens, so the organization's theme
-  still owns the colours; the Classroom, Course and Lesson sections carry
-  their own look (boards D1 to D3). This file loads after the kit's on every
-  page.
+  (@backgold/template-kit's src/styles/site.css and entries.css): a classroom
+  lit at night, in the vocabulary of fire (board set K, the Kindling brief
+  §6). Everything reads the kit's tokens, so the organization's theme owns
+  every colour: the "ember" is the band's main call (--button, its ink
+  --button-ink), the "gold" its accent (--accent), the "smoke" its card
+  ground (--surface); the template never pins a colour of its own. The
+  Classroom, Course and Lesson sections carry their own look (boards D1 to
+  D3, K2, K3). This file loads after the kit's on every page.
+
+  1. Tokens and rhythm   2. The header   3. Bands and heads
+  4. The field hero and its proof line   5. Cards   6. The feature card
+  7. Conversations   8. The Watch list   9. A video's page   10. Doors
+  11. The letter   12. The footer   § Motion   then the kill switch.
 */
+
+/* ── 1. Tokens and rhythm ── */
+
+:root {
+  /* The one easing: hard, never springy (MOTION.md rule 4). */
+  --ak-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Headings in the display face at one weight: a theme's display face that has only a regular cut is never thickened. */
+h1,
+h2,
+h3,
+.bg-section.hero-statement .statement-headline {
+  font-weight: 500;
+}
+
+.kicker {
+  color: var(--accent);
+  letter-spacing: 0.16em;
+}
+/* The ember rule under a section's kicker, the one over its heading; centred under a centred kicker. */
+main .bg-section .kicker:has(+ :is(h1, h2))::after,
+.ak-series-title::after {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-top: 0.625rem;
+  border-radius: 1px;
+  background: var(--button);
+  transform-origin: left center;
+}
+main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
+  margin-inline: auto;
+  transform-origin: center;
+}
+
+/* A numeral the template draws: the accent's, in the display face. */
+.ak-numeral {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-variant-numeric: lining-nums;
+}
+
+/* A link that is a line's call ("See the syllabus", "All conversations"): the ink, an ember underline, an ember arrow. */
+.ak-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--button);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.35em;
+}
+.ak-link::after {
+  content: '\00a0\2192';
+  display: inline-block;
+  margin-left: 0.25rem;
+  color: var(--button);
+  text-decoration: none;
+}
+.ak-link:hover {
+  text-decoration-thickness: 3px;
+}
+
+/* A chip: a pill on a hairline. Gold for what is free, ember filled for Free, quiet for everything else. */
+.ak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pill);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ak-chip-gold {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ak-chip-ember {
+  border-color: var(--button);
+  background: var(--button);
+  color: var(--button-ink);
+}
+.ak-chip-ember-line {
+  border-color: var(--button);
+  color: var(--button);
+}
+/* The flame, small, drawn in the ember: a drop with its point up. */
+.ak-flame {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50% 0 50% 50%;
+  background: var(--button);
+  rotate: -45deg;
+}
+/* The play glyph on a call ("Play lesson 1"). */
+.ak-play-glyph {
+  width: 0.625rem;
+  height: 0.75rem;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
 
 .button {
   border-radius: var(--pill);
   padding: 0.85rem 1.5rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--button) 82%, #000) 0%, var(--button) 55%, color-mix(in srgb, var(--button) 70%, #fff) 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--button) 82%, black) 0%, var(--button) 55%, color-mix(in srgb, var(--button) 70%, white) 100%);
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 28%, transparent);
-  transition:
-    box-shadow 0.25s ease,
-    transform 0.15s ease;
 }
 .button:hover,
 .button:focus-visible {
   box-shadow:
     0 0 24px color-mix(in srgb, var(--accent) 28%, transparent),
     0 0 64px color-mix(in srgb, var(--accent) 12%, transparent);
-  transform: translateY(-1px);
 }
 .button.button-quiet {
   background: transparent;
@@ -38,38 +145,1126 @@
   box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
-.kicker {
+/* ── 2. The header: the name set in type beside the mark, the current page underlined in the ember, Apply an ember outline ── */
+
+.ak-brand {
+  gap: 0.625rem;
+}
+.ak-brand .ak-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-right: -0.25rem;
+}
+.ak-brand-words {
+  display: grid;
+  min-width: 0;
+}
+.ak-brand-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ak-brand-tail {
+  margin-top: 0.25rem;
   color: var(--accent);
-  letter-spacing: 0.16em;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.header-bar-menu > ul > li > a[aria-current='page'] {
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--button);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.65em;
+}
+/* The header's button is an ember outline: the hero's call is the one filled call above the fold. */
+.site-header .header-button {
+  border: 1.5px solid var(--button);
+  background: transparent;
+  box-shadow: none;
+  color: var(--button);
+}
+.site-header .header-button:hover,
+.site-header .header-button:focus-visible {
+  background: color-mix(in srgb, var(--button) 12%, transparent);
+}
+/* On a phone the bar holds the name and Menu; the button waits in the sheet. */
+@media (max-width: 55.99rem) {
+  .site-header .header-button {
+    display: none;
+  }
 }
 
-/* The cards the sections draw: the classroom's course cards, the pathway doors, the issue cards. */
+/* ── 3. Bands and heads ── */
+
+/* Two bands meet on a hairline, the lower band's. */
+.bg-section + .bg-section {
+  border-top: 1px solid var(--line);
+}
+/* The hearth: the contrast band carries one still glow of the ember at its bottom left corner. */
+.bg-section.bg-band-contrast {
+  background-image: radial-gradient(52rem 30rem at 0% 100%, color-mix(in srgb, var(--button) 6%, transparent), transparent 70%);
+}
+/* A section's head as the academy sets it: the kicker and the heading at the left, the line under them (and its link) at the right. */
+.ak-head {
+  display: grid;
+  gap: 1rem 4rem;
+  margin-bottom: clamp(1.75rem, 1.25rem + 1.5vw, 2.75rem);
+}
+.ak-head-title > :last-child,
+.ak-head-aside > :last-child,
+.ak-head-aside .lede > :last-child {
+  margin-bottom: 0;
+}
+.ak-head h2 {
+  margin: 0;
+  font-size: clamp(2.25rem, 1.5rem + 2.4vw, 3.5rem);
+  line-height: 1.04;
+}
+.ak-head .lede {
+  margin: 0;
+}
+.ak-head-more {
+  margin: 1.125rem 0 0;
+}
+@media (min-width: 56rem) {
+  .ak-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+  }
+}
+
+/* ── 4. The field hero and its proof line ── */
+
+.bg-section.hero-field .field-words {
+  max-width: 56rem;
+}
+.bg-section.hero-field .field-headline {
+  font-size: clamp(2.75rem, 1.5rem + 4.6vw, 5.5rem);
+}
+/* The clause after the colon, in the ember's italic. */
+.bg-section.hero-field .field-headline em {
+  color: var(--button);
+}
+.bg-section.hero-field .field-lede {
+  max-width: 36em;
+}
+/* The second call is a link: the hero's one filled call is the first. */
+.bg-section.hero-field .actions {
+  align-items: center;
+  gap: 1rem 2rem;
+}
+.bg-section.hero-field .actions .button.button-quiet {
+  min-height: 0;
+  padding: 0.25rem 0 0.375rem;
+  border: 0;
+  border-radius: 0;
+  /* The ember underline under the words, not under the arrow. */
+  background: linear-gradient(var(--button), var(--button)) left bottom / calc(100% - 1.75rem) 2px no-repeat;
+  box-shadow: none;
+  color: var(--ink);
+  text-decoration: none;
+}
+.bg-section.hero-field .actions .button.button-quiet::after {
+  content: '\2192';
+  margin-left: 0.25rem;
+  color: var(--button);
+}
+@media (max-width: 47.99rem) {
+  .bg-section.hero-field {
+    min-height: 28rem;
+  }
+  .bg-section.hero-field .actions {
+    flex-direction: column;
+    align-self: stretch;
+  }
+  .bg-section.hero-field .actions .button:not(.button-quiet) {
+    align-self: stretch;
+  }
+}
+/* Three figures, each number over its words, hairlines between them, over one hairline of their own. */
+.ak-proof {
+  display: flex;
+  justify-content: center;
+  margin: 2.25rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+.ak-proof-figure {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 clamp(1rem, 0.5rem + 2vw, 2rem);
+}
+.ak-proof-figure + .ak-proof-figure {
+  border-left: 1px solid var(--line);
+}
+.ak-proof-words {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+}
+.ak-proof-n {
+  margin: 0;
+  font-size: clamp(2.25rem, 1.75rem + 1.6vw, 3rem);
+  line-height: 1;
+}
+/* Every digit in a cell of one width (the display face has no tabular figures): the column the odometer rolls in. */
+.ak-digits {
+  display: inline-flex;
+}
+.ak-digit {
+  display: inline-block;
+  width: 0.46em;
+  text-align: center;
+}
+.ak-odo-d {
+  height: 1em;
+  overflow: hidden;
+}
+.ak-odo-d > span {
+  display: flex;
+  flex-direction: column;
+  translate: 0 calc(var(--d, 0) * -1em);
+}
+
+/* ── 5. Cards: the band's surface on a hairline that warms to the ember under the pointer ── */
+
 .bg-section[data-type] .card,
 .bg-section[data-type] .door,
-.bg-section[data-type] .issue-card {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--ink)) 0%, var(--surface) 100%);
+.bg-section[data-type] .issue-card,
+.ak-video,
+.ak-door,
+.ak-feature {
+  background: var(--surface);
   border: 1px solid var(--line);
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.2s ease;
 }
 .bg-section[data-type] .card:hover,
 .bg-section[data-type] .door:hover,
-.bg-section[data-type] .issue-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
-    0 24px 60px -30px color-mix(in srgb, var(--accent) 35%, transparent);
-  transform: translateY(-2px);
+.bg-section[data-type] .issue-card:hover,
+.ak-video-linked:hover,
+.ak-door-linked:hover {
+  border-color: var(--button);
+  box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--button) 35%, transparent);
+}
+/* A play mark: a disc of the band's ground with the ink's triangle in it. */
+.ak-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-band-background) 80%, transparent);
+  translate: -50% -50%;
+}
+.ak-play::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 30%;
+  height: 34%;
+  translate: 10% 0;
+  background: var(--ink);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.ak-play-lg {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+/* The ember line along a cover's foot. */
+.ak-video-still::after,
+.ak-feature-cover::after,
+.ak-player::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--button);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .button,
+/* ── 6. The feature card (Course · outline): the cover and the course's facts at the left, the first lessons at the right ── */
+
+.ak-feature {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+.ak-feature-media {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+.ak-feature-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
+}
+.ak-feature-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ak-feature-facts {
+  display: none;
+  margin: 0;
+  padding: 0.5rem 1.75rem 1rem;
+  font-size: var(--text-sm);
+}
+.ak-feature-facts > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.ak-feature-facts > div:last-child {
+  border-bottom: 0;
+}
+.ak-feature-facts dt {
+  color: var(--muted);
+}
+.ak-feature-facts dd {
+  margin: 0;
+  color: var(--ink);
+}
+.ak-feature-peek {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: clamp(1.25rem, 1rem + 1.5vw, 2.5rem);
+}
+.ak-feature-peek > * {
+  margin: 0;
+}
+.ak-feature-title {
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.875rem);
+  line-height: 1.1;
+}
+.ak-feature-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.ak-feature-title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+.ak-feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.ak-feature-count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ak-peek {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.ak-peek-row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.ak-peek-n {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 1;
+}
+.ak-peek-name {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1.3125rem;
+  line-height: 1.15;
+}
+.ak-peek-kicker {
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ak-peek-name a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.ak-peek-name a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+/* A locked lesson dims: its number in a gold taken toward the card, its title in the muted ink. */
+.ak-peek-row.is-locked .ak-peek-n {
+  color: color-mix(in srgb, var(--accent) 58%, var(--surface));
+}
+.ak-peek-row.is-locked .ak-peek-name a {
+  color: var(--muted);
+}
+.ak-peek-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.ak-feature-calls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.75rem;
+  padding-top: 0.5rem;
+}
+.ak-feature-calls .button {
+  gap: 0.625rem;
+}
+@media (max-width: 39.99rem) {
+  /* On a phone a lock keeps its mark and drops its words. */
+  .ak-peek-lock-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .ak-peek-row {
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  }
+  .ak-peek-n {
+    font-size: 2rem;
+  }
+}
+@media (min-width: 56rem) {
+  .ak-feature {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .ak-feature-media {
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+  .ak-feature-facts {
+    display: block;
+  }
+}
+
+/* ── 7. Conversations: the chapter mark on its hairline, the head, the cards three across ── */
+
+.ak-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ak-cards > li {
+  display: flex;
+  min-width: 0;
+}
+@media (min-width: 40rem) {
+  .ak-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 60rem) {
+  .ak-cards-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 64rem) {
+  .ak-cards-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.ak-video {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+.ak-video-still {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
+}
+.ak-video-still img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A video with no still: its title in the display face where the still would be. */
+.ak-video-stand-in {
+  position: absolute;
+  inset: auto 1rem 1rem;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  line-height: 1.1;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.ak-video-still-bare .ak-play {
+  left: auto;
+  right: 0.875rem;
+  top: 0.875rem;
+  translate: none;
+}
+.ak-chip-live {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  background: color-mix(in srgb, var(--bg-band-background) 80%, transparent);
+}
+.ak-watching-meta .ak-chip-live {
+  position: static;
+}
+.ak-video-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1.125rem 1.25rem 1.25rem;
+}
+.ak-video-body > * {
+  margin: 0;
+}
+.ak-video-title {
+  font-size: 1.375rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ak-video-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+/* The title's link opens the whole card. */
+.ak-video-title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.ak-video-title a:focus-visible {
+  outline: none;
+}
+.ak-video-linked:focus-within {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.ak-video-guest {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.ak-video-meta {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.ak-video-body .ak-video-meta {
+  margin-top: auto !important;
+  padding-top: 0.5rem;
+}
+.ak-video-length {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The chapter mark: the organization's mark on a hairline at the head of the conversations band. */
+.ak-chapter {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: clamp(2.5rem, 2rem + 2vw, 3.5rem);
+}
+.ak-chapter::before,
+.ak-chapter::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--line);
+}
+.ak-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.ak-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.4375rem;
+  object-fit: contain;
+}
+.ak-mark-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--button);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--button) 18%, transparent);
+}
+
+/* ── 8. The Watch list: its head on the hearth, then each series under its running head, four across ── */
+
+.ak-watch-head .bg-section-inner {
+  display: grid;
+  gap: 1.5rem 3rem;
+  align-items: end;
+}
+.ak-watch-head h1 {
+  margin: 0;
+  font-size: clamp(3.5rem, 2.5rem + 3.4vw, 5.5rem);
+  line-height: 1;
+}
+.ak-watch-head .lede {
+  max-width: 34em;
+  margin: 1.5rem 0 0;
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.375rem);
+}
+.ak-watch-count,
+.ak-series-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ak-watch-count .ak-numeral {
+  font-size: clamp(2.75rem, 2rem + 2vw, 3.5rem);
+  line-height: 1;
+}
+@media (min-width: 56rem) {
+  .ak-watch-head .bg-section-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+.ak-watch.listing {
+  padding-top: clamp(2.5rem, 2rem + 2vw, 4rem);
+}
+.ak-series + .ak-series {
+  margin-top: clamp(3rem, 2.5rem + 2vw, 4.5rem);
+}
+.ak-series-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.ak-series-title {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ak-series-count .ak-numeral {
+  font-size: 2.25rem;
+  line-height: 1;
+}
+.ak-series-more {
+  margin: 1.75rem 0 0;
+}
+/* A phone shows each series' newest four. */
+@media (max-width: 39.99rem) {
+  .ak-series .ak-cards-4 > li:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+/* ── 9. A video's page: the theater (the page's ground taken deeper), the player and its words, the rail ── */
+
+.bg-section.ak-theater {
+  background: color-mix(in srgb, var(--bg-band-background) 55%, black);
+}
+.ak-theater-inner {
+  display: grid;
+  gap: 2rem 3rem;
+  align-items: start;
+}
+.ak-watching > * {
+  margin: 0;
+}
+.ak-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.25rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ak-crumbs a {
+  color: var(--ink);
+}
+.ak-player {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.ak-player :is(iframe, video, img) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+.ak-player-missing {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  color: var(--muted);
+}
+.ak-watching-title {
+  margin-top: 1.75rem !important;
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+  line-height: 1.08;
+}
+.ak-watching-lede {
+  margin-top: 1rem !important;
+}
+.ak-watching-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.5rem !important;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.ak-byline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.ak-byline img {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.ak-byline > span {
+  display: grid;
+  line-height: 1.25;
+}
+.ak-byline-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.ak-byline-role {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.ak-watching-body {
+  margin-top: 1.75rem !important;
+}
+.ak-rail {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.ak-rail-title {
+  margin: 0 0 1.25rem;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ak-rail-title::after {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-top: 0.625rem;
+  background: var(--button);
+}
+.ak-rail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ak-rail-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.875rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+.ak-rail-still {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
+  box-shadow: inset 0 -2px 0 var(--button);
+}
+.ak-rail-still img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ak-rail-still .ak-video-stand-in {
+  inset: auto 0.5rem 0.5rem;
+  font-size: 0.875rem;
+}
+.ak-rail-words {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.ak-rail-words a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.ak-rail-words a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.ak-rail-words a:hover {
+  text-decoration: underline;
+}
+.ak-rail-meta {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.ak-rail-more {
+  margin: 1rem 0 0;
+  font-size: var(--text-sm);
+}
+@media (min-width: 64rem) {
+  .ak-theater-inner {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+  }
+}
+
+/* ── 10. Doors: a title, a line and a link in the ember, as many across as there are up to five ── */
+
+.ak-doors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ak-door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1.5rem 1.375rem 1.5rem;
+  border-radius: var(--radius-card);
+}
+.ak-door > * {
+  margin: 0;
+}
+.ak-door-title {
+  font-size: clamp(1.5rem, 1.3rem + 0.5vw, 1.75rem);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.ak-door-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.ak-door-title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.ak-door-title a:focus-visible {
+  outline: none;
+}
+.ak-door-linked:focus-within {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.ak-door-summary {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.ak-door-more {
+  margin-top: auto !important;
+  padding-top: 1rem;
+  color: var(--button);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.ak-door-linked:hover .ak-door-more {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.25em;
+}
+@media (min-width: 40rem) {
+  .ak-doors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ak-doors-1 {
+    grid-template-columns: minmax(0, 24rem);
+  }
+}
+@media (min-width: 60rem) {
+  .ak-doors-3,
+  .ak-doors-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ak-doors-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 72rem) {
+  .ak-doors-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* ── 11. The letter: the sign-up's frame keeps its height before it has drawn ── */
+
+#above-the-footer .bg-section[data-type='SignupCapture'] iframe {
+  min-height: 15.5rem;
+}
+
+/* ── 12. The footer: on the page's ground, the closing line in the display face beside the mark, then the wordmark at its own size ── */
+
+.site-footer {
+  --bg-band-background: var(--band-plain);
+  --bg-band-color: var(--band-plain-ink);
+  --ink: var(--band-plain-ink);
+  --muted: var(--band-plain-muted);
+  --accent: var(--band-plain-accent);
+  --link: var(--band-plain-link);
+  --button: var(--band-plain-button);
+  --button-ink: var(--band-plain-button-ink);
+  --button-2: var(--band-plain-button-2);
+  --button-2-ink: var(--band-plain-button-2-ink);
+  --surface: var(--band-plain-surface);
+  --line: var(--band-plain-line);
+  --line-strong: var(--band-plain-line-strong);
+  border-top: 1px solid var(--line);
+}
+
+.ak-closing .closing-call-inner {
+  max-width: calc(var(--content) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: clamp(3rem, 2rem + 3vw, 5rem) var(--gutter) 0;
+}
+.ak-closing-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.125rem;
+  padding-bottom: clamp(2.25rem, 1.75rem + 2vw, 3.5rem);
+  border-bottom: 1px solid var(--line);
+}
+.ak-closing-line .closing-call-words {
+  flex: 1 1 auto;
+}
+.ak-closing .ak-mark {
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-top: 0.375rem;
+}
+.ak-closing .ak-mark img {
+  border-radius: 0.5625rem;
+}
+.ak-closing-headline {
+  max-width: 22ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.25rem + 2.6vw, 3.375rem);
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+}
+.ak-closing-headline em {
+  color: var(--button);
+  font-style: italic;
+}
+.ak-closing .closing-call-body {
+  max-width: var(--measure);
+  margin: 0.875rem 0 0;
+  color: var(--muted);
+  font-size: var(--text-lg);
+}
+.ak-closing .closing-call-tagline {
+  margin: 0.875rem 0 0;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-style: italic;
+}
+.ak-closing .closing-call-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+}
+.site-footer .footer-brand .brand-logo {
+  width: min(17.25rem, 100%);
+  max-height: none;
+}
+
+/*
+  § Motion
+
+  Every effect here is the "from" side of an animation or a transition, in
+  `prefers-reduced-motion: no-preference` (MOTION.md rules 1 and 2): the page
+  as the rules above draw it is the finished page, which reduced motion, a
+  browser without a feature, scripts off and a screenshot all get. Hard
+  easing, short times, nothing loops (the field hero's motes are the kit's).
+
+  The ember rule draws in under a kicker from the left, and the heading after
+  it rises (the field hero's rise), as they come up the window. Where the
+  browser has scroll-driven animations each plays on its own view timeline
+  (the kicker's, `--ak-kicker`, for the rule) once src/scripts/motion.ts has
+  put `ak-scroll` on the root, after marking the bands already in the window
+  `ak-seen` so they stay finished. They fill forwards only: a kicker or a
+  heading not reached yet is drawn finished until its first line comes in,
+  so a screenshot of the whole page is the finished page. Elsewhere
+  motion.ts plays them once, 400 and 500 ms: from the visitor's first scroll
+  it marks what waits below the fold (`ak-wait`) and lights each as it comes
+  into view (`ak-lit`). The odometer's wheels roll once on load.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .button {
+    transition:
+      box-shadow 0.25s ease,
+      transform 0.15s ease;
+  }
+  .button:hover,
+  .button:focus-visible {
+    transform: translateY(-1px);
+  }
   .bg-section[data-type] .card,
   .bg-section[data-type] .door,
-  .bg-section[data-type] .issue-card {
-    transition: none;
-    transform: none;
+  .bg-section[data-type] .issue-card,
+  .ak-video,
+  .ak-door {
+    transition:
+      border-color 0.18s var(--ak-ease),
+      box-shadow 0.25s var(--ak-ease),
+      transform 0.18s var(--ak-ease);
+  }
+  .bg-section[data-type] .card:hover,
+  .bg-section[data-type] .door:hover,
+  .bg-section[data-type] .issue-card:hover,
+  .ak-video-linked:hover,
+  .ak-door-linked:hover {
+    transform: translateY(-2px);
+  }
+
+  @supports (animation-timeline: view()) {
+    .ak-scroll main .bg-section:not(.ak-seen) .kicker:has(+ h2) {
+      view-timeline: --ak-kicker block;
+    }
+    .ak-scroll main .bg-section:not(.ak-seen) .kicker:has(+ h2)::after {
+      animation: ak-rule var(--ak-ease) forwards;
+      animation-timeline: --ak-kicker;
+      animation-range: entry 0% cover 22%;
+    }
+    .ak-scroll main .bg-section:not(.ak-seen) .kicker + h2 {
+      animation: ak-rise var(--ak-ease) forwards;
+      animation-timeline: view();
+      animation-range: entry 0% cover 26%;
+    }
+  }
+  main .bg-section .kicker.ak-wait::after {
+    transform: scaleX(0);
+  }
+  main .bg-section .kicker.ak-lit::after {
+    animation: ak-rule 400ms var(--ak-ease) both;
+  }
+  main .bg-section h2.ak-wait {
+    opacity: 0;
+  }
+  main .bg-section h2.ak-lit {
+    animation: ak-rise 500ms var(--ak-ease) both;
+  }
+
+  .ak-odo-d > span {
+    transition: translate 700ms var(--ak-ease) calc(var(--k, 0) * 70ms);
+  }
+}
+@keyframes ak-rule {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes ak-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+/* ── Nothing moves for a visitor who asked for less motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }

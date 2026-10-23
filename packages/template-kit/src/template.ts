@@ -98,6 +98,21 @@ export interface TemplateConfig {
   /** The component that draws the 404 page's content. Left out, the kit's (components/NotFound.astro). */
   notFound?: AstroComponent
   /**
+   * The component that draws the footer's closing call on its `closing`
+   * layout, given `{ call }` (a ClosingCall, lib/chrome.ts): a template's
+   * own closing line over the columns. Left out, the kit's
+   * (components/chrome/ClosingCall.astro).
+   */
+  closingCall?: AstroComponent
+  /**
+   * The component that draws the brand at the header's left, given
+   * `{ name, logoUrl }` as the kit's Brand is (components/chrome/Brand.astro):
+   * a template that sets the name in type beside the organization's mark
+   * where a wide logo would read too small. The footer keeps the kit's Brand.
+   * Left out, the kit's.
+   */
+  headerBrand?: AstroComponent
+  /**
    * Links a template adds to its menus for routes it draws itself (an
    * archive at `/archive`), which no menu link in BackGold can name
    * (layouts/Site.astro). `menu` 'header' (the default): at the top level,

@@ -44,11 +44,33 @@ A page can draw the same sections anywhere: Classroom (`grid`, `list`),
 Course (`syllabus`, `outline`, pinned to a course) and Lesson (`player`,
 `reading`), beside the kit's Hero, About (its `books` layout for an
 instructor and what they wrote), Pathways, Issues, StatCards, Faq, TeamGrid,
-VideoEmbed, Cta, QuoteStrip, SignupCapture, FormBlock and Map. A lesson's
+VideoEmbed, Cta, QuoteStrip, SignupCapture, FormBlock, Map and Collection. A lesson's
 video is the org's own upload in the browser's player, or an imported YouTube
 or Vimeo video in that player's frame. Who may open a lesson is the Content API's answer, never the
 site's: a locked lesson arrives without its video or notes, and its `lock`
 names the door (sign in, join, or ask).
+
+## What the academy draws itself
+
+The kit draws every section and page; the template draws some of them its
+own way (boards K1, K4 and K6 of the Kindling pass). Its sections are listed
+in `src/sections.ts`, each drawn through `src/components/sections/Kindled.astro`:
+
+| Where | What the academy draws |
+| --- | --- |
+| Hero · Field | The kit's field, the headline a size up, the second call as a link, and under the calls the proof line: "{courses} courses · {lessons} lessons · {videos} conversations and clips", each number counted from the Content API when the page is drawn (`src/lib/counts.ts`), never typed. |
+| Course · Outline | The free course as a feature card: "Start here", the course's title and summary, its cover with its facts (lessons, who can watch), its first four lessons (Free, the locks and what opens them), Play lesson 1 and See the syllabus. |
+| Collection (cards) | Conversations: the chapter mark (the site's icon on a hairline), "Watch", the heading, a line about who talks in them and "All conversations", then each entry's 16:9 still with a play mark, its title, its guest line, its length and date; three across, one on a phone. |
+| Pathways · Doors | Each door a title, a line and a link: "Start with <course>" when it opens a course, "Apply" when it opens `/join`, else the section's link label or "Start here". |
+| The video list, and a news list that holds videos alone | "Watch.": the videos grouped by their `series` term (Conversations, Training clips, Live sessions; a video with none is a training clip), each group counted, newest eight (four on a phone) with a link to the series' own list. A news list with a post or an episode in it is the kit's. |
+| A video's page | The theater: the player, the title, the summary, the series, length, date and byline, Watch on YouTube, the five newest videos of its series beside it, then the free course's feature card. |
+| The header's brand | The site's icon beside the name set in type ("Libertarian Leadership" / "ACADEMY"); the header's button an outline. |
+| The footer | On the page's ground; its closing call (the `closing` layout) as the site's closing line in the display face beside the icon. |
+
+Kickers sit over an ember rule and the heading under one rises as it comes
+into view, and the proof line's numbers roll up once; all of it is the
+stylesheet's § Motion and `src/scripts/motion.ts`, and none of it runs for a
+visitor who asked for reduced motion.
 
 ## Signing in
 
