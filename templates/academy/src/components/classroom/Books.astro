@@ -1,0 +1,90 @@
+---
+// About · Books (board L2's offset rule, for an instructor and what they
+// wrote): the person's words at the left (the kicker, their name as the
+// heading, their role, the story and the section's one button) and the
+// shelf at the right, two across. Each book stands in an ember rule offset
+// down and to the right: its cover (2:3) over a cover set in type, the
+// title in the display face over a short ember rule and the author (the
+// section's heading) under it, which shows where there is no cover or the
+// cover does not load (the script takes a failed one away), never an empty
+// box. Under it the
+// title, the year and the detail ("2026 · Pine Valley Press") and "Get the
+// book" when the row has an address. On a phone the words sit over the
+// shelf. With no words the shelf takes the row, four across on a wide
+// screen; with no book the words take it alone; with neither, nothing is
+// drawn.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Prose from '@backgold/template-kit/components/Prose.astro'
+import { buttonOf, credentialsOf } from '@backgold/template-kit/components/sections/About/credentials.ts'
+import { prose, text } from '@backgold/template-kit/lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const role = text(section.copy.role)
+const button = buttonOf(section)
+const { books } = credentialsOf(section)
+const words = !!(kicker || heading || role || prose(section.copy.body) || button)
+const Book = words ? 'h3' : 'h2'
+---
+{(words || books.length > 0) && (
+  <Band section={section} class="about about-books kc-books">
+    <div class:list={['kc-books-grid', words && books.length > 0 && 'kc-books-split']}>
+      {words && (
+        <div class="kc-books-words">
+          {kicker && <p class="kicker">{kicker}</p>}
+          {heading && <h2 class="kc-books-name">{heading}</h2>}
+          {role && <p class="kc-books-role">{role}</p>}
+          <Prose value={section.copy.body} class="kc-books-body" />
+          {button && (
+            <p class="actions">
+              <a class="button" href={button.href} rel={button.rel}>{button.label}</a>
+            </p>
+          )}
+        </div>
+      )}
+      {books.length > 0 && (
+        <ul class="kc-shelf" role="list">
+          {books.map((book) => (
+            <li class="kc-book">
+              <div class="kc-book-frame">
+                <div class="kc-book-cover kc-book-set" aria-hidden="true">
+                  <span class="kc-book-set-title">{book.title}</span>
+                  {heading && <span class="kc-book-set-author">{heading}</span>}
+                </div>
+                {book.cover && <img class="kc-book-cover kc-book-photo" src={book.cover} alt="" loading="lazy" decoding="async" />}
+              </div>
+              <Book class="kc-book-title">{book.title}</Book>
+              {(book.year || book.detail) && (
+                <p class="kc-book-meta">
+                  {book.year && (book.datetime ? <time datetime={book.datetime}>{book.year}</time> : book.year)}
+                  {book.year && book.detail && ' · '}
+                  {book.detail}
+                </p>
+              )}
+              {book.link && (
+                <p class="kc-book-get">
+                  <a href={book.link.href} rel={book.link.rel}>Get the book<span class="visually-hidden">: {book.title}</span><span aria-hidden="true"> →</span></a>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </Band>
+)}
+
+<script>
+  // A cover that does not load leaves the one set in type under it.
+  for (const img of document.querySelectorAll<HTMLImageElement>('.kc-book-photo')) {
+    if (img.complete && img.naturalWidth === 0) img.remove()
+    else img.addEventListener('error', () => img.remove(), { once: true })
+  }
+</script>

@@ -1,0 +1,51 @@
+---
+// A course's lessons in order (board L2's syllabus), as a ruled list: a
+// 3px rule over the first row and a hairline under each. Each row is the
+// lesson's numeral, large and light in gold ("05"), "Lesson 5" as a kicker
+// over its title (together the link to the lesson; a locked one opens its
+// door), the state in words, and the length at the right. The states: Done
+// with its check, Up next on the ember edge, the lock's word (Sign in to
+// watch, For members with Join to watch) dimmed, and, signed out, Free in
+// gold on a lesson anyone can watch. The numerals rise once as the list
+// comes into view (Enter).
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import type { SyllabusRow } from '@backgold/template-kit/components/sections/Course/course.ts'
+import { clockOf } from '@backgold/template-kit/lib/academy'
+import Enter from './Enter.astro'
+import { numeral } from './place'
+
+interface Props {
+  rows: SyllabusRow[]
+  /** A visitor is signed in: the rows say Done and Up next instead of Free. */
+  signedIn: boolean
+}
+
+const { rows, signedIn } = Astro.props
+---
+<ol class="kc-rows" role="list">
+  {rows.map((row) => (
+    <li class:list={['cs-row', `cs-row-${row.state}`, 'kc-row', row.href && 'kc-row-linked']} style={`--kc-i: ${Math.min(row.n - 1, 8)}`}>
+      <span class="kc-num kc-row-n" aria-hidden="true" data-kc-enter>{numeral(row.n)}</span>
+      <span class="kc-row-name">
+        {row.href ? (
+          <a href={row.href}><span class="kc-row-kicker">Lesson {row.n}</span> <span class="kc-row-title">{row.name}</span></a>
+        ) : (
+          <><span class="kc-row-kicker">Lesson {row.n}</span> <span class="kc-row-title">{row.name}</span></>
+        )}
+      </span>
+      <span class="kc-row-state">
+        {row.state === 'done' && <span class="kc-row-word kc-row-done"><Icon name="check" /> Done</span>}
+        {row.state === 'next' && <span class="kc-row-word kc-row-next">Up next</span>}
+        {row.state === 'open' && !signedIn && row.access === 'public' && <span class="kc-row-word kc-row-free">Free</span>}
+        {row.state === 'locked' && (
+          <span class="kc-row-word kc-row-lock">
+            <Icon name="lock" /> {row.lockWord}
+            {row.lock?.reason === 'members' && <span class="kc-row-join">Join to watch</span>}
+          </span>
+        )}
+      </span>
+      {clockOf(row.seconds) && <span class="kc-row-len">{clockOf(row.seconds)}</span>}
+    </li>
+  ))}
+</ol>
+<Enter />

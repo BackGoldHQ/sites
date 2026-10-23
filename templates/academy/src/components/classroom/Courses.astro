@@ -1,0 +1,72 @@
+---
+// A Classroom's head and its courses (board L1, in the organization's
+// colors), for the grid, the list and the courses list page. The head: on a
+// page, the kicker and heading the organization typed (the kit's
+// SectionHead); on the courses list page (`name`), the list's name as the
+// page's <h1>, set as the kicker, over the template's own line, "Every
+// course, at your pace.". Under it the tally, drawn from the courses ("8
+// courses · 64 lessons", the numbers in gold), then the line: with a
+// visitor, "You have finished 1 of 6 courses and have 3 under way."; signed
+// out, why to sign in and the Sign in link. Then the cards (CourseCard) in
+// the grid, three across on a wide screen, two on a tablet, one on a phone,
+// or the rows of the list. With no course the heading stands over "Nothing
+// here yet."; with neither, nothing is drawn.
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
+import type { Classroom } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import CourseCard from './CourseCard.astro'
+import Enter from './Enter.astro'
+
+interface Props {
+  section: Section
+  classroom: Classroom
+  layout: 'grid' | 'list'
+  /** The courses list page's name ("Courses"), drawn as its <h1>; left out on a page's section. */
+  name?: string | null
+}
+
+const { section, classroom, layout, name = null } = Astro.props
+const { kicker, heading, cards, summary, signIn, visitor } = classroom
+const plural = (n: number, one: string) => `${one}${n === 1 ? '' : 's'}`
+const lessons = cards.reduce((sum, card) => sum + card.lessons, 0)
+const level = name || heading ? 3 : 2
+---
+{(name || heading || cards.length > 0) && (
+  <Band section={section} class:list={['kc-classroom', `kc-classroom-${layout}`, name && 'kc-classroom-page']}>
+    {name ? (
+      <header class="kc-classroom-head">
+        <h1 class="kicker kc-classroom-name">{name}</h1>
+        <p class="kc-classroom-line">Every course, at your pace.</p>
+      </header>
+    ) : (
+      <SectionHead kicker={kicker} heading={heading} more={[]} />
+    )}
+    {cards.length > 0 && (
+      <p class="kc-tally">
+        <span class="kc-tally-n">{cards.length}</span> {plural(cards.length, 'course')}
+        {lessons > 0 && <> · <span class="kc-tally-n">{lessons}</span> {plural(lessons, 'lesson')}</>}
+      </p>
+    )}
+    {summary && (
+      <p class="cr-line">
+        You have finished <strong>{summary.finished}</strong> of {summary.total} {plural(summary.total, 'course')}{summary.started > 0 && <> and have <strong>{summary.started}</strong> under way</>}.
+      </p>
+    )}
+    {signIn && cards.length > 0 && (
+      <p class="cr-line">
+        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={signIn}>Sign in</a>
+      </p>
+    )}
+    {cards.length > 0 ? (
+      <ul class:list={['cr-cards', 'kc-cards', `kc-cards-${layout}`]} role="list">
+        {cards.map((card) => (
+          <li><CourseCard card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={level} layout={layout} /></li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">Nothing here yet.</p>
+    )}
+    <Enter />
+  </Band>
+)}

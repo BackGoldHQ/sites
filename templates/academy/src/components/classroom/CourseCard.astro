@@ -1,0 +1,91 @@
+---
+// One course on a Classroom (board L1, in the organization's colors): the
+// cover with its lesson count and an ember line along its foot, the title
+// (the whole card is the link to the course), its line, and what this
+// reader needs to know under them.
+//
+// Signed in, on a course the visitor can open: the line along the foot is
+// the course's bar (a real <progress>, the share of lessons finished), and
+// a disc on the line carries the ring with the fraction beside it ("4 of
+// 12"); the last line says what is left ("38 min left", "Not started ·
+// 52 min", "Under way") or Finished, when the disc turns to a check. On a
+// course they cannot open: the disc carries the lock and the lock's word
+// ("For members"), and a members course says "Join <org> to start this
+// course.". Signed out: no disc and no bar, the line is the ember rule, and
+// the last line is what it takes to watch, in gold when an email will do
+// ("Free with your email", "Free") and quiet otherwise ("For members"),
+// with the course's length. `layout` is the section's: a card in the grid,
+// or a row in the list with the cover at the left.
+import Bar from '@backgold/template-kit/components/sections/Course/Bar.astro'
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import Ring from '@backgold/template-kit/components/sections/Course/Ring.astro'
+import type { CourseCard } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import { accessChipOf, leftOf, lengthOf, lessonsOf, lockWordOf, stateOf } from '@backgold/template-kit/lib/academy'
+
+interface Props {
+  card: CourseCard
+  signedIn: boolean
+  /** The organization's name (the site's), for the members card's line. */
+  orgName: string | null
+  level: 2 | 3
+  layout: 'grid' | 'list'
+}
+
+const { card, signedIn, orgName, level, layout } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const tracked = signedIn && !card.locked && card.progress ? card.progress : null
+const state = tracked ? stateOf(tracked) : null
+const length = lengthOf(card.seconds)
+const lockedForVisitor = signedIn && card.locked
+const chip = lockedForVisitor && card.lock ? lockWordOf(card.lock) : accessChipOf(card.access, card.lock?.tag_label ?? null)
+const open = card.access === 'public' || card.access === 'signed_in'
+const join = lockedForVisitor && card.lock?.reason === 'members' ? (orgName ? `Join ${orgName} to start this course.` : 'Join to start this course.') : null
+const left = tracked ? leftOf(tracked) : null
+---
+<article class:list={['card', 'cr-card', 'kc-card', `kc-card-${layout}`, (tracked || lockedForVisitor) && 'kc-card-placed']}>
+  <div class="kc-cover">
+    {card.cover ? <img src={card.cover} alt="" loading="lazy" decoding="async" /> : <span class="kc-cover-blank" aria-hidden="true"></span>}
+    <span class="kc-count">{lessonsOf(card.lessons)}</span>
+    {tracked ? (
+      <Bar completed={tracked.completed} total={tracked.total} label={`${card.title}: ${tracked.completed} of ${tracked.total} lessons`} />
+    ) : (
+      <span class:list={['kc-foot', lockedForVisitor && 'kc-foot-quiet']} aria-hidden="true"></span>
+    )}
+  </div>
+  {tracked && state && (
+    <p class:list={['kc-place', state === 'finished' && 'kc-place-done']} data-kc-enter>
+      <span class="kc-disc">
+        <Ring value={tracked.completed} max={tracked.total} size={40} stroke={4} />
+        {state === 'finished' && <span class="kc-disc-mark"><Icon name="check" /></span>}
+      </span>
+      <span class="kc-place-words">{state === 'finished' ? 'Finished' : `${tracked.completed} of ${tracked.total}`}<span class="visually-hidden">{state === 'finished' ? `: ${tracked.completed} of ${tracked.total} lessons` : ' lessons finished'}</span></span>
+    </p>
+  )}
+  {lockedForVisitor && (
+    <p class="kc-place kc-place-locked">
+      <span class="kc-disc"><span class="kc-disc-mark"><Icon name="lock" /></span></span>
+      <span class="kc-place-words">{chip}</span>
+    </p>
+  )}
+  <div class="card-body kc-body">
+    <Title class="card-title kc-title">{card.href ? <a href={card.href}>{card.title}</a> : card.title}</Title>
+    {card.summary && <p class="card-summary kc-summary">{card.summary}</p>}
+    <div class="kc-status">
+      {tracked && state ? (
+        <p class="kc-figures">
+          <span>{lessonsOf(tracked.total)}</span>
+          {state === 'finished' && <span class="kc-state kc-state-done"><Icon name="check" /> Finished</span>}
+          {state === 'new' && <span class="kc-state">{length ? `Not started · ${length}` : 'Not started'}</span>}
+          {state === 'started' && <span class="kc-state">{left ?? 'Under way'}</span>}
+        </p>
+      ) : (
+        <p class="kc-figures">
+          {!lockedForVisitor && <span class:list={['kc-chip', open ? 'kc-chip-open' : 'kc-chip-quiet']}>{!open && <Icon name="lock" />}{chip}</span>}
+          {lockedForVisitor && <span>{lessonsOf(card.lessons)}</span>}
+          {length && <span class="kc-state">{length}</span>}
+        </p>
+      )}
+      {join && <p class="kc-join">{join}</p>}
+    </div>
+  </div>
+</article>

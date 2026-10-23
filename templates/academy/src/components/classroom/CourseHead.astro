@@ -1,0 +1,74 @@
+---
+// A course's head (board L2, in the organization's colors), on the hearth
+// band: the kicker "Course · 12 lessons · 1 h 1 min", the title large, the
+// summary. For a visitor, their place: the ring (116px, drawing in once)
+// with the fraction in it, "4 of 12 · 38 min left", "Lesson 4 finished on
+// Tuesday" (when the api says when) and the course's bar; once finished,
+// Finished with its check. Then the one accent button, "Continue · Lesson
+// 5" ("Start · Lesson 1" before the first lesson is done, and signed out),
+// with the lesson's title and length beside it; nothing once the course is
+// finished. Signed out, the line under it says why to sign in, with the
+// link. The cover sits at the right in an ember rule offset down and to the
+// right (`cover`), above the words on a phone.
+import Bar from '@backgold/template-kit/components/sections/Course/Bar.astro'
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import Ring from '@backgold/template-kit/components/sections/Course/Ring.astro'
+import type { CourseView } from '@backgold/template-kit/components/sections/Course/course.ts'
+import { clockOf, countAndLength, leftOf, stateOf } from '@backgold/template-kit/lib/academy'
+import Enter from './Enter.astro'
+
+interface Props {
+  view: CourseView
+  /** The title is the page's <h1> (the course's own page) rather than an <h2>. */
+  lead: boolean
+  cover: boolean
+}
+
+const { view, lead, cover } = Astro.props
+const Title = lead ? 'h1' : 'h2'
+const finished = view.progress ? stateOf(view.progress) === 'finished' : false
+const left = view.progress ? leftOf(view.progress) : null
+const nextLength = view.next ? clockOf(view.next.row.seconds) : null
+const image = cover ? view.cover : null
+---
+<header class:list={['cs-head', 'kc-head', image && 'kc-head-cover']}>
+  <div class="kc-head-words">
+    <p class="kicker">Course · {countAndLength(view.lessons, view.seconds)}</p>
+    <Title class="cs-title kc-head-title">{view.title}</Title>
+    {view.summary && <p class="lede cs-summary">{view.summary}</p>}
+    {view.progress && (
+      <div class="kc-head-place">
+        <div class="kc-head-ring" data-kc-enter>
+          <Ring value={view.progress.completed} max={view.progress.total} size={116} stroke={3.25} />
+          <span class="kc-head-ring-n" aria-hidden="true">{finished ? <Icon name="check" /> : <>{view.progress.completed}<small>/{view.progress.total}</small></>}</span>
+        </div>
+        <div class="kc-head-figures">
+          <p class="kc-head-count">
+            <strong>{view.progress.completed} of {view.progress.total}</strong>
+            {left && !finished && <> · {left}</>}
+            {finished && <span class="kc-head-finished"> · <Icon name="check" /> Finished</span>}
+          </p>
+          {view.lastFinished && <p class="fine">Lesson {view.lastFinished.n} finished {view.lastFinished.on}</p>}
+          <Bar completed={view.progress.completed} total={view.progress.total} label={`${view.title}: ${view.progress.completed} of ${view.progress.total} lessons`} />
+        </div>
+      </div>
+    )}
+    {view.next && !finished && (
+      <div class="kc-head-go">
+        <a class="button" href={view.next.row.href ?? undefined}>{view.next.verb} · Lesson {view.next.row.n}</a>
+        <p class="fine">{nextLength ? `${view.next.row.name} · ${nextLength}` : view.next.row.name}</p>
+      </div>
+    )}
+    {!view.visitor && (
+      <p class="fine cs-sign-in">
+        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={view.signIn}>Sign in</a>
+      </p>
+    )}
+  </div>
+  {image && (
+    <div class="kc-head-cover-frame">
+      <img class="cs-cover" src={image} alt="" decoding="async" />
+    </div>
+  )}
+  <Enter />
+</header>

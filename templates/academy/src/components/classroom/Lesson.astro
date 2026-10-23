@@ -1,0 +1,164 @@
+---
+// One lesson (board L3, in the organization's colors), for both layouts:
+// one section in two parts, inside the lesson's root (the element the kit's
+// lesson script, Tracker, reads its slugs and forms from).
+//
+// The theater: a ground deeper than the page (the photo band's colors, the
+// brand's darkest, the same in both modes), with the breadcrumb, then
+//   the player   Player: an uploaded file in the browser's <video>, or an
+//                imported YouTube or Vimeo video in that player's own
+//                frame, picking up for a visitor where they stopped. Locked:
+//                the teaser, the cover dimmed under the lock and its word,
+//                the length on it. With no video yet, the cover dimmed
+//                under a line that says so.
+//   the head     the lesson's numeral, large and light in gold ("05",
+//                rising once), beside its title, "Lesson 5: Decide what you
+//                want", and "Lesson 5 of 12 in <course> · 4:50".
+//   the door     a locked lesson's (the kit's Door), on a card lighter than
+//                the theater (the panel band's colors).
+//   completion   for a visitor, Complete: Mark complete on a raised bar
+//                beside "Picks up at 1:12, where you stopped."; once done,
+//                Completed and Mark as not done.
+//   Up next      the next lesson in the course as a card: its thumbnail,
+//                "Up next", its title and its length or lock.
+//   the rail     the course's lessons with thumbnails (Rail), at the right
+//                on a wide screen, under the lesson on a narrow one.
+// Then on the section's own band (the page ground on a lesson's own page):
+// the notes under "Notes", the first letter dropped in ember (or, locked,
+// "The notes for this lesson open with the video."), and Previous and Next
+// as a ruled pair with their numerals.
+//
+// `layout` is the section's: `player` sets the player on the theater's
+// stage beside the rail; `reading` keeps the theater to the breadcrumb, the
+// head and the door, and holds the player (when the lesson has one), the
+// notes, completion, Previous and Next and the rail to the reading column
+// under it, the rail last.
+import type { Section } from '@backgold/content'
+import { VISITOR_PROGRESS_PATH } from '@backgold/contract/content-api'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import Crumbs from '@backgold/template-kit/components/sections/Course/Crumbs.astro'
+import Door from '@backgold/template-kit/components/sections/Lesson/Door.astro'
+import Tracker from '@backgold/template-kit/components/sections/Lesson/Tracker.astro'
+import type { LessonView } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
+import { clockOf, lessonTitle } from '@backgold/template-kit/lib/academy'
+import Complete from './Complete.astro'
+import Enter from './Enter.astro'
+import Player from './Player.astro'
+import Rail from './Rail.astro'
+import Thumb from './Thumb.astro'
+import { numeral } from './place'
+
+interface Props {
+  view: LessonView
+  section: Section
+  layout: 'player' | 'reading'
+  /** Drawn as the lesson's own page: its title is the <h1>. */
+  lead: boolean
+}
+
+const { view, section, layout, lead } = Astro.props
+const Title = lead ? 'h1' : 'h2'
+const sub: 2 | 3 = lead ? 2 : 3
+const Sub = lead ? 'h2' : 'h3'
+const length = clockOf(view.seconds)
+const tracks = view.visitor !== null && !view.locked
+const narrow = view.video?.kind === 'file' ? (view.video.sources?.['720'] ?? null) : null
+// The body's headings move under the notes' own heading: h2 becomes the level below "Notes".
+const shift = lead ? 1 : 2
+const notes = view.notes?.replace(/<(\/?)h([2-5])>/g, (_, slash: string, level: string) => `<${slash}h${Math.min(Number(level) + shift, 6)}>`) ?? null
+const upNext = view.next ? (view.rail.rows.find((row) => row.n === view.next!.n) ?? null) : null
+const upNextWord = upNext ? (upNext.locked ? upNext.word : clockOf(upNext.seconds)) : null
+const reading = layout === 'reading'
+const below = reading || notes !== null || view.locked || view.previous !== null || view.next !== null
+---
+<Band section={section} class:list={['lesson', `lesson-${layout}`, 'kc-lesson-band']}>
+  <div
+    class:list={['ls', 'kc-lesson', `kc-lesson-${layout}`]}
+    data-lesson={tracks ? '' : undefined}
+    data-course-slug={tracks ? view.courseSlug : undefined}
+    data-lesson-slug={tracks ? view.slug : undefined}
+    data-progress={tracks ? VISITOR_PROGRESS_PATH : undefined}
+    data-resume={tracks && view.resumeAt !== null ? String(Math.floor(view.resumeAt)) : undefined}
+  >
+    <div class="kc-part kc-theater">
+      <div class="kc-part-inner">
+        <Crumbs steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.courseTitle, href: view.courseHref }, { label: `Lesson ${view.n}`, href: null }]} />
+        <div class="kc-stage">
+          <div class="kc-stage-main">
+            {!reading && <Player view={view} />}
+            <header class="ls-head kc-lesson-head">
+              <span class="kc-num kc-lesson-n" aria-hidden="true" data-kc-enter>{numeral(view.n)}</span>
+              <div class="kc-lesson-words">
+                <Title class="ls-title kc-lesson-title">{lessonTitle(view.n, view.name)}</Title>
+                <p class="fine">
+                  Lesson {view.n} of {view.total} in {view.courseHref ? <a href={view.courseHref}>{view.courseTitle}</a> : view.courseTitle}
+                  {length && <> · {length}</>}
+                </p>
+              </div>
+            </header>
+            {view.door && (
+              <div class="bg-band-panel kc-door">
+                <Door door={view.door} section={section} level={sub} />
+              </div>
+            )}
+            {!reading && tracks && <Complete view={view} />}
+            {!reading && upNext && view.next?.href && (
+              <a class="kc-upnext" href={view.next.href}>
+                <Thumb n={upNext.n} cover={upNext.cover} done={upNext.done} locked={upNext.locked} />
+                <span class="kc-upnext-words">
+                  <span class="kicker">Up next</span>
+                  <span class="kc-upnext-title">{lessonTitle(upNext.n, upNext.name)}</span>
+                  {upNextWord && <span class="kc-upnext-meta">{upNextWord}</span>}
+                </span>
+                <span class="kc-upnext-arrow" aria-hidden="true">→</span>
+              </a>
+            )}
+          </div>
+          {!reading && <Rail view={view} section={section} level={sub} />}
+        </div>
+      </div>
+    </div>
+    {below && (
+      <div class="kc-part kc-lesson-body">
+        <div class="kc-part-inner">
+          <div class="kc-reading">
+            {reading && view.video && <Player view={view} />}
+            {notes && (
+              <section class="ls-notes kc-notes">
+                <Sub class="kicker kc-notes-label">Notes</Sub>
+                <div class="prose" set:html={notes} />
+              </section>
+            )}
+            {view.locked && <p class="kc-notes-locked">The notes for this lesson open with the video.</p>}
+            {reading && tracks && <Complete view={view} />}
+            {(view.previous || view.next) && (
+              <nav class="kc-pn" aria-label="Other lessons in this course">
+                {view.previous && view.previous.href && (
+                  <a class="kc-pn-link kc-pn-prev" href={view.previous.href} rel="prev">
+                    <span class="kc-num kc-pn-n" aria-hidden="true" data-kc-enter>{numeral(view.previous.n)}</span>
+                    <span class="kc-pn-words">
+                      <span class="kc-pn-dir">Previous</span>
+                      <span class="kc-pn-name">{lessonTitle(view.previous.n, view.previous.name)}</span>
+                    </span>
+                  </a>
+                )}
+                {view.next && view.next.href && (
+                  <a class="kc-pn-link kc-pn-next" href={view.next.href} rel="next">
+                    <span class="kc-pn-words">
+                      <span class="kc-pn-dir">Next</span>
+                      <span class="kc-pn-name">{lessonTitle(view.next.n, view.next.name)}</span>
+                    </span>
+                    <span class="kc-num kc-pn-n" aria-hidden="true" data-kc-enter>{numeral(view.next.n)}</span>
+                  </a>
+                )}
+              </nav>
+            )}
+            {reading && <Rail view={view} section={section} level={sub} />}
+          </div>
+        </div>
+      </div>
+    )}
+    <Enter />
+    {(tracks || narrow) && <Tracker />}
+  </div>
+</Band>
