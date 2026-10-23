@@ -19,6 +19,7 @@ import { defineTemplate, kitEntries } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import Closing from './components/Closing.astro'
 import HeaderBrand from './components/HeaderBrand.astro'
+import Live from './components/Live.astro'
 import Video from './components/entries/Video.astro'
 import Watch from './components/entries/Watch.astro'
 import Kindled from './components/sections/Kindled.astro'
@@ -39,4 +40,5 @@ export default defineTemplate({
   visitorSignIn: true,
   closingCall: Closing,
   headerBrand: HeaderBrand,
+  livePage: Live,
 })

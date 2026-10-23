@@ -1,0 +1,29 @@
+---
+// A live stream's moment as the visitor's own clock reads it: the server
+// writes it in UTC (`text`, lib/stream.ts), and a few lines of script write it
+// again in the visitor's zone, in the same words (lib/stream-time.ts), once
+// the page loads. Without script the UTC words stay. One copy of the script
+// serves every moment on the page.
+import type { StreamMoment } from '../../lib/stream-time'
+
+interface Props {
+  /** The moment, ISO 8601. */
+  at: string
+  /** The moment in words in UTC. */
+  text: string
+  moment: StreamMoment
+}
+
+const { at, text, moment } = Astro.props
+---
+<time datetime={at} data-bg-local={moment}>{text}</time>
+
+<script>
+  import { streamTime, type StreamMoment } from '../../lib/stream-time'
+
+  for (const node of document.querySelectorAll<HTMLTimeElement>('time[data-bg-local]')) {
+    const moment = node.dataset.bgLocal as StreamMoment
+    const local = streamTime(node.dateTime, moment === 'day' ? 'day' : 'time')
+    if (local) node.textContent = local
+  }
+</script>

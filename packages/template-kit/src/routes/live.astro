@@ -1,0 +1,49 @@
+---
+// `/live`: the organization's YouTube stream (GET /live, lib/stream.ts),
+// drawn by the template's `livePage` (the kit's components/live/LivePage
+// when it has none) under the site's header and footer: the player and the
+// live chat while it is live, the still and when it starts while it is
+// upcoming, "Not live right now" with the three newest videos while the
+// channel is off; never a blank page. The newest videos are the video type's
+// list (GET /entries/video), whose areas the page draws (the Top banner and
+// Above the footer, the sign-up band there): an organization with no video
+// type has neither. The edge cache keys this page on the stream as it keys
+// every page (@backgold/astro's liveVariant), and a browser may keep it for
+// the stream's own minute.
+// The kit's integration serves it, for the template its `template` option
+// names (`virtual:backgold-template`).
+import { appearanceOf } from '../lib/brand'
+import { listOf } from '../lib/entries'
+import { LIVE_PATH, liveHead, liveStream, streamView } from '../lib/stream'
+import Site from '../layouts/Site.astro'
+import LivePage from '../components/live/LivePage.astro'
+import template from 'virtual:backgold-template'
+
+/** How many of the newest videos the page lists while the channel is off. */
+const NEWEST = 3
+
+Astro.locals.template = template
+const bg = Astro.locals.backgold
+if (bg.setup !== null) return new Response(null, { status: 503 })
+
+const { client, site } = bg
+const siteName = site.name ?? site.domain
+const [stream, newest, types] = await Promise.all([
+  liveStream(bg),
+  client.entries('video', { limit: NEWEST }).catch(() => null),
+  client.types().catch(() => null),
+])
+/** A site that opens dark gets the chat in YouTube's dark look: pinned dark, or auto on a template that opens dark. */
+const appearance = appearanceOf(site.style)
+const dark = appearance === 'dark' || (appearance === 'auto' && template.defaultAppearance === 'dark')
+const view = stream ? streamView(stream, new URL(bg.siteUrl).hostname, dark) : null
+const channel = view?.channelTitle ?? (bg.orgName || siteName)
+const videoList = listOf(types?.types.find((t) => t.key === 'video'))
+const areas = newest?.areas ?? null
+const head = liveHead(view, channel, siteName)
+const LiveLayout = template.livePage ?? LivePage
+Astro.response.headers.set('Cache-Control', 'public, max-age=60')
+---
+<Site template={template} title={head.title} description={head.description} canonicalPath={LIVE_PATH} page={null} areas={areas}>
+  <LiveLayout stream={view} videos={(newest?.entries ?? []).slice(0, NEWEST)} videoList={videoList} channel={channel} areas={areas} />
+</Site>

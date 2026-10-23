@@ -41,6 +41,10 @@
 //             fill's bar, WCAG 1.4.11), under 1.25:1 on light mode's dark
 //             bands.
 //   link      a text link: the primary colour on light grounds.
+//   live      the state red of something on the air now (the Watch Live
+//             item's dot): taken darker on light grounds, lighter on dark
+//             ones, a twentieth at a time, only until it holds 3:1 against
+//             the ground (WCAG 1.4.11); past half way, the band's ink.
 //
 // A section's `band` is a ground, never a colour. The grounds:
 //   plain     the page
@@ -68,6 +72,9 @@ export interface BrandColors {
   secondary_color?: string | null
   accent_color?: string | null
 }
+
+/** The state red of a live stream, before it is held to 3:1 on each ground. */
+const LIVE = '#e0362c'
 
 /** Used for any brand colour BackGold does not have. */
 const FALLBACK = { primary: '#1f3a5f', secondary: '#f4efe6', accent: '#b4232c' } as const
@@ -173,6 +180,7 @@ interface Band {
   surface: string
   line: string
   lineStrong: string
+  live: string
 }
 
 type BandName = 'plain' | 'tint' | 'panel' | 'wash' | 'contrast' | 'brand' | 'photo'
@@ -225,6 +233,7 @@ function band(ground: string, m: Mode): Band {
     surface: light ? m.surface : mix(LIGHT_INK, ground, 0.035),
     line: light ? m.line : mix(LIGHT_INK, ground, 0.1),
     lineStrong: light ? m.lineStrong : mix(LIGHT_INK, ground, 0.2),
+    live: reaching(LIVE, light ? BLACK : LIGHT_INK, 0.5, ground, NON_TEXT, ink),
   }
 }
 
@@ -414,6 +423,7 @@ function lines(p: Palette): string[] {
       `--band-${name}-surface:${b.surface}`,
       `--band-${name}-line:${b.line}`,
       `--band-${name}-line-strong:${b.lineStrong}`,
+      `--band-${name}-live:${b.live}`,
     )
   }
   return out
