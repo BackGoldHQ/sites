@@ -93,6 +93,7 @@ import HeroStatement from './Hero/statement.astro'
 import HeroDonate from './Hero/donate.astro'
 import HeroVideo from './Hero/video.astro'
 import HeroRotating from './Hero/rotating.astro'
+import HeroField from './Hero/field.astro'
 import IssuesSteps from './Issues/steps.astro'
 import IssuesNumbered from './Issues/numbered.astro'
 import IssuesRows from './Issues/rows.astro'
@@ -206,6 +207,7 @@ export const sections = {
   'Hero:donate': HeroDonate,
   'Hero:video': HeroVideo,
   'Hero:rotating': HeroRotating,
+  'Hero:field': HeroField,
   About,
   'About:left': AboutLeft,
   'About:letter': AboutLetter,
