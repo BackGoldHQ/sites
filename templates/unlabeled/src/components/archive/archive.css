@@ -391,11 +391,11 @@
   white-space: normal;
 }
 
-/* The doors to the two browsing views, under the holdings (brief §4.4). */
-.ar-doors {
+/* The line under the holdings naming the two browsing views (brief §4.4); not the door boxes (.ar-doors) at the page's foot. */
+.ar-views {
   margin-top: 0.75rem;
 }
-.ar-doors a {
+.ar-views a {
   color: var(--ar-ink);
 }
 
