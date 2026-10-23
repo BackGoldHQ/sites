@@ -355,6 +355,17 @@ check, is dropped from the key, so `?utm_source=…`, `?cursor=junk` and
 cursor's or search's page is keyed by the content version like every other
 page, so a publish retires it too.
 
+`<variant>` carries the organization's YouTube stream while one is live or
+scheduled (`client.live()`, `GET /live`, which the client holds for 60
+seconds): `live.<8 hex>` or `upcoming.<8 hex>` of what a page can draw from
+it, empty while the channel is off the air. The middleware reads it once per
+request before the lookup, and `liveStreamOf(Astro.locals.backgold)` from
+`@backgold/astro/server` hands a page the same answer, so a page that draws
+the stream (the template kit's Watch Live item and `/live` page) is stored
+apart from the one drawn with nothing on and changes within about a minute
+of the stream starting, moving or ending, whatever the content version. A
+failed read is nothing live; it never fails the page.
+
 A page that reads a query parameter the key drops says so with an
 `X-Backgold-Reads-Query` header (`READS_QUERY_HEADER` from
 `@backgold/astro/server`): the names, comma-separated, a trailing `*` standing
@@ -446,7 +457,9 @@ Nothing here runs an experiment; these are the three things an experiment
 needs, in place from the start:
 
 1. **A variant slot in the cache key.** `locals.backgold.variant` is empty
-   today; a variant later is one more value in the key, not a new cache.
+   today (the key's variant carries only the live stream, see
+   [Caching](#caching)); a variant later is one more value in the key, not a
+   new cache.
 2. **A first-party visitor id.** The `bg_vid` cookie: a random id, one year,
    `SameSite=Lax`, `Secure`, readable by script so the analytics island can
    use it as the visitor's id. No personal data. Set after the cache step and

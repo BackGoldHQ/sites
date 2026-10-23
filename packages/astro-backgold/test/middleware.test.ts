@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor } from '../src/server/context.js'
 import { EDGE_CACHE_NAME, cacheKey, openEdgeCache } from '../src/server/edge-cache.js'
+import { liveStreamOf, liveVariant } from '../src/server/live-stream.js'
+import type { BackgoldReady } from '../src/server/context.js'
 import type { BackgoldEnv } from '../src/server/env.js'
 import { SETUP_PATH } from '../src/server/setup.js'
 import { API_ORIGIN, OTHER_SITE_ID, PK, SITE_ID, SK, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
@@ -350,6 +352,76 @@ describe('edge cache', () => {
     expect(pending).toHaveLength(1)
     await Promise.all(pending)
     expect(d.cache.stored.size).toBe(1)
+  })
+})
+
+describe('the live stream in the edge-cache key', () => {
+  const STREAM = {
+    status: 'live',
+    video_id: 'J54IfAUoJdQ',
+    url: 'https://www.youtube.com/watch?v=J54IfAUoJdQ',
+    embed_url: 'https://www.youtube.com/embed/J54IfAUoJdQ',
+    title: 'Live from the statehouse',
+    thumbnail_url: null,
+    scheduled_start_at: null,
+    started_at: '2026-10-23T19:02:00Z',
+    channel_title: 'Libertarian Academy',
+  } as const
+  const liveCalls = () => api.calls.filter((u) => u.pathname.endsWith('/live')).length
+
+  it('stores a page drawn while a stream is live apart from the one drawn while nothing is, and goes back to it after', async () => {
+    let now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const d = deps()
+    api.live = { live: null }
+    await runMiddleware(fakeContext('/'), html(), d)
+    const off = `https://backgold.cache/cd_8f2a/b1/184//${encodeURIComponent('https://pinevalleyliberty.org')}/?`
+    expect([...d.cache.stored.keys()]).toEqual([off])
+
+    api.live = { live: STREAM }
+    now += 61_000
+    const live = await runMiddleware(fakeContext('/'), html(), d)
+    expect(live.headers.get('X-Backgold-Cache')).toBe('MISS')
+    const variant = liveVariant(STREAM)
+    expect(variant).toMatch(/^live\.[0-9a-f]{8}$/)
+    expect([...d.cache.stored.keys()]).toEqual([off, `https://backgold.cache/cd_8f2a/b1/184/${variant}/${encodeURIComponent('https://pinevalleyliberty.org')}/?`])
+
+    api.live = { live: null }
+    now += 61_000
+    const back = await runMiddleware(fakeContext('/'), html(), d)
+    expect(back.headers.get('X-Backgold-Cache')).toBe('HIT')
+    vi.restoreAllMocks()
+  })
+
+  it('keys an upcoming stream, and each change to what a page draws from it, as its own entry', () => {
+    const upcoming = { ...STREAM, status: 'upcoming' as const, started_at: null, scheduled_start_at: '2026-10-30T23:00:00Z' }
+    expect(liveVariant(upcoming)).toMatch(/^upcoming\.[0-9a-f]{8}$/)
+    expect(liveVariant({ ...upcoming, scheduled_start_at: '2026-10-31T23:00:00Z' })).not.toBe(liveVariant(upcoming))
+    expect(liveVariant({ ...STREAM, title: 'Retitled' })).not.toBe(liveVariant(STREAM))
+    expect(liveVariant(null)).toBe('')
+  })
+
+  it('reads GET /live once a request, shares that read with the render, and holds it a minute', async () => {
+    const d = deps()
+    api.live = { live: STREAM }
+    const ctx = fakeContext('/about')
+    let drawn: unknown
+    await runMiddleware(ctx, vi.fn(async () => {
+      drawn = await liveStreamOf((ctx.locals as { backgold: BackgoldReady }).backgold)
+      return new Response('<html></html>', { status: 200 })
+    }), d)
+    expect(drawn).toEqual(STREAM)
+    expect(liveCalls()).toBe(1)
+    await runMiddleware(fakeContext('/issues'), html(), d)
+    expect(liveCalls()).toBe(1)
+  })
+
+  it('keys as nothing live when the api has no GET /live, and never fails the page', async () => {
+    const d = deps()
+    const res = await runMiddleware(fakeContext('/'), html(), d)
+    expect(res.status).toBe(200)
+    expect([...d.cache.stored.keys()]).toEqual([`https://backgold.cache/cd_8f2a/b1/184//${encodeURIComponent('https://pinevalleyliberty.org')}/?`])
+    expect(liveCalls()).toBe(1)
   })
 })
 

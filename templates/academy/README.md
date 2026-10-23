@@ -85,6 +85,36 @@ proof line's numbers roll up once; all of it is the stylesheet's § Motion and
 `src/scripts/motion.ts`, and none of it runs for a visitor who asked for
 reduced motion.
 
+## Watch Live
+
+When the organization's connected YouTube channel is on the air, every
+template on the kit says so; the academy draws the page its own way.
+
+- **The header rule.** While the Content API's `GET /live` answers a stream
+  whose `status` is `live`, the header menu's last item, before the header
+  button, is **Watch Live** with a dot in the state red (`--live`, a state,
+  never an animation), current on `/live`; the phone sheet carries it too.
+  Nothing is drawn while a stream is only `upcoming` or the channel is off.
+- **The route.** `/live` is the kit's own (`routes/live.astro`, injected for
+  every template like `/volunteer`): live, the player (`embed_url` with
+  `autoplay=1&rel=0`), the title as the h1, "Live now · since <time>" in the
+  visitor's zone, the live chat beside the player (under the words on a
+  phone) and Open on YouTube; upcoming, the still with a play mark, "Next
+  live: <day and time>" and Open on YouTube; off, "Not live right now", one
+  line and the three newest videos. Above the footer (the Academy letter)
+  draws under it in every state; it is never blank.
+- **The hook.** A template draws the page its own way with `livePage` in
+  its `src/template.ts`, given `LivePageProps` from
+  `@backgold/template-kit/lib/stream`; the academy's is
+  `src/components/Live.astro`: the theater around the player, the chat in a
+  smoke panel, the kicker WATCH LIVE over the title, and the newest
+  conversations as its video cards while it is off.
+- **Freshness.** `GET /live` is read once a request and held for a minute
+  (`client.live()`, never under the content version), and the edge cache
+  keys every page on it, so the item and the page change within about a
+  minute of the stream starting or ending. Until the api serves `GET /live`
+  (a 404), the site draws nothing live.
+
 ## Signing in
 
 The header offers **Sign in** (`visitorSignIn: true` in `src/template.ts`).

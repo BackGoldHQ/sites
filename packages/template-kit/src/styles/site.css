@@ -8,11 +8,11 @@
   Colours come only from the custom properties the layout writes from the
   brand in BackGold (src/lib/brand.ts, the token sheet, light and dark):
   --bg-brand-* and, for each band, --band-<name> and its -ink, -muted,
-  -accent, -link, -button(-ink), -button-2(-ink), -surface, -line and
-  -line-strong. Everything below reads the short names a band sets (--ink,
-  --muted, --accent, --link, --button, --button-ink, --button-2,
-  --button-2-ink, --surface, --line, --line-strong), so a section restyles
-  with its band.
+  -accent, -link, -button(-ink), -button-2(-ink), -surface, -line,
+  -line-strong and -live. Everything below reads the short names a band sets
+  (--ink, --muted, --accent, --link, --button, --button-ink, --button-2,
+  --button-2-ink, --surface, --line, --line-strong, --live), so a section
+  restyles with its band.
 
   Sections carry `bg-section bg-band-<band> bg-bleed-<bleed>` and
   `data-type="<Type>"` (and `data-variant="<layout>"`); style a type with
@@ -74,6 +74,7 @@ body,
   --surface: var(--band-plain-surface);
   --line: var(--band-plain-line);
   --line-strong: var(--band-plain-line-strong);
+  --live: var(--band-plain-live);
 }
 .bg-band-tint {
   --bg-band-background: var(--band-tint);
@@ -89,6 +90,7 @@ body,
   --surface: var(--band-tint-surface);
   --line: var(--band-tint-line);
   --line-strong: var(--band-tint-line-strong);
+  --live: var(--band-tint-live);
 }
 .bg-band-panel {
   --bg-band-background: var(--band-panel);
@@ -104,6 +106,7 @@ body,
   --surface: var(--band-panel-surface);
   --line: var(--band-panel-line);
   --line-strong: var(--band-panel-line-strong);
+  --live: var(--band-panel-live);
 }
 .bg-band-wash {
   --bg-band-background: var(--band-wash);
@@ -119,6 +122,7 @@ body,
   --surface: var(--band-wash-surface);
   --line: var(--band-wash-line);
   --line-strong: var(--band-wash-line-strong);
+  --live: var(--band-wash-live);
 }
 /* Flat, as A1 draws the ribbon and the photo call to action. */
 .bg-band-contrast {
@@ -135,6 +139,7 @@ body,
   --surface: var(--band-contrast-surface);
   --line: var(--band-contrast-line);
   --line-strong: var(--band-contrast-line-strong);
+  --live: var(--band-contrast-live);
 }
 /*
   The brand ground: the primary colour in both modes (A1's footer, its
@@ -157,6 +162,7 @@ body,
   --surface: var(--band-brand-surface);
   --line: var(--band-brand-line);
   --line-strong: var(--band-brand-line-strong);
+  --live: var(--band-brand-live);
 }
 /* Words laid over a photo (Hero · Full photo): the photo band's inks, which read on its scrim. */
 .on-photo {
@@ -170,6 +176,7 @@ body,
   --button-2-ink: var(--band-photo-button-2-ink);
   --line: var(--band-photo-line);
   --line-strong: var(--band-photo-line-strong);
+  --live: var(--band-photo-live);
   color: var(--ink);
 }
 
@@ -634,6 +641,23 @@ main:focus {
   padding: 0.5rem 0;
   font-size: var(--text);
   font-weight: 600;
+}
+/*
+  Watch Live, while the organization's stream is live (layouts/Site.astro):
+  its label after a dot in the state red, in the bar and the sheet. The dot
+  is a state, never an animation.
+*/
+.menu-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.live-dot {
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--live);
 }
 /* Under the menu: the header button again, full width, then the legal line. */
 .site-header .header-sheet-button {

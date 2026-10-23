@@ -824,6 +824,86 @@ describe('createClient: areas()', () => {
   })
 })
 
+describe('createClient: live()', () => {
+  const STREAM = {
+    status: 'live',
+    video_id: 'J54IfAUoJdQ',
+    url: 'https://www.youtube.com/watch?v=J54IfAUoJdQ',
+    embed_url: 'https://www.youtube.com/embed/J54IfAUoJdQ',
+    title: 'Live from the statehouse',
+    thumbnail_url: 'https://i.ytimg.com/vi/J54IfAUoJdQ/hqdefault_live.jpg',
+    scheduled_start_at: null,
+    started_at: '2026-10-23T19:02:00Z',
+    channel_title: 'Libertarian Academy',
+  }
+
+  it('answers the stream GET /live names, and null for { live: null }', async () => {
+    const { api, client } = setup()
+    api.routes['/live'] = () => ok({ live: STREAM })
+    assert.deepEqual(await client.live(), STREAM)
+    const off = setup()
+    off.api.routes['/live'] = () => ok({ live: null })
+    assert.equal(await off.client.live(), null)
+  })
+
+  it('holds an answer 60 seconds in memory, never in the store, and shares one read', async () => {
+    const { api, rec, client } = setup()
+    let now = 1_000_000
+    Date.now = () => now
+    api.routes['/live'] = () => ok({ live: STREAM })
+    const [a, b] = await Promise.all([client.live(), client.live()])
+    assert.deepEqual(a, b)
+    assert.equal(api.callsTo('/live').length, 1)
+    api.routes['/live'] = () => ok({ live: null })
+    now += 59_000
+    assert.deepEqual(await client.live(), STREAM)
+    assert.equal(api.callsTo('/live').length, 1)
+    now += 2_000
+    assert.equal(await client.live(), null)
+    assert.equal(api.callsTo('/live').length, 2)
+    assert.ok(![...rec.keys].some((k) => k.includes('/live')))
+    assert.ok(!rec.ops.some((op) => op.key?.includes('/live')))
+  })
+
+  it('is never keyed on the content version: a new version does not re-read it', async () => {
+    const { api, client } = setup()
+    api.routes['/live'] = () => ok({ live: STREAM })
+    await client.live()
+    await client.setVersion(185)
+    await client.live()
+    assert.equal(api.callsTo('/live').length, 1)
+  })
+
+  it('forgets the held answer on bust()', async () => {
+    const { api, client } = setup()
+    api.routes['/live'] = () => ok({ live: STREAM })
+    await client.live()
+    api.routes['/live'] = () => ok({ live: null })
+    await client.bust()
+    assert.equal(await client.live(), null)
+    assert.equal(api.callsTo('/live').length, 2)
+  })
+
+  it('answers null for an api with no GET /live, and for an answer not shaped like a stream', async () => {
+    const { client } = setup()
+    assert.equal(await client.live(), null)
+    for (const live of [{ ...STREAM, status: 'ended' }, { ...STREAM, video_id: 7 }, 'live', []]) {
+      const other = setup()
+      other.api.routes['/live'] = () => ok({ live })
+      assert.equal(await other.client.live(), null, JSON.stringify(live))
+    }
+  })
+
+  it('throws any other failure and holds nothing, so the next call asks again', async () => {
+    const { api, client } = setup()
+    api.routes['/live'] = () => ({ status: 503, body: { error: 'Try again', code: 'UNAVAILABLE' } })
+    await assert.rejects(client.live(), (err: unknown) => err instanceof BackgoldApiError && err.status === 503 && err.code === 'UNAVAILABLE')
+    api.routes['/live'] = () => ok({ live: STREAM })
+    assert.deepEqual(await client.live(), STREAM)
+    assert.equal(api.callsTo('/live').length, 2)
+  })
+})
+
 // ── First-party ──────────────────────────────────────────────────────────────
 
 describe('createClient: first-party reads', () => {

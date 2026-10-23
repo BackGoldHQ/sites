@@ -1,34 +1,15 @@
 ---
 // The video list layout, `grid`: the videos as a grid of pictures, each with
-// a play mark, its title and its date; the whole card opens the video's page.
-import { safeHref, safeSrc } from '@backgold/astro/server'
+// a play mark, its title and its date; the whole card opens the video's page
+// (cards.astro).
 import ListFrame from '../ListFrame.astro'
 import type { ListLayoutProps } from '../props'
-import { formatDay } from '../../../lib/format'
+import VideoCards from './cards.astro'
 
 type Props = ListLayoutProps
 
 const props = Astro.props
-const cards = props.entries.map((entry) => ({
-  entry,
-  href: entry.url ? safeHref(entry.url) : null,
-  still: entry.hero ? safeSrc(entry.hero.url) : null,
-  day: formatDay(entry.publish_at),
-}))
 ---
 <ListFrame {...props} noun="videos" class="list-videos">
-  <ul class="video-grid" role="list">
-    {cards.map((card) => (
-      <li class="card video-card">
-        <div class="video-card-still">
-          {card.still && <img src={card.still} alt="" loading="lazy" decoding="async" />}
-          <span class="video-card-play" aria-hidden="true"></span>
-        </div>
-        <div class="card-body">
-          <h2 class="card-title">{card.href ? <a href={card.href}>{card.entry.title}</a> : card.entry.title}</h2>
-          {card.day && card.entry.publish_at && <time class="card-date" datetime={card.entry.publish_at}>{card.day}</time>}
-        </div>
-      </li>
-    ))}
-  </ul>
+  <VideoCards entries={props.entries} level={2} />
 </ListFrame>

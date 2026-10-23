@@ -32,6 +32,11 @@
 //                    sign-in routes answer.
 //                    After a sign-in, the notice "You are signed in as …"
 //                    under the header (SignedInNotice, board D4).
+//                    While the organization's YouTube stream is live (GET
+//                    /live, lib/stream.ts), the menu's last item is Watch
+//                    Live, a dot in the state red before its label, current
+//                    on /live, in the bar and the sheet alike; nothing while
+//                    the stream is only upcoming or the channel is off.
 //   the page         <main>; each page renders its own single <h1>.
 //   other areas      any area this template does not place (one the
 //                    organization added in BackGold), after the page, full
@@ -103,6 +108,7 @@ import { chromeOf, copyrightLine } from '../lib/chrome'
 import { siteFonts } from '../lib/fonts'
 import { footerColumnsOf } from '../lib/footer'
 import { tidyHeaderMenu } from '../lib/menu'
+import { liveStream, withWatchLive } from '../lib/stream'
 import type { TemplateConfig } from '../template'
 import '../styles/site.css'
 
@@ -129,7 +135,7 @@ if (bg.setup !== null) throw new Error('The site key is not configured; the setu
 const { site, legal, client } = bg
 const { template, page, areas = null, signInTitle = null, ...head } = Astro.props
 const { sections } = template
-const [primary, footer, utility] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility')])
+const [primary, footer, utility, stream] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility'), liveStream(bg)])
 const pathname = Astro.url.pathname
 const headerItems = primary?.items ?? []
 /**
@@ -175,8 +181,12 @@ function withTemplateLinks(nodes: MenuNode[], menu: 'header' | 'footer'): MenuNo
   return out
 }
 const headerButton = headerButtonOf(headerItems, pathname, page)
-/** The header menu, its repeats drawn once (lib/menu.ts): never the header button again, never two same links side by side, a group of one link a plain item. */
-const headerNodes = tidyHeaderMenu(withTemplateLinks(menuOf(headerItems, pathname, page), 'header'), headerButton)
+/**
+ * The header menu, its repeats drawn once (lib/menu.ts): never the header
+ * button again, never two same links side by side, a group of one link a
+ * plain item; then Watch Live last while the stream is live (lib/stream.ts).
+ */
+const headerNodes = withWatchLive(tidyHeaderMenu(withTemplateLinks(menuOf(headerItems, pathname, page), 'header'), headerButton), stream, pathname)
 const footerNodes = withTemplateLinks(menuOf(footer?.items ?? [], pathname, page), 'footer')
 const bottomRow = menuOf(utility?.items ?? [], pathname, page).flatMap((node) => [node, ...node.children]).filter((node) => node.href)
 const otherAreas = areas ? Object.keys(areas).filter((key) => !PLACED_AREAS.includes(key)) : []
