@@ -5,8 +5,10 @@
 // (presenter, seconder, the vote as filed and, only from a "Yeas:" list,
 // the tally), and the citation boxed with Share under it; then the
 // diagram, the Context band (its meeting with this decision marked, its
-// category on a line, its campuses, the same item filed twice, the buckets
-// whose basis names it) and the neighbours in its category.
+// category on a line, its campuses, the same agenda item filed twice under
+// another category (same agenda_item, or the same title, at its meeting)
+// apart from the other near-same entries at its meeting, the buckets whose
+// basis names it) and the neighbours in its category.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
@@ -15,6 +17,7 @@ import Diagram from '../archive/Diagram.astro'
 import Timeline from '../archive/Timeline.astro'
 import Share from '../archive/Share.astro'
 import RunningHead from '../archive/RunningHead.astro'
+import '../archive/money.css'
 import { archiveFor } from '../../lib/archive/index'
 import { bucketsCiting, filedTwice, neighbours, tallyOf } from '../../lib/archive/views'
 import { list, str } from '../../lib/archive/record'
@@ -37,7 +40,13 @@ const from = Math.max(0, Math.min(here - 4, atMeeting.length - 9))
 const meetingWindow = atMeeting.slice(from, from + 9)
 const inCategory = docs.filter((d) => d.kind === 'board_decision' && d.category === doc.category)
 const { previous, next, index, count } = neighbours(docs, doc)
-const twice = filedTwice(doc, docs)
+const agendaItem = str(f.agenda_item)
+const titleKey = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+/** The same agenda item at its meeting, filed under another category: the same agenda_item, or the same title. */
+const sameItem = docs.filter((d) => d.kind === 'board_decision' && d.id !== doc.id && d.meeting !== null && d.meeting === doc.meeting && d.category !== doc.category && ((agendaItem !== null && str(d.fields.agenda_item) === agendaItem) || titleKey(d.title) === titleKey(doc.title)))
+const twice = filedTwice(doc, docs).filter((d) => !sameItem.includes(d))
+const filedUnder = [...new Set([doc.category, ...sameItem.map((d) => d.category)].filter((c): c is string => c !== null))]
+const underList = filedUnder.length > 2 ? `${filedUnder.slice(0, -1).map((c) => `under ${c}`).join(', ')} and under ${filedUnder.at(-1)}` : filedUnder.map((c) => `under ${c}`).join(' and ')
 const buckets = bucketsCiting(doc, docs)
 const tally = tallyOf(doc.voteDetail)
 const sources = list(f.source_documents).map((slug) => docs.find((d) => d.kind === 'source_document' && d.slug === slug) ?? { slug, title: slug, url: `/sources/${encodeURIComponent(slug)}` })
@@ -119,11 +128,22 @@ const day = shortDay(doc.date)
             <ul class="ar-list-plain">{campusCounts.map((c) => <li><a href={hrefOf(REST, { category: c.campus })}>{c.count} · {c.campus}</a></li>)}</ul>
           </>
         )}
-        <p class="ar-label" style="margin-top:1.25rem">// Same meeting, filed under another category</p>
-        {twice.length > 0 ? (
-          <ul class="ar-list-plain">{twice.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a> <span class="ar-faint">· {d.category}</span></li>)}</ul>
-        ) : (
-          <p class="ar-faint">None.</p>
+        {sameItem.length > 0 && (
+          <>
+            <p class="ar-label" style="margin-top:1.25rem">// Same agenda item · filed {sameItem.length === 1 ? 'twice' : `${sameItem.length + 1} times`}</p>
+            <ul class="ar-list-plain mr-twice">{sameItem.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a></li>)}</ul>
+            {filedUnder.length > 1 && <p class="ar-muted" style="padding:0;margin-top:0.5rem">The archive files this item {underList}. {sameItem.length === 1 ? 'Both entries are' : `All ${sameItem.length + 1} entries are`} kept as filed.</p>}
+          </>
+        )}
+        {(twice.length > 0 || sameItem.length === 0) && (
+          <>
+            <p class="ar-label" style="margin-top:1.25rem">// Same meeting, filed under another category</p>
+            {twice.length > 0 ? (
+              <ul class="ar-list-plain">{twice.map((d) => <li><span class="ar-mark">{d.mark ?? 'DEC'}</span> <a href={d.url}>{d.title}</a> <span class="ar-faint">· {d.category}</span></li>)}</ul>
+            ) : (
+              <p class="ar-faint">None.</p>
+            )}
+          </>
         )}
         <p class="ar-label" style="margin-top:1.25rem">// Cited by a data bucket</p>
         {buckets.length > 0 ? (

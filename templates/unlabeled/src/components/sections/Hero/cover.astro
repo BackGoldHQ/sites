@@ -15,8 +15,12 @@
 // Pause button sits at the band's lower right (WCAG 2.2.2). Its caption,
 // when the section has one, sits at the photo's upper right as a figure
 // label ("Fig. 01 // A live candidate forum"). The band opens with its
-// running head on black slabs, the site's name at the left. Without a photo
-// or a video the stack sits on the page's ground. The page-opening Hero's
+// running head on black slabs, the site's name at the left and the page as a
+// file in the centre, "File 001 — Home": the page's title, numbered by its
+// place among the header menu's links read in order, groups' links in place
+// (src/lib/file-number.ts); a page the menu does not name gets its title
+// alone, and a page with no title (a preview) leaves the centre empty.
+// Without a photo or a video the stack sits on the page's ground. The page-opening Hero's
 // headline is the page's <h1>, any other's an <h2>. A Hero with no headline
 // stacks the site's title (her "Not Red. Not Blue. Just Texans."): as the <h1>
 // when it opens the page, else as words under the page's own title, which
@@ -29,6 +33,7 @@ import type Default from '@backgold/template-kit/components/sections/Hero/index.
 import { heroPhoto, links, media } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 import RunningHead from '../../RunningHead.astro'
+import { pageFile } from '../../../lib/file-number'
 
 type Props = ComponentProps<typeof Default>
 
@@ -49,9 +54,11 @@ const buttons = links(section)
 /** One slab per sentence: the stack breaks after a full stop, a question or an exclamation. */
 const siteName = bg.setup === null ? (bg.site.name ?? bg.site.domain) : null
 const slabs = headline ? headline.split(/(?<=[.!?])\s+/u).filter((line) => line !== '') : []
+/** The running head's centre: "File 001 — Home". */
+const file = bg.setup === null ? await pageFile(bg.client, Astro.url.pathname) : null
 ---
 <Band section={section} class:list={['u-cover', framed && 'u-cover-photo']}>
-  <RunningHead kicker={siteName} title={null} class="u-rh-onphoto" />
+  <RunningHead kicker={siteName} title={file} class="u-rh-onphoto" />
   {framed && (
     <div class="u-cover-photo-box u-halftone" aria-hidden={picture?.alt ? undefined : 'true'}>
       {picture && <img src={picture.url} alt={picture.alt} loading={level === 1 ? 'eager' : 'lazy'} fetchpriority={level === 1 ? 'high' : undefined} decoding="async" />}

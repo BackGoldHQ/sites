@@ -1,9 +1,11 @@
 ---
 // One data bucket at /data/<slug> (board U3, frame 2): the meta line, the
-// title, the total huge, the line items as the bucket records them, the
-// basis as its citation with the decisions it names, what feeds it and
-// where it flows, its own flow when its lines add up to its total, and its
-// Sankey diagram.
+// title, the total huge, the line items as the bucket records them (signs
+// as filed), the basis as its citation with the decisions it names, what
+// feeds it and where it flows (the buckets they name linked), the flow it
+// sits in when its feeder's line items add up to the buckets the feeder
+// feeds (this bucket solid, the rest hatched), else one line saying why no
+// flow is drawn, and its Sankey diagram.
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import Share from '../archive/Share.astro'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
@@ -13,7 +15,7 @@ import Diagram from '../archive/Diagram.astro'
 import Flow from '../archive/Flow.astro'
 import { archiveFor } from '../../lib/archive/index'
 import { basisOf } from '../../lib/archive/views'
-import { bucketFlow, bucketOf } from '../../lib/archive/money'
+import { bucketOf, flowFor, lineFigure, linkedMarks } from '../../lib/archive/money'
 import { str } from '../../lib/archive/record'
 import { formatUsd } from '../../lib/archive/query'
 import { shortDay } from '../../lib/archive/format'
@@ -27,6 +29,14 @@ const docs = data?.docs ?? [doc]
 const bucket = bucketOf(doc)
 const f = doc.fields
 const basis = basisOf(doc, docs)
+const buckets = docs.filter((d) => d.kind === 'data_bucket').map((d) => (d.id === doc.id ? bucket : bucketOf(d)))
+const { pairing, reason } = flowFor(bucket, buckets)
+const feeding = pairing?.feeder === bucket
+const flow = pairing && {
+  ...pairing,
+  right: pairing.right.map((s) => (s.href === doc.url ? { ...s, note: 'this bucket', solid: true, href: undefined } : s)),
+}
+const linked = (text: string) => linkedMarks(text, buckets)
 ---
 <ArchiveFrame crumbs={[{ label: 'Money', href: '/archive/money' }, { label: bucket.family }, { label: doc.mark ?? entry.title }]}>
   <EntryHead label="Data bucket" path={`/${base}/${doc.slug}`} kind={type?.singular_label ?? 'Data bucket'} meta={[bucket.family, bucket.side, bucket.basis && `Basis ${bucket.basis}`]} title={entry.title} summary={entry.summary} markdown={entry.body?.markdown}>
@@ -43,7 +53,7 @@ const basis = basisOf(doc, docs)
       <table class="ar-table">
         <tbody>
           {bucket.lines.map((l) => (
-            <tr><td>{l.text}</td><td class="ar-num">{l.value === null ? '—' : formatUsd(l.value)}</td></tr>
+            <tr><td>{l.text}</td><td class="ar-num">{lineFigure(l) ?? '—'}</td></tr>
           ))}
         </tbody>
       </table>
@@ -57,12 +67,24 @@ const basis = basisOf(doc, docs)
 
   {(str(f.fed_by) || str(f.flows_to)) && (
     <dl class="ar-facts">
-      {str(f.fed_by) && <div><dt>Fed by</dt><dd>{str(f.fed_by)}</dd></div>}
-      {str(f.flows_to) && <div><dt>Flows to</dt><dd>{str(f.flows_to)}</dd></div>}
+      {bucket.fedBy && <div><dt>Fed by</dt><dd>{linked(bucket.fedBy).map((p) => (p.href ? <a href={p.href} title={p.title}>{p.text}</a> : p.text))}</dd></div>}
+      {bucket.flowsTo && <div><dt>Flows to</dt><dd>{linked(bucket.flowsTo).map((p) => (p.href ? <a href={p.href} title={p.title}>{p.text}</a> : p.text))}</dd></div>}
     </dl>
   )}
 
-  {bucket.balanced && bucket.total !== null && <Flow caption={`The flow, from the bucket’s own lines · in = out: ${formatUsd(bucket.total)}`} hub={entry.title} id={`flow-${doc.slug}`} {...bucketFlow(bucket)} />}
+  {flow ? (
+    <Flow
+      caption={feeding
+        ? `The flow · this bucket’s line items in, the ${flow.fed.length === 1 ? 'bucket' : 'buckets'} it feeds out · in = out: ${formatUsd(flow.total)}`
+        : `The flow · ${flow.feeder.doc.title}, this bucket and the one that feeds it · this bucket solid, the rest hatched · in = out: ${formatUsd(flow.total)}`}
+      hub={flow.feeder.doc.title}
+      id={`flow-${doc.slug}`}
+      left={flow.left}
+      right={flow.right}
+    />
+  ) : (
+    reason && <p class="ar-meta ar-hint" style="margin-top:1rem">No flow drawn: {reason}</p>
+  )}
   <Diagram fields={f} field="sankey_diagram" data="sankey_data" title={entry.title} />
   <Share title={entry.title} path={doc.url} />
 </ArchiveFrame>

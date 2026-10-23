@@ -1,16 +1,19 @@
 ---
 // One records request at /records/<slug> (board U10, frame 2), her
-// information_request type as it is: the meta line, the title, the status
-// as a shape, requested and responded dates where she filled them (and the
-// days between, the page's arithmetic), requested from, what we asked for,
-// what came back, the records provided, the response PDF, the request
-// email she attached, Share.
+// information_request type as it is: the running head (its address,
+// Requested from in the centre), the meta line, the title, the status as a
+// shape, requested and responded dates where she filled them (and the days
+// between, the page's arithmetic), requested from, what we asked for, what
+// came back, the records provided, the response document with Download
+// and, when it is a PDF, read in place, the request email she attached,
+// Share this request. The archive names the type itself (kinds.ts).
 import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import Share from '../archive/Share.astro'
 import Prose from '@backgold/template-kit/components/Prose.astro'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import EntryHead from '../archive/EntryHead.astro'
 import { archiveFor } from '../../lib/archive/index'
+import { kindOf } from '../../lib/archive/kinds'
 import { fileUrl, str } from '../../lib/archive/record'
 import { daysBetween, plural, shortDay } from '../../lib/archive/format'
 
@@ -23,17 +26,22 @@ const f = doc.fields
 const requested = str(f.requested_on)
 const responded = str(f.responded_on)
 const status = str(f.status)
+const kind = kindOf('information_request')
+const from = str(f.requested_from)
 const pdf = fileUrl(f.response_document)
 const pdfName = f.response_document && typeof f.response_document === 'object' ? str((f.response_document as Record<string, unknown>).file_name) : null
+// Read in place only a PDF: a file named .pdf, else an unnamed file in a pdf field.
+const readable = pdf !== null && (pdfName ? /\.pdf$/i.test(pdfName) : type?.fields.find((x) => x.key === 'response_document')?.kind === 'pdf')
 const email = fileUrl(f.request_email)
 const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((s) => s.trim()).filter(Boolean)
 ---
-<ArchiveFrame crumbs={[{ label: type?.plural_label ?? 'Records requests', href: `/${base}` }, { label: entry.title }]}>
+<ArchiveFrame crumbs={[{ label: kind.plural, href: `/${base}` }, { label: entry.title }]}>
   <EntryHead
-    label={type?.singular_label ?? 'Records request'}
+    label={kind.singular}
     path={`/${base}/${doc.slug}`}
-    kind={type?.singular_label ?? 'Records request'}
-    meta={[str(f.requested_from), requested && `Requested ${shortDay(requested)?.toUpperCase()}`, responded && `Responded ${shortDay(responded)?.toUpperCase()}`, status]}
+    place={from ? `Requested from ${from}` : ''}
+    kind={kind.singular}
+    meta={[from, requested && `Requested ${shortDay(requested)?.toUpperCase()}`, responded && `Responded ${shortDay(responded)?.toUpperCase()}`, status]}
     title={entry.title}
     summary={entry.summary}
     markdown={entry.body?.markdown}
@@ -42,7 +50,7 @@ const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((s) => s.
     <div><dt>// Status</dt><dd>{status ? <span class="ar-status" data-status={status}>{status}</span> : '—'}</dd></div>
     {requested && <div><dt>// Requested on</dt><dd>{shortDay(requested)}</dd></div>}
     {responded && <div><dt>// Responded on</dt><dd>{shortDay(responded)}{requested && ` · ${plural(daysBetween(requested, responded), 'day')} later`}</dd></div>}
-    {str(f.requested_from) && <div><dt>// Requested from</dt><dd>{str(f.requested_from)}</dd></div>}
+    {from && <div><dt>// Requested from</dt><dd>{from}</dd></div>}
   </dl>
   <div class="ar-two" style="margin-top:1.5rem">
     {str(f.what_we_asked_for) && <section><p class="ar-label">// What we asked for</p><Prose value={f.what_we_asked_for} /></section>}
@@ -54,11 +62,24 @@ const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((s) => s.
       <ul class="ar-list-plain">{provided.map((p) => <li>{p} <span class="ar-faint">· as provided</span></li>)}</ul>
     </section>
   )}
-  {(pdf || email) && (
-    <section class="ar-doors">
-      {pdf && <div><p class="ar-label">// The response · response_document</p><p>{pdfName ?? 'BISD response · PDF'}</p><p><a class="ar-btn" href={pdf} rel="noopener">Download the response</a></p></div>}
-      {email && <div><p class="ar-label">// The request as sent · request_email</p><img src={email} alt="The email the request went out in" style="max-width:100%;height:auto;border:1px solid #616161" loading="lazy" /></div>}
+  {pdf && readable && (
+    <section class="ar-reader" aria-labelledby="ar-reader-head">
+      <p class="ar-label">// The response · response_document (pdf)</p>
+      <div class="ar-reader-head">
+        <div>
+          <h2 id="ar-reader-head">Read it here</h2>
+          <p class="ar-meta">{pdfName ?? 'BISD response · PDF'}</p>
+        </div>
+        <a class="ar-btn" href={pdf} rel="noopener">Download the response ↓</a>
+      </div>
+      <iframe class="ar-reader-frame" src={pdf} title={`The response: ${pdfName ?? entry.title}`} loading="lazy"></iframe>
     </section>
   )}
-  <Share title={entry.title} path={doc.url} />
+  {((pdf && !readable) || email) && (
+    <section class="ar-doors">
+      {pdf && !readable && <div><p class="ar-label">// The response · response_document</p><p>{pdfName ?? 'BISD response'}</p><p><a class="ar-btn" href={pdf} rel="noopener">Download the response ↓</a></p></div>}
+      {email && <div><p class="ar-label">// The request as sent · request_email</p><img src={email} alt="The email the request went out in" style="max-width:100%;height:auto;border:1px solid var(--ar-line-strong)" loading="lazy" /></div>}
+    </section>
+  )}
+  <Share title={entry.title} path={doc.url} label="Share this request" />
 </ArchiveFrame>

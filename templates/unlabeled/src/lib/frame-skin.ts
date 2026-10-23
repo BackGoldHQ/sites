@@ -14,12 +14,20 @@
 // hairline meter, a shift's spots in the meta line over the same meter; a
 // petition's collapsed text as a hairline-ruled disclosure whose summary is
 // the meta line with a `[ + ]` bracket (`[ – ]` open) and whose text reads in
-// the mono body; cards as hairline boxes. It never hides a required field,
+// the mono body; cards as hairline boxes; what a visitor types in JetBrains
+// Mono, her text face, whose @font-face rules the route puts before these on
+// this site's own addresses (src/frame/faces.ts; the frame itself loads only
+// the look's face, Ubuntu Sans Mono); and a failure's line in red, #DC2626, the one place her brand lets
+// a status colour in (U7 note 4, U-cat §1). No frame part marks a send as
+// done (the `ok` tone is progress, "Sending…"), so the green has no place yet. It never hides a required field,
 // a consent row, a legal line, an error or the submit, and every state
 // (focus, invalid, picked, disabled) still reads as what it is. The frame
 // may refuse the skin (a preview host): the look alone then draws them.
 
 const META = `font-size: 11px; line-height: 1.45; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase;`
+
+/** The status red: inside BackGold's frames only, for a failure only (U-cat §1). */
+const ERROR_RED = '#DC2626'
 
 export const FRAME_SKIN_CSS = `/* Unlabeled: BackGold's frames in her look (FRAME-SKINS contract). */
 html[data-bg-look] { color-scheme: dark; }
@@ -60,6 +68,7 @@ html[data-bg-look] .bg-fr-input {
   border-radius: 0;
   box-shadow: none;
   color: var(--bg-look-ink);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
 }
 html[data-bg-look] .bg-fr-input:focus,
@@ -98,12 +107,12 @@ html[data-bg-look] .bg-fr-item:has(input:checked) {
 html[data-bg-look] .bg-fr-check { color: var(--bg-look-muted); font-size: 12px; line-height: 1.5; }
 html[data-bg-look] .bg-fr-check input { accent-color: var(--bg-look-ink); border-radius: 0; }
 
-/* The message line: a failure in the accent with a rule before it. */
+/* The message line: a failure in the status red with a rule before it. */
 html[data-bg-look] .bg-fr-error { font-size: 12px; letter-spacing: 0.04em; }
 html[data-bg-look] .bg-fr-error[data-tone='error'] {
   padding-left: 10px;
-  border-left: 2px solid var(--bg-look-accent);
-  color: var(--bg-look-accent);
+  border-left: 2px solid ${ERROR_RED};
+  color: ${ERROR_RED};
 }
 
 /* The main call: the white block in capitals, inverting on hover. */

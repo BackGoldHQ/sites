@@ -1,7 +1,8 @@
 // The six content types the archive reads, in the order the door counts
 // them: the five the BISD archive was normalized into (brief §4.2) and her
-// own records requests. Labels and addresses come from GET /types when the
-// organization has the type; these are what the page says when it does not.
+// own records requests. These labels are what every archive page calls
+// them, whatever the organization named the type in BackGold; the address
+// comes from GET /types when the organization has the type, else `base`.
 
 export const ARCHIVE_KINDS = [
   { key: 'board_meeting', singular: 'Board meeting', plural: 'Board meetings', base: 'meetings', chip: 'Meetings', code: 'MTG' },
