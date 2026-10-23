@@ -59,7 +59,10 @@ included) `X-BackGold-Entry: <entry id>`; BackGold's dispatch counts the view
 and strips the header; a site built elsewhere may ignore or strip them. The
 id is what `resolveRoute` first resolved the request's own address to, on a
 `GET` that renders a 200 HTML page; a list, a term, an author, a feed, the
-SEO routes, the 404, the setup page and `/preview` carry neither. The header
+SEO routes, the 404, the setup page and `/preview` carry neither. A route
+that draws a page where its address resolved to nothing (the template kit's
+`/events/<type>`, the events page narrowed to a type) names it with
+`drawnInstead(resolved)` from `@backgold/astro/server`. The header
 is stored with the edge-cache copy, so a hit carries it too. It needs
 `AsyncLocalStorage`: the `nodejs_compat` or `nodejs_als` compatibility flag,
 which the starter and BackGold's templates set; without either, pages render

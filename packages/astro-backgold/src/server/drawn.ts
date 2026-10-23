@@ -65,6 +65,18 @@ export function recordDrawn(resolved: Resolved, samePath: (requestPath: string) 
   record.drawn = drawnOf(resolved)
 }
 
+/**
+ * Records `resolved` as what the request drew in place of a resolution of its
+ * own path that drew nothing (the template kit's `/events/<type>`, the events
+ * page drawn where the path resolved to `not_found`). A page or an entry
+ * already recorded stays.
+ */
+export function drawnInstead(resolved: Resolved): void {
+  const record = storage?.getStore()
+  if (!record || record.drawn) return
+  record.drawn = drawnOf(resolved)
+}
+
 /** The header naming what `record` drew, for a 200 HTML render; empty for anything else. */
 export function drawnHeaders(record: DrawnRecord, response: Response): Record<string, string> {
   const drawn = record.drawn

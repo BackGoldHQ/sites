@@ -3675,6 +3675,10 @@ async function checkPartyBoards(origin, fixture) {
   check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
   check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
   check(
+    res.headers.get('x-backgold-page') === 'lp_events' && !res.headers.has('x-backgold-entry'),
+    `/events/volunteer names the events page it drew in X-BackGold-Page (${res.headers.get('x-backgold-page')})`,
+  )
+  check(
     fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer' && new URLSearchParams(s.search).get('limit') === '50'),
     "it read GET /events?type=volunteer with limit=50, the agenda's cap of 80 held to the api's maximum (the api answers 400 BAD_LIMIT above 50)",
   )

@@ -3,7 +3,7 @@ import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import type { BackgoldReady } from '../src/server/context.js'
-import { DRAWN_ENTRY_HEADER, DRAWN_PAGE_HEADER } from '../src/server/drawn.js'
+import { DRAWN_ENTRY_HEADER, DRAWN_PAGE_HEADER, drawnInstead } from '../src/server/drawn.js'
 import { resolveRoute } from '../src/server/resolve.js'
 import { API_ORIGIN, PK, fakeApi, fakeCache, fakeContext, fakeKv, type FakeContext } from './fixtures.js'
 
@@ -93,6 +93,26 @@ describe('what a render drew', () => {
     expect(await drawnOn('/endorsements', ['/', '/endorsements', '/endorsements/sheriff'])).toMatchObject({ page: null, entry: null })
     expect(await drawnOn('/', ['/endorsements', '/', '/endorsements/sheriff'])).toMatchObject({ page: HOME.page.id, entry: null })
     expect(await drawnOn('/endorsements/sheriff/', ['/endorsements/sheriff'])).toMatchObject({ entry: 'ci_sheriff' })
+  })
+
+  it('names a page drawn in place of a path that resolved to nothing (the kit’s /events/<type>), never in place of a page or an entry', async () => {
+    /** A page that resolves its own address, then `instead` (a page read at another path) as the catch-all's typed events page does. */
+    const swapping = (ctx: FakeContext, instead: string) =>
+      vi.fn(async (_rewrite?: string) => {
+        const { client } = (ctx.locals as { backgold: BackgoldReady }).backgold
+        await resolveRoute(client, ctx.url)
+        drawnInstead(await resolveRoute(client, instead))
+        return new Response('<html>rendered</html>', { status: 200, headers: { 'Content-Type': 'text/html' } })
+      })
+    const named = async (path: string, instead: string) => {
+      const ctx = fakeContext(path)
+      const res = await runMiddleware(ctx, swapping(ctx, instead), deps())
+      return { page: res.headers.get(DRAWN_PAGE_HEADER), entry: res.headers.get(DRAWN_ENTRY_HEADER) }
+    }
+    expect(await named('/no-such-page/volunteer', '/preview')).toEqual({ page: 'lp_preview', entry: null })
+    expect(await named('/', '/preview')).toEqual({ page: HOME.page.id, entry: null })
+    expect(await named('/endorsements/sheriff', '/preview')).toEqual({ page: null, entry: 'ci_sheriff' })
+    expect(await named('/preview?bg_preview=tok_good', '/')).toEqual({ page: null, entry: null })
   })
 
   it('names nothing on a render that is not a 200 HTML page, or a request that is not a GET', async () => {
