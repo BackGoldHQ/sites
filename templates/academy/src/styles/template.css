@@ -1449,7 +1449,7 @@ main .bg-section .field-words .kicker:has(+ :is(h1, h2))::after {
 }
 @media (min-width: 56rem) {
   .kc-row {
-    grid-template-columns: 7rem minmax(0, 1fr) auto;
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr) auto auto;
   }
   .kc-row-n {
     font-size: 6rem;

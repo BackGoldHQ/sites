@@ -23,7 +23,7 @@ const photo = heroPhoto(Astro.props.section, 'photoUrl', 'imageUrl')
   <ProofLine />
   {photo && (
     <figure slot="aside" class="ak-portrait">
-      <img src={photo.url} alt={photo.alt} width="640" height="800" decoding="async" fetchpriority="high" />
+      <img src={photo.url} alt={photo.alt} width="640" height="800" loading="eager" decoding="async" fetchpriority="high" />
     </figure>
   )}
 </KitField>
