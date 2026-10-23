@@ -6,6 +6,8 @@ import { str } from './record'
 import type { ArchiveDoc } from './record'
 
 export const PAY_SORTS = ['office', 'name', 'value', 'row'] as const
+/** The query names /archive/pay reads: the search, the sort and the office left open. */
+export const PAY_QUERY_NAMES = ['q', 'sort', 'office'] as const
 export type PaySort = (typeof PAY_SORTS)[number]
 
 export interface PayRow {

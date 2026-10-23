@@ -9,8 +9,9 @@ import Site from '@backgold/template-kit/layouts/Site.astro'
 import template from '../../template'
 import ArchiveFrame from '../../components/archive/ArchiveFrame.astro'
 import { loadArchive, sourceOf } from '../../lib/archive/index'
-import { histogram, PAY_SORTS, payRows, sortPay, SMALL_VALUE, type PaySort } from '../../lib/archive/pay'
+import { histogram, PAY_QUERY_NAMES, PAY_SORTS, payRows, sortPay, SMALL_VALUE, type PaySort } from '../../lib/archive/pay'
 import { REST, searcherFor } from '../../lib/archive/search'
+import { READS_QUERY_HEADER } from '@backgold/astro/server'
 import { countBy } from '../../lib/archive/views'
 import { formatUsd } from '../../lib/archive/query'
 import { plural } from '../../lib/archive/format'
@@ -19,6 +20,9 @@ const source = sourceOf(Astro.locals)
 if (!source) return new Response(null, { status: 503 })
 const data = await loadArchive(source)
 const search = Astro.url.searchParams
+// The page reads these names, so the edge's stored bare copy is never served
+// to a request that carries one (READS_QUERY_HEADER); that render says no-store.
+Astro.response.headers.set(READS_QUERY_HEADER, PAY_QUERY_NAMES.join(','))
 const q = (search.get('q') ?? '').trim().slice(0, 200)
 const sortParam = search.get('sort')
 const sort: PaySort = (PAY_SORTS as readonly string[]).includes(sortParam ?? '') ? (sortParam as PaySort) : 'office'
