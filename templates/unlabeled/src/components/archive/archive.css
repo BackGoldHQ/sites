@@ -391,6 +391,14 @@
   white-space: normal;
 }
 
+/* The doors to the two browsing views, under the holdings (brief §4.4). */
+.ar-doors {
+  margin-top: 0.75rem;
+}
+.ar-doors a {
+  color: var(--ar-ink);
+}
+
 /* Browse: the term rail and the meeting strip. */
 .ar-browse {
   display: grid;
