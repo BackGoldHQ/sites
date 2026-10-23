@@ -294,6 +294,35 @@ export type TypedEntryResponse<K extends string> = { entry: TypedEntryDetail<K>;
 /** What `preview(token)` answers: a draft page or a draft entry, by the token's kind. */
 export type PreviewResponse = PageResponse | EntryResponse
 
+/**
+ * The stream an organization's connected YouTube channel is showing, as
+ * `GET /live` answers it: `live` while it is on the air, `upcoming` for the
+ * next one scheduled. The api's own shape; it joins the vendored contract
+ * once the platform's `GET /live` lands there.
+ */
+export interface LiveStream {
+  status: 'live' | 'upcoming'
+  /** The YouTube video id. */
+  video_id: string
+  /** The watch address on YouTube. */
+  url: string
+  /** `https://www.youtube.com/embed/<video_id>`. */
+  embed_url: string
+  title: string
+  thumbnail_url: string | null
+  /** When an upcoming stream is scheduled to start (ISO 8601); null when YouTube names no time. */
+  scheduled_start_at: string | null
+  /** When a live stream went on the air (ISO 8601); null when YouTube names no time. */
+  started_at: string | null
+  /** The channel's name on YouTube. */
+  channel_title: string | null
+}
+
+/** `GET /live`: the stream, or null while the channel is off the air. */
+export interface LiveResponse {
+  live: LiveStream | null
+}
+
 export interface BackgoldContent {
   /** `GET /site`: identity, brand, social, SEO, the legal line, the version. */
   site(): Promise<SiteResponse>
@@ -389,6 +418,15 @@ export interface BackgoldContent {
    * never renewed without the cookie.
    */
   signOutVisitor(token: string): Promise<void>
+  /**
+   * `GET /live`: the organization's YouTube stream while it is live or
+   * upcoming, else null. Never keyed on the content version: the answer is
+   * held in memory for 60 seconds (the api's own `max-age`) and never
+   * written to the store, so a page asking on every request costs one api
+   * request a minute. An api with no `GET /live` (a 404) answers null and is
+   * held the same way; any other failure throws and is not held.
+   */
+  live(): Promise<LiveStream | null>
   /** `GET /preview/:token` — a secret key; never cached. Throws BAD_PREVIEW_TOKEN on a bad or expired token. */
   preview(token: string): Promise<PreviewResponse | null>
   /**
@@ -414,7 +452,7 @@ export interface BackgoldContent {
    * store's error.
    */
   setVersion(version: number): Promise<void>
-  /** Forget the version, in memory and the store; the next read re-learns it (another process sharing the store may already have written a newer one). Surfaces the store's error. */
+  /** Forget the version, in memory and the store, and the held `live()` answer; the next read re-learns them (another process sharing the store may already have written a newer version). Surfaces the store's error. */
   bust(): Promise<void>
 }
 

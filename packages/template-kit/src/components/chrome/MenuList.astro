@@ -5,11 +5,14 @@
 // (they share a `name`), and it opens on a click or Enter, so it works with
 // the keyboard and with scripts off. In the phone sheet every group is open:
 // its label is a small heading over its links. A group that has an address
-// of its own lists it first among its links.
+// of its own lists it first among its links. Watch Live (lib/stream.ts, while
+// the organization's stream is live) carries a dot in the state red before
+// its label.
 import type { MenuNode } from '@backgold/astro/server'
+import type { LiveMenuNode } from '../../lib/stream'
 
 interface Props {
-  nodes: MenuNode[]
+  nodes: LiveMenuNode[]
   mode: 'bar' | 'sheet'
 }
 
@@ -22,7 +25,7 @@ const holdsCurrent = (node: MenuNode) => node.children.some((child) => child.cur
     <li class:list={[node.children.length > 0 && 'menu-group']}>
       {node.children.length === 0 ? (
         node.href ? (
-          <a href={node.href} rel={node.rel} aria-current={node.current ? 'page' : undefined}>{node.label}</a>
+          <a href={node.href} rel={node.rel} aria-current={node.current ? 'page' : undefined}>{node.live ? <span class="menu-live"><span class="live-dot" aria-hidden="true"></span>{node.label}</span> : node.label}</a>
         ) : (
           <span>{node.label}</span>
         )

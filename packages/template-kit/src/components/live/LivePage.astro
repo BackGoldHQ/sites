@@ -1,0 +1,215 @@
+---
+// The /live page as the kit draws it (routes/live.astro; a template's
+// `livePage` draws it in its place), from LivePageProps (lib/stream.ts), in
+// one of three states:
+//
+//   live      the stream in YouTube's player at the top (16:9, playing on
+//             arrival), the title as the page's h1 under it, "Live now ·
+//             since <time>" after a dot in the state red, and Open on
+//             YouTube; the live chat beside them on a wide screen, under them
+//             on a phone.
+//   upcoming  the stream's still with a play mark, opening it on YouTube; the
+//             title as the h1, "Next live: <day and time>", Open on YouTube.
+//   off       "Not live right now", one line ("When <channel> goes live, the
+//             stream plays here."), and the three newest videos as the video
+//             list's cards, with All videos.
+//
+// The layout draws the page's areas around it in every state (the sign-up
+// above the footer, say). Times are written in UTC and again in the visitor's
+// own zone (LocalTime).
+import VideoCards from '../entries/video/cards.astro'
+import LocalTime from './LocalTime.astro'
+import type { LivePageProps } from '../../lib/stream'
+
+type Props = LivePageProps
+
+const { stream, videos, videoList, channel } = Astro.props
+---
+<div class="live-page" data-live-state={stream?.status ?? 'off'}>
+  {stream?.status === 'live' ? (
+    <div class="live-stage">
+      <div class="live-player">
+        <iframe src={stream.playerSrc} title={stream.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <div class="live-words">
+        <h1>{stream.title}</h1>
+        <p class="live-status">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>Live now{stream.startedAt && stream.startedText && <> · since <LocalTime at={stream.startedAt} text={stream.startedText} moment="time" /></>}</span>
+        </p>
+        <p class="live-actions"><a class="button button-quiet" href={stream.watchUrl} rel="noopener">Open on YouTube</a></p>
+      </div>
+      <div class="live-chat">
+        <iframe src={stream.chatSrc} title={`Live chat: ${stream.title}`}></iframe>
+      </div>
+    </div>
+  ) : stream ? (
+    <div class="live-upcoming">
+      <a class="live-still" href={stream.watchUrl} rel="noopener">
+        <img src={stream.still} alt="" />
+        <span class="live-play" aria-hidden="true"></span>
+        <span class="visually-hidden">{stream.title} on YouTube</span>
+      </a>
+      <div class="live-words">
+        <h1>{stream.title}</h1>
+        <p class="live-status">
+          <span>Next live: {stream.scheduledAt && stream.scheduledText ? <LocalTime at={stream.scheduledAt} text={stream.scheduledText} moment="day" /> : 'soon'}</span>
+        </p>
+        <p class="live-actions"><a class="button button-quiet" href={stream.watchUrl} rel="noopener">Open on YouTube</a></p>
+      </div>
+    </div>
+  ) : (
+    <div class="live-off">
+      <h1>Not live right now</h1>
+      <p class="lede">When {channel} goes live, the stream plays here.</p>
+      {videos.length > 0 && (
+        <section class="live-newest" aria-labelledby="live-newest">
+          <div class="live-newest-head">
+            <h2 id="live-newest">Newest videos</h2>
+            {videoList && <a href={videoList.path}>All videos</a>}
+          </div>
+          <VideoCards entries={videos} level={3} />
+        </section>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .live-page {
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2.25rem) var(--gutter) var(--space);
+  }
+  .live-page h1 {
+    margin: 0;
+    font-size: clamp(1.875rem, 1.35rem + 1.8vw, 2.875rem);
+    line-height: 1.08;
+  }
+  .live-stage {
+    display: grid;
+    grid-template-areas: 'player' 'words' 'chat';
+    gap: 1.5rem;
+  }
+  .live-player {
+    grid-area: player;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--band-contrast);
+  }
+  .live-player iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .live-stage .live-words {
+    grid-area: words;
+  }
+  .live-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.875rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .live-actions {
+    margin: 1.25rem 0 0;
+  }
+  .live-chat {
+    grid-area: chat;
+    display: flex;
+    min-height: 28rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .live-chat iframe {
+    flex: 1;
+    width: 100%;
+    min-height: 28rem;
+    border: 0;
+  }
+  .live-upcoming {
+    display: grid;
+    gap: 1.5rem;
+    align-items: center;
+  }
+  .live-still {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--band-contrast);
+  }
+  .live-still img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .live-play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 50%;
+    background: var(--button);
+    translate: -50% -50%;
+  }
+  .live-play::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 30%;
+    height: 34%;
+    translate: 10% 0;
+    background: var(--button-ink);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  .live-off .lede {
+    margin: 1rem 0 0;
+  }
+  .live-newest {
+    margin-top: clamp(2.25rem, 1.5rem + 2vw, 3.5rem);
+  }
+  .live-newest-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .live-newest-head h2 {
+    margin: 0;
+  }
+  .live-newest-head a {
+    color: var(--link);
+    font-weight: 700;
+  }
+  @media (min-width: 56rem) {
+    .live-upcoming {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+  }
+  @media (min-width: 64rem) {
+    .live-stage {
+      grid-template-columns: minmax(0, 1fr) 22rem;
+      grid-template-rows: auto auto;
+      grid-template-areas: 'player chat' 'words chat';
+      gap: 1.5rem 1.75rem;
+    }
+  }
+</style>

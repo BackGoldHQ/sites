@@ -195,6 +195,20 @@ seconds, never by version).
 const { shifts } = await bg.shifts({ limit: 10 })
 ```
 
+**`live()`**: the organization's YouTube stream while its connected channel
+is live or has one scheduled, else `null` (`GET /live`). It carries `status`
+(`live` or `upcoming`), `video_id`, `url` (the watch address), `embed_url`,
+`title`, `thumbnail_url`, `scheduled_start_at`, `started_at` and
+`channel_title`. It is never keyed on the content version: the client holds
+the answer in memory for 60 seconds (the api's own `max-age`) and never writes
+it to the store, so asking on every request costs one api request a minute.
+An api that has no `GET /live` answers `null`; any other failure throws.
+
+```ts
+const stream = await bg.live()
+if (stream?.status === 'live') console.log('On the air:', stream.title)
+```
+
 **`terms(taxonomy)`**: a taxonomy's terms.
 
 ```ts
@@ -311,8 +325,8 @@ How the client knows the version:
   not on every fetch (KV takes one write per key per second).
 
 `bg.version()` returns the version the client trusts (`null` before the first
-read). `bg.bust()` forgets the version, in memory and in the store; the next
-read re-learns it (another process sharing the store may already have written
+read). `bg.bust()` forgets the version, in memory and in the store, and the
+held `live()` answer; the next read re-learns it (another process sharing the store may already have written
 a newer one).
 
 While the version is trusted, a read the store already holds makes no request

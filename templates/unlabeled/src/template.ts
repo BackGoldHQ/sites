@@ -49,6 +49,9 @@ const DARK: FrameColors = {
   surface: '#000000',
   line: '#1a1a1a',
   lineStrong: '#616161',
+  // The live dot (the kit's Watch Live item) in her ink: no red on her site,
+  // ever; on the air reads by the dot's place, not its colour.
+  live: '#ffffff',
 }
 
 /** Where the archive's records open: each type's own address. */

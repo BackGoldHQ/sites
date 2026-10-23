@@ -2,7 +2,8 @@
 // answers 404, then (a) setup check, (b) the `bg_vid` visitor
 // cookie, (c) the signed-in visitor (`bg_visitor`), (d) the site's
 // redirects, (e) the edge cache, which a signed-in visitor's request never
-// reads or writes. Registered by the integration; `@backgold/astro/middleware`
+// reads or writes, keyed on the organization's live stream too
+// (server/live-stream.ts). Registered by the integration; `@backgold/astro/middleware`
 // exports `onRequest` for a site that composes its own middleware with
 // `sequence()`.
 
@@ -12,6 +13,7 @@ import options from 'virtual:backgold/options'
 import { backgoldFor, type BackgoldContextLike } from './server/context.js'
 import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, openEdgeCache, readsRequestQuery, toStore, type EdgeCache } from './server/edge-cache.js'
 import { namesNoSite, waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
+import { liveStreamOf, liveVariant } from './server/live-stream.js'
 import { PREVIEW_HEADERS } from './server/preview.js'
 import { redirectFor } from './server/redirects.js'
 import { errorResponse, noSite } from './server/respond.js'
@@ -118,9 +120,12 @@ async function pipeline(context: MiddlewareContextLike, next: MiddlewareNext, de
     if (redirect) return own(redirect)
   }
 
-  // (e) The edge cache.
+  // (e) The edge cache. A page drawn while a stream is live or upcoming is
+  // its own entry: the key's variant carries the stream (liveVariant), read
+  // once for the request (liveStreamOf), so the page draws the same answer.
   if (method !== 'GET' || uncached || signedIn || !deps.cache) return own(await next())
-  const key = new Request(cacheKey({ siteId: bg.siteId, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant: bg.variant, url: context.url }))
+  const variant = [bg.variant, liveVariant(await liveStreamOf(bg))].filter(Boolean).join('~')
+  const key = new Request(cacheKey({ siteId: bg.siteId, buildId: deps.buildId, siteUrl: bg.siteUrl, version: bg.version, variant, url: context.url }))
   const hit = await deps.cache.match(key).catch(() => undefined)
   // A copy whose page reads a query name this request carries is not this request's page.
   if (hit && !readsRequestQuery(hit, context.url)) return finish(fromCache(hit))
