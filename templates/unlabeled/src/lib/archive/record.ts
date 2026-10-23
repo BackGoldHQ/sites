@@ -8,12 +8,36 @@
 import type { EntryDetail } from '@backgold/content'
 import { figuresIn } from './query'
 import { markOf, type ArchiveKindKey } from './kinds'
+import { shortDay } from './format'
 
 export interface ArchiveLink {
   label: string
   href: string
   /** True for a link that leaves the site (drawn with ↗). */
   external: boolean
+}
+
+/** A records request's ledger facts, as she filled them (her information_request fields). */
+export interface RequestFacts {
+  /** `requested_from`. */
+  from: string | null
+  /** `requested_on`, YYYY-MM-DD. */
+  requestedOn: string | null
+  /** `responded_on`, YYYY-MM-DD. */
+  respondedOn: string | null
+  /** `status`: Fulfilled, Waiting on a response, Denied. */
+  status: string | null
+}
+
+/**
+ * A records request's row meta after its kind (board U2, frame 1): who it
+ * was asked of, the day it was answered (else the day it was asked), its
+ * status. "Beaumont ISD · Responded Sep 23, 2026 · Fulfilled".
+ */
+export function requestMeta(request: RequestFacts | null | undefined): string[] {
+  if (!request) return []
+  const when = request.respondedOn ? `Responded ${shortDay(request.respondedOn)}` : request.requestedOn ? `Requested ${shortDay(request.requestedOn)}` : null
+  return [request.from, when, request.status].filter((v): v is string => Boolean(v))
 }
 
 export interface ArchiveDoc {
@@ -42,6 +66,8 @@ export interface ArchiveDoc {
   /** A pay record's reported value. */
   pay: number | null
   links: ArchiveLink[]
+  /** A records request's facts for its row; null for every other kind. */
+  request: RequestFacts | null
   /** The entry's own text, every field value and term name, as text. */
   body: string
   publishAt: string | null
@@ -227,6 +253,7 @@ export function toDoc(kind: ArchiveKindKey, entry: EntryDetail, urlBase: string)
     amounts: [...new Set(amounts)].sort((a, b) => b - a),
     pay,
     links: linksOf(kind, f),
+    request: kind === 'information_request' ? { from: str(f.requested_from), requestedOn: isoDay(f.requested_on), respondedOn: isoDay(f.responded_on), status: str(f.status) } : null,
     body,
     publishAt: entry.publish_at,
     fields: f,

@@ -118,6 +118,13 @@ export interface TemplateConfig {
     also?: string[]
   }>
   /**
+   * What the phone's menu sheet carries besides the menu, the header button
+   * and the legal line: `socials` draws the site's social links, as the
+   * footer draws them, after the button (and the account links) and before
+   * the legal line (layouts/Site.astro). Left out, the sheet carries none.
+   */
+  menuSheet?: { socials?: boolean }
+  /**
    * Where the news list draws its search box: at the end of the filter row,
    * beside the chips (`filter`, board A4, the default), or beside the list's
    * head, on its subhead's line (`head`, board C10); on a narrow screen it

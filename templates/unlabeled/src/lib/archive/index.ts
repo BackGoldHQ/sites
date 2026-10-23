@@ -26,7 +26,7 @@ import { ARCHIVE_KINDS, type ArchiveKindKey } from './kinds'
 import { httpUrl, list, toDoc, type ArchiveDoc } from './record'
 
 /** Bumped when ArchiveDoc's shape changes, so a deploy never reads an index an older build wrote. */
-export const ARCHIVE_FORMAT = 2
+export const ARCHIVE_FORMAT = 3
 
 /** How long a built index may live in KV; a version bump retires it sooner. */
 const INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -73,14 +73,20 @@ export interface ArchiveSource {
   version: number
 }
 
-/** The archive types as the organization names them, in the door's order. */
+/**
+ * The archive types in the door's order, each where the organization keeps
+ * it. Their labels are the archive's own (kinds.ts), whatever the
+ * organization calls the type in BackGold: her information_request type is
+ * "Information requests" there and "Records requests" on every archive
+ * chip, rail, crumb and head.
+ */
 export function archiveTypes(types: ContentTypeSummary[]): ArchiveType[] {
   return ARCHIVE_KINDS.map((kind) => {
     const found = types.find((t) => t.key === kind.key)
     return {
       key: kind.key,
-      singular: found?.singular_label ?? kind.singular,
-      plural: found?.plural_label ?? kind.plural,
+      singular: kind.singular,
+      plural: kind.plural,
       base: found?.url_base ?? kind.base,
       present: found !== undefined,
     }

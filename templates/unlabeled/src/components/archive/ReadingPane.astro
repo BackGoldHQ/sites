@@ -1,43 +1,122 @@
 ---
 // A text extraction in a reading pane (boards U3, U4): line-numbered, the
-// cited lines set in white, each line addressable (`#L1035`), the text
-// exactly as the archive made it. `limit` shows only the first lines, with
-// the whole text a link away; `find` sets every line holding those words
-// in white and counts them.
+// cited lines set in white, each line addressable (`#L1035`, or the pane's
+// own prefix where a page holds several panes), the text exactly as the
+// archive made it. `limit` shows only the first lines; `windowed` shows
+// WINDOW_LINES lines from just before the first cited line (the first
+// HEAD_LINES when nothing is cited); either way the caption says which lines
+// of how many, and `wholeHref` leads to the whole text. `find` sets every
+// hit of those words in a white block (`<mark>`) and counts the lines
+// holding them; with scripts on, a stepper under the caption walks the
+// marks one by one (Prev, Next, "i of n"), scrolling each into the pane.
+import './reading.css'
+
 interface Props {
   text: string | null
   /** Where the text lives, for when it cannot be read. */
   href: string | null
   cited?: number[]
   limit?: number | null
+  windowed?: boolean
   wholeHref?: string | null
+  /** The words of the link to the whole text. */
+  wholeLabel?: string
   find?: string | null
   label?: string
+  /** What each line's id starts with: `L` gives `L1035`. */
+  idPrefix?: string
 }
 
-const { text, href, cited = [], limit = null, wholeHref = null, find = null, label = 'Readable text' } = Astro.props
+/** How many lines a windowed pane shows, and how many of them come before the first cited line. */
+const WINDOW_LINES = 36
+const WINDOW_LEAD = 2
+/** The lines a windowed pane shows when nothing is cited. */
+const HEAD_LINES = 80
+
+const { text, href, cited = [], limit = null, windowed = false, wholeHref = null, wholeLabel = 'Read the whole text →', find = null, label = 'Readable text', idPrefix = 'L' } = Astro.props
 const lines = text === null ? [] : text.split(/\r?\n/)
-const needle = find?.trim().toLowerCase() || null
-const found = needle ? lines.flatMap((line, i) => (line.toLowerCase().includes(needle) ? [i + 1] : [])) : []
-const marked = new Set([...cited, ...found])
-const shown = limit !== null ? lines.slice(0, limit) : lines
+const needle = find?.trim() || null
+const pattern = needle ? new RegExp(`(${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi') : null
+const found = needle ? lines.flatMap((line, i) => (line.toLowerCase().includes(needle.toLowerCase()) ? [i + 1] : [])) : []
+const hits = new Set(found)
+const citedSet = new Set(cited)
+// The lines shown, 1-based and inclusive.
+const [from, to] = (() => {
+  if (windowed) {
+    const first = cited.find((n) => n >= 1 && n <= lines.length)
+    if (first === undefined) return [1, Math.min(lines.length, HEAD_LINES)]
+    const start = Math.max(1, Math.min(first - WINDOW_LEAD, lines.length - WINDOW_LINES + 1))
+    return [start, Math.min(lines.length, start + WINDOW_LINES - 1)]
+  }
+  return [1, limit !== null ? Math.min(lines.length, limit) : lines.length]
+})()
+const shown = lines.slice(from - 1, to)
+const whole = from === 1 && to === lines.length
+const firstCited = cited.find((n) => n >= from && n <= to) ?? null
+/** A line cut at each hit of the find, the hits marked. */
+const pieces = (line: string): { text: string; hit: boolean }[] =>
+  pattern ? line.split(pattern).flatMap((part, i) => (part === '' ? [] : [{ text: part, hit: i % 2 === 1 }])) : [{ text: line, hit: false }]
+const n = (value: number) => value.toLocaleString('en-US')
 ---
 {text === null ? (
   <p class="ar-faint" style="margin-top:1rem">The readable text could not be read just now.{href && <> <a href={href} rel="noopener">Open it where the archive keeps it ↗</a></>}</p>
 ) : (
-  <>
+  <div class="ar-reading" data-ar-reading>
     <p class="ar-meta" style="margin-top:1rem">
-      // {label} · {shown.length < lines.length ? `lines 1–${shown.length.toLocaleString('en-US')} of ${lines.length.toLocaleString('en-US')}` : `${lines.length.toLocaleString('en-US')} lines`} · the text extraction, exactly as made
-      {needle && <> · “{find}” on {found.length} {found.length === 1 ? 'line' : 'lines'}</>}
-      {cited.length > 0 && <> · <a href={`#L${cited[0]}`}>Go to the cited item</a></>}
+      // {label} · {whole ? `${n(lines.length)} lines` : `lines ${n(from)}–${n(to)} of ${n(lines.length)}`} · the text extraction, exactly as made
+      {needle && <> · “{needle}” on {found.length} {found.length === 1 ? 'line' : 'lines'}</>}
+      {firstCited !== null && <> · <a href={`#${idPrefix}${firstCited}`}>Go to the cited item</a></>}
     </p>
-    <div class="ar-pane">
+    {found.length > 0 && (
+      <p class="ar-meta ar-find-step" data-ar-find-step hidden>
+        <button type="button" data-step="-1">‹ Prev</button>
+        <span data-ar-find-at aria-live="polite" />
+        <button type="button" data-step="1">Next ›</button>
+      </p>
+    )}
+    <div class="ar-pane" data-ar-pane>
       <ol>
-        {shown.map((line, i) => (
-          <li id={`L${i + 1}`} data-cited={marked.has(i + 1) ? '' : undefined}><span>{i + 1}{marked.has(i + 1) && <span class="visually-hidden"> {cited.includes(i + 1) ? 'cited' : 'found'}</span>}</span><span>{line || ' '}</span></li>
-        ))}
+        {shown.map((line, i) => {
+          const at = from + i
+          return (
+            <li id={`${idPrefix}${at}`} data-cited={citedSet.has(at) ? '' : undefined}>
+              <span>{at}{(citedSet.has(at) || hits.has(at)) && <span class="visually-hidden"> {citedSet.has(at) ? 'cited' : 'found'}</span>}</span>
+              <span>{line ? (hits.has(at) ? pieces(line).map((p) => (p.hit ? <mark>{p.text}</mark> : p.text)) : line) : ' '}</span>
+            </li>
+          )
+        })}
       </ol>
     </div>
-    {shown.length < lines.length && wholeHref && <p class="ar-meta ar-hint"><a href={wholeHref}>Read the whole text →</a></p>}
-  </>
+    {!whole && wholeHref && <p class="ar-meta ar-hint"><a href={wholeHref}>{wholeLabel}</a></p>}
+  </div>
 )}
+
+<script>
+  // The find's stepper: shown once this runs, it walks the pane's marks,
+  // scrolling the pane to each (and the page, only as far as the pane needs).
+  const still = matchMedia('(prefers-reduced-motion: reduce)')
+  for (const reading of document.querySelectorAll<HTMLElement>('[data-ar-reading]')) {
+    const step = reading.querySelector<HTMLElement>('[data-ar-find-step]')
+    const pane = reading.querySelector<HTMLElement>('[data-ar-pane]')
+    const status = step?.querySelector<HTMLElement>('[data-ar-find-at]')
+    const marks = [...reading.querySelectorAll<HTMLElement>('[data-ar-pane] mark')]
+    if (!step || !pane || !status || marks.length === 0) continue
+    let at = 0
+    const show = (index: number, scrollPage: boolean) => {
+      marks[at]?.removeAttribute('data-current')
+      at = (index + marks.length) % marks.length
+      const mark = marks[at]!
+      mark.setAttribute('data-current', '')
+      status.textContent = `${at + 1} of ${marks.length}`
+      const behavior = still.matches ? 'auto' : 'smooth'
+      pane.scrollBy({ top: mark.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 3, behavior })
+      if (scrollPage) pane.scrollIntoView({ block: 'nearest', behavior })
+    }
+    step.hidden = false
+    show(0, false)
+    step.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('button[data-step]')
+      if (button) show(at + Number(button.dataset.step), true)
+    })
+  }
+</script>

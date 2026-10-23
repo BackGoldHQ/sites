@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountRange, figuresIn, parseChips, parseQuery } from '../src/lib/archive/query'
+import { amountRange, figuresIn, matchedIn, parseChips, parseQuery, sameAmounts, sameAnswerLines } from '../src/lib/archive/query'
 
 const MILLION_68 = { low: 68_000_000, high: 68_999_999.99 }
 
@@ -34,6 +34,33 @@ describe('dollar amounts read to their stated precision', () => {
 
   it('shows the parse as chips', () => {
     expect(parseChips(parseQuery('$68 million'))).toEqual(['Dollar amount $68,000,000 to $68,999,999.99'])
+  })
+
+  it('names the other spellings that give the same answer, leaving out the one typed', () => {
+    expect(sameAnswerLines(parseQuery('$68 million'))).toEqual(['Same answer for 68 million · $68M · 68,000,000 · 68000000'])
+    expect(sameAmounts(parseQuery('68000000').amounts[0]!)).toEqual(['$68 million', '68 million', '$68M', '68,000,000'])
+    expect(sameAmounts(parseQuery('$68.2 million').amounts[0]!)).toEqual(['68.2 million', '$68.2M', '68,200,000', '68200000'])
+    expect(sameAmounts(parseQuery('$480,354').amounts[0]!)).toEqual(['480,354', '480354'])
+    expect(sameAmounts(parseQuery('$562,143.00').amounts[0]!)).toEqual(['562,143.00'])
+    expect(sameAnswerLines(parseQuery('hvac'))).toEqual([])
+  })
+
+  it('every spelling it names reads as the same range', () => {
+    for (const q of ['$68 million', '$250k', '1.5 billion', '$480,354', '$562,143.00']) {
+      const [a] = parseQuery(q).amounts
+      for (const other of sameAmounts(a!)) expect(parseQuery(other).amounts[0]).toMatchObject({ low: a!.low, high: a!.high })
+    }
+  })
+
+  it('names the parts of the records a query matched in', () => {
+    const doc = { title: 'HVAC replacement', summary: 'Approved for $562,143.00.', body: 'Odom Academy · CSP 26.16', presenter: 'Cheryl Hernandez', seconder: null, category: 'Facilities', campuses: ['Odom Academy'], amounts: [562_143], pay: null, date: '2026-08-20' }
+    const pay = { ...doc, title: 'A Person — Stipend', summary: '', body: '', presenter: null, category: null, campuses: [], amounts: [81_980], pay: 81_980 }
+    expect(matchedIn([doc], parseQuery('hvac hernandez'))).toEqual(['titles', 'people'])
+    expect(matchedIn([doc], parseQuery('odom'))).toEqual(['terms', 'details'])
+    expect(matchedIn([doc], parseQuery('CSP 26.16 august 2026'))).toEqual(['details', 'dates'])
+    expect(matchedIn([doc, pay], parseQuery('$562,143'))).toEqual(['summaries'])
+    expect(matchedIn([pay], parseQuery('$81,980'))).toEqual(['pay values'])
+    expect(matchedIn([], parseQuery('hvac'))).toEqual([])
   })
 
   it('finds every figure a text writes', () => {

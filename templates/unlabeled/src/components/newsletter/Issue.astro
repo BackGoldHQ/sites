@@ -1,0 +1,20 @@
+---
+// One newsletter issue, Unlabeled's (`newsletter:issue`): the kit's issue
+// page, its line over the title (the issue's `issue` field, else the type's
+// name) followed by the issue's number counted from the oldest,
+// "BISD · Issue 02" (src/lib/issues.ts). An issue the count does not know (a
+// draft in preview, a failed read) keeps the line alone.
+import KitIssue from '@backgold/template-kit/components/entries/newsletter/issue.astro'
+import type { EntryLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { text } from '@backgold/template-kit/lib/format'
+import { issueLabel, issueNumbers } from '../../lib/issues'
+
+type Props = EntryLayoutProps
+
+const { entry, type } = Astro.props
+const bg = Astro.locals.backgold
+const n = bg.setup === null ? (await issueNumbers(bg.client, entry.type)).byId.get(entry.id) : undefined
+const line = text(entry.fields?.issue) ?? type?.singular_label ?? 'Newsletter'
+const numbered = n ? { ...entry, fields: { ...entry.fields, issue: `${line} · ${issueLabel(n)}` } } : entry
+---
+<KitIssue {...Astro.props} entry={numbered} />

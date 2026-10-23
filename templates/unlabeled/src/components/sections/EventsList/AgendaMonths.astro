@@ -3,10 +3,12 @@
 // empty month that carries a door): the events grouped by month under the
 // month's name and year (44px capitals) and its count, each a row with the day, the
 // type, the time, the place and an empty live-counts slot (LiveCounts fills
-// it). A month between two listed months that has no event is drawn as an
-// invitation ("November is open.") with the section's empty-events line and
-// the section's first link as an outlined button ("Host Unlabeled"), never as
-// a blank. The rows are EventRows, the ones every events list shares;
+// it). A month between two listed months that has no event, and the month
+// after the last listed one (U8's "December 2026 · nothing yet"), are drawn
+// as an invitation ("December is open.") with the section's empty-events
+// line and the section's first link as an outlined button ("Host
+// Unlabeled"; no button when the section has no link), never as a blank.
+// The rows are EventRows, the ones every events list shares;
 // `buttons` puts the event's button on each row, otherwise the title is the
 // link; `zoneless` leaves the zone's name off the times. With no events it
 // draws nothing.
@@ -34,14 +36,15 @@ interface Month {
 }
 
 // Rows arrive soonest first. A month is year * 12 + month; every month from
-// the first listed to the last gets a group, so an empty one in between shows.
-// An event with no readable date goes last, under "Date to come".
+// the first listed to the one after the last gets a group, so an empty one in
+// between shows, and the agenda ends on an open month rather than its last
+// event. An event with no readable date goes last, under "Date to come".
 const dated = events.filter((e) => e.when)
 const undated = events.filter((e) => !e.when)
 const keyOf = (e: EventRow) => e.when!.year * 12 + e.when!.monthIndex
 const keys = dated.map(keyOf)
 const first = keys.length > 0 ? Math.min(...keys) : 0
-const last = keys.length > 0 ? Math.max(...keys) : -1
+const last = keys.length > 0 ? Math.max(...keys) + 1 : -1
 const months: Month[] = []
 for (let key = first; key <= last; key++) {
   const name = monthName(key % 12)
