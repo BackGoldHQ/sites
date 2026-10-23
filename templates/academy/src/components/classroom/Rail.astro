@@ -1,18 +1,18 @@
 ---
-// The course's lessons beside a lesson (board L3's rail), inside the
-// theater: the kicker "Course" over the course's title, then for a visitor
-// the ring with "4 of 12" and "38 min left", signed out "12 lessons · 1 h 1
-// min" and "Lesson 1 is free". Each row is the lesson's thumbnail (Thumb:
-// its still or the course's cover, its numeral, its check or lock, the
-// place the visitor stopped), its title (a link, but for this lesson's) and
-// under it its word (Done, Now, Members, Free, Sign in; "Now · 1:12 of
-// 4:50" where the visitor stopped in this one) or its length. Under 56rem
-// only the lessons either side of this one show, with "All 12 lessons" to
-// the course under them, as on every width.
+// The course's lessons beside a lesson (board K3's rail), on the theater's
+// raised ground: the kicker "Course" over the course's title, then for a
+// visitor the ring with "4/12" in it beside "4 of 12" and "lessons" (or
+// what is left when the lessons carry lengths), signed out "12 lessons"
+// and "Lesson 1 is free". Each row is the lesson's thumbnail (Thumb), its
+// title (a link, but for this lesson's) and its state in words: Done, Now
+// (in gold, with "1:12 of 4:50" where the visitor stopped), Not started,
+// Free (in gold), Sign in, Members, or its length signed out. This lesson's
+// row is raised and outlined. Every lesson is listed, "All 12 lessons" to
+// the course under them.
 import type { Section } from '@backgold/content'
-import Ring from '@backgold/template-kit/components/sections/Course/Ring.astro'
 import type { LessonView, RailRow } from '@backgold/template-kit/components/sections/Lesson/lesson.ts'
 import { clockOf, leftOf, lessonsOf } from '@backgold/template-kit/lib/academy'
+import Disc from './Disc.astro'
 import Thumb from './Thumb.astro'
 import { partId } from './place'
 
@@ -26,42 +26,67 @@ const { view, section, level } = Astro.props
 const Title = level === 2 ? 'h2' : 'h3'
 const id = partId(section, 'lesson-rail')
 const { rail } = view
+const signedIn = view.visitor !== null
 const left = rail.progress ? leftOf(rail.progress) : null
-/** The row's word, with the place the visitor stopped in this lesson ("Now · 1:12 of 4:50"). */
-function wordOf(row: RailRow): string | null {
-  const at = row.now && row.place !== null ? clockOf(row.place) : null
-  const of = clockOf(row.seconds)
-  if (at) return of ? `${row.word ?? 'Now'} · ${at} of ${of}` : `${row.word ?? 'Now'} · ${at}`
-  return row.word ?? of
+const [countWords, lengthWords] = rail.count.split(' · ')
+
+/** The row's state: its word first ("Now", "Done", "Free", "Sign in") in gold where it is good news, then the rest. */
+function stateOf(row: RailRow): { lead: string | null; gold: boolean; rest: string | null } {
+  const clock = clockOf(row.seconds)
+  if (row.now) {
+    const at = row.place !== null ? clockOf(row.place) : null
+    const after = row.word && row.word !== 'Now' ? row.word.replace(/^Now · /, '') : at ? (clock ? `${at} of ${clock}` : at) : clock
+    return { lead: 'Now', gold: true, rest: after }
+  }
+  if (row.word === 'Free') return { lead: 'Free', gold: true, rest: clock }
+  if (row.word) return { lead: row.word, gold: false, rest: null }
+  if (signedIn) return { lead: 'Not started', gold: false, rest: clock }
+  return { lead: clock, gold: false, rest: null }
 }
 ---
 <aside class="kc-rail" aria-labelledby={id}>
   <p class="kicker">Course</p>
   <Title id={id} class="kc-rail-title">{view.courseHref ? <a href={view.courseHref}>{view.courseTitle}</a> : view.courseTitle}</Title>
   {rail.progress ? (
-    <div class="kc-rail-place" data-kc-enter>
-      <Ring value={rail.progress.completed} max={rail.progress.total} size={48} stroke={4} />
+    <div class="kc-rail-place">
+      <Disc state="progress" completed={rail.progress.completed} total={rail.progress.total} size={54} stroke={3.4} />
       <p>
         <strong>{rail.progress.completed} of {rail.progress.total}</strong>
-        {left && <span>{left}</span>}
+        <span>{left ?? 'lessons'}</span>
       </p>
     </div>
   ) : (
     <p class="kc-rail-figures">
-      <span>{rail.count}</span>
+      <strong>{countWords}</strong>
+      {lengthWords && <span>{lengthWords}</span>}
       {rail.free && <span>{rail.free}</span>}
     </p>
   )}
   <ol class="kc-rail-rows" role="list">
-    {rail.rows.map((row) => (
-      <li class:list={['kc-rail-row', row.now && 'kc-rail-now', row.done && 'kc-rail-done', row.locked && 'kc-rail-locked', Math.abs(row.n - view.n) > 2 && 'kc-rail-far']}>
-        <Thumb n={row.n} cover={row.cover} done={row.done} locked={row.locked} watched={row.place !== null && row.seconds ? row.place / row.seconds : null} />
-        <span class="kc-rail-text">
-          {row.now || !row.href ? <span class="kc-rail-name" aria-current={row.now ? 'page' : undefined}>{row.name}</span> : <a class="kc-rail-name" href={row.href}>{row.name}</a>}
-          {wordOf(row) && <span class="kc-rail-word">{wordOf(row)}</span>}
-        </span>
-      </li>
-    ))}
+    {rail.rows.map((row) => {
+      const state = stateOf(row)
+      return (
+        <li class:list={['kc-rail-row', row.now && 'kc-rail-now', row.done && 'kc-rail-done', row.locked && 'kc-rail-locked']}>
+          <Thumb
+            n={row.n}
+            cover={row.cover}
+            done={row.done}
+            locked={row.locked}
+            place={row.now ? (row.place !== null && row.seconds ? row.place / row.seconds : 1) : null}
+          />
+          <span class="kc-rail-text">
+            {row.now || !row.href ? <span class="kc-rail-name" aria-current={row.now ? 'page' : undefined}>{row.name}</span> : <a class="kc-rail-name" href={row.href}>{row.name}</a>}
+            {(state.lead || state.rest) && (
+              <span class="kc-rail-word">
+                {state.lead && <b class:list={[state.gold && 'kc-gold']}>{state.lead}</b>}
+                {state.lead && state.rest && ' · '}
+                {state.rest}
+              </span>
+            )}
+          </span>
+        </li>
+      )
+    })}
   </ol>
   {view.courseHref && <a class="text-link kc-rail-all" href={view.courseHref}>All {lessonsOf(view.total)}</a>}
 </aside>

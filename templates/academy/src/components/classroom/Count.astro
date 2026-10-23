@@ -1,0 +1,10 @@
+---
+// The classroom's count (board K2): the number of courses in a gold numeral
+// over its word, "8 courses".
+interface Props {
+  n: number
+}
+
+const { n } = Astro.props
+---
+<p class="kc-count"><span class="kc-num kc-count-n">{n}</span> {n === 1 ? 'course' : 'courses'}</p>

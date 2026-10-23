@@ -1,69 +1,87 @@
 ---
-// A Classroom's head and its courses (board L1, in the organization's
-// colors), for the grid, the list and the courses list page. The head: on a
-// page, the kicker and heading the organization typed (the kit's
-// SectionHead); on the courses list page (`name`), the list's name as the
-// page's <h1>, set as the kicker, over the template's own line, "Every
-// course, at your pace.". Under it the tally, drawn from the courses ("8
-// courses · 64 lessons", the numbers in gold), then the line: with a
-// visitor, "You have finished 1 of 6 courses and have 3 under way."; signed
-// out, why to sign in and the Sign in link. Then the cards (CourseCard) in
-// the grid, three across on a wide screen, two on a tablet, one on a phone,
-// or the rows of the list. With no course the heading stands over "Nothing
-// here yet."; with neither, nothing is drawn.
+// A Classroom's head and its courses (board K2), for the grid, the list
+// and the courses list page.
+//
+// The head: the kicker and the heading the organization typed; on the
+// courses list page (`name`), the list's name as the page's <h1> for a
+// screen reader, and on screen the kicker "The classroom" over the
+// template's heading, "Every course, at your pace.". Beside it at the right,
+// the count drawn from the courses, the numeral in gold ("8 courses"): on
+// the grid, at the end of the line under the heading; on the list, on the
+// heading's own line. The grid's line is the visitor's ("You have finished
+// 2 of 8 courses and have 3 under way.") or, signed out, why to sign in
+// with the Sign in link.
+//
+// Then the courses: the grid's cards (CourseCard), four across on a wide
+// screen, three, two, then one on a phone, or the list's ruled rows
+// (CourseRow). With no course the heading stands over "Nothing here yet.";
+// with neither, nothing is drawn.
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
-import SectionHead from '@backgold/template-kit/components/sections/SectionHead.astro'
 import type { Classroom } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
 import CourseCard from './CourseCard.astro'
+import Count from './Count.astro'
+import CourseRow from './CourseRow.astro'
 import Enter from './Enter.astro'
 
 interface Props {
   section: Section
   classroom: Classroom
   layout: 'grid' | 'list'
-  /** The courses list page's name ("Courses"), drawn as its <h1>; left out on a page's section. */
+  /** The courses list page's name ("Courses"), its <h1>; left out on a page's section. */
   name?: string | null
 }
 
 const { section, classroom, layout, name = null } = Astro.props
-const { kicker, heading, cards, summary, signIn, visitor } = classroom
-const plural = (n: number, one: string) => `${one}${n === 1 ? '' : 's'}`
-const lessons = cards.reduce((sum, card) => sum + card.lessons, 0)
+const { cards, summary, signIn, visitor } = classroom
+const kicker = name ? 'The classroom' : classroom.kicker
+const heading = name ? 'Every course, at your pace.' : classroom.heading
 const level = name || heading ? 3 : 2
+const plural = (n: number) => (n === 1 ? 'course' : 'courses')
+const grid = layout === 'grid'
 ---
 {(name || heading || cards.length > 0) && (
   <Band section={section} class:list={['kc-classroom', `kc-classroom-${layout}`, name && 'kc-classroom-page']}>
-    {name ? (
-      <header class="kc-classroom-head">
-        <h1 class="kicker kc-classroom-name">{name}</h1>
-        <p class="kc-classroom-line">Every course, at your pace.</p>
-      </header>
-    ) : (
-      <SectionHead kicker={kicker} heading={heading} more={[]} />
+    {name && <h1 class="visually-hidden">{name}</h1>}
+    {(kicker || heading || !grid) && (
+      <div class="kc-classroom-head">
+        <div class="section-head">
+          <div>
+            {kicker && <p class="kicker">{kicker}</p>}
+            {heading && <h2>{heading}</h2>}
+          </div>
+        </div>
+        {!grid && cards.length > 0 && <Count n={cards.length} />}
+      </div>
     )}
-    {cards.length > 0 && (
-      <p class="kc-tally">
-        <span class="kc-tally-n">{cards.length}</span> {plural(cards.length, 'course')}
-        {lessons > 0 && <> · <span class="kc-tally-n">{lessons}</span> {plural(lessons, 'lesson')}</>}
-      </p>
-    )}
-    {summary && (
-      <p class="cr-line">
-        You have finished <strong>{summary.finished}</strong> of {summary.total} {plural(summary.total, 'course')}{summary.started > 0 && <> and have <strong>{summary.started}</strong> under way</>}.
-      </p>
-    )}
-    {signIn && cards.length > 0 && (
-      <p class="cr-line">
-        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={signIn}>Sign in</a>
-      </p>
+    {grid && (
+      <div class="kc-classroom-line">
+        {summary ? (
+          <p class="cr-line">
+            You have finished <strong>{summary.finished}</strong> of {summary.total} {plural(summary.total)}{summary.started > 0 && <> and have <strong>{summary.started}</strong> under way</>}.
+          </p>
+        ) : signIn && cards.length > 0 ? (
+          <p class="cr-line">
+            Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={signIn}>Sign in</a>
+          </p>
+        ) : null}
+        {cards.length > 0 && <Count n={cards.length} />}
+      </div>
     )}
     {cards.length > 0 ? (
-      <ul class:list={['cr-cards', 'kc-cards', `kc-cards-${layout}`]} role="list">
-        {cards.map((card) => (
-          <li><CourseCard card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={level} layout={layout} /></li>
-        ))}
-      </ul>
+      grid ? (
+        <ul class="cr-cards kc-cards" role="list">
+          {cards.map((card) => (
+            <li><CourseCard card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={level} /></li>
+          ))}
+        </ul>
+      ) : (
+        <ol class="cr-cards kc-course-rows" role="list">
+          {cards.map((card) => (
+            <li><CourseRow card={card} signedIn={visitor !== null} orgName={classroom.orgName} level={level} /></li>
+          ))}
+        </ol>
+      )
     ) : (
       <p class="empty">Nothing here yet.</p>
     )}

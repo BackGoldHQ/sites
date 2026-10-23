@@ -2,12 +2,12 @@
 // Course · Syllabus (board L2, in the organization's colors): one course as
 // a visitor sees it, one section in two parts. The head on the hearth (the
 // contrast band's colors, whatever band the section was given): the
-// breadcrumb and CourseHead (the cover in its offset ember rule, the ring,
+// breadcrumb (Trail) and CourseHead (the cover in its offset ember rule, the ring,
 // the bar and "Continue · Lesson 5" for a visitor, "Start · Lesson 1" and
 // the sign-in line without one). Then, on the section's own band (the page
 // ground on the course's own page): the syllabus under "Syllabus" and the
 // count (Syllabus, the ruled list with its gold numerals) beside "About
-// this course" (Lessons, Length, Who can watch, the lessons whose rule is
+// this course" on a card under a gold rule (Lessons, Length, Who can watch, the lessons whose rule is
 // not the course's) and, for a visitor, "Your place" with Sign out; on a
 // phone the panels follow the syllabus.
 //
@@ -17,11 +17,11 @@
 // `syllabus` and any layout it has no file for but `outline` (the kit's).
 import type { Section } from '@backgold/content'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
-import Crumbs from '@backgold/template-kit/components/sections/Course/Crumbs.astro'
 import { courseOf, type CourseView } from '@backgold/template-kit/components/sections/Course/course.ts'
 import { lengthOf, lessonsOf } from '@backgold/template-kit/lib/academy'
 import CourseHead from './CourseHead.astro'
 import Syllabus from './Syllabus.astro'
+import Trail from './Trail.astro'
 
 interface Props {
   section: Section
@@ -42,7 +42,7 @@ const length = view ? lengthOf(view.seconds) : null
   <Band section={section} class="course course-syllabus kc-course">
     <div class="bg-band-contrast kc-part kc-course-head">
       <div class="kc-part-inner">
-        <Crumbs steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.title, href: null }]} />
+        <Trail steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.title, href: null }]} />
         <CourseHead view={view} lead={lead} cover />
       </div>
     </div>

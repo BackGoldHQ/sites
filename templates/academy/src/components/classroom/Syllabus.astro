@@ -1,13 +1,14 @@
 ---
-// A course's lessons in order (board L2's syllabus), as a ruled list: a
+// A course's lessons in order (board K3's syllabus), as a ruled list: a
 // 3px rule over the first row and a hairline under each. Each row is the
-// lesson's numeral, large and light in gold ("05"), "Lesson 5" as a kicker
+// lesson's numeral in gold (56px, 40 on a phone), "Lesson 5" as a kicker
 // over its title (together the link to the lesson; a locked one opens its
-// door), the state in words, and the length at the right. The states: Done
-// with its check, Up next on the ember edge, the lock's word (Sign in to
-// watch, For members with Join to watch) dimmed, and, signed out, Free in
-// gold on a lesson anyone can watch. The numerals rise once as the list
-// comes into view (Enter).
+// door), its state at the right, and its length when it has one. The
+// states: Done beside the gold check disc; Up next on a raised row with the
+// ember edge and an ember outline chip; locked, the numeral dimmed and the
+// lock beside its word (Sign in to watch, For members with Join to watch);
+// signed out, the ember Free pill on a lesson anyone can watch. The
+// numerals rise once as the list comes into view (Enter).
 import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
 import type { SyllabusRow } from '@backgold/template-kit/components/sections/Course/course.ts'
 import { clockOf } from '@backgold/template-kit/lib/academy'
@@ -34,11 +35,11 @@ const { rows, signedIn } = Astro.props
         )}
       </span>
       <span class="kc-row-state">
-        {row.state === 'done' && <span class="kc-row-word kc-row-done"><Icon name="check" /> Done</span>}
-        {row.state === 'next' && <span class="kc-row-word kc-row-next">Up next</span>}
-        {row.state === 'open' && !signedIn && row.access === 'public' && <span class="kc-row-word kc-row-free">Free</span>}
+        {row.state === 'done' && <span class="kc-row-word"><span class="kc-ok"><Icon name="check" /></span> Done</span>}
+        {row.state === 'next' && <span class="kc-pill kc-pill-line">Up next</span>}
+        {row.state === 'open' && !signedIn && row.access === 'public' && <span class="kc-pill kc-pill-fill">Free</span>}
         {row.state === 'locked' && (
-          <span class="kc-row-word kc-row-lock">
+          <span class="kc-row-word">
             <Icon name="lock" /> {row.lockWord}
             {row.lock?.reason === 'members' && <span class="kc-row-join">Join to watch</span>}
           </span>

@@ -1,21 +1,23 @@
 ---
-// A course's head (board L2, in the organization's colors), on the hearth
-// band: the kicker "Course · 12 lessons · 1 h 1 min", the title large, the
-// summary. For a visitor, their place: the ring (116px, drawing in once)
-// with the fraction in it, "4 of 12 · 38 min left", "Lesson 4 finished on
-// Tuesday" (when the api says when) and the course's bar; once finished,
-// Finished with its check. Then the one accent button, "Continue · Lesson
-// 5" ("Start · Lesson 1" before the first lesson is done, and signed out),
-// with the lesson's title and length beside it; nothing once the course is
-// finished. Signed out, the line under it says why to sign in, with the
-// link. The cover sits at the right in an ember rule offset down and to the
-// right (`cover`), above the words on a phone.
+// A course's head (board K3), on the hearth: the kicker "Course · 12
+// lessons" (and the length when the lessons carry one), the title large,
+// the summary, and under a hairline the way in. For a visitor, their place:
+// the ring (116px, 88 on a phone, drawing in once) with "4/12" in it, and
+// beside it "4 of 12 lessons" (with what is left when the lessons carry
+// lengths), "Lesson 4 finished on Tuesday" when the api says when, and the
+// course's bar in gold; then the one filled call, "Continue · Lesson 5",
+// with the lesson's title quiet beside it ("Start · Lesson 1" before the
+// first is done; once finished, Finished with its check and no call).
+// Signed out: "Start · Lesson 1" with the first lesson's title, and the line
+// that says why to sign in, with the link. The cover sits at the right in
+// an ember rule offset down and to the left (`cover`), over the words on a
+// phone.
 import Bar from '@backgold/template-kit/components/sections/Course/Bar.astro'
 import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
-import Ring from '@backgold/template-kit/components/sections/Course/Ring.astro'
 import type { CourseView } from '@backgold/template-kit/components/sections/Course/course.ts'
-import { clockOf, countAndLength, leftOf, stateOf } from '@backgold/template-kit/lib/academy'
-import Enter from './Enter.astro'
+import { countAndLength, leftOf, lessonsOf, stateOf } from '@backgold/template-kit/lib/academy'
+import Disc from './Disc.astro'
+import HeadGo from './HeadGo.astro'
 
 interface Props {
   view: CourseView
@@ -28,7 +30,6 @@ const { view, lead, cover } = Astro.props
 const Title = lead ? 'h1' : 'h2'
 const finished = view.progress ? stateOf(view.progress) === 'finished' : false
 const left = view.progress ? leftOf(view.progress) : null
-const nextLength = view.next ? clockOf(view.next.row.seconds) : null
 const image = cover ? view.cover : null
 ---
 <header class:list={['cs-head', 'kc-head', image && 'kc-head-cover']}>
@@ -36,39 +37,41 @@ const image = cover ? view.cover : null
     <p class="kicker">Course · {countAndLength(view.lessons, view.seconds)}</p>
     <Title class="cs-title kc-head-title">{view.title}</Title>
     {view.summary && <p class="lede cs-summary">{view.summary}</p>}
-    {view.progress && (
-      <div class="kc-head-place">
-        <div class="kc-head-ring" data-kc-enter>
-          <Ring value={view.progress.completed} max={view.progress.total} size={116} stroke={3.25} />
-          <span class="kc-head-ring-n" aria-hidden="true">{finished ? <Icon name="check" /> : <>{view.progress.completed}<small>/{view.progress.total}</small></>}</span>
+    <div class="kc-head-way">
+      {view.progress ? (
+        <div class="kc-head-place">
+          <Disc
+            state={finished ? 'finished' : 'progress'}
+            completed={view.progress.completed}
+            total={view.progress.total}
+            size={116}
+            stroke={2.6}
+            class="kc-head-ring"
+          />
+          <div class="kc-head-figures">
+            <p class="kc-head-count">
+              <strong>{view.progress.completed} of {lessonsOf(view.progress.total)}</strong>
+              {left && !finished && <span> · {left}</span>}
+              {finished && <span class="kc-head-finished"> · <Icon name="check" /> Finished</span>}
+            </p>
+            {view.lastFinished && <p class="fine kc-head-last">Lesson {view.lastFinished.n} finished {view.lastFinished.on}</p>}
+            <Bar completed={view.progress.completed} total={view.progress.total} label={`${view.title}: ${view.progress.completed} of ${view.progress.total} lessons`} />
+            {view.next && !finished && <HeadGo next={view.next} />}
+          </div>
         </div>
-        <div class="kc-head-figures">
-          <p class="kc-head-count">
-            <strong>{view.progress.completed} of {view.progress.total}</strong>
-            {left && !finished && <> · {left}</>}
-            {finished && <span class="kc-head-finished"> · <Icon name="check" /> Finished</span>}
-          </p>
-          {view.lastFinished && <p class="fine">Lesson {view.lastFinished.n} finished {view.lastFinished.on}</p>}
-          <Bar completed={view.progress.completed} total={view.progress.total} label={`${view.title}: ${view.progress.completed} of ${view.progress.total} lessons`} />
-        </div>
-      </div>
-    )}
-    {view.next && !finished && (
-      <div class="kc-head-go">
-        <a class="button" href={view.next.row.href ?? undefined}>{view.next.verb} · Lesson {view.next.row.n}</a>
-        <p class="fine">{nextLength ? `${view.next.row.name} · ${nextLength}` : view.next.row.name}</p>
-      </div>
-    )}
-    {!view.visitor && (
-      <p class="fine cs-sign-in">
-        Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={view.signIn}>Sign in</a>
-      </p>
-    )}
+      ) : (
+        view.next && <HeadGo next={view.next} />
+      )}
+      {!view.visitor && (
+        <p class="cs-sign-in kc-head-sign-in">
+          Sign in with your email and the Academy keeps your place in every course. <a class="text-link" href={view.signIn}>Sign in</a>
+        </p>
+      )}
+    </div>
   </div>
   {image && (
     <div class="kc-head-cover-frame">
       <img class="cs-cover" src={image} alt="" decoding="async" />
     </div>
   )}
-  <Enter />
 </header>

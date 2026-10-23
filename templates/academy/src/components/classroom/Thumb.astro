@@ -1,10 +1,11 @@
 ---
-// A lesson's thumbnail (board L3's rail and Up next): its still, or the
-// course's cover, at 16:9 with the lesson's numeral on it, and the mark of
-// where the visitor stands: the check on a lesson done, the lock on one they
-// cannot open (the still dimmed), and on the lesson they stopped in, a line
-// along the foot at the place they stopped. It repeats the words beside it,
-// so it is hidden from screen readers.
+// A lesson's thumbnail (board K3's rail and Up next): its still, or the
+// course's cover, at 16:9 and dimmed, the lesson's numeral on a scrim chip,
+// and the mark of where the visitor stands: the gold check on a lesson done,
+// the lock on one they cannot open (the still dimmed further), and on the
+// lesson on the page the ember place line along the foot, as far as they
+// watched when the api knows. It repeats the words beside it, so it is
+// hidden from screen readers.
 import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
 import { numeral } from './place'
 
@@ -13,18 +14,18 @@ interface Props {
   cover: string | null
   done?: boolean
   locked?: boolean
-  /** The share of the lesson watched, 0 to 1, for the line along the foot; null for none. */
-  watched?: number | null
+  /** The place line: the share watched, 0 to 1, or 1 for the lesson on the page with no saved place; null for none. */
+  place?: number | null
   class?: string
 }
 
-const { n, cover, done = false, locked = false, watched = null, class: className } = Astro.props
-const share = watched !== null && Number.isFinite(watched) ? Math.round(Math.min(Math.max(watched, 0), 1) * 1000) / 10 : null
+const { n, cover, done = false, locked = false, place = null, class: className } = Astro.props
+const share = place !== null && Number.isFinite(place) ? Math.round(Math.min(Math.max(place, 0), 1) * 1000) / 10 : null
 ---
 <span class:list={['kc-thumb', done && 'kc-thumb-done', locked && 'kc-thumb-locked', className]} aria-hidden="true">
   {cover ? <img src={cover} alt="" loading="lazy" decoding="async" /> : <span class="kc-thumb-blank"></span>}
   <span class="kc-thumb-n">{numeral(n)}</span>
-  {done && <span class="kc-thumb-mark"><Icon name="check" /></span>}
-  {locked && <span class="kc-thumb-mark"><Icon name="lock" /></span>}
-  {share !== null && share > 0 && <span class="kc-thumb-watched" style={`--kc-watched: ${share}%`}></span>}
+  {done && <span class="kc-thumb-mark kc-ok"><Icon name="check" /></span>}
+  {locked && <span class="kc-thumb-mark kc-thumb-lock"><Icon name="lock" /></span>}
+  {share !== null && share > 0 && <span class="kc-thumb-place" style={`--kc-place: ${share}%`}></span>}
 </span>
