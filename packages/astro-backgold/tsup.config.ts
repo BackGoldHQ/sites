@@ -6,7 +6,9 @@ import { defineConfig } from 'tsup'
 // Astro at them by file URL; the shipped components import `render`.
 // `@backgold/content`, `astro` and the other dependencies stay imports;
 // `cloudflare:workers` and the options module exist only at runtime.
-// `node:` stays on the integration's one Node import (it runs in `astro build`).
+// `node:` stays on the integration's one Node import (it runs in `astro build`)
+// and on the middleware's `node:async_hooks`, imported at runtime where the
+// Worker has it (server/drawn.ts).
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
@@ -27,7 +29,7 @@ export default defineConfig({
   },
   format: ['esm'],
   dts: { entry: { index: 'src/index.ts', server: 'src/server.ts', middleware: 'src/middleware.ts' } },
-  external: ['astro', /^astro\//, '@backgold/content', 'cloudflare:workers', 'virtual:backgold/options', 'node:fs/promises'],
+  external: ['astro', /^astro\//, '@backgold/content', 'cloudflare:workers', 'virtual:backgold/options', 'node:fs/promises', 'node:async_hooks'],
   removeNodeProtocol: false,
   target: 'es2022',
   platform: 'neutral',

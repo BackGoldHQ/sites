@@ -54,6 +54,17 @@ reads with its site keys, and an `X-BackGold-Site` header a visitor sends it
 is ignored. `Astro.locals.backgold.firstParty` says which mode the request
 ran in, and `Astro.locals.backgold.siteId` which site it rendered.
 
+Every drawn page answers `X-BackGold-Page: <page id>`, every entry (a lesson
+included) `X-BackGold-Entry: <entry id>`; BackGold's dispatch counts the view
+and strips the header; a site built elsewhere may ignore or strip them. The
+id is what `resolveRoute` first resolved the request's own address to, on a
+`GET` that renders a 200 HTML page; a list, a term, an author, a feed, the
+SEO routes, the 404, the setup page and `/preview` carry neither. The header
+is stored with the edge-cache copy, so a hit carries it too. It needs
+`AsyncLocalStorage`: the `nodejs_compat` or `nodejs_als` compatibility flag,
+which the starter and BackGold's templates set; without either, pages render
+without the header.
+
 ### A template's shared Worker (the dispatched form)
 
 One of BackGold's templates runs as one Worker in BackGold's dispatch
