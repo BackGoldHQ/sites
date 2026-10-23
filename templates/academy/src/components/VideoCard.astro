@@ -1,0 +1,56 @@
+---
+// One video as a card (the conversations grid and the Watch list, boards K1
+// and K4): its still at 16:9 with a play mark at its middle and an ember
+// line along its foot (a Live chip with the flame on a live session), its
+// title, the guest line (the entry's summary, two lines at most, left out
+// when it only repeats the title), and its length and date in the meta face
+// ("30:27 · Oct 20, 2026"). The title is the card's one link; the whole card
+// opens it. A video with no still draws its title in the display face on
+// the card's ground in the still's place, never a blank region.
+import { clockOf } from '@backgold/template-kit/lib/academy'
+import { shortDate } from '../lib/dates'
+
+export interface VideoCardData {
+  title: string
+  href: string | null
+  summary: string | null
+  still: string | null
+  seconds: number | null
+  date: string | null
+  /** A live session: the still carries the Live chip. */
+  live?: boolean
+}
+
+interface Props {
+  card: VideoCardData
+  /** The title's level: 2 on a list page (under its h1), 3 inside a section or a group (under their h2). */
+  level?: 2 | 3
+  /** Draw the play mark: the card is a video. */
+  play?: boolean
+}
+
+const { card, level = 3, play = true } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const length = clockOf(card.seconds)
+const day = shortDate(card.date)
+const words = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const guest = card.summary && !words(card.summary).startsWith(words(card.title)) ? card.summary : null
+---
+<article class:list={['ak-video', card.href && 'ak-video-linked']}>
+  <div class:list={['ak-video-still', !card.still && 'ak-video-still-bare']}>
+    {card.still ? <img src={card.still} alt="" loading="lazy" decoding="async" /> : <span class="ak-video-stand-in" aria-hidden="true">{card.title}</span>}
+    {card.live && <span class="ak-chip ak-chip-live"><span class="ak-flame" aria-hidden="true"></span>Live</span>}
+    {play && <span class="ak-play" aria-hidden="true"></span>}
+  </div>
+  <div class="ak-video-body">
+    <Title class="ak-video-title">{card.href ? <a href={card.href}>{card.title}</a> : card.title}</Title>
+    {guest && <p class="ak-video-guest">{guest}</p>}
+    {(length || day) && (
+      <p class="ak-video-meta">
+        {length && <span class="ak-video-length"><span class="visually-hidden">Length </span>{length}</span>}
+        {length && day && <span aria-hidden="true"> · </span>}
+        {day && card.date && <time datetime={card.date}>{day}</time>}
+      </p>
+    )}
+  </div>
+</article>

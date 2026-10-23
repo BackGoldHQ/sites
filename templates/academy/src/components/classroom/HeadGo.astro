@@ -1,0 +1,17 @@
+---
+// A course head's one call (board K3): "Continue · Lesson 5" or "Start ·
+// Lesson 1", filled, with the lesson's title (and length) quiet beside it.
+import type { CourseView } from '@backgold/template-kit/components/sections/Course/course.ts'
+import { clockOf } from '@backgold/template-kit/lib/academy'
+
+interface Props {
+  next: NonNullable<CourseView['next']>
+}
+
+const { next } = Astro.props
+const length = clockOf(next.row.seconds)
+---
+<div class="kc-head-go">
+  <a class="button" href={next.row.href ?? undefined}>{next.verb} · Lesson {next.row.n}</a>
+  <p class="kc-head-next">{length ? `${next.row.name} · ${length}` : next.row.name}</p>
+</div>

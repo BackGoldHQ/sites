@@ -1,0 +1,79 @@
+---
+// Course · Syllabus (board L2, in the organization's colors): one course as
+// a visitor sees it, one section in two parts. The head on the hearth (the
+// contrast band's colors, whatever band the section was given): the
+// breadcrumb (Trail) and CourseHead (the cover in its offset ember rule, the ring,
+// the bar and "Continue · Lesson 5" for a visitor, "Start · Lesson 1" and
+// the sign-in line without one). Then, on the section's own band (the page
+// ground on the course's own page): the syllabus under "Syllabus" and the
+// count (Syllabus, the ruled list with its gold numerals) beside "About
+// this course" on a card under a gold rule (Lessons, Length, Who can watch, the lessons whose rule is
+// not the course's) and, for a visitor, "Your place" with Sign out; on a
+// phone the panels follow the syllabus.
+//
+// The course is the one at this address or the section's pinned course
+// (the kit's sections/Course/course.ts); with neither, or one the api does
+// not have, nothing is drawn. The template's default Course layout; it draws
+// `syllabus` and any layout it has no file for but `outline` (the kit's).
+import type { Section } from '@backgold/content'
+import Band from '@backgold/template-kit/components/sections/Band.astro'
+import { courseOf, type CourseView } from '@backgold/template-kit/components/sections/Course/course.ts'
+import { lengthOf, lessonsOf } from '@backgold/template-kit/lib/academy'
+import CourseHead from './CourseHead.astro'
+import Syllabus from './Syllabus.astro'
+import Trail from './Trail.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+  /** Drawn as the course's own page: the title is the <h1>. */
+  lead?: boolean
+  /** The course, already read; left out, the section reads it. */
+  view?: CourseView | null
+}
+
+const { section, lead = false } = Astro.props
+const view = Astro.props.view !== undefined ? Astro.props.view : await courseOf(section, Astro)
+const Sub = lead ? 'h2' : 'h3'
+const name = view?.visitor ? (view.visitor.first_name ?? view.visitor.email) : null
+const length = view ? lengthOf(view.seconds) : null
+---
+{view && (
+  <Band section={section} class="course course-syllabus kc-course">
+    <div class="bg-band-contrast kc-part kc-course-head">
+      <div class="kc-part-inner">
+        <Trail steps={[{ label: 'Courses', href: view.coursesHref }, { label: view.title, href: null }]} />
+        <CourseHead view={view} lead={lead} cover />
+      </div>
+    </div>
+    <div class="kc-part kc-course-body">
+      <div class="kc-part-inner cs-columns kc-columns">
+        <div class="cs-syllabus kc-syllabus">
+          <div class="kc-list-head">
+            <p class="kicker">Syllabus</p>
+            <Sub>{lessonsOf(view.lessons)}</Sub>
+          </div>
+          <Syllabus rows={view.rows} signedIn={view.visitor !== null} />
+        </div>
+        <aside class="cs-aside kc-aside" aria-label="About this course">
+          <section class="kc-panel">
+            <Sub class="kc-panel-title">About this course</Sub>
+            <dl class="kc-facts">
+              <div><dt>Lessons</dt><dd>{view.lessons}</dd></div>
+              {length && <div><dt>Length</dt><dd>{length}</dd></div>}
+              <div><dt>Who can watch</dt><dd>{view.whoCanWatch}</dd></div>
+              {view.exceptions.map((e) => <div><dt>Lesson {e.n}</dt><dd>{e.who}</dd></div>)}
+            </dl>
+          </section>
+          {view.visitor && (
+            <section class="kc-panel">
+              <Sub class="kc-panel-title">Your place</Sub>
+              <p>You are signed in as {name}. The Academy keeps your place in each course on this site.</p>
+              <a class="text-link" href={view.signOut}>Sign out</a>
+            </section>
+          )}
+        </aside>
+      </div>
+    </div>
+  </Band>
+)}

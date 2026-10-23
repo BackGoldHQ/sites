@@ -1,0 +1,20 @@
+---
+// Classroom · Grid (board L1): the organization's courses as cards
+// (Courses), each with this visitor's place in it, read as the kit reads
+// them (sections/Classroom/classroom.ts). The template's default Classroom
+// layout; it draws `grid` and any layout it has no file for.
+import type { Section } from '@backgold/content'
+import { classroomOf } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import Courses from './Courses.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+  /** Where the courses come from: the section's rows (a page), or `GET /courses` (the courses list page). */
+  from?: 'rows' | 'read'
+}
+
+const { section, from } = Astro.props
+const classroom = await classroomOf(section, Astro, from)
+---
+<Courses section={section} classroom={classroom} layout="grid" />

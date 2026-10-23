@@ -1,0 +1,45 @@
+---
+// One course on the classroom's list (board K2's catalog): a row of the
+// ruled list with the cover at the left (its ember foot line, the
+// visitor's bar), the title and its line, and at the right what this reader
+// needs (card.ts): the chip or the visitor's place, the count, and the word
+// that opens it ("Open", "Continue", "Start"). The whole row is the link to
+// the course; on a phone the right column runs under the words.
+import Bar from '@backgold/template-kit/components/sections/Course/Bar.astro'
+import type { CourseCard } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import Arrow from './Arrow.astro'
+import Chip from './Chip.astro'
+import { cardWords } from './card'
+
+interface Props {
+  card: CourseCard
+  signedIn: boolean
+  orgName: string | null
+  level: 2 | 3
+}
+
+const { card, signedIn, orgName, level } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const words = cardWords(card, signedIn, orgName)
+const action = words.action ?? (card.href ? 'Open' : null)
+---
+<div class="cr-card kc-course-row">
+  <div class="kc-cover">
+    {card.cover ? <img src={card.cover} alt="" loading="lazy" decoding="async" /> : <span class="kc-cover-blank" aria-hidden="true"></span>}
+    {words.tracked ? (
+      <Bar completed={words.tracked.completed} total={words.tracked.total} label={`${card.title}: ${words.tracked.completed} of ${words.tracked.total} lessons`} />
+    ) : (
+      <span class="kc-foot" aria-hidden="true"></span>
+    )}
+  </div>
+  <div class="kc-course-row-words">
+    <Title class="kc-course-row-title">{card.href ? <a href={card.href}>{card.title}</a> : card.title}</Title>
+    {card.summary && <p>{card.summary}</p>}
+    {words.join && <p class="kc-join">{words.join}</p>}
+  </div>
+  <p class="kc-course-row-side">
+    {words.chip ? <Chip chip={words.chip} /> : null}
+    {words.meta && <span class:list={[words.chip ? 'kc-meta' : 'kc-meta-strong']}>{words.meta}</span>}
+    {action && <span class="kc-go">{action}<Arrow /></span>}
+  </p>
+</div>

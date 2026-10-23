@@ -1,0 +1,110 @@
+---
+// The video list on the academy (board K4, "Watch."): a head band, "Watch."
+// with a line naming the series in it and, at its right, how many videos
+// there are in the accent's numerals; then the videos in their series
+// (lib/watch.ts), Conversations, Training clips, Live sessions, each under a
+// running head (its name as a kicker over the ember rule, its count at the
+// right) with its newest eight as VideoCards (four on a phone), four across,
+// and under them a link to the rest on the series' own list
+// (`<list>/series/<key>`). A live session's card carries the Live chip. The
+// whole list is read from the Content API, every page, so the counts are
+// whole and nothing pages. A series' own list, and videos that carry no
+// series at all, are one grid of the page under the list's head, with the
+// pager under it.
+//
+// It draws the video type's own list (`video:grid`) and the news list (the
+// blog types' shared list, `post:list`) of an academy whose blog holds
+// videos alone, its video library at the blog's address. Any other list
+// drawn with `post:list`, and a news list with a post or an episode in it,
+// is the kit's post list.
+import type { Entry } from '@backgold/content'
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import ListFrame from '@backgold/template-kit/components/entries/ListFrame.astro'
+import PostList from '@backgold/template-kit/components/entries/post/list.astro'
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { basePath, termPath } from '@backgold/template-kit/lib/entries'
+import VideoCard, { type VideoCardData } from '../VideoCard.astro'
+import { SERIES, groupsOf, isLive, seriesFiled } from '../../lib/watch'
+
+type Props = ListLayoutProps
+
+/** How many videos a series shows on the whole list (four of them on a phone) before its link to the rest. */
+const SHOWN = 8
+/** How many a phone shows. */
+const SHOWN_PHONE = 4
+
+const props = Astro.props
+const bg = Astro.locals.backgold
+const client = bg.setup === null ? bg.client : null
+/** Whether the blog holds a post or an episode beside its videos. */
+const others = async () =>
+  client !== null && (await Promise.all(['post', 'podcast'].map((k) => client.entries(k, { limit: 1 }).catch(() => null)))).some((p) => (p?.entries.length ?? 0) > 0)
+const videos = props.type === 'blog' ? client !== null && !(await others()) : props.type.key === 'video'
+const whole = videos && props.term === null && (props.search?.q ?? null) === null
+const all: Entry[] = []
+if (whole && client !== null) {
+  try {
+    for await (const entry of client.allEntries('video', { limit: 50, ...bg.visitorReads })) all.push(entry)
+  } catch {
+    // A read that fails draws this page of the list as it came, ungrouped.
+    all.length = 0
+  }
+}
+const terms = whole && seriesFiled(all) && client !== null ? await client.terms(SERIES).catch(() => null) : null
+const groups = whole && seriesFiled(all) ? groupsOf(all, terms) : []
+const base = basePath(props.base)
+const card = (e: Entry): VideoCardData => ({
+  title: e.title,
+  href: e.url ? safeHref(e.url) : null,
+  summary: e.summary,
+  still: e.hero ? safeSrc(e.hero.url) : null,
+  seconds: e.duration_seconds,
+  date: e.publish_at,
+  live: isLive(e),
+})
+const lower = (label: string) => label.charAt(0).toLowerCase() + label.slice(1)
+// The line under "Watch." names the series in it: "Conversations with people who ran, training clips, and live sessions."
+const named = groups.map((g) => (g.key === 'conversations' ? `${lower(g.label)} with people who ran` : lower(g.label)))
+const listed = named.length > 2 ? `${named.slice(0, -1).join(', ')}, and ${named.at(-1)}.` : named.length === 2 ? `${named[0]} and ${named[1]}.` : null
+const lede = listed ? listed.charAt(0).toUpperCase() + listed.slice(1) : null
+const count = (n: number) => (n === 1 ? 'video' : 'videos')
+---
+{!videos ? (
+  <PostList {...props} />
+) : groups.length > 0 ? (
+  <>
+    <header class="bg-section bg-band-contrast bg-bleed-full ak-watch-head">
+      <div class="bg-section-inner">
+        <div class="ak-watch-words">
+          <h1>Watch.</h1>
+          {lede && <p class="lede">{lede}</p>}
+        </div>
+        <p class="ak-watch-count"><span class="ak-numeral">{all.length.toLocaleString('en-US')}</span> {count(all.length)}</p>
+      </div>
+    </header>
+    <div class="listing list-videos ak-watch">
+      {groups.map((group) => {
+        const more = group.listed && group.entries.length > SHOWN_PHONE
+        const id = `series-${group.key}`
+        return (
+          <section class="ak-series" id={id} aria-labelledby={`${id}-title`}>
+            <div class="ak-series-head">
+              <h2 id={`${id}-title`} class="ak-series-title">{group.label}</h2>
+              <p class="ak-series-count"><span class="ak-numeral">{group.entries.length.toLocaleString('en-US')}</span> {count(group.entries.length)}</p>
+            </div>
+            <ul class="ak-cards ak-cards-4" role="list">
+              {group.entries.slice(0, SHOWN).map((e) => <li><VideoCard card={card(e)} level={3} /></li>)}
+            </ul>
+            {more && <p class="ak-series-more"><a class="ak-link" href={termPath(base, SERIES, group.key)}>All {lower(group.label)}</a></p>}
+          </section>
+        )
+      })}
+    </div>
+  </>
+) : (
+  <ListFrame {...props} noun="videos" name={props.term ? 'Watch' : 'Watch.'} class="list-videos ak-watch">
+    <ul class="ak-cards ak-cards-4" role="list">
+      {props.entries.map((e) => <li><VideoCard card={card(e)} level={2} /></li>)}
+    </ul>
+  </ListFrame>
+)}

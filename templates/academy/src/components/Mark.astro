@@ -1,0 +1,12 @@
+---
+// The organization's mark, small: the site's icon (its favicon in BackGold,
+// the flame on an academy that set one) when it has one, else an ember dot.
+// The header's brand, the chapter mark at the head of the conversations and
+// the footer's closing line wear it.
+import { safeSrc } from '@backgold/astro/server'
+
+const src = safeSrc(Astro.locals.backgold.site?.favicon_url)
+---
+<span class="ak-mark" aria-hidden="true">
+  {src ? <img src={src} alt="" width="28" height="28" decoding="async" /> : <span class="ak-mark-dot"></span>}
+</span>

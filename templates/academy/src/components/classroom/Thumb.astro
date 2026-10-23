@@ -1,0 +1,31 @@
+---
+// A lesson's thumbnail (board K3's rail and Up next): its still, or the
+// course's cover, at 16:9 and dimmed, the lesson's numeral on a scrim chip,
+// and the mark of where the visitor stands: the gold check on a lesson done,
+// the lock on one they cannot open (the still dimmed further), and on the
+// lesson on the page the ember place line along the foot, as far as they
+// watched when the api knows. It repeats the words beside it, so it is
+// hidden from screen readers.
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import { numeral } from './place'
+
+interface Props {
+  n: number
+  cover: string | null
+  done?: boolean
+  locked?: boolean
+  /** The place line: the share watched, 0 to 1, or 1 for the lesson on the page with no saved place; null for none. */
+  place?: number | null
+  class?: string
+}
+
+const { n, cover, done = false, locked = false, place = null, class: className } = Astro.props
+const share = place !== null && Number.isFinite(place) ? Math.round(Math.min(Math.max(place, 0), 1) * 1000) / 10 : null
+---
+<span class:list={['kc-thumb', done && 'kc-thumb-done', locked && 'kc-thumb-locked', className]} aria-hidden="true">
+  {cover ? <img src={cover} alt="" loading="lazy" decoding="async" /> : <span class="kc-thumb-blank"></span>}
+  <span class="kc-thumb-n">{numeral(n)}</span>
+  {done && <span class="kc-thumb-mark kc-ok"><Icon name="check" /></span>}
+  {locked && <span class="kc-thumb-mark kc-thumb-lock"><Icon name="lock" /></span>}
+  {share !== null && share > 0 && <span class="kc-thumb-place" style={`--kc-place: ${share}%`}></span>}
+</span>

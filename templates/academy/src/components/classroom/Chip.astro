@@ -1,0 +1,13 @@
+---
+// A course's chip (board K2): gold outline for what an email opens and for
+// Finished, quiet with the lock for what it does not.
+import Icon from '@backgold/template-kit/components/sections/Course/Icon.astro'
+import type { CardWords } from './card'
+
+interface Props {
+  chip: NonNullable<CardWords['chip']>
+}
+
+const { chip } = Astro.props
+---
+<span class:list={['kc-chip', `kc-chip-${chip.tone}`]}>{chip.icon && <Icon name={chip.icon} />}{chip.label}</span>

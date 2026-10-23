@@ -1,0 +1,15 @@
+---
+// Classroom · List (board L1): the same courses as rows held to the content
+// width, the cover at the left and the words beside it; on a phone each row
+// is a card again (Courses, CourseCard).
+import type { ComponentProps } from 'astro/types'
+import type Grid from './ClassroomGrid.astro'
+import { classroomOf } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
+import Courses from './Courses.astro'
+
+type Props = ComponentProps<typeof Grid>
+
+const { section, from } = Astro.props
+const classroom = await classroomOf(section, Astro, from)
+---
+<Courses section={section} classroom={classroom} layout="list" />
