@@ -1,6 +1,7 @@
 ---
 // One record as a row in the dossier (board U2): its mark, its kind as a
-// white chip and the meta line (category · date · meeting · campuses), its
+// white chip and the meta line (category · meeting · campuses; a records
+// request's requested from · responded or requested day · status), its
 // date at the right, the title as filed, the
 // summary with the match in context, presenter and vote or the reported
 // value when present, the citation boxed, and its links (Open original
@@ -11,6 +12,7 @@ import type { ArchiveType } from '../../lib/archive/index'
 import { shortDay } from '../../lib/archive/format'
 import { formatUsd } from '../../lib/archive/query'
 import { kindOf } from '../../lib/archive/kinds'
+import { requestMeta } from '../../lib/archive/record'
 import Marked from './Marked.astro'
 
 interface Props {
@@ -24,7 +26,7 @@ interface Props {
 const { doc, types, context = null, compact = false } = Astro.props
 const singular = types.find((t) => t.key === doc.kind)?.singular ?? doc.kind
 const day = shortDay(doc.date)
-const meta = [doc.category, doc.meeting && doc.kind !== 'board_meeting' ? `Meeting ${doc.meeting}` : null, ...doc.campuses].filter(Boolean)
+const meta = doc.kind === 'information_request' && doc.request ? requestMeta(doc.request) : [doc.category, doc.meeting && doc.kind !== 'board_meeting' ? `Meeting ${doc.meeting}` : null, ...doc.campuses].filter(Boolean)
 const fieldHit = context?.where === 'field'
 const summary = doc.summary || null
 ---

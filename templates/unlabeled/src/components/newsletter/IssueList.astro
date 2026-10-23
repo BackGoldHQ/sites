@@ -1,0 +1,37 @@
+---
+// The newsletter's issue list, Unlabeled's (`newsletter:list`, U-cat's
+// Collection · list specimen): the kit's list (newest first, each issue's
+// date, headline and preheader, in the kit's ListFrame with its pager), each
+// row opening with its number counted from the oldest issue, "Issue 07"
+// (src/lib/issues.ts). An issue the count does not know (none can be read)
+// draws no number.
+import { safeHref } from '@backgold/astro/server'
+import ListFrame from '@backgold/template-kit/components/entries/ListFrame.astro'
+import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
+import { formatDay } from '@backgold/template-kit/lib/format'
+import { issueLabel, issueNumbers } from '../../lib/issues'
+
+type Props = ListLayoutProps
+
+const props = Astro.props
+const bg = Astro.locals.backgold
+const numbers = bg.setup === null && props.type !== 'blog' ? (await issueNumbers(bg.client, props.type.key)).byId : new Map<string, number>()
+const issues = props.entries.map((entry) => {
+  const n = numbers.get(entry.id)
+  return { entry, href: entry.url ? safeHref(entry.url) : null, day: formatDay(entry.publish_at), number: n ? issueLabel(n) : null }
+})
+---
+<ListFrame {...props} noun="issues" class="list-issues">
+  <ol class="issue-rows" role="list">
+    {issues.map((issue) => (
+      <li class="issue-row">
+        {issue.number && <span class="issue-row-number">{issue.number}</span>}
+        {issue.day && issue.entry.publish_at && <time datetime={issue.entry.publish_at}>{issue.day}</time>}
+        <div>
+          <h2 class="issue-row-title">{issue.href ? <a href={issue.href}>{issue.entry.title}</a> : issue.entry.title}</h2>
+          {issue.entry.summary && <p>{issue.entry.summary}</p>}
+        </div>
+      </li>
+    ))}
+  </ol>
+</ListFrame>

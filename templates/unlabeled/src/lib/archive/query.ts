@@ -273,3 +273,102 @@ export function parseChips(q: ParsedQuery): string[] {
   for (const p of q.phrases) chips.push(`Phrase “${p}”`)
   return chips
 }
+
+const SCALE_SPELLINGS = [
+  { scale: 1e9, word: 'billion', letter: 'B' },
+  { scale: 1e6, word: 'million', letter: 'M' },
+  { scale: 1e3, word: 'thousand', letter: 'K' },
+] as const
+
+/**
+ * The other ways of writing a dollar amount that read as the same range
+ * (board U2, frame 3): with the scale word, with its letter, with thousands
+ * separators, as bare digits. Each spelling is parsed back and kept only
+ * when it asks for exactly this range; the spelling that was typed is left
+ * out. "$68 million" gives 68 million · $68M · 68,000,000 · 68000000.
+ */
+export function sameAmounts(a: AmountRange): string[] {
+  const candidates: string[] = []
+  for (const { scale, word, letter } of SCALE_SPELLINGS) {
+    const n = round2(a.low / scale)
+    if (n < 1 || Math.abs(n * scale - a.low) > 0.001) continue
+    const figure = String(n)
+    candidates.push(`$${figure} ${word}`, `${figure} ${word}`, `$${figure}${letter}`)
+    break
+  }
+  const whole = Number.isInteger(a.low)
+  candidates.push(a.low.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 }))
+  if (whole) candidates.push(`${a.low.toLocaleString('en-US')}.00`, String(a.low))
+  const typed = a.source.toLowerCase().replace(/\s+/g, ' ')
+  const out: string[] = []
+  for (const c of candidates) {
+    if (c.toLowerCase() === typed || out.includes(c)) continue
+    const back = parseQuery(c)
+    if (back.amounts.length === 1 && back.words.length === 0 && back.amounts[0]!.low === a.low && back.amounts[0]!.high === a.high) out.push(c)
+  }
+  return out
+}
+
+/** The "Same answer for …" line under the field for each dollar amount the query asks for, when it has other spellings. */
+export function sameAnswerLines(q: ParsedQuery): string[] {
+  return q.amounts.map(sameAmounts).filter((same) => same.length > 0).map((same) => `Same answer for ${same.join(' · ')}`)
+}
+
+/** What "Matched in" reads of a record: the search document's text parts. */
+export interface MatchableDoc {
+  title: string
+  summary: string
+  body: string
+  presenter: string | null
+  seconder: string | null
+  category: string | null
+  campuses: string[]
+  amounts: number[]
+  pay: number | null
+  date: string | null
+}
+
+/** The parts of a record "Matched in" names, in the order it names them. */
+const MATCH_PARTS = ['titles', 'summaries', 'people', 'terms', 'details', 'pay values', 'dates'] as const
+
+/**
+ * Where the query's parts were found across the records it matched (board
+ * U2, frame 3, "Matched in titles · details · pay values"): words, phrases
+ * and codes by the part of each record that holds them, dollar amounts by
+ * the figure they hit (a pay record's value, else the title, the summary or
+ * the other fields), a pay range in pay values, a date in dates. Empty when
+ * the query asks for nothing or nothing matched.
+ */
+export function matchedIn(docs: MatchableDoc[], q: ParsedQuery): string[] {
+  const found = new Set<(typeof MATCH_PARTS)[number]>()
+  const needles = [...q.words, ...q.phrases].map((w) => foldText(w)).filter(Boolean)
+  const codes = q.codes.map(codeKey)
+  for (const doc of docs) {
+    const parts = {
+      titles: foldText(doc.title),
+      summaries: foldText(doc.summary),
+      people: foldText([doc.presenter ?? '', doc.seconder ?? ''].join(' ')),
+      terms: foldText([doc.category ?? '', ...doc.campuses].join(' ')),
+      details: foldText(doc.body),
+    }
+    for (const [part, text] of Object.entries(parts) as Array<[keyof typeof parts, string]>) {
+      if (needles.some((n) => text.includes(n)) || codes.some((c) => text.replace(/\s+/g, '').includes(c))) found.add(part)
+    }
+    for (const a of q.amounts) {
+      const hit = (n: number) => n >= a.low && n <= a.high
+      if (doc.pay !== null && hit(doc.pay)) found.add('pay values')
+      else if (figuresIn(doc.title).some(hit)) found.add('titles')
+      else if (figuresIn(doc.summary).some(hit)) found.add('summaries')
+      else if (doc.amounts.some(hit)) found.add('details')
+    }
+    if (q.pay && doc.pay !== null) found.add('pay values')
+    if (q.dates.length > 0 && doc.date !== null) found.add('dates')
+  }
+  return MATCH_PARTS.filter((p) => found.has(p))
+}
+
+/** The "Matched in …" line under the field; null when nothing matched. */
+export function matchedLine(docs: MatchableDoc[], q: ParsedQuery): string | null {
+  const parts = matchedIn(docs, q)
+  return parts.length > 0 ? `Matched in ${parts.join(' · ')}` : null
+}

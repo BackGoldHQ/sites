@@ -12,6 +12,8 @@ on her domain (design: the platform repository's
 | `/archive` | The door, and the search across all six types: `?q&kind&category&meeting&from&to&pay_min&pay_max&sort&page` | `src/pages/archive/index.astro` |
 | `/archive/index.json` | The documents the search runs over, for the island | `src/pages/archive/index.json.ts` |
 | `/archive/archive.csv` | The whole archive, a row per record | `src/pages/archive/archive.csv.ts` |
+| `/archive/download-links.csv` | DownloadLinks.csv: a row per board meeting, its BoardBook links and archived PDFs | `src/pages/archive/download-links.csv.ts` |
+| `/archive/README.txt` | READ_ME.txt: what the archive is, the three disclaimers, the kinds and their counts, the downloads, from the index | `src/pages/archive/README.txt.ts` |
 | `/archive/money` | The data buckets by family, the Financial family by fund | `src/pages/archive/money.astro` |
 | `/archive/pay` | The pay records: histogram, offices, table (`?q&sort&office`) | `src/pages/archive/pay.astro` |
 | `/data`, `/pay` | Redirect (301) to `/archive/money` and `/archive/pay` | `src/pages/data/index.ts`, `src/pages/pay/index.ts` |
@@ -47,7 +49,7 @@ read on its own, eight at a time. The whole set
 is kept in KV (`BACKGOLD_CACHE`) under
 
 ```
-bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT> (2 today)
+bg-archive:<site id>:v<content version>:f<ARCHIVE_FORMAT> (3 today)
 ```
 
 for seven days, so a publish in BackGold (a new content version) is a new
@@ -86,9 +88,48 @@ links and kept in KV under `bg-archive-text:<site id>:v<version>:<hash of
 the address>` (`src/lib/archive/text.ts`).
 
 `/archive` with any query name, `/archive/pay` with `q`, `sort` or `office`,
-and a source with `?find=` answer `Cache-Control: no-store`, and `/archive`
-names its query names in `X-Backgold-Reads-Query`, so the edge cache never
-answers a query with the bare page's copy.
+and a source with `?find=` or `?all=1` answer `Cache-Control: no-store`, and
+`/archive` and every source name their query names in
+`X-Backgold-Reads-Query`, so the edge cache never answers a query with the
+bare page's copy. A source's page is an entry the kit's catch-all draws, and
+a header its layout sets arrives after the response has started, so the
+template's middleware (`src/middleware.ts`) sets both on every address under
+`/sources/`.
+
+## The meeting and source pages
+
+A meeting (`src/components/entries/meeting.astro`, board U4) hangs each
+decision on the agenda item it names in `agenda_item`; a decision naming
+none hangs on the item whose title its own title matches
+(`src/lib/archive/agenda.ts`, `matchItem`): both titles cut to stemmed words,
+each word weighted by how few of the agenda's items use it, scored as a
+weighted Dice coefficient. The best item must score at least 0.3 and 1.3
+times the next best, and an item naming a different procurement number
+(`CSP 25.11` against `CSP 25.15`) or policy code (`CW(LOCAL)` against
+`DEC (Local)`) is out, so a decision is never guessed between two items; it
+then sits under "No item cited". Tried on the archive's 25 agenda texts
+against the 88 decisions whose `agenda_item` is on their agenda's outline,
+the title alone puts 82 on that item, 6 on none and none on another. A matched decision says so on its row.
+
+The meeting's head carries where it was held, read from the agenda's head
+(the lines after the date and time line), and the latest meeting in the
+archive points forward to the soonest upcoming event on Events that is a
+board meeting (a Hearing, or a title naming a board meeting:
+`src/lib/next-meeting.ts`). Its reading pane has a tab for each text the
+archive has: Agenda (`agenda_text`), Resolution(s) (each resolution
+document's `readable_text`) and Minutes (`minutes_text`, else the minutes
+document's `readable_text`), the first 400 lines of each.
+
+A source (`src/components/entries/source.astro`, board U3 frame 4) has Text
+and PDF tabs. Its pane shows 36 lines from just before the first cited line
+(the first 80 when nothing is cited), with Show the whole text at `?all=1`;
+`?find=` shows the whole text with every hit marked, and with scripts on a
+stepper walks the marks. The PDF tab is a hairline box with Open the PDF
+(and the file's size when the record states one); with scripts on, the
+`archived_file` is drawn in the box the first time the tab is chosen, so no
+page loads the PDF unasked, and with scripts off it never does. Every tab is
+a radio and a label (`PaneTabs.astro`, `reading.css`), so the tabs work with
+scripts off.
 
 ## Query grammar (`src/lib/archive/query.ts`)
 
@@ -106,7 +147,10 @@ separators, or five or more digits; a four-digit number from 1900 to 2099 is
 a year. Dollar amounts match the figures a record states: a decision's
 `amounts` and `largest_amount`, a bucket's `total_value` and line-item
 figures, a pay record's `pay_value`, and any `$` figure in a summary. The
-parse shows as dashed chips under the field. An empty result names what was
+parse shows as dashed chips under the field: what the query was read as,
+for a dollar amount the other spellings that give the same answer (each
+parsed back to the same range), and the parts of the records it matched in
+(titles, summaries, people, terms, details, pay values, dates). An empty result names what was
 searched, the closest smaller query with its count, the nearest decision
 category, a page on the site whose title holds a word of the query, and the
 door to request a record.
@@ -118,8 +162,8 @@ defines them, plus her `information_request` type:
 
 | Type (`url_base`) | Fields read | Terms |
 | --- | --- | --- |
-| `board_meeting` (`meetings`) | `meeting_date`, `meeting_time`, `meeting_kind`, `agenda_link`, `minutes_link`, `resolutions_link`, `agenda_download`, `minutes_download`, `agenda_pdf`, `minutes_pdf`, `agenda_text` (the agenda's text extraction, read for the outline and the reading pane) | — |
-| `board_decision` (`decisions`) | `meeting` (reference: its slug), `decided_on`, `agenda_item` (`II.E.8`, hangs the decision on the agenda's outline), `presenter`, `seconder`, `vote_outcome`, `vote_detail` (the tally is drawn only from its `Yeas:` list), `amounts`, `largest_amount`, `source_citation`, `source_documents` (slugs), `timeline_diagram`, `timeline_data`, `archive_id` (`<folder>/<number>`, the row mark's number), `original_title` | `decision_category` (the row mark's prefix), `campus` |
+| `board_meeting` (`meetings`) | `meeting_date`, `meeting_time`, `meeting_kind`, `agenda_link`, `minutes_link`, `resolutions_link`, `agenda_download`, `minutes_download`, `agenda_pdf`, `minutes_pdf`, `agenda_text` (the agenda's text extraction, read for the outline, the place and the reading pane), `minutes_text` (the minutes' tab) | — |
+| `board_decision` (`decisions`) | `meeting` (reference: its slug), `decided_on`, `agenda_item` (`II.E.8`, hangs the decision on the agenda's outline; without it the title is matched), `presenter`, `seconder`, `vote_outcome`, `vote_detail` (the tally is drawn only from its `Yeas:` list), `amounts`, `largest_amount`, `source_citation`, `source_documents` (slugs), `timeline_diagram`, `timeline_data`, `archive_id` (`<folder>/<number>`, the row mark's number), `original_title` | `decision_category` (the row mark's prefix), `campus` |
 | `data_bucket` (`data`) | `family`, `flow_side`, `total_value`, `total_label`, `basis`, `basis_decisions` (slugs), `line_items`, `notes`, `fed_by`, `flows_to`, `sankey_diagram`, `sankey_data`, `archive_id` | `campus` |
 | `pay_record` (`pay`) | `person`, `position`, `pay_value`, `pay_display`, `workbook`, `workbook_row`, `workbook_file`, `unit_note`, `archive_id` | `district_office` |
 | `source_document` (`sources`) | `document_kind`, `meeting` (reference), `boardbook_link`, `archived_file`, `readable_text`, `original_filename`, `source_note`, `archive_id` | — |
@@ -132,6 +176,12 @@ filter greys, inverts and thresholds it: white lines on black, its dark
 headers as white blocks). Either way the
 original and its `.mmd` are linked. Entries are listed newest first by
 `publish_at`, so the import sets it to the meeting or decision date.
+
+Every archive page calls the six types by the archive's own labels
+(`src/lib/archive/kinds.ts`), whatever the organization named them in
+BackGold: her `information_request` type ("Information requests" there) is
+Records requests on the chips, the rail, the crumbs and the heads; only its
+address comes from her type.
 
 A type the organization does not have is left out everywhere (its count, its
 chip, its rail); with none of them the door says the archive has nothing
@@ -165,6 +215,7 @@ the archive door.
   in template.json.
 - **StatCards `archive` in the contract's `SECTION_LAYOUTS`** (and in
   template.json's variants) so an operator can place the Home door.
-- **`agenda_item` filled at import** for every decision (8 of 192 carry one
-  today); a decision without one sits under "No item cited" on its meeting.
+- **`agenda_item` filled at import** for every decision (98 of 192 carry
+  one); a decision without one hangs on the item its title matches, else
+  sits under "No item cited" on its meeting.
 - **Mono diagrams** at import as `<field>_mono`.

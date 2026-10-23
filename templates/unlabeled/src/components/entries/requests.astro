@@ -1,23 +1,30 @@
 ---
-// /records, her records requests as a ledger (board U10, frame 1): newest
-// first, each with its publish date, status as a shape (Fulfilled solid,
-// Waiting on a response dashed, Denied struck through), requested and
-// responded dates where she filled them, requested from, the summary, the
-// records provided, the response PDF; the counts by status; Submit
-// documents where her site has that page; and Request a record as a
-// numbered how-to.
+// /records, her records requests as a ledger (board U10, frame 1): the
+// head (Get organized, Fulfilled requests.), the counts by status, then the
+// requests newest first, each with its publish date, status as a shape
+// (Fulfilled solid, Waiting on a response dashed, Denied struck through),
+// requested and responded dates where she filled them, requested from and
+// its address, the summary, the records provided, the response PDF. On a
+// phone the first three show and "Show n more" opens the rest (a checkbox
+// and its label, no script). Then Submit documents where her site has that
+// page, and Request a record as a numbered how-to. The archive names the
+// type itself (kinds.ts), whatever her type is called in BackGold.
 import type { ListLayoutProps } from '@backgold/template-kit/components/entries/props.ts'
 import ArchiveFrame from '../archive/ArchiveFrame.astro'
 import RunningHead from '../archive/RunningHead.astro'
 import { loadArchive, sourceOf } from '../../lib/archive/index'
+import { kindOf } from '../../lib/archive/kinds'
 import { fileUrl, str } from '../../lib/archive/record'
 import { dayParts, shortDay } from '../../lib/archive/format'
 
 type Props = ListLayoutProps
 
 const STATUSES = ['Fulfilled', 'Waiting on a response', 'Denied'] as const
+/** The rows a phone shows before "Show n more". */
+const PHONE_ROWS = 3
 
 const { type, term } = Astro.props
+const kind = kindOf('information_request')
 const base = type === 'blog' ? 'records' : (type.url_base ?? 'records')
 const source = sourceOf(Astro.locals)
 const data = source ? await loadArchive(source) : null
@@ -30,21 +37,26 @@ const pages = bg.setup === null ? ((await bg.client.pages().catch(() => null))?.
 const submit = pages.find((p) => p.slug === 'submit-documents') ?? null
 const nonBusinessDays = docs.find((d) => d.kind === 'board_decision' && d.mark === 'GOV-D08') ?? null
 const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
+const more = rows.length - PHONE_ROWS
 ---
-<ArchiveFrame crumbs={[{ label: type === 'blog' ? 'Records requests' : type.plural_label }]}>
-  <header class="ar-entry">
-    <RunningHead mark={`Records requests // /${base}`} title="BISD public information requests" folio="Q / 01" />
-    <h1>{type === 'blog' ? 'Records requests' : type.plural_label}</h1>
+<ArchiveFrame crumbs={[{ label: kind.plural }]}>
+  <header class="ar-entry ar-requests-head">
+    <RunningHead mark={`${kind.plural} // /${base}`} title="BISD public information requests" folio="Q / 01" />
+    <div>
+      <p class="ar-meta u-slash">Get organized</p>
+      <h1>Fulfilled requests.</h1>
+    </div>
     <p class="ar-lede">Every public information request the team has filed, newest first, with what came back. The archive’s search covers every one.</p>
   </header>
   <div class="ar-holdings">
     <a href="#ledger"><b class="u-numeral">{all.length}</b><span class="ar-meta">Published</span></a>
     {STATUSES.map((s) => <a href="#ledger"><b class="u-numeral">{count(s)}</b><span class="ar-meta">{s}</span></a>)}
   </div>
-  <p class="ar-chips" aria-label="Status key">{STATUSES.map((s) => <span class="ar-status" data-status={s}>{s}</span>)}</p>
+  <p class="ar-chips ar-status-key" aria-label="Status key">{STATUSES.map((s) => <span class="ar-status" data-status={s}>{s}</span>)}</p>
 
+  {more > 0 && <input class="visually-hidden ar-more-toggle" type="checkbox" id="ar-ledger-more" />}
   <ul class="ar-rows ar-ledger" id="ledger" style="margin-top:1.5rem">
-    {rows.map((d) => {
+    {rows.map((d, i) => {
       const f = d.fields
       const pdf = fileUrl(f.response_document)
       const requested = str(f.requested_on)
@@ -52,13 +64,19 @@ const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
       const published = d.publishAt ? dayParts(d.publishAt.slice(0, 10)) : null
       const provided = (str(f.records_provided) ?? '').split(/;\s*|\n+/).map((x) => x.trim()).filter(Boolean)
       return (
-        <li>
+        <li class={i >= PHONE_ROWS ? 'ar-more' : undefined}>
           <div>
             {published && <p class="ar-ledger-date"><b>{published.month} {published.day}</b><span class="ar-meta">{published.year} · published</span></p>}
             {str(f.status) && <p style="margin-top:0.5rem"><span class="ar-status" data-status={str(f.status)}>{str(f.status)}</span></p>}
+            {(requested || responded) && (
+              <p class="ar-meta ar-ledger-days">
+                {requested && <span>Requested {day(requested)}</span>}
+                {responded && <span>Responded {day(responded)}</span>}
+              </p>
+            )}
           </div>
           <div class="ar-row-body">
-            <p><span class="ar-kind">REQ</span> <span class="ar-meta">{[str(f.requested_from), requested && `Requested ${day(requested)}`, responded && `Responded ${day(responded)}`].filter(Boolean).join(' · ')}</span></p>
+            <p><span class="ar-kind">{kind.code}</span> <span class="ar-meta">{[str(f.requested_from), d.url].filter(Boolean).join(' · ')}</span></p>
             <h3 class="ar-row-title"><a href={d.url}>{d.title}</a></h3>
             {d.summary && <p class="ar-row-summary">{d.summary}</p>}
             <p class="ar-row-links">{pdf && <a href={pdf} rel="noopener">Response PDF ↓</a>}<a href={d.url}>The request →</a></p>
@@ -71,6 +89,7 @@ const day = (iso: string | null) => shortDay(iso)?.toUpperCase() ?? null
       )
     })}
   </ul>
+  {more > 0 && <label class="ar-btn ar-btn-outline ar-more-label" for="ar-ledger-more">Show {more} more</label>}
   {rows.length === 0 && <p class="ar-faint" style="margin-top:1.5rem">No records request is published yet.</p>}
 
   {submit && (
