@@ -473,16 +473,24 @@ export type FrameColors = Readonly<Band>
 
 /**
  * A template's change to the colours a module frame is sent (TemplateConfig
- * `frameColors`): given the band's colours and the scheme, the colours to
- * send. Only the eleven the look carries are sent; the ground is there to
- * read.
+ * `frameColors`): given the band's colours, the scheme, which band the frame
+ * sits on and every band's colours in that scheme (for a template that
+ * draws a band on a ground of its own, derived from the others), the
+ * colours to send. Only the eleven the look carries are sent; the ground is
+ * there to read.
  */
-export type FrameColorsAdjust = (colors: FrameColors, scheme: 'light' | 'dark') => FrameColors
+export type FrameColorsAdjust = (
+  colors: FrameColors,
+  scheme: 'light' | 'dark',
+  band: SectionBand,
+  bands: Readonly<Record<SectionBand, FrameColors>>,
+) => FrameColors
 
 /** A band through a template's adjust; a colour it returns that is not `#rrggbb` keeps the band's, since the api drops a malformed look whole. */
-function adjusted(b: Band, scheme: 'light' | 'dark', adjust: FrameColorsAdjust | null): Band {
+function adjusted(palette: Palette, band: SectionBand, scheme: 'light' | 'dark', adjust: FrameColorsAdjust | null): Band {
+  const b = palette.bands[band]
   if (!adjust) return b
-  const out = adjust(b, scheme)
+  const out = adjust(b, scheme, band, palette.bands)
   const keep = (key: keyof Band) => (/^#[0-9a-f]{6}$/i.test(out[key] ?? '') ? out[key] : b[key])
   return Object.fromEntries((Object.keys(b) as Array<keyof Band>).map((key) => [key, keep(key)])) as unknown as Band
 }
@@ -508,10 +516,8 @@ export function moduleLook(
   theme: SiteThemeLike | null | undefined = null,
   adjust: FrameColorsAdjust | null = null,
 ): Record<string, string> {
-  const lightBand = lightOf(brand, theme).bands[band]
-  const darkBand = darkOf(brand, theme).bands[band]
-  const light = lookValue(adjusted(lightBand, 'light', adjust))
-  const dark = lookValue(adjusted(darkBand, 'dark', adjust))
+  const light = lookValue(adjusted(lightOf(brand, theme), band, 'light', adjust))
+  const dark = lookValue(adjusted(darkOf(brand, theme), band, 'dark', adjust))
   if (appearance === 'light') return { look: light }
   if (appearance === 'dark') return { look: dark }
   return { look: light, look_dark: dark }

@@ -4,11 +4,12 @@
 // named here and loads the template's motion once a page.
 //
 // The academy's own: Hero · field with the proof line under its buttons
-// (the counts from the Content API); Course · outline as the free course's
-// feature card (its cover, the first four lessons, Play lesson 1); a
-// Collection's cards as conversations (16:9 stills, the guest line, length
-// and date); Pathways · doors as doors of a title, a line and a link; and
-// the classroom's layouts (src/classroom.ts).
+// (the counts from the Content API), split beside the hero's photo, with the
+// strip of the newest conversations under it; Course · outline as the free
+// course's feature card (its cover, the first four lessons, Play lesson 1);
+// a Collection's cards as conversations (the newest large, two beside it);
+// Pathways · doors as a ruled list of the paths; and the classroom's
+// layouts (src/classroom.ts).
 import { kitSections, type AstroComponent } from '@backgold/template-kit/template'
 import { classroomSections } from './classroom'
 import Conversations from './components/sections/Conversations.astro'

@@ -1,15 +1,30 @@
 ---
-// Hero · field on the academy: the kit's field (the words over the motes
-// that fire moves through), with the proof line under its buttons
-// (ProofLine.astro: the courses, lessons and videos counted from the
-// Content API). The headline a size up and the phone's shorter field are
-// the stylesheet's.
+// Hero · field on the academy (the Kindling brief §10.3, §10.4): the kit's
+// field burning three times as bright (the stylesheet's --field-glow), with
+// the proof line under its calls (ProofLine.astro: the courses, lessons and
+// videos counted from the Content API). A Hero with a photo is a split: the
+// words at the left and the photo at the right, the Lead Instructor's
+// portrait in an ember rim light over a glow (on a phone under the words);
+// with none the words stay centered. Under the page's opening hero, the
+// strip of the newest conversations (NewStrip.astro), when the organization
+// has published videos. The headline's size and the night ground are the
+// stylesheet's.
 import type { ComponentProps } from 'astro/types'
 import KitField from '@backgold/template-kit/components/sections/Hero/field.astro'
+import { heroPhoto } from '@backgold/template-kit/lib/section'
+import NewStrip from '../NewStrip.astro'
 import ProofLine from '../ProofLine.astro'
 
 type Props = ComponentProps<typeof KitField>
+
+const photo = heroPhoto(Astro.props.section, 'photoUrl', 'imageUrl')
 ---
 <KitField {...Astro.props}>
   <ProofLine />
+  {photo && (
+    <figure slot="aside" class="ak-portrait">
+      <img src={photo.url} alt={photo.alt} width="640" height="800" decoding="async" fetchpriority="high" />
+    </figure>
+  )}
 </KitField>
+{Astro.props.level === 1 && <NewStrip />}

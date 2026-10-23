@@ -17,6 +17,7 @@
 import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
 import { defineTemplate, kitEntries } from '@backgold/template-kit/template'
 import manifest from '../template.json'
+import { kindlingFrameColors } from './lib/kindling'
 import Closing from './components/Closing.astro'
 import HeaderBrand from './components/HeaderBrand.astro'
 import Video from './components/entries/Video.astro'
@@ -37,6 +38,8 @@ export default defineTemplate({
   },
   defaultAppearance: 'light',
   visitorSignIn: true,
+  // BackGold's frames on a parchment band wear the parchment (src/lib/kindling.ts).
+  frameColors: kindlingFrameColors,
   closingCall: Closing,
   headerBrand: HeaderBrand,
 })
