@@ -745,16 +745,17 @@ main img,
   gap: 0.5rem 1.5rem;
 }
 /*
-  The brand is her mark (src/assets/mark.svg) at 168 × 46 (118 on a phone),
-  drawn as a mask in the ink; the name, and the logo BackGold holds, stay in
-  the link for screen readers.
+  The brand is her wordmark (src/assets/wordmark.png, her own file: UNLA, the
+  longhorn skull as the B, ELED) at 168 × 46 (118 on a phone), drawn as an
+  alpha mask in the ink; the name, and the logo BackGold holds, stay in the
+  link for screen readers.
 */
 .site-header .brand,
 .site-footer .brand {
   position: relative;
   display: block;
   width: clamp(7.375rem, 6.4rem + 3.2vw, 10.5rem);
-  aspect-ratio: 1118 / 304;
+  aspect-ratio: 2219 / 603;
   color: var(--ink);
 }
 .site-header .brand::before,
@@ -763,8 +764,8 @@ main img,
   position: absolute;
   inset: 0;
   background: currentColor;
-  -webkit-mask: url('../assets/mark.svg') center / contain no-repeat;
-  mask: url('../assets/mark.svg') center / contain no-repeat;
+  -webkit-mask: url('../assets/wordmark.png') center / contain no-repeat;
+  mask: url('../assets/wordmark.png') center / contain no-repeat;
 }
 .site-header .brand > *,
 .site-footer .brand > * {
@@ -1402,16 +1403,16 @@ strong {
   max-width: calc(var(--content) + 2 * var(--gutter));
   padding-top: clamp(2.5rem, 2rem + 2vw, 4rem);
 }
-/* The wordmark at the full width of the content column, then the groups under a hairline. */
+/* Her wordmark (src/assets/wordmark.png) at the full width of the content column, then the groups under a hairline. */
 .site-footer-inner::before {
   content: '';
   display: block;
   width: 100%;
-  aspect-ratio: 1118 / 304;
+  aspect-ratio: 2219 / 603;
   margin-bottom: clamp(2rem, 1.5rem + 2vw, 3rem);
   background: var(--ink);
-  -webkit-mask: url('../assets/mark.svg') center / contain no-repeat;
-  mask: url('../assets/mark.svg') center / contain no-repeat;
+  -webkit-mask: url('../assets/wordmark.png') center / contain no-repeat;
+  mask: url('../assets/wordmark.png') center / contain no-repeat;
 }
 .site-footer .footer-grid {
   padding-top: 1.75rem;
