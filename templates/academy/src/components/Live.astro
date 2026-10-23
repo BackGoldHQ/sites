@@ -1,0 +1,254 @@
+---
+// The /live page on the academy (Watch Live, the Kindling brief §11): the
+// kit's three states (LivePageProps, @backgold/template-kit lib/stream.ts)
+// drawn in Kindling.
+//
+//   live      the theater (a video's page's ground, the page's taken deeper):
+//             the stream in YouTube's player at the top, playing on arrival,
+//             the ember line along its foot; the live chat (YouTube's dark
+//             look) beside it in a smoke panel on a wide screen, under the
+//             words on a phone; under
+//             the player the head with no numeral, the kicker WATCH LIVE over
+//             the stream's title, then "Live now · since <time>" after the
+//             live dot and Open on YouTube as the academy's link.
+//   upcoming  the same theater around the stream's still with the play mark
+//             (opening it on YouTube), the same head, "Next live: <day and
+//             time>", Open on YouTube.
+//   off       on the page's own ground: the kicker over "Not live right now",
+//             the line ("When <channel> goes live, the stream plays here."),
+//             and the three newest conversations as the academy's video
+//             cards (VideoCard), with All conversations.
+//
+// The layout draws Above the footer under it in every state, the Academy
+// letter's sign-up. Times are written in UTC and again in the visitor's zone
+// (the kit's LocalTime). The page's look is this file's own <style>; it
+// reads the academy's shared pieces (the kicker and its ember rule, the link,
+// the cards) as every page does.
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import LocalTime from '@backgold/template-kit/components/live/LocalTime.astro'
+import type { LivePageProps } from '@backgold/template-kit/lib/stream'
+import VideoCard, { type VideoCardData } from './VideoCard.astro'
+
+type Props = LivePageProps
+
+const { stream, videos, videoList, channel } = Astro.props
+const cards: VideoCardData[] = videos.map((e) => ({
+  title: e.title,
+  href: e.url ? safeHref(e.url) : null,
+  summary: e.summary,
+  still: e.hero ? safeSrc(e.hero.url) : null,
+  seconds: e.duration_seconds,
+  date: e.publish_at,
+}))
+---
+{stream ? (
+  <section class="bg-section bg-band-plain bg-bleed-full ak-live" data-live-state={stream.status}>
+    <div class="bg-section-inner ak-live-stage">
+      {stream.status === 'live' ? (
+        <div class="ak-live-screen">
+          <iframe src={stream.playerSrc} title={stream.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+      ) : (
+        <a class="ak-live-screen ak-live-still" href={stream.watchUrl} rel="noopener">
+          <img src={stream.still} alt="" />
+          <span class="ak-live-play" aria-hidden="true"></span>
+          <span class="visually-hidden">{stream.title} on YouTube</span>
+        </a>
+      )}
+      <div class="ak-live-head">
+        <p class="kicker">Watch live</p>
+        <h1>{stream.title}</h1>
+        {stream.status === 'live' ? (
+          <p class="ak-live-status">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span>Live now{stream.startedAt && stream.startedText && <> · since <LocalTime at={stream.startedAt} text={stream.startedText} moment="time" /></>}</span>
+          </p>
+        ) : (
+          <p class="ak-live-status">
+            <span>Next live: {stream.scheduledAt && stream.scheduledText ? <LocalTime at={stream.scheduledAt} text={stream.scheduledText} moment="day" /> : 'soon'}</span>
+          </p>
+        )}
+        <p class="ak-live-go"><a class="ak-link" href={stream.watchUrl} rel="noopener">Open on YouTube</a></p>
+      </div>
+      {stream.status === 'live' && (
+        <aside class="ak-live-chat" aria-label="Live chat">
+          <iframe src={stream.chatSrcDark} title={`Live chat: ${stream.title}`}></iframe>
+        </aside>
+      )}
+    </div>
+  </section>
+) : (
+  <section class="bg-section bg-band-plain bg-bleed-full ak-live" data-live-state="off">
+    <div class="bg-section-inner">
+      <div class="ak-live-off">
+        <p class="kicker">Watch live</p>
+        <h1>Not live right now</h1>
+        <p class="lede">When {channel} goes live, the stream plays here.</p>
+      </div>
+      {cards.length > 0 && (
+        <div class="ak-live-newest">
+          <div class="ak-live-newest-head">
+            <h2>The newest conversations</h2>
+            {videoList && <a class="ak-link" href={videoList.path}>All conversations</a>}
+          </div>
+          <ul class="ak-live-cards" role="list">
+            {cards.map((card) => <li><VideoCard card={card} level={3} /></li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+<style>
+  /* The theater: the page's ground taken deeper, as a video's page draws it. */
+  .ak-live[data-live-state='live'],
+  .ak-live[data-live-state='upcoming'] {
+    background: color-mix(in srgb, var(--bg-band-background) 55%, black);
+  }
+  .ak-live h1 {
+    margin: 0;
+    font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+    line-height: 1.08;
+  }
+  .ak-live-stage {
+    display: grid;
+    grid-template-areas: 'screen' 'head' 'chat';
+    gap: 1.75rem;
+  }
+  .ak-live-screen {
+    grid-area: screen;
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .ak-live-screen :is(iframe, img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    object-fit: cover;
+  }
+  /* The ember line along the screen's foot. */
+  .ak-live-screen::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--button);
+    pointer-events: none;
+  }
+  /* The play mark: a disc of the band's ground with the ink's triangle in it. */
+  .ak-live-play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4.5rem;
+    height: 4.5rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--bg-band-background) 80%, transparent);
+    translate: -50% -50%;
+  }
+  .ak-live-play::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 30%;
+    height: 34%;
+    translate: 10% 0;
+    background: var(--ink);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  .ak-live-still:hover .ak-live-play {
+    border-color: var(--button);
+  }
+  .ak-live-head {
+    grid-area: head;
+  }
+  .ak-live-head .kicker {
+    margin: 0 0 0.75rem;
+  }
+  .ak-live-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 0 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+  .ak-live-go {
+    margin: 1.25rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  /* The chat in a smoke panel: the card ground on a hairline. */
+  .ak-live-chat {
+    grid-area: chat;
+    display: flex;
+    min-height: 28rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  .ak-live-chat iframe {
+    flex: 1;
+    width: 100%;
+    min-height: 28rem;
+    border: 0;
+  }
+  .ak-live-off {
+    max-width: var(--measure);
+  }
+  .ak-live-off .lede {
+    margin: 1rem 0 0;
+  }
+  .ak-live-newest {
+    margin-top: clamp(2.5rem, 1.75rem + 2.4vw, 4rem);
+  }
+  .ak-live-newest-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .ak-live-newest-head h2 {
+    margin: 0;
+  }
+  .ak-live-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* Each card the height of the tallest in its row. */
+  .ak-live-cards > li {
+    display: grid;
+  }
+  @media (min-width: 64rem) {
+    .ak-live-stage {
+      grid-template-columns: minmax(0, 1fr) 21rem;
+      grid-template-rows: auto auto;
+      grid-template-areas: 'screen chat' 'head chat';
+      gap: 2rem 2.5rem;
+    }
+    .ak-live[data-live-state='upcoming'] .ak-live-stage {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      grid-template-rows: auto;
+      grid-template-areas: 'screen head';
+      align-items: center;
+    }
+  }
+</style>

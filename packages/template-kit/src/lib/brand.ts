@@ -41,6 +41,10 @@
 //             fill's bar, WCAG 1.4.11), under 1.25:1 on light mode's dark
 //             bands.
 //   link      a text link: the primary colour on light grounds.
+//   live      the state red of something on the air now (the Watch Live
+//             item's dot): taken darker on light grounds, lighter on dark
+//             ones, a twentieth at a time, only until it holds 3:1 against
+//             the ground (WCAG 1.4.11); past half way, the band's ink.
 //
 // A section's `band` is a ground, never a colour. The grounds:
 //   plain     the page
@@ -68,6 +72,9 @@ export interface BrandColors {
   secondary_color?: string | null
   accent_color?: string | null
 }
+
+/** The state red of a live stream, before it is held to 3:1 on each ground. */
+const LIVE = '#e0362c'
 
 /** Used for any brand colour BackGold does not have. */
 const FALLBACK = { primary: '#1f3a5f', secondary: '#f4efe6', accent: '#b4232c' } as const
@@ -173,6 +180,7 @@ interface Band {
   surface: string
   line: string
   lineStrong: string
+  live: string
 }
 
 type BandName = 'plain' | 'tint' | 'panel' | 'wash' | 'contrast' | 'brand' | 'photo'
@@ -225,6 +233,7 @@ function band(ground: string, m: Mode): Band {
     surface: light ? m.surface : mix(LIGHT_INK, ground, 0.035),
     line: light ? m.line : mix(LIGHT_INK, ground, 0.1),
     lineStrong: light ? m.lineStrong : mix(LIGHT_INK, ground, 0.2),
+    live: reaching(LIVE, light ? BLACK : LIGHT_INK, 0.5, ground, NON_TEXT, ink),
   }
 }
 
@@ -414,6 +423,7 @@ function lines(p: Palette): string[] {
       `--band-${name}-surface:${b.surface}`,
       `--band-${name}-line:${b.line}`,
       `--band-${name}-line-strong:${b.lineStrong}`,
+      `--band-${name}-live:${b.live}`,
     )
   }
   return out
@@ -473,16 +483,24 @@ export type FrameColors = Readonly<Band>
 
 /**
  * A template's change to the colours a module frame is sent (TemplateConfig
- * `frameColors`): given the band's colours and the scheme, the colours to
- * send. Only the eleven the look carries are sent; the ground is there to
- * read.
+ * `frameColors`): given the band's colours, the scheme, which band the frame
+ * sits on and every band's colours in that scheme (for a template that
+ * draws a band on a ground of its own, derived from the others), the
+ * colours to send. Only the eleven the look carries are sent; the ground is
+ * there to read.
  */
-export type FrameColorsAdjust = (colors: FrameColors, scheme: 'light' | 'dark') => FrameColors
+export type FrameColorsAdjust = (
+  colors: FrameColors,
+  scheme: 'light' | 'dark',
+  band: SectionBand,
+  bands: Readonly<Record<SectionBand, FrameColors>>,
+) => FrameColors
 
 /** A band through a template's adjust; a colour it returns that is not `#rrggbb` keeps the band's, since the api drops a malformed look whole. */
-function adjusted(b: Band, scheme: 'light' | 'dark', adjust: FrameColorsAdjust | null): Band {
+function adjusted(palette: Palette, band: SectionBand, scheme: 'light' | 'dark', adjust: FrameColorsAdjust | null): Band {
+  const b = palette.bands[band]
   if (!adjust) return b
-  const out = adjust(b, scheme)
+  const out = adjust(b, scheme, band, palette.bands)
   const keep = (key: keyof Band) => (/^#[0-9a-f]{6}$/i.test(out[key] ?? '') ? out[key] : b[key])
   return Object.fromEntries((Object.keys(b) as Array<keyof Band>).map((key) => [key, keep(key)])) as unknown as Band
 }
@@ -508,10 +526,8 @@ export function moduleLook(
   theme: SiteThemeLike | null | undefined = null,
   adjust: FrameColorsAdjust | null = null,
 ): Record<string, string> {
-  const lightBand = lightOf(brand, theme).bands[band]
-  const darkBand = darkOf(brand, theme).bands[band]
-  const light = lookValue(adjusted(lightBand, 'light', adjust))
-  const dark = lookValue(adjusted(darkBand, 'dark', adjust))
+  const light = lookValue(adjusted(lightOf(brand, theme), band, 'light', adjust))
+  const dark = lookValue(adjusted(darkOf(brand, theme), band, 'dark', adjust))
   if (appearance === 'light') return { look: light }
   if (appearance === 'dark') return { look: dark }
   return { look: light, look_dark: dark }

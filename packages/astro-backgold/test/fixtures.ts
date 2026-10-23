@@ -35,6 +35,8 @@ export const OTHER_SITE_ID = 'cd_9b1c'
 
 export interface FakeApi {
   version: number
+  /** What GET /live answers: `{ live }`, or undefined for an api with no such route (a 404). */
+  live?: { live: unknown }
   calls: URL[]
   /** The headers of each call, in order. */
   headers: Headers[]
@@ -70,6 +72,7 @@ export function fakeApi(version = 184): FakeApi {
         if (token === 'tok_gone') return Response.json({ error: 'Not found', code: 'NOT_FOUND' }, { status: 404, headers: common })
         return Response.json({ error: 'This preview link is not valid or has expired', code: 'BAD_PREVIEW_TOKEN' }, { status: 400, headers: common })
       }
+      if (path === '/live' && api.live) return Response.json(api.live, { headers: { 'Cache-Control': 'public, max-age=60' } })
       const etag = `"v${api.version}"`
       if (headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: { ...common, ETag: etag } })
       const name = ROUTES[path]

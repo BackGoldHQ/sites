@@ -17,6 +17,8 @@
 //   - A visitor read — a call with a visitor's token, per call or on the
 //     client — sends X-BackGold-Visitor, never reads or writes the store, and
 //     hands a renewed token (X-BackGold-Visitor-Renew) to onVisitorRenew.
+//   - `live()` (GET /live, the organization's YouTube stream) is outside the
+//     content version: never stored, its answer held in memory for 60 s.
 //   - Reads carry only Authorization, Accept and If-None-Match (the api's
 //     CORS allows no other request header) and go only to apiOrigin. A
 //     first-party client (a site Worker in BackGold's namespace, reaching the
@@ -40,6 +42,7 @@ import type {
   EventsResponse,
   LessonProgressResponse,
   LessonResponse,
+  LiveStream,
   MenuResponse,
   PageResponse,
   PagesResponse,
@@ -72,6 +75,8 @@ const DEFAULT_MAX_VERSION_AGE_SECONDS = 60
 const DEFAULT_CACHE_TTL_SECONDS = 3600
 /** The version record is rewritten for a new version, or when its confirmation is older than this. */
 const VERSION_WRITE_INTERVAL_MS = 5000
+/** How long `live()` holds an answer: the api's own `max-age` for GET /live. */
+const LIVE_HOLD_MS = 60_000
 
 /** The key prefixes, held equal to the api's SITE_KEY_PREFIXES by the type check. */
 const KEY_PREFIXES = { publishable: 'bg_site_pk_', secret: 'bg_site_sk_' } as const satisfies typeof SITE_KEY_PREFIXES
@@ -143,6 +148,15 @@ function parsedBody(read: CachedRead): { value: unknown } | undefined {
   } catch {
     return undefined
   }
+}
+
+/** The stream in a `GET /live` answer: null for `{ live: null }`, and for anything not shaped like a stream. */
+function liveOf(body: unknown): LiveStream | null {
+  const live = isRecord(body) ? body.live : null
+  if (!isRecord(live)) return null
+  if (live.status !== 'live' && live.status !== 'upcoming') return null
+  if (typeof live.video_id !== 'string' || typeof live.title !== 'string') return null
+  return live as unknown as LiveStream
 }
 
 /** The version record stored under `${scope}:version`. */
@@ -512,6 +526,25 @@ export const createClient: CreateClient = (opts) => {
   }
 
   const must = async <T>(path: string): Promise<T> => (await read<T>(path, {}, undefined, 'throw'))!
+
+  // GET /live, outside the content version: the last answer and when it came,
+  // and the read every concurrent caller shares while one is in flight.
+  let liveHeld: { stream: LiveStream | null; at: number } | null = null
+  let liveRead: Promise<LiveStream | null> | null = null
+  const live = (): Promise<LiveStream | null> => {
+    if (liveHeld && Date.now() - liveHeld.at < LIVE_HOLD_MS) return Promise.resolve(liveHeld.stream)
+    liveRead ??= (async () => {
+      const res = await send('/live', '')
+      if (!res.ok && res.status !== 404) throw await apiError(res)
+      // An api that serves no GET /live (404) has no stream to show.
+      const stream = res.ok ? liveOf(JSON.parse(await res.text())) : null
+      liveHeld = { stream, at: Date.now() }
+      return stream
+    })().finally(() => {
+      liveRead = null
+    })
+    return liveRead
+  }
   const seg = encodeURIComponent
 
   const entries = <K extends string>(type: K, opts: Parameters<BackgoldContent['entries']>[1] = {}) =>
@@ -611,6 +644,7 @@ export const createClient: CreateClient = (opts) => {
     async signOutVisitor(token) {
       await visitorCall<void>('/visitor', '', { token: checkVisitorToken(token), onRenew: undefined }, 'throw', { method: 'DELETE' })
     },
+    live,
     preview: (token) => read<PreviewResponse>(`/preview/${seg(token)}`, {}, undefined, 'null'),
     raw: <T = unknown>(path: string, query: Query = {}, opts?: ReadOptions) => read<T>(path, query, opts, 'null'),
 
@@ -629,6 +663,7 @@ export const createClient: CreateClient = (opts) => {
       if (!stored || version > stored.version) await writeVersion(true)
     },
     async bust() {
+      liveHeld = null
       if (known !== null) previous = known
       known = null
       confirmedAt = 0

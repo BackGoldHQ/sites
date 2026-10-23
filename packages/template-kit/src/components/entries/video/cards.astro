@@ -1,0 +1,39 @@
+---
+// Videos as the video list draws them (grid.astro, and the /live page's
+// newest three, components/live/LivePage.astro): each a card with its picture
+// and a play mark, its title and its date; the whole card opens the video's
+// page. `level` is the titles' heading level: 2 on a list page under its h1,
+// 3 under a section's h2.
+import type { Entry } from '@backgold/content'
+import { safeHref, safeSrc } from '@backgold/astro/server'
+import { formatDay } from '../../../lib/format'
+import '../../../styles/entries.css'
+
+interface Props {
+  entries: Entry[]
+  level?: 2 | 3
+}
+
+const { entries, level = 2 } = Astro.props
+const Title = level === 2 ? 'h2' : 'h3'
+const cards = entries.map((entry) => ({
+  entry,
+  href: entry.url ? safeHref(entry.url) : null,
+  still: entry.hero ? safeSrc(entry.hero.url) : null,
+  day: formatDay(entry.publish_at),
+}))
+---
+<ul class="video-grid" role="list">
+  {cards.map((card) => (
+    <li class="card video-card">
+      <div class="video-card-still">
+        {card.still && <img src={card.still} alt="" loading="lazy" decoding="async" />}
+        <span class="video-card-play" aria-hidden="true"></span>
+      </div>
+      <div class="card-body">
+        <Title class="card-title">{card.href ? <a href={card.href}>{card.entry.title}</a> : card.entry.title}</Title>
+        {card.day && card.entry.publish_at && <time class="card-date" datetime={card.entry.publish_at}>{card.day}</time>}
+      </div>
+    </li>
+  ))}
+</ul>

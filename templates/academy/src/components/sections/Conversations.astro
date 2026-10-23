@@ -4,8 +4,10 @@
 // chapter mark), the kicker and the heading at the left, the line under them
 // and the link to the whole list at the right, then each entry as a
 // VideoCard (its 16:9 still with a play mark, its title, its guest line, its
-// length and date), three across, two on a tablet, one on a phone: a grid,
-// never a strip.
+// length and date, their stills loaded with the page): the newest large
+// across two thirds, the next two stacked beside it (the Kindling brief
+// §10.5); on a tablet the newest across the top and two under it, on a
+// phone one under another. A grid, never a strip.
 //
 // A Collection carries a heading and no other words, so a Collection of
 // videos draws the template's own around it: the chapter mark, the kicker
@@ -69,9 +71,9 @@ const more = all ? [all] : seeAllOf(section, baked)
       </div>
     </div>
     {cards.length > 0 ? (
-      <ul class="ak-cards ak-cards-3" role="list">
-        {cards.map((card) => (
-          <li><VideoCard card={card} level={heading ? 3 : 2} play={videos} /></li>
+      <ul class="ak-convos" role="list">
+        {cards.map((card, i) => (
+          <li class:list={[i === 0 && 'ak-convos-lead']}><VideoCard card={card} level={heading ? 3 : 2} play={videos} size={i === 0 ? 'lead' : 'side'} eager /></li>
         ))}
       </ul>
     ) : (
