@@ -3,12 +3,15 @@
 // layouts added (Hero · portrait, Countdown · tiles and inline, its
 // QuoteStrip · wall, the endorsements wall, in place of the kit's, its
 // Issues · cards, the kit's counted, and its Donate · story, the kit's with
-// no kicker), the news search beside the news list's head (C10), and its
+// no kicker; the kit's ContentPost · prose as its default, so a site that
+// moves here keeps its articles in place), the news search beside the news
+// list's head (C10), and its
 // own faces, Barlow Condensed for headings and Public Sans for text, from
 // Google Fonts. astro.config.mjs names this file to the kit's integration,
 // whose routes draw every page with it.
 
 import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+import ContentPostProse from '@backgold/template-kit/components/sections/ContentPost/prose.astro'
 import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import CountdownInline from './components/sections/Countdown/inline.astro'
@@ -23,6 +26,7 @@ export default defineTemplate({
   manifest: siteTemplateManifestSchema.parse(manifest),
   sections: {
     ...kitSections,
+    ContentPost: ContentPostProse,
     'Hero:portrait': HeroPortrait,
     'Issues:cards': IssuesCards,
     'Countdown:tiles': CountdownTiles,

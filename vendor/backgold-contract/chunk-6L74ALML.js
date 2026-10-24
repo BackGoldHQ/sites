@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-UVWZGL4W.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-XH5WEM3Q.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -104,7 +104,9 @@ var SECTION_LAYOUTS = {
   // library, shelves and outline: the services sections (2026-10-14), a course catalog and a syllabus.
   Collection: ["cards", "list", "compact", "feature", "library", "shelves", "outline"],
   // player and theater: the services sections (2026-10-14), a lesson's media beside its notes.
-  ContentPost: ["card", "banner", "player", "theater"],
+  // prose: the whole piece in the page, as the hosted block draws every layout
+  // (2026-10-21): a site that moves to a template keeps its articles readable.
+  ContentPost: ["card", "banner", "player", "theater", "prose"],
   PlatformPlanks: ["numbered", "columns", "longread"],
   CandidateRoster: ["cards", "ballot", "compact"],
   TeamGrid: ["grid", "board", "list"],
@@ -218,6 +220,7 @@ function contentApiEmbedUrls(origins) {
     event: (orgSlug, slug) => `${donor}/embed/e/${seg(orgSlug)}/${seg(slug)}`,
     events: (orgSlug) => `${api}/embed/events/${seg(orgSlug)}`,
     calendar: (orgSlug) => `${api}/embed/calendar/${seg(orgSlug)}`,
+    shift: (orgSlug, slug) => `${api}/embed/shift/${seg(orgSlug)}/${seg(slug)}`,
     store: (orgSlug) => `${donor}/embed/s/${seg(orgSlug)}`,
     loaderScript: `${donor}/embed.js`,
     advocacyScript: `${api}/api/advocacy-pages/embed.js`
@@ -1309,6 +1312,8 @@ var CONTENT_API_BLOCKS = {
   // asks, then the stat tiles (`group: 'tile'`), a tile's value a typed figure
   // or `auto:total` / `auto:signatures` / `auto:category:<value>`. The
   // bring-your-own dataset URL and the petition picked stay in the block.
+  // `data.petition` is the picked petition itself (its title, text, target,
+  // count and goal), so a template can draw the text beside the frame.
   Petition: {
     role: "compliance",
     copy: ["heading", "addressedTo", "goalNote", "volunteerPrompt"],
@@ -1616,6 +1621,10 @@ function projectDocument(doc, ctx) {
     if (spec.data) {
       const data = dataOf(spec.data, props);
       section.data = ctx.audience === "hosted" ? data : { source: data.source, items: data.items.map((item) => scrub(item, ctx)) };
+      if (type === "Petition") {
+        const slug = str(props.petitionSlug);
+        section.data.petition = slug && ctx.petitions && Object.hasOwn(ctx.petitions, slug) ? ctx.petitions[slug] : null;
+      }
     }
     if (spec.embed) {
       const embed = spec.embed(props, ctx);

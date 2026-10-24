@@ -51,7 +51,6 @@ export function templateKit(options) {
         injectRoute({ pattern: '/preview', entrypoint: route('preview.astro'), prerender: false })
         injectRoute({ pattern: '/backgold-setup', entrypoint: route('setup.astro'), prerender: false })
         injectRoute({ pattern: '/404', entrypoint: route('not-found.astro'), prerender: false })
-        injectRoute({ pattern: '/volunteer', entrypoint: route('volunteer.astro'), prerender: false })
         injectRoute({ pattern: '/volunteer/[slug]', entrypoint: route('volunteer-shift.astro'), prerender: false })
         injectRoute({ pattern: '/live', entrypoint: route('live.astro'), prerender: false })
         injectRoute({ pattern: '/form/[slug]', entrypoint: route('form.astro'), prerender: false })
