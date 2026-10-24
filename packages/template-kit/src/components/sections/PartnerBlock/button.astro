@@ -1,0 +1,24 @@
+---
+// PartnerBlock · Button: a ready-made module's launch button alone, centred
+// in its band; the module opens in a dialog (Launch.astro).
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Launch from './Launch.astro'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+---
+<Band section={section} class="partner partner-button">
+  <Launch section={section} />
+</Band>
+
+<style>
+  .partner-button :global(.partner-launch) {
+    display: flex;
+    justify-content: center;
+  }
+</style>

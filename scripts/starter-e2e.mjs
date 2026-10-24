@@ -966,6 +966,17 @@ function kitchenSinkDocument() {
       block('SignupCapture', { heading: 'Stay in touch', subtext: 'News once a week.', buttonText: 'Join', pageId: 'lp_ks' }),
       block('SocialFrame', { heading: 'Add a frame to your photo', family: 'ring', collectContact: 'optional' }),
       block('Advocacy', { heading: 'Call your legislators', setSlug: 'levy-bills', level: 'state', buttonText: 'Find mine', orgSlug: 'pine-valley' }),
+      // A ready-made module: the bake writes the org's hosted copy of it.
+      block('PartnerBlock', {
+        module: 'wspq',
+        layout: 'spotlight',
+        kicker: 'Beyond left and right',
+        heading: 'Where do you land?',
+        body: "Ten questions, two minutes, one dot on the map.",
+        buttonLabel: "Take the World's Smallest Political Quiz",
+        formPageId: 'lp_wspq',
+        formBlockId: 'FormBlock-wspq',
+      }),
     ],
   }
 }

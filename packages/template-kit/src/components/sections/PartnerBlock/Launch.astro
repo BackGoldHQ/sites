@@ -1,0 +1,129 @@
+---
+// A ready-made module's launch button and the dialog it opens: BackGold's
+// frame of the organization's one hosted copy of the module (ModuleFrame), in
+// a native <dialog>, so the focus trap, Escape and the inert page behind it
+// are the browser's. The frame asks for BackGold's `dialog` layout: set out
+// alone, the form keeps its own title and leaves off its account-autofill row. The launch control is a link to the hosted form's own
+// page, so a visitor without scripts still reaches the module; the script
+// turns it into the dialog's opener and adds the dialog's close button (the
+// site draws no control of a module's own beside the frame). The frame waits in a <template> until the first open: a
+// page nobody opened the module on loads no form and counts no view. The
+// dialog closes on its own button, on a click on the backdrop, and a few
+// seconds after the frame says the visitor is done (`givegold:complete`), so
+// the thank-you is read before it goes. A section BackGold sends with no
+// embed (the organization has no live copy) draws the module's line saying it
+// is not available, and no button.
+import type { Section } from '@backgold/content'
+import ModuleFrame from '../modules/ModuleFrame.astro'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  class?: string
+}
+
+const { section, class: className } = Astro.props
+const label = text(section.copy.buttonLabel) ?? 'Open'
+const title = text(section.copy.heading) ?? label
+---
+{section.embed?.iframe ? (
+  <div class:list={['partner-launch', className]} data-partner-launch>
+    <a class="button" href={section.embed.iframe} aria-haspopup="dialog" data-partner-open>{label}</a>
+    <dialog class="partner-dialog" aria-label={title} data-partner-dialog>
+      <div class="partner-dialog-body" data-partner-body></div>
+      <template data-partner-frame>
+        <ModuleFrame embed={section.embed} band="plain" type={section.type} layout="dialog" title={title} height="36rem" />
+      </template>
+    </dialog>
+  </div>
+) : (
+  <ModuleFrame embed={null} band={section.band} type={section.type} layout="card" title={title} class={className} />
+)}
+
+<script>
+  /** How long the thank-you stays up before the dialog closes itself. */
+  const COMPLETE_CLOSE_MS = 3500
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-partner-launch]')) {
+    const open = root.querySelector<HTMLAnchorElement>('[data-partner-open]')
+    const dialog = root.querySelector<HTMLDialogElement>('[data-partner-dialog]')
+    const body = root.querySelector<HTMLElement>('[data-partner-body]')
+    const frame = root.querySelector<HTMLTemplateElement>('[data-partner-frame]')
+    if (!open || !dialog || !body || !frame || typeof dialog.showModal !== 'function') continue
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const close = (): void => {
+      if (timer) clearTimeout(timer)
+      timer = undefined
+      if (dialog.open) dialog.close()
+    }
+    const closer = document.createElement('button')
+    closer.type = 'button'
+    closer.className = 'partner-close'
+    closer.setAttribute('aria-label', 'Close')
+    closer.textContent = '×'
+    closer.addEventListener('click', close)
+    dialog.prepend(closer)
+    open.addEventListener('click', (event) => {
+      event.preventDefault()
+      if (!body.firstElementChild) body.append(frame.content.cloneNode(true))
+      dialog.showModal()
+    })
+    // A click on the backdrop lands on the <dialog> itself; its content fills the box.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close()
+    })
+    addEventListener('message', (event) => {
+      const data: unknown = event.data
+      if (!data || typeof data !== 'object' || (data as { type?: unknown }).type !== 'givegold:complete') return
+      const iframe = body.querySelector('iframe')
+      if (!iframe || event.source !== iframe.contentWindow) return
+      let origin: string
+      try {
+        origin = new URL(iframe.src).origin
+      } catch {
+        return
+      }
+      if (event.origin !== origin) return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(close, COMPLETE_CLOSE_MS)
+    })
+  }
+</script>
+
+<style>
+  .partner-dialog {
+    margin: auto;
+    width: min(40rem, calc(100vw - 1.5rem));
+    max-height: calc(100dvh - 1.5rem);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-card);
+    background: var(--band-plain);
+    color: var(--band-plain-ink);
+    box-shadow: var(--shadow);
+  }
+  .partner-dialog::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+  .partner-dialog-body {
+    padding: 2.25rem 1.25rem 1.25rem;
+  }
+  /* Made by the script, so outside this component's scoped styles. */
+  .partner-dialog :global(.partner-close) {
+    position: sticky;
+    top: 0.5rem;
+    float: right;
+    margin: 0.5rem 0.5rem 0 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: grid;
+    place-items: center;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 0;
+    border-radius: 999px;
+    background: var(--band-plain-surface);
+    color: var(--band-plain-ink);
+  }
+</style>
