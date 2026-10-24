@@ -3,9 +3,10 @@ import { CONTENT_API_EXAMPLES } from '@backgold/contract/content-api-examples'
 import type { Author, PageResponse, SiteResponse } from '@backgold/content'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AI_CRAWLERS } from '../src/options.js'
+import type { BackgoldLocals } from '../src/server/context.js'
 import { atomFeed } from '../src/server/feeds.js'
 import { llmsFullTxt, llmsTxt } from '../src/server/llms.js'
-import { jsonLdFor, robotsTxt, serializeJsonLd, sitemapXml } from '../src/server/seo.js'
+import { jsonLdFor, robotsTxt, seoHead, serializeJsonLd, sitemapXml } from '../src/server/seo.js'
 import { SITE_URL, builtIn, client, entryDetail, entryOf, typesExample } from './seo-api.js'
 
 const site = (CONTENT_API_EXAMPLES.SiteResponse as SiteResponse).site
@@ -249,11 +250,14 @@ describe('llmsFullTxt', () => {
         '',
         'Fund the fight for lower taxes',
         '',
-        // The Map, CandidateRoster and TeamGrid sections: their copy (the
-        // Map's heading and legend labels, the roster's heading, the team's
-        // heading; the team's button text is its link's label, so it is not
-        // written). Section data rows — the regions, the candidates, the
-        // seats — are not page copy and are not written.
+        // The Petition, Map, CandidateRoster and TeamGrid sections: their copy
+        // (the petition's heading, the Map's heading and legend labels, the
+        // roster's heading, the team's heading; the team's button text is its
+        // link's label, so it is not written). Section data — the petition's
+        // text, the regions, the candidates, the seats — is not page copy and
+        // is not written.
+        'Freeze the levy',
+        '',
         'Where we are organized',
         '',
         'Chartered',
@@ -484,6 +488,19 @@ describe('atomFeed', () => {
     const { feed } = parse(xml)
     expect(feed.entry).toBeUndefined()
     expect(feed.updated).toBe('1970-01-01T00:00:00.000Z')
+  })
+})
+
+describe('seoHead', () => {
+  const locals = (s: typeof site | null): BackgoldLocals => ({ site: s, siteUrl: SITE_URL }) as unknown as BackgoldLocals
+
+  it('carries the site’s Meta domain-verification value', () => {
+    expect(seoHead({ canonicalPath: '/' }, locals(site), false).metaDomainVerification).toBe('x7k2q9w4m1p8z3r6t5v0n2b8c4d6f1')
+  })
+
+  it('has none when the site has none, or while the site is in setup', () => {
+    expect(seoHead({ canonicalPath: '/' }, locals({ ...site, meta_domain_verification: null }), false).metaDomainVerification).toBeNull()
+    expect(seoHead({ canonicalPath: '/' }, locals(null), false).metaDomainVerification).toBeNull()
   })
 })
 

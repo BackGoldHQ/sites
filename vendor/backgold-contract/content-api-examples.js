@@ -236,6 +236,33 @@ var pageExample = {
       embed: { iframe: "https://secure.backgold.com/embed/d/df_general", script: "https://secure.backgold.com/embed.js" }
     },
     {
+      id: "Petition-1",
+      type: "Petition",
+      band: "plain",
+      bleed: "full",
+      variant: "none",
+      copy: { heading: "Freeze the levy" },
+      media: {},
+      links: [],
+      options: {},
+      data: {
+        source: "petition",
+        items: [],
+        petition: {
+          slug: "freeze-the-levy",
+          title: "Freeze the levy",
+          text_html: '<p>We, the undersigned residents of Pine Valley, ask the county board to hold the property levy at this year\u2019s rate.</p><p>Read the budget: <a href="https://pinevalley.example.gov/budget" target="_blank" rel="noopener noreferrer">https://pinevalley.example.gov/budget</a></p>',
+          addressed_to: "The Pine Valley County Board",
+          signature_count: 1284,
+          goal: 2e3
+        }
+      },
+      embed: {
+        iframe: "https://secure.backgold.com/embed/p/pine-valley/freeze-the-levy",
+        script: "https://secure.backgold.com/embed.js"
+      }
+    },
+    {
       id: "Map-1",
       type: "Map",
       band: "plain",
@@ -575,7 +602,8 @@ var shiftsExample = {
       waitlisted: 0,
       state: "open",
       subject: { kind: "event", slug: "town-hall" },
-      signup_url: "https://pinevalleyliberty.org/volunteer/town-hall-greeters"
+      signup_url: "https://pinevalleyliberty.org/volunteer/town-hall-greeters",
+      signup_embed: { iframe: "https://api.backgold.com/embed/shift/pine-valley/town-hall-greeters", script: "https://secure.backgold.com/embed.js" }
     },
     {
       id: "shf_9d4",
@@ -591,7 +619,8 @@ var shiftsExample = {
       waitlisted: 0,
       state: "full",
       subject: { kind: "standalone", slug: null },
-      signup_url: "https://pinevalleyliberty.org/volunteer/saturday-sign-crew"
+      signup_url: "https://pinevalleyliberty.org/volunteer/saturday-sign-crew",
+      signup_embed: { iframe: "https://api.backgold.com/embed/shift/pine-valley/saturday-sign-crew", script: "https://secure.backgold.com/embed.js" }
     }
   ],
   next_cursor: null
@@ -601,6 +630,19 @@ var shiftsLiveExample = {
     { id: "shf_7q2", signed_up: 6, waitlisted: 0, state: "open" },
     { id: "shf_9d4", signed_up: 6, waitlisted: 2, state: "waitlist" }
   ]
+};
+var liveExample = {
+  live: {
+    status: "live",
+    video_id: "pV7c4Lh2TmQ",
+    url: "https://www.youtube.com/watch?v=pV7c4Lh2TmQ",
+    embed_url: "https://www.youtube.com/embed/pV7c4Lh2TmQ",
+    title: "Town hall, live from the Grange",
+    thumbnail_url: "https://i.ytimg.com/vi/pV7c4Lh2TmQ/maxresdefault_live.jpg",
+    scheduled_start_at: null,
+    started_at: "2026-10-08T23:02:00.000Z",
+    channel_title: "Pine Valley for Liberty"
+  }
 };
 var course = {
   id: "ci_c01",
@@ -729,6 +771,7 @@ var CONTENT_API_EXAMPLES = {
   EventsLiveResponse: eventsLiveExample,
   ShiftsResponse: shiftsExample,
   ShiftsLiveResponse: shiftsLiveExample,
+  LiveResponse: liveExample,
   CoursesResponse: coursesExample,
   CourseResponse: courseExample,
   LessonResponse: lessonExample,
@@ -737,4 +780,4 @@ var CONTENT_API_EXAMPLES = {
   VisitorExchangeResponse: visitorExchangeExample
 };
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, liveExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
