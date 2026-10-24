@@ -34,7 +34,7 @@ CI job (`node scripts/check-manifests.mjs`) parses every
 BackGold can read.
 
 BackGold's api and app read the manifest from the platform repository,
-gitlab.com/backgold/backgold (private), which keeps its own copy at `packages/shared/site-templates/party.template.json`.
+github.com/BackGoldHQ/backgold (private), which keeps its own copy at `packages/shared/site-templates/party.template.json`.
 After a change to `template.json` merges here, refresh that copy in a platform
 MR: copy the file to that path and run
 `pnpm --filter @givegold/shared templates:build` there. Until then the
@@ -438,39 +438,36 @@ button and `npm run deploy` use.
 
 **Account setup.** In place today: the dispatch namespace `sites-staging`,
 the KV namespace `backgold-party-staging-cache` with its id in the
-`PARTY_STAGING_KV_ID` CI variable, and `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID`, each a masked, protected project variable on this
-repository, so only `main` pipelines see them. To set it up again from
-nothing, in BackGold's account, in this order:
+`PARTY_STAGING_KV_ID` repository secret, and `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID`, each a repository secret on this repository. To set
+it up again from nothing, in BackGold's account, in this order:
 
 1. Create the dispatch namespace `sites-staging`, with the `cf` CLI
    (`cf workers-for-platforms dispatch-namespaces create --name sites-staging`)
    or with wrangler (`npx wrangler dispatch-namespace create sites-staging`),
    whichever the operator uses.
 2. Create the cache's KV namespace and put its id in the
-   `PARTY_STAGING_KV_ID` CI variable (a GitLab project variable on this
-   repository, masked and protected, so only `main` pipelines see it):
+   `PARTY_STAGING_KV_ID` repository secret:
    `npx wrangler kv namespace create backgold-party-staging-cache`, then
-   `glab variable set PARTY_STAGING_KV_ID <id> --masked --protected -R backgold/sites`.
+   `gh secret set PARTY_STAGING_KV_ID --body <id> -R BackGoldHQ/sites`.
 3. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` on this repository,
-   masked and protected, under **Settings → CI/CD → Variables** (or with
-   `glab variable set … -R backgold/sites`). The two deploy jobs exist only
-   while `CLOUDFLARE_API_TOKEN` is set. This repository is the only one that
-   deploys `template-party`.
+   under **Settings → Secrets and variables → Actions** (or with
+   `gh secret set … -R BackGoldHQ/sites`). The deploy jobs stop before
+   deploying while `CLOUDFLARE_API_TOKEN` is unset. This repository is the
+   only one that deploys `template-party`.
 
 The job needs no site key and no secrets: a first-party read needs no key,
 `/preview` reads drafts through the same binding, and the api keeps `/api/*`
 on every site host, so the template's webhook route
 (`/api/backgold/webhook`) is never reached and needs no signing secret.
 
-**The job.** `deploy-party-staging` in this repository's `.gitlab-ci.yml`
-runs by itself on a push to `main` that changed `templates/party/`,
-`packages/`, `vendor/`, `pnpm-lock.yaml` or `.gitlab-ci.yml`, and is a
-manual job, never blocking, on every other `main` pipeline, to redeploy by
-hand. It deploys the template and the packages as committed in the pipeline
-it runs in, built from this workspace, so it never waits on npm; play it by
-hand on the newest `main` pipeline. After the pipeline's
-`pnpm install --frozen-lockfile`, it:
+**The job.** The `party` job of `.github/workflows/deploy-staging.yml` runs
+by itself on a push to `main` that changed `templates/party/`, `packages/`,
+`vendor/`, `pnpm-lock.yaml` or the workflow file, and by hand (Actions →
+Deploy staging → Run workflow, `template: party` or `all`) to redeploy
+`main`'s head. It deploys the template and the packages as committed there,
+built from this workspace, so it never waits on npm. After the job's
+`pnpm install --frozen-lockfile`, `scripts/deploy-template.sh staging party`:
 
 1. refuses to start without `CLOUDFLARE_API_TOKEN` and
    `CLOUDFLARE_ACCOUNT_ID`, or without a `PARTY_STAGING_KV_ID` that is a
@@ -546,26 +543,24 @@ on the operator's login, so every command below names the account
    `backgold-party-staging-cache`:
    `CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler kv namespace create backgold-party-production-cache`.
    Copy the `id` it prints (32 hex characters).
-3. Put that id in the `PARTY_PRODUCTION_KV_ID` CI variable, a GitLab project
-   variable on this repository, masked and protected so only `main`
-   pipelines see it:
-   `glab variable set PARTY_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites`.
-   It is the only variable production adds. Staging reads `PARTY_STAGING_KV_ID`
+3. Put that id in the `PARTY_PRODUCTION_KV_ID` repository secret:
+   `gh secret set PARTY_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites`.
+   It is the only secret production adds. Staging reads `PARTY_STAGING_KV_ID`
    and nothing else of its own; both jobs use `CLOUDFLARE_API_TOKEN` and
    `CLOUDFLARE_ACCOUNT_ID` (staging's step 3), and need no site key and no
    secrets.
 4. Check the one thing the job cannot fix: the production api must already
    be deployed with the `FirstParty` entrypoint, because the service binding
    names `backgold-api` and that export; if production's api predates it,
-   play `deploy-api-production` on the platform repository's pipeline first.
-5. Play `deploy-production` on a `main` pipeline, the newest one; it runs
-   `deploy-party-production` (and the other templates' production jobs).
+   run the platform repository's Release workflow first.
+5. Run this repository's Release workflow (Actions → Release → Run workflow,
+   on `main`); it deploys `party` (and every other template), one job each.
 
-**The job.** `deploy-party-production` in this repository's `.gitlab-ci.yml`
-runs on a `main` pipeline once the `deploy-production` button has been played
-there (environment `production`, resource group `party-production`); it is
-never played on its own and the unplayed button never blocks the pipeline. It is `deploy-party-staging` with
-the production names, step for step (see Staging deploy above): it refuses to
+**The job.** The `party` job of `.github/workflows/release.yml` runs when the
+Release workflow is run by hand on `main` (environment `production`); it is
+never run on its own. It is the staging job with the production names, step
+for step (`scripts/deploy-template.sh production party`; see Staging deploy
+above): it refuses to
 start without `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and a
 `PARTY_PRODUCTION_KV_ID` that is a 32-character namespace id, writes the id
 over the `__PARTY_PRODUCTION_KV_ID__` placeholder in `wrangler.jsonc`, reads

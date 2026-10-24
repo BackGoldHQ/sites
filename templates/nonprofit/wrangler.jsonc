@@ -29,10 +29,11 @@
   },
   // BackGold's own deploys of this template: the Worker `template-nonprofit` in
   // a Workers for Platforms dispatch namespace, `sites-staging` (the
-  // `deploy-nonprofit-staging` job in this repository's .gitlab-ci.yml, which
+  // `deploy-staging` job for `nonprofit` in this repository's
+  // .github/workflows/deploy-staging.yml, which
   // runs by itself on a push to main that changed the template, a package,
-  // vendor/, the lockfile or the CI file) and `sites-production` (the manual
-  // `deploy-nonprofit-production` job there, run from the `deploy-production` button), each uploaded with
+  // vendor/, the lockfile or the CI file) and `sites-production` (the
+  // `deploy-production` job for `nonprofit` in release.yml, run by hand), each uploaded with
   // `wrangler deploy --dispatch-namespace <namespace>`. Nothing above changes
   // for the Deploy button; a copy of this template can delete this block. An
   // env inherits main, compatibility, assets and observability from above,
@@ -83,7 +84,7 @@
         // carries them.
         "BACKGOLD_API_ORIGIN": "https://api.backgold.com"
       },
-      // The `deploy-nonprofit-production` job replaces the id below with the
+      // The production deploy (release.yml) replaces the id below with the
       // NONPROFIT_PRODUCTION_KV_ID CI variable before it builds, and refuses to
       // deploy when that variable is unset or is not a namespace id. The
       // namespace is created once, by hand, and is not staging's:

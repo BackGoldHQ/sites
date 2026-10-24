@@ -1149,7 +1149,7 @@ dependencies and runs on Node 20 or later, Cloudflare Workers, and any
 runtime with `fetch` and Web Crypto. Every answer has the shape of section 4.
 For a complete Astro site built on it, see
 [the public starter](../templates/astro-starter/README.md)
-([gitlab.com/backgold/backgold-starter](https://gitlab.com/backgold/backgold-starter)),
+([github.com/BackGoldHQ/backgold-starter](https://github.com/BackGoldHQ/backgold-starter)),
 and for every option and method in full, the client's
 [README](../packages/content-client/README.md).
 

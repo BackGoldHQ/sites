@@ -7,7 +7,7 @@ draft previews, the site's redirects, `sitemap.xml`, `robots.txt`, `llms.txt`
 and an Atom feed, route resolution, and the components a page is built from.
 
 It reads content with [`@backgold/content`](https://www.npmjs.com/package/@backgold/content).
-The starter template (gitlab.com/backgold/backgold-starter, with a Deploy to
+The starter template (github.com/BackGoldHQ/backgold-starter, with a Deploy to
 Cloudflare button) is a complete site built on it.
 
 Requires Astro 7 with `@astrojs/cloudflare` 14 and Node 22.12+ to build.
