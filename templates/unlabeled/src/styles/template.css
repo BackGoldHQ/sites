@@ -608,10 +608,10 @@ main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
 
 /*
   The chapter mark (U1 between the programs and the manifesto, U-cat §4): the
-  skull and horns on a strong rule between bands, the next band's section
-  mark and kicker beside it (`§ 03 — Who we are`). The letter
-  (About/letter.astro) opens with one; `.u-chapter` draws it anywhere, with
-  <Mark kind="skull" /> inside.
+  skull and horns (src/assets/skull.png) on a strong rule between bands, the
+  next band's section mark and kicker beside it (`§ 03 — Who we are`), over
+  the rule. The letter (About/letter.astro) opens with one; `.u-chapter` draws
+  it anywhere, with <Mark kind="skull" /> inside.
 */
 .u-chapter-band {
   padding: var(--space) var(--gutter) 0;
@@ -637,7 +637,7 @@ main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
   height: 1px;
   background: var(--line-strong);
 }
-.u-chapter > svg {
+.u-chapter > .u-mark {
   grid-column: 2;
   grid-row: 1;
   width: clamp(8rem, 6rem + 6vw, 13rem);
@@ -648,6 +648,8 @@ main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
   grid-row: 1;
 }
 .u-chapter-mark {
+  position: relative;
+  z-index: 1;
   grid-column: 3;
   grid-row: 1;
   justify-self: start;
@@ -671,14 +673,18 @@ main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
   counter-increment: none;
 }
 
-/* The horns alone, drawn out to a rule: a divider (U-cat §4). */
+/* The horns alone (src/assets/horns.png) at the centre of a hairline rule: a divider (U-cat §4). */
 .u-horns {
   display: block;
   width: 100%;
   height: clamp(1.25rem, 1rem + 1vw, 2rem);
   background: var(--line-strong);
-  -webkit-mask: url('../assets/horns.svg') center / 100% 100% no-repeat;
-  mask: url('../assets/horns.svg') center / 100% 100% no-repeat;
+  -webkit-mask:
+    url('../assets/horns.png') center / auto 100% no-repeat,
+    linear-gradient(#000 0 0) center / 100% 1px no-repeat;
+  mask:
+    url('../assets/horns.png') center / auto 100% no-repeat,
+    linear-gradient(#000 0 0) center / 100% 1px no-repeat;
 }
 /* The skull as a watermark, in the hairline grey, behind a box (the archive's citation). */
 .u-watermark {
@@ -691,8 +697,8 @@ main .bg-bleed-full.bg-band-panel + .bg-bleed-full.bg-band-panel {
   inset: 0;
   z-index: -1;
   background: var(--u-line);
-  -webkit-mask: url('../assets/skull.svg') right center / auto 140% no-repeat;
-  mask: url('../assets/skull.svg') right center / auto 140% no-repeat;
+  -webkit-mask: url('../assets/skull.png') right center / auto 140% no-repeat;
+  mask: url('../assets/skull.png') right center / auto 140% no-repeat;
   pointer-events: none;
 }
 
@@ -1800,7 +1806,7 @@ strong {
   }
 
   /* The mark arrives: the chapter skull and the 404's stamp land in three hard steps, no bounce. */
-  :is(.u-chapter > svg, .u-404-mark) {
+  :is(.u-chapter > .u-mark, .u-404-mark) {
     animation: u-stamp 220ms steps(3) both;
   }
   @keyframes u-stamp {
@@ -1831,7 +1837,7 @@ strong {
       animation-timeline: view();
       animation-range: entry 10% entry 70%;
     }
-    :is(.u-chapter > svg, .u-404-mark) {
+    :is(.u-chapter > .u-mark, .u-404-mark) {
       animation-timeline: view();
       animation-range: entry 60% entry 100%;
     }
