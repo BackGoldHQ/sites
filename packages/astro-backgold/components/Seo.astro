@@ -1,7 +1,8 @@
 ---
 // The head tags: title, description, canonical on SITE_URL, Open Graph,
-// the Twitter card (which reads the og: tags), robots, favicon, the blog feed, JSON-LD. Site-level values
-// from `/site` fill in what the props leave out. On the preview page it also
+// the Twitter card (which reads the og: tags), robots, favicon, the Meta
+// domain-verification tag, the blog feed, JSON-LD. Site-level values from
+// `/site` fill in what the props leave out. On the preview page it also
 // tells the BackGold editor the page carries section markers.
 import options from 'virtual:backgold/options'
 import { isPreviewPath } from '../dist/render.js'
@@ -25,6 +26,7 @@ const preview = isPreviewPath(Astro.url.pathname)
 <link rel="canonical" href={head.canonical} />
 {head.noindex && <meta name="robots" content="noindex" />}
 {head.favicon && <link rel="icon" href={head.favicon} />}
+{head.metaDomainVerification && <meta name="facebook-domain-verification" content={head.metaDomainVerification} />}
 {head.feed && <link rel="alternate" type="application/atom+xml" title={head.feed.title} href={head.feed.href} />}
 {head.title && <meta property="og:title" content={head.title} />}
 {head.description && <meta property="og:description" content={head.description} />}

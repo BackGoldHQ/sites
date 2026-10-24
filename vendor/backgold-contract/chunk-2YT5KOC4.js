@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-UVWZGL4W.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-7JGFDKCW.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -49,8 +49,11 @@ var SECTION_LAYOUTS = {
   // donate, video and rotating: sections batch 3 (2026-10-14), a hero with a
   // donate card beside its words, one over a looping video, and one whose
   // headline's last word cycles through its own `words` rows. portrait is the
-  // candidate template's name-first hero (2026-10-15, proposed, C-1).
-  Hero: ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"],
+  // candidate template's name-first hero (2026-10-15, proposed, C-1). field
+  // is the academy template's kindling field (2026-10-21): the words centered
+  // over a canvas of motes that fire moves through; `note` is the small line
+  // under the buttons.
+  Hero: ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait", "field"],
   // portrait and books: the services sections (2026-10-14), a bio with its
   // credentials and a writer with their books.
   About: ["right", "left", "letter", "portrait", "books"],
@@ -104,7 +107,9 @@ var SECTION_LAYOUTS = {
   // library, shelves and outline: the services sections (2026-10-14), a course catalog and a syllabus.
   Collection: ["cards", "list", "compact", "feature", "library", "shelves", "outline"],
   // player and theater: the services sections (2026-10-14), a lesson's media beside its notes.
-  ContentPost: ["card", "banner", "player", "theater"],
+  // prose: the whole piece in the page, as the hosted block draws every layout
+  // (2026-10-21): a site that moves to a template keeps its articles readable.
+  ContentPost: ["card", "banner", "player", "theater", "prose"],
   PlatformPlanks: ["numbered", "columns", "longread"],
   CandidateRoster: ["cards", "ballot", "compact"],
   TeamGrid: ["grid", "board", "list"],
@@ -123,7 +128,9 @@ var SECTION_LAYOUTS = {
   Petition: ["none", "image", "map", "coverage"],
   Store: ["grid", "featured"],
   Event: ["detail", "card"],
-  Calendar: ["month", "agenda"],
+  // split: the month grid with the agenda beside it (2026-10-22), first asked
+  // for by the Libertarian Party of Washington's /events page.
+  Calendar: ["month", "agenda", "split"],
   SocialFrame: ["ring", "lower_third", "corner", "countdown"],
   Advocacy: ["full", "compact"]
 };
@@ -162,6 +169,7 @@ var VISITOR_RETURN_PATH = "/_backgold/visitor";
 var VISITOR_SIGN_OUT_PATH = "/_backgold/sign-out";
 var VISITOR_SIGN_IN_PATH = "/_backgold/sign-in";
 var VISITOR_PROGRESS_PATH = "/_backgold/progress";
+var LIVE_STREAM_CACHE_CONTROL = "public, max-age=60";
 function siteKeyKind(key) {
   if (key.startsWith(SITE_KEY_PREFIXES.publishable)) return "publishable";
   if (key.startsWith(SITE_KEY_PREFIXES.secret)) return "secret";
@@ -218,6 +226,7 @@ function contentApiEmbedUrls(origins) {
     event: (orgSlug, slug) => `${donor}/embed/e/${seg(orgSlug)}/${seg(slug)}`,
     events: (orgSlug) => `${api}/embed/events/${seg(orgSlug)}`,
     calendar: (orgSlug) => `${api}/embed/calendar/${seg(orgSlug)}`,
+    shift: (orgSlug, slug) => `${api}/embed/shift/${seg(orgSlug)}/${seg(slug)}`,
     store: (orgSlug) => `${donor}/embed/s/${seg(orgSlug)}`,
     loaderScript: `${donor}/embed.js`,
     advocacyScript: `${api}/api/advocacy-pages/embed.js`
@@ -1309,6 +1318,8 @@ var CONTENT_API_BLOCKS = {
   // asks, then the stat tiles (`group: 'tile'`), a tile's value a typed figure
   // or `auto:total` / `auto:signatures` / `auto:category:<value>`. The
   // bring-your-own dataset URL and the petition picked stay in the block.
+  // `data.petition` is the picked petition itself (its title, text, target,
+  // count and goal), so a template can draw the text beside the frame.
   Petition: {
     role: "compliance",
     copy: ["heading", "addressedTo", "goalNote", "volunteerPrompt"],
@@ -1616,6 +1627,10 @@ function projectDocument(doc, ctx) {
     if (spec.data) {
       const data = dataOf(spec.data, props);
       section.data = ctx.audience === "hosted" ? data : { source: data.source, items: data.items.map((item) => scrub(item, ctx)) };
+      if (type === "Petition") {
+        const slug = str(props.petitionSlug);
+        section.data.petition = slug && ctx.petitions && Object.hasOwn(ctx.petitions, slug) ? ctx.petitions[slug] : null;
+      }
     }
     if (spec.embed) {
       const embed = spec.embed(props, ctx);
@@ -1677,4 +1692,4 @@ function projectedBlockProps(block, ctx) {
   return props;
 }
 
-export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, EVENTS_WINDOW_MAX_DAYS, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, EVENTS_WINDOW_MAX_DAYS, LIVE_STREAM_CACHE_CONTROL, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, TEMPLATE_SECTION_TYPES, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
