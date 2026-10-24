@@ -59,6 +59,29 @@ describe('loadPreview in the dispatched form', () => {
     for (const [name, value] of Object.entries(PREVIEW_HEADERS)) expect(result.response.headers.get(name)).toBe(value)
   })
 
+  it('sends the site token from the environment with each read, and none without one', async () => {
+    worker.env.BACKGOLD_SITE_ID = SITE_ID
+    worker.env.BACKGOLD_SITE_TOKEN = 'tok_site_cd_8f2a'
+    expect((await loadPreview(asSite(SITE_ID, 'bg_preview=tok_good'))).ok).toBe(true)
+    expect(api.headers.map((h) => h.get('X-BackGold-Site-Token'))).toEqual(['tok_site_cd_8f2a', 'tok_site_cd_8f2a'])
+    delete worker.env.BACKGOLD_SITE_TOKEN
+    expect((await loadPreview(asSite(SITE_ID, 'bg_preview=tok_good'))).ok).toBe(true)
+    expect(api.headers.slice(2).every((h) => !h.has('X-BackGold-Site-Token'))).toBe(true)
+  })
+
+  it('never takes a site token from the request, and never answers with it', async () => {
+    worker.env.BACKGOLD_SITE_TOKEN = 'tok_site_cd_8f2a'
+    const request = new Request('https://pinevalleyliberty.org/preview?bg_preview=tok_forged', {
+      headers: { 'X-BackGold-Site': SITE_ID, 'X-BackGold-Site-Token': 'tok_from_a_visitor' },
+    })
+    const result = await loadPreview(request)
+    expect(api.headers.map((h) => h.get('X-BackGold-Site-Token'))).toEqual(['tok_site_cd_8f2a'])
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.headers.has('X-BackGold-Site-Token')).toBe(false)
+    expect(await result.response.text()).not.toContain('tok_site_cd_8f2a')
+  })
+
   it('lets BACKGOLD_SITE_ID win over the header', async () => {
     worker.env.BACKGOLD_SITE_ID = SITE_ID
     const result = await loadPreview(asSite(OTHER_SITE_ID, 'bg_preview=tok_good'))

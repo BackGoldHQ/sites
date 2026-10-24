@@ -66,6 +66,26 @@ describe('first-party mode', () => {
     expect(bg.setup).toEqual({ missing: ['BACKGOLD_SITE_ID', 'BACKGOLD_API_ORIGIN'] })
   })
 
+  it('sends the site token from the environment on every read, and none without one', async () => {
+    await backgoldFor(firstPartyEnv({ BACKGOLD_SITE_TOKEN: 'tok_site_cd_8f2a' }), fakeContext('/'))
+    expect(api.headers.length).toBeGreaterThan(0)
+    for (const headers of api.headers) {
+      expect(headers.get('X-BackGold-Site')).toBe(SITE_ID)
+      expect(headers.get('X-BackGold-Site-Token')).toBe('tok_site_cd_8f2a')
+    }
+    const seen = api.headers.length
+    await backgoldFor(firstPartyEnv({ BACKGOLD_SITE_TOKEN: '  ' }), fakeContext('/'))
+    await backgoldFor(firstPartyEnv(), fakeContext('/'))
+    expect(api.headers.length).toBeGreaterThan(seen)
+    expect(api.headers.slice(seen).every((h) => !h.has('X-BackGold-Site-Token'))).toBe(true)
+  })
+
+  it('never takes a site token from the request', async () => {
+    await backgoldFor(firstPartyEnv(), fakeContext('/', { headers: { 'X-BackGold-Site-Token': 'tok_from_a_visitor' } }))
+    expect(api.headers.length).toBeGreaterThan(0)
+    expect(api.headers.every((h) => !h.has('X-BackGold-Site-Token'))).toBe(true)
+  })
+
   it('keeps one client per binding and site id', async () => {
     const env = firstPartyEnv()
     const a = await backgoldFor(env, fakeContext('/'))
