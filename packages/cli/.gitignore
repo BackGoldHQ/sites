@@ -1,0 +1,3 @@
+# The fixture site is a hand-made build: its dist/ and .wrangler/ are source here.
+!/test-fixtures/site/dist/
+!/test-fixtures/site/.wrangler/
