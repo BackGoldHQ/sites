@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as ShiftPublicState, h as ShiftPublicSubjectKind, i as SiteMode, j as SiteApiKeyKind } from './constants-3dFHOvY5.js';
-export { k as ContentWebhookEvent, l as SITE_KEY_PREFIXES, m as SitePageModuleKind } from './constants-3dFHOvY5.js';
+import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, L as LiveStreamStatus, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as ShiftPublicState, h as ShiftPublicSubjectKind, i as SiteMode, j as SiteApiKeyKind } from './constants-DuDgs06x.js';
+export { k as ContentWebhookEvent, l as SITE_KEY_PREFIXES, m as SitePageModuleKind } from './constants-DuDgs06x.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -340,7 +340,7 @@ type SectionBleed = (typeof SECTION_BLEEDS)[number];
  * contract names is never refused.
  */
 declare const SECTION_LAYOUTS: {
-    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait"];
+    readonly Hero: readonly ["centered", "split", "overlap", "cover", "statement", "donate", "video", "rotating", "portrait", "field"];
     readonly About: readonly ["right", "left", "letter", "portrait", "books"];
     readonly Issues: readonly ["cards", "steps", "numbered", "rows", "checklist", "tabs", "drawer"];
     readonly StatCards: readonly ["row", "ribbon", "feature", "wall", "archive"];
@@ -369,7 +369,7 @@ declare const SECTION_LAYOUTS: {
     readonly EventsList: readonly ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts", "map"];
     readonly Blog: readonly ["cards", "list", "feature"];
     readonly Collection: readonly ["cards", "list", "compact", "feature", "library", "shelves", "outline"];
-    readonly ContentPost: readonly ["card", "banner", "player", "theater"];
+    readonly ContentPost: readonly ["card", "banner", "player", "theater", "prose"];
     readonly PlatformPlanks: readonly ["numbered", "columns", "longread"];
     readonly CandidateRoster: readonly ["cards", "ballot", "compact"];
     readonly TeamGrid: readonly ["grid", "board", "list"];
@@ -385,7 +385,7 @@ declare const SECTION_LAYOUTS: {
     readonly Petition: readonly ["none", "image", "map", "coverage"];
     readonly Store: readonly ["grid", "featured"];
     readonly Event: readonly ["detail", "card"];
-    readonly Calendar: readonly ["month", "agenda"];
+    readonly Calendar: readonly ["month", "agenda", "split"];
     readonly SocialFrame: readonly ["ring", "lower_third", "corner", "countdown"];
     readonly Advocacy: readonly ["full", "compact"];
 };
@@ -455,6 +455,24 @@ interface SectionMedia {
 interface SectionData {
     source: string;
     items: unknown[];
+    /** A Petition section's petition (ProjectDocumentContext `petitions`); null
+     *  when it names none that is public. On no other section. */
+    petition?: SectionPetition | null;
+}
+/**
+ * The petition a Petition section frames, so a template can draw its words
+ * beside the sign sheet: never who signed. `text_html` is the petition's
+ * text as the sheet draws it (packages/site statementHtml: a <p> per
+ * paragraph, links in a new tab, everything typed escaped); '' when it has
+ * none. `signature_count` is the count when the page was read.
+ */
+interface SectionPetition {
+    slug: string;
+    title: string;
+    text_html: string;
+    addressed_to: string | null;
+    signature_count: number;
+    goal: number | null;
 }
 /**
  * How a compliance module renders on a partner site: the iframe of the module
@@ -568,6 +586,14 @@ interface Entry {
     authors: EntryAuthor[];
     /** Preview only: the entry's state ('draft' or 'published'). */
     status?: string;
+    /**
+     * Only on a list read with `?include=fields`: the entry's field values by
+     * key, as its detail carries them (EntryDetail.fields; `{}` when the entry
+     * is locked for this reader), so a site builds an index of a type one page
+     * at a time instead of one detail read per entry. Absent on every other
+     * list read.
+     */
+    fields?: Record<string, unknown>;
     /**
      * Who may open the entry (0552): its own rule, or the one it follows. Read
      * through a course, a lesson with no rule of its own follows the course;
@@ -811,7 +837,10 @@ interface ShiftSubject {
  * One open volunteer shift as GET /shifts lists it. Counts only: who signed
  * up is never part of the Content API. `signup_url` is the shift's signup
  * card on BackGold (`/volunteer/<slug>` on the site's own host, or on the
- * organization's host for a headless site): a template links there.
+ * organization's host for a headless site): a page links there.
+ * `signup_embed` is the same card as a frame on the api origin
+ * (`/embed/shift/<org>/<slug>`), the shape a section's `embed` carries: a
+ * template frames it on its own shift page and never rebuilds the form.
  */
 interface ShiftsListRow {
     id: string;
@@ -832,6 +861,7 @@ interface ShiftsListRow {
     state: ShiftPublicState;
     subject: ShiftSubject;
     signup_url: string;
+    signup_embed: SectionEmbed;
 }
 /** GET /shifts — the organization's open public shifts, soonest first, one page at a time. */
 interface ShiftsResponse {
@@ -849,6 +879,36 @@ interface ShiftLiveCounts {
 interface ShiftsLiveResponse {
     shifts: ShiftLiveCounts[];
 }
+/**
+ * The organization's YouTube stream that is on now, else its next scheduled
+ * one, as BackGold last read the connected channel's live address (every five
+ * minutes). `url` is the watch page; `embed_url` plays it in a frame. Times
+ * are ISO UTC: `scheduled_start_at` is an upcoming stream's start,
+ * `started_at` a live stream's (when YouTube gave none, when BackGold first
+ * saw it live). `channel_title` names the channel as it was connected.
+ */
+interface LiveStream {
+    status: LiveStreamStatus;
+    video_id: string;
+    url: string;
+    embed_url: string;
+    title: string | null;
+    thumbnail_url: string | null;
+    scheduled_start_at: string | null;
+    started_at: string | null;
+    channel_title: string | null;
+}
+/**
+ * GET /live — the stream, or null when nothing is on or scheduled. A live
+ * stream beats an upcoming one; among live streams the latest start wins,
+ * among upcoming ones the soonest. Never versioned: answered with
+ * LIVE_STREAM_CACHE_CONTROL.
+ */
+interface LiveResponse {
+    live: LiveStream | null;
+}
+/** GET /live's Cache-Control: a browser, a shared cache and the edge keep it a minute. */
+declare const LIVE_STREAM_CACHE_CONTROL = "public, max-age=60";
 /**
  * One event by its slug, for a site that draws the event's own page at
  * `/events/<slug>`: its list row, and what the page shows around BackGold's
@@ -966,6 +1026,8 @@ interface ContentApiEmbedUrls {
     event(orgSlug: string, slug: string): string;
     events(orgSlug: string): string;
     calendar(orgSlug: string): string;
+    /** One volunteer shift's signup card, framed (api routes/shift-embed.ts). */
+    shift(orgSlug: string, slug: string): string;
     store(orgSlug: string): string;
     /** The embed loader script (public/embed.js on the donor host): builds and sizes frames in the `data-backgold-*` containers on the page when it loads. */
     loaderScript: string;
@@ -1032,6 +1094,12 @@ interface ProjectDocumentContext {
      * read, the capture is framed by the page the bake names.
      */
     areaSectionId?: string;
+    /**
+     * The public petitions the document's Petition blocks name, by slug (the
+     * api reads them, org-scoped). A Petition section's `data.petition` is its
+     * petition's entry, or null with none.
+     */
+    petitions?: Readonly<Record<string, SectionPetition>>;
 }
 /** What a block is to the Content API. */
 type ContentApiBlockRole = 'compliance' | 'data' | 'chrome' | 'presentational';
@@ -2375,4 +2443,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, LIVE_STREAM_CACHE_CONTROL, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type LiveResponse, type LiveStream, LiveStreamStatus, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionPetition, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

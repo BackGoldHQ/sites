@@ -14,6 +14,8 @@ const site = (CONTENT_API_EXAMPLES.SiteResponse as SiteResponse).site
 const ready = (): BackgoldLocals =>
   ({ client: null, site, legal: { disclaimer: null, required: true }, version: 1, siteUrl: SITE_URL, variant: '', visitorId: null, setup: null }) as unknown as BackgoldLocals
 
+const withVerification = (value: string | null): BackgoldLocals => ({ ...ready(), site: { ...site, meta_domain_verification: value } }) as BackgoldLocals
+
 async function render(props: Record<string, unknown>, backgold: BackgoldLocals = ready(), url?: string): Promise<string> {
   const { default: Seo } = await import('../components/Seo.astro')
   const container = await AstroContainer.create()
@@ -32,6 +34,20 @@ describe.skipIf(!BUILT)('<Seo> (container API; needs `pnpm build`)', () => {
     expect(html).toContain(`<link rel="alternate" type="application/atom+xml" title="Pine Valley for Liberty" href="${SITE_URL}/feed.xml">`)
     expect(html).toContain('<link rel="icon" href="https://api.backgold.com/api/media-files/med_logo">')
     expect(html).not.toContain('name="robots"')
+  })
+
+  it('writes the Meta domain-verification tag once, escaped, and nothing without a value', async () => {
+    const tag = '<meta name="facebook-domain-verification" content="x7k2q9w4m1p8z3r6t5v0n2b8c4d6f1">'
+    const html = await render({ canonicalPath: '/' })
+    expect(html.split(tag)).toHaveLength(2)
+    expect(html.match(/facebook-domain-verification/g)).toHaveLength(1)
+
+    const hostile = await render({ canonicalPath: '/' }, withVerification('"><script>x</script>'))
+    expect(hostile).toContain('<meta name="facebook-domain-verification" content="&quot;><script>x</script>">')
+
+    const none = await render({ canonicalPath: '/' }, withVerification(null))
+    expect(none).not.toContain('facebook-domain-verification')
+    expect(none).toBe(html.replace(tag, ''))
   })
 
   it('has no og:image and a summary card without an image, and drops an unsafe one', async () => {

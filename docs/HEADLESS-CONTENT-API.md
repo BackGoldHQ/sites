@@ -132,6 +132,7 @@ curl -s "$BG/site" -H "Authorization: Bearer $BG_SITE_KEY"
     "domain": "example.org",
     "mode": "headless",
     "favicon_url": "https://api.backgold.com/api/media-files/med_logo",
+    "meta_domain_verification": null,
     "pack": "evidence",
     "style": "{\"corners\":\"sharp\"}",
     "theme": null,
@@ -152,6 +153,10 @@ curl -s "$BG/site" -H "Authorization: Bearer $BG_SITE_KEY"
 
 - `favicon_url` is the site's own icon, or the organization's logo if the
   site has none.
+- `meta_domain_verification` is the content of the site's
+  `<meta name="facebook-domain-verification">` tag: the site's own value, else
+  the organization's, else `null` (draw no tag). Put it in the `<head>` of
+  every page.
 - `style` is the site's style settings as **JSON text**. Parse it if you use
   it.
 - `seo` comes from the published home page's title and description.

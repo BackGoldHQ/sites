@@ -237,6 +237,8 @@ export interface SeoHead {
   twitterCard: 'summary' | 'summary_large_image'
   noindex: boolean
   favicon: string | null
+  /** The `facebook-domain-verification` content from `/site`, drawn on every page; null draws no tag. */
+  metaDomainVerification: string | null
   feed: { href: string; title: string } | null
   jsonLd: object[] | null
 }
@@ -265,6 +267,7 @@ export function seoHead(props: SeoProps, bg: BackgoldLocals, feeds: boolean): Se
     twitterCard: image ? 'summary_large_image' : 'summary',
     noindex: props.noindex === true,
     favicon: absoluteUrl(site?.favicon_url, bg.siteUrl),
+    metaDomainVerification: site?.meta_domain_verification ?? null,
     feed: feeds && name ? { href: `${bg.siteUrl}/feed.xml`, title: name } : null,
     jsonLd,
   }
