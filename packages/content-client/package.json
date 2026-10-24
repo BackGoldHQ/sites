@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/backgold/sites.git",
+    "url": "git+https://github.com/BackGoldHQ/sites.git",
     "directory": "packages/content-client"
   },
   "keywords": [

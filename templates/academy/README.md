@@ -163,7 +163,7 @@ CI variable. Before the first deploy, once:
 
 ```bash
 npx wrangler kv namespace create backgold-academy-staging-cache
-glab variable set ACADEMY_STAGING_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set ACADEMY_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 The api dispatches a site to `template-academy` once the platform knows the
@@ -177,7 +177,7 @@ As the party template's (its README, Production deploy): the Worker
 
 ```bash
 npx wrangler kv namespace create backgold-academy-production-cache
-glab variable set ACADEMY_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set ACADEMY_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 ## License

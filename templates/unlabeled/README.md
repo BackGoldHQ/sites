@@ -185,7 +185,7 @@ names: the Worker `template-unlabeled` in `sites-staging`, the job
 
 ```bash
 npx wrangler kv namespace create backgold-unlabeled-staging-cache
-glab variable set UNLABELED_STAGING_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set UNLABELED_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 The api dispatches a site to `template-unlabeled` once the platform knows the
@@ -201,7 +201,7 @@ As the party template's (its README, Production deploy): the Worker
 
 ```bash
 npx wrangler kv namespace create backgold-unlabeled-production-cache
-glab variable set UNLABELED_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set UNLABELED_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 ## Not done here

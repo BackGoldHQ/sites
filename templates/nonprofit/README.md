@@ -237,7 +237,7 @@ names: the Worker `template-nonprofit` in `sites-staging`, the job
 
 ```bash
 npx wrangler kv namespace create backgold-nonprofit-staging-cache
-glab variable set NONPROFIT_STAGING_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set NONPROFIT_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 The api dispatches a site to `template-nonprofit` once the platform knows the
@@ -251,7 +251,7 @@ As the party template's (its README, Production deploy): the Worker
 
 ```bash
 npx wrangler kv namespace create backgold-nonprofit-production-cache
-glab variable set NONPROFIT_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set NONPROFIT_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 ## License

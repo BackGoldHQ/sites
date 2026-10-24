@@ -14,7 +14,7 @@ own details; this guide links to them rather than repeating them.
 
 | | Path A: a client site from the public starter | Path B: a site on the party template |
 | --- | --- | --- |
-| What it is | The client's own Astro site, in the client's own repository, made from the public starter [gitlab.com/backgold/backgold-starter](https://gitlab.com/backgold/backgold-starter). | A site BackGold draws with its hosted party template, `templates/party` in this repository. |
+| What it is | The client's own Astro site, in the client's own repository, made from the public starter [github.com/BackGoldHQ/backgold-starter](https://github.com/BackGoldHQ/backgold-starter). | A site BackGold draws with its hosted party template, `templates/party` in this repository. |
 | Where the code lives | The client's repository (GitHub or GitLab). This repository is not involved, except when a fix belongs in a package. | This repository, `templates/party`. One copy of the code serves every site on the template. |
 | How the site is set up | A site in **headless** mode in the operator app, read with site keys. | A site made from the template in the operator app (template mode). No keys. |
 | How it deploys | As the client's own Cloudflare Worker, from the client's repository. | As the Worker `template-party` in BackGold's Workers for Platforms dispatch namespaces, `sites-staging` and `sites-production`, from this repository's `main`. |
@@ -28,11 +28,11 @@ it. Both paths share everything under [Shared material](#shared-material).
 
 | Piece | Where | What it is |
 | --- | --- | --- |
-| The BackGold platform | [gitlab.com/backgold/backgold](https://gitlab.com/backgold/backgold) (private) | The api, the operator app and the Content API. Production: app `https://app.backgold.com`, api `https://api.backgold.com`. Staging: app `https://app.backgold.dev`, api `https://api.backgold.dev`. |
+| The BackGold platform | [github.com/BackGoldHQ/backgold](https://github.com/BackGoldHQ/backgold) (private) | The api, the operator app and the Content API. Production: app `https://app.backgold.com`, api `https://api.backgold.com`. Staging: app `https://app.backgold.dev`, api `https://api.backgold.dev`. |
 | The Content API | `<api>/api/content/v1`, reference at `<api>/api/content/v1/docs` | The read-only API a site gets its pages, menus, entries, events, areas and brand from. The developer guide is [HEADLESS-CONTENT-API.md](HEADLESS-CONTENT-API.md). |
 | `@backgold/content` | npm; source `packages/content-client` | The typed, cache-aware client for the Content API, and the `backgold-content types` command. [README](../packages/content-client/README.md). |
 | `@backgold/astro` | npm; source `packages/astro-backgold` | The plumbing for an Astro site on Cloudflare Workers: routing, the edge cache, the webhook, preview, redirects, the SEO routes and the components (`Section`, `Area`, `Menu`, `Embed`, `Disclaimer`, …). It reads content with `@backgold/content`. [README](../packages/astro-backgold/README.md). |
-| The public starter | `templates/astro-starter` here, mirrored to gitlab.com/backgold/backgold-starter | The thin, restylable site on top of the two packages. Its [README](../templates/astro-starter/README.md) is written for outside users and is the client-facing setup guide. |
+| The public starter | `templates/astro-starter` here, mirrored to github.com/BackGoldHQ/backgold-starter | The thin, restylable site on top of the two packages. Its [README](../templates/astro-starter/README.md) is written for outside users and is the client-facing setup guide. |
 | The party template | `templates/party` | The template BackGold runs for state parties. Its `template.json` tells the operator app's composer which layouts it draws. [README](../templates/party/README.md). |
 | The academy template | `templates/academy` | The template BackGold runs for an organization's classroom: courses of video lessons at `/courses`, each lesson open to anyone, to anyone signed in with their email, to members or to a tag. It draws the kit's Classroom, Course and Lesson sections and the course type's Syllabus and Classroom layouts, offers Sign in in the header (the visitor signs in through the giving portal and the site keeps their token in an HttpOnly cookie), and deploys as the Worker `template-academy` like the party template. [README](../templates/academy/README.md). |
 | The nonprofit template | `templates/nonprofit` | The template BackGold runs for community nonprofits: bright and hand-drawn (a hand-lettered display face, sticker buttons, pen-outlined cards, torn paper and grain, all in the organization's own colors). It draws its programs with its own Services · programs layout, its volunteer shifts with spot dots and weeks (EventsList · shifts), the row's icon as a doodle in Issues · cards and Pathways · doors, and marks the word an operator wraps in `*asterisks*` in a heading; it deploys as the Worker `template-nonprofit` like the party template. [README](../templates/nonprofit/README.md). |
@@ -41,12 +41,12 @@ it. Both paths share everything under [Shared material](#shared-material).
 
 ```mermaid
 flowchart TB
-  subgraph platform["BackGold platform (gitlab.com/backgold/backgold)"]
+  subgraph platform["BackGold platform (github.com/BackGoldHQ/backgold)"]
     app["Operator app<br/>app.backgold.com"]
     api["api Worker and its Content API<br/>api.backgold.com/api/content/v1<br/>(staging: api.backgold.dev)"]
     wfp["Dispatch namespaces<br/>sites-staging / sites-production<br/>Worker template-party"]
   end
-  subgraph sites["This repository (gitlab.com/backgold/sites)"]
+  subgraph sites["This repository (github.com/BackGoldHQ/sites)"]
     pkgs["packages/content-client<br/>packages/astro-backgold"]
     party["templates/party"]
     starterSrc["templates/astro-starter"]
@@ -55,7 +55,7 @@ flowchart TB
     content["@backgold/content"]
     astro["@backgold/astro"]
   end
-  starterRepo["Public starter<br/>gitlab.com/backgold/backgold-starter"]
+  starterRepo["Public starter<br/>github.com/BackGoldHQ/backgold-starter"]
   client["Client repository<br/>(made from the starter)"]
   clientWorker["Client's own Worker<br/>on the client's Cloudflare account"]
 
@@ -93,7 +93,7 @@ endpoint, and the domain.
 Either:
 
 - **Deploy to Cloudflare.** The button in the
-  [public starter's README](https://gitlab.com/backgold/backgold-starter)
+  [public starter's README](https://github.com/BackGoldHQ/backgold-starter)
   makes a copy of the starter in the client's GitHub or GitLab account,
   creates the Worker and its KV namespace, and asks for `BACKGOLD_SITE_KEY`
   and `SITE_URL`. A site made this way rebuilds and deploys on every push to
@@ -101,7 +101,7 @@ Either:
 - **Clone it** into a repository of the client's:
 
   ```bash
-  git clone https://gitlab.com/backgold/backgold-starter.git <client-site>
+  git clone https://github.com/BackGoldHQ/backgold-starter.git <client-site>
   cd <client-site>
   git remote set-url origin <the client's repository URL>
   npm install
@@ -110,7 +110,7 @@ Either:
   The public starter's `package.json` names published `^<version>` ranges of
   both packages, so `npm install` works outside this repository.
 
-Never push to gitlab.com/backgold/backgold-starter. It is written only by this
+Never push to github.com/BackGoldHQ/backgold-starter. It is written only by this
 repository's `sync-starter` job, and anything pushed there by hand is
 overwritten.
 
@@ -232,16 +232,15 @@ publishable key and `BACKGOLD_API_ORIGIN=https://api.backgold.dev` in
 
 ### 4. Ship it
 
-Merge an MR to `main` (see [Merge requests](#merge-requests-in-this-repository)).
-`deploy-party-staging` runs by itself on that `main` pipeline when the push
-changed `templates/party/`, `packages/`, `vendor/`, `pnpm-lock.yaml` or
-`.gitlab-ci.yml`, and deploys the template, built from this workspace, into
-`sites-staging`. Check it on staging (`https://westmark.backgold.dev`).
-Production is one button, `deploy-production`, on every `main` pipeline: play
-it on the newest one and every template this repository owns deploys into
-`sites-production` (`deploy-party-production`, `deploy-candidate-production`
-run from it, in that pipeline, as committed there). Never merge anything you would not put on
-staging.
+Merge a PR to `main` (see [Pull requests](#pull-requests-in-this-repository)).
+The staging deploy (`.github/workflows/deploy-staging.yml`) runs by itself on
+that push when it changed `templates/party/`, `packages/`, `vendor/`,
+`pnpm-lock.yaml` or the workflow file, and deploys the template, built from
+this workspace, into `sites-staging`. Check it on staging
+(`https://westmark.backgold.dev`). Production is one button, the Release
+workflow (`release.yml`, Actions → Release → Run workflow, on `main`): every
+template this repository owns deploys into `sites-production`, one job each,
+as committed on `main`. Never merge anything you would not put on staging.
 
 ## Shared material
 
@@ -403,48 +402,49 @@ Publishing is a release for outside users (the public starter and client
 repositories). Nothing here waits on it: the party template deploys from this
 workspace. Never run `npm publish` by hand, and never commit an `.npmrc`.
 
-1. Bump `version` in the package's `package.json` in an MR, and merge it.
-2. On that merge's `main` pipeline, play `pack-content` or `pack-astro`. Its
-   publish job (`publish-content`, `publish-astro`) follows by itself. Publish
-   `@backgold/content` first when `@backgold/astro` needs its new version: the
-   pack job refuses a dependency npm does not have, and a version already on
-   npm.
-3. The version bump also runs `sync-starter`, which stays yellow until npm has
-   the version the public starter will name. After publishing, play
-   `sync-starter` on any `main` pipeline.
+1. Bump `version` in the package's `package.json` in a PR, and merge it.
+2. Run the Publish to npm workflow (`.github/workflows/publish.yml`, Actions →
+   Publish to npm → Run workflow, on `main`) for that package. Its publish job
+   follows the pack job by itself. Publish `@backgold/content` first when
+   `@backgold/astro` needs its new version: the pack job refuses a dependency
+   npm does not have, and a version already on npm.
+3. The version bump also runs the starter sync (`sync-starter.yml`), which
+   warns and does nothing until npm has the version the public starter will
+   name. After publishing, run that workflow by hand.
 
-### Merge requests in this repository
+### Pull requests in this repository
 
 ```bash
 git fetch origin main
 git switch -c <you>/<topic> origin/main
 # edit, then lint and check what you touched (Working in this repository)
 git push -u origin <you>/<topic>
-glab mr create --draft --target-branch main --fill
+gh pr create --draft --base main --fill
 # when the work is complete:
-glab mr update <iid> --ready && glab ci run --mr -b <you>/<topic>
+gh pr ready <n>
 ```
 
-- MRs against `main`, opened with `glab mr create`. Nobody pushes to `main`;
-  only maintainers merge, and only with a green pipeline. Squash-merge. Never
-  stack MRs.
-- CI runs only on open, ready MRs, on the self-hosted runners the
-  `backgold` group shares with the platform. A branch with no MR and a draft
-  MR run nothing, and marking an MR ready does not start a pipeline, hence the
-  `glab ci run --mr` above. Each check job runs only when its paths changed; a
-  red run that a local lint would have caught is a wasted run.
+- PRs against `main`, opened with `gh pr create`. Nobody pushes to `main`;
+  only maintainers merge, and only once the required check `gate`
+  (`CI Passed`) is green. Squash-merge. Never stack PRs.
+- CI (`.github/workflows/ci.yml`) runs only on open, ready PRs, on the
+  self-hosted runners the BackGoldHQ org shares with the platform, the
+  owner's own machines. A branch with no PR and a draft PR run nothing;
+  `gh pr ready <n>` starts the run. Each check job runs only when its paths
+  changed; a red run that a local lint would have caught is a wasted run.
 - Lint and check before every push.
 - No AI attribution anywhere: no `Co-Authored-By`, no "Generated with".
 - Product, pricing and taxonomy decisions belong to JHL: put the question
-  under `Decisions needed` in the MR description and build the smallest thing
+  under `Decisions needed` in the PR description and build the smallest thing
   that does not depend on it.
 
-What a merge to `main` does: `deploy-party-staging` (automatic when the party
-template, a package, `vendor/`, the lockfile or the CI file changed) and
-`sync-starter` (automatic when `templates/astro-starter/`, a package's
-`package.json` or `scripts/sync-starter.sh` changed). Manual on every `main`
-pipeline: `deploy-production` (which runs the `deploy-*-production` jobs),
-`pack-content`, `pack-astro`, and both of the automatic jobs again.
+What a merge to `main` does: the staging deploy of each template the push
+touched (`deploy-staging.yml`; a package, `vendor/`, the lockfile or the
+workflow file count as touching every template) and the starter sync
+(`sync-starter.yml`, when `templates/astro-starter/`, a package's
+`package.json` or `scripts/sync-starter.sh` changed). By hand, on `main`:
+`release.yml` (production, every template), `publish.yml` (one package per
+run), and both of the automatic workflows again.
 
 ## Briefing your agent
 
@@ -455,7 +455,7 @@ This is a BackGold client site. Before changing anything, read:
 - README.md and src/ of this repository. A client repository made from the
   public starter: its README covers settings, sections, areas, menus, embeds,
   the legal line and local development.
-- In gitlab.com/backgold/sites: CLAUDE.md, docs/CLIENT-SITES.md, and the
+- In github.com/BackGoldHQ/sites: CLAUDE.md, docs/CLIENT-SITES.md, and the
   README of every package or template you touch.
 
 Rules:
@@ -498,14 +498,14 @@ it. Change the contract in the platform, merge it there, then run
 
 **I changed `template.json` and my MR is green. Am I done?** Not until the
 platform's copy matches. Copy the file to
-`packages/shared/site-templates/<key>.template.json` in a platform MR and run
+`packages/shared/site-templates/<key>.template.json` in a platform PR and run
 `pnpm --filter @givegold/shared templates:build`. The platform's
 `templates-drift` job stays yellow until then, and the operator app's composer
 keeps offering what the old copy says.
 
 **Can I `npm publish` a fix so a client gets it today?** No. Bump the version
-in an MR, merge, and play the pack job on that `main` pipeline; the publish
-job does the rest with the project's token. A hand publish skips the checks
+in a PR, merge, and run the Publish to npm workflow on `main`; its publish
+job does the rest with the repository's token. A hand publish skips the checks
 that keep `@backgold/astro` from naming a client version npm does not have.
 
 **Which keys do I use while developing?** For template work, none: run
@@ -521,12 +521,11 @@ leaked: make a new one on the site's Developer page (**New secret key**, **New
 signing secret**), replace it on the Worker with `npx wrangler secret put`,
 and, for a secret key, **Revoke** the old one on the Developer page. Removing
 it from the repository's history does not un-leak it, and
-gitlab.com/backgold/sites is public.
+github.com/BackGoldHQ/sites is public.
 
 **The party template looks wrong on a production site after my merge.** A
-merge deploys to staging only. Production runs whatever
-`deploy-production` last deployed; play it on the newest `main` pipeline once
-staging looks right.
+merge deploys to staging only. Production runs whatever the Release workflow
+last deployed; run it on `main` once staging looks right.
 
-**Can I push a change to gitlab.com/backgold/backgold-starter?** No. Change
-`templates/astro-starter` here; `sync-starter` mirrors it on merge.
+**Can I push a change to github.com/BackGoldHQ/backgold-starter?** No. Change
+`templates/astro-starter` here; the starter sync mirrors it on merge.

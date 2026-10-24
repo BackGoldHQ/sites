@@ -1,4 +1,4 @@
-> **This repository is synced from `templates/astro-starter` in [gitlab.com/backgold/sites](https://gitlab.com/backgold/sites), and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
+> **This repository is synced from `templates/astro-starter` in [github.com/BackGoldHQ/sites](https://github.com/BackGoldHQ/sites), and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
 
 # BackGold starter for Astro
 
@@ -10,7 +10,7 @@ Workers with [Astro](https://astro.build), keeps every page cached at the edge
 until the content changes, and comes with a sitemap, `robots.txt`, `llms.txt`,
 Atom feeds and structured data already in place.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://gitlab.com/backgold/backgold-starter)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/BackGoldHQ/backgold-starter)
 
 It is built on two packages: [`@backgold/content`](https://www.npmjs.com/package/@backgold/content),
 the typed client for the Content API, and [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro),
