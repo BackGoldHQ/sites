@@ -18,7 +18,7 @@
 // that Google does not serve: the stylesheet names it first and falls back to
 // JetBrains Mono.
 
-import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+import { siteTemplateManifestSchema } from '@backgold/template-kit/contract/site-templates'
 import { defineTemplate, kitEntries } from '@backgold/template-kit/template'
 import type { FrameColors } from '@backgold/template-kit/lib/brand'
 import manifest from '../template.json'

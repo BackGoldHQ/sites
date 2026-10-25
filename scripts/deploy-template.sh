@@ -18,8 +18,9 @@
 # version, the client notices within its one-minute version check, and a new
 # version is a miss in the site's cache.
 #
-# It builds from this workspace: the job installs it, the two packages build
-# to their dist, and the template's @backgold dependencies resolve to them,
+# It builds from this workspace: the job installs it, the two packages and
+# the kit's contract slice build to their dist, and the template's @backgold
+# dependencies resolve to them,
 # so the deploy carries the packages as committed here, never what is on npm.
 #
 # The environment of templates/<template>/wrangler.jsonc holds the name, the
@@ -95,6 +96,7 @@ fi
 
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
+pnpm --filter @backgold/template-kit build
 CLOUDFLARE_ENV="$ENVIRONMENT" pnpm --filter "backgold-template-$TEMPLATE" build
 built=$(node -p "require('./templates/$TEMPLATE/dist/server/wrangler.json').name")
 if [ "$built" != "template-$TEMPLATE" ]; then

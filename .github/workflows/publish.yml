@@ -1,7 +1,11 @@
-# NPM — BY HAND ONLY. Publishes one of the three public packages to the npm
+# NPM — BY HAND ONLY. Publishes one of the five public packages to the npm
 # registry: `package: content` for @backgold/content (packages/content-client),
 # `package: astro` for @backgold/astro (packages/astro-backgold), `package:
-# cli` for @backgold/cli (packages/cli). Run it from
+# cli` for @backgold/cli (packages/cli), `package: template-kit` for
+# @backgold/template-kit (packages/template-kit), `package: templates` for
+# @backgold/templates (packages/templates: the templates' source, which
+# `backgold eject` reads, and templates.json, the exact @backgold versions it
+# was built with; the pack refuses it until npm has each of them). Run it from
 # Actions → Publish to npm → Run workflow, on main. With the starter sync they
 # are the only jobs that put source in a public place. Nothing in this
 # repository waits on a publish: the templates deploy from the workspace. A
@@ -42,7 +46,10 @@
 # To release: bump `version` in the package's package.json in a PR, merge,
 # then run this workflow on main for that package. Publish @backgold/content
 # first when @backgold/astro needs its new version, and @backgold/astro before
-# @backgold/cli when a CLI release leans on a new kit. A version already on npm
+# @backgold/cli when a CLI release leans on a new kit. @backgold/templates goes
+# last, from the same main commit as the packages it names: template-kit,
+# then astro, content and cli when they were bumped, then templates. A
+# version already on npm
 # is refused up front, so re-running after a half-finished attempt stops with
 # a message instead of a registry error.
 
@@ -54,7 +61,7 @@ on:
       package:
         description: Package to publish
         type: choice
-        options: [content, astro, cli]
+        options: [content, astro, cli, template-kit, templates]
         required: true
 
 permissions:
@@ -72,12 +79,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PUBLISH_PACKAGE: ${{ inputs.package == 'astro' && '@backgold/astro' || inputs.package == 'cli' && '@backgold/cli' || '@backgold/content' }}
-  PUBLISH_DIR: ${{ inputs.package == 'astro' && 'packages/astro-backgold' || inputs.package == 'cli' && 'packages/cli' || 'packages/content-client' }}
+  PUBLISH_PACKAGE: ${{ inputs.package == 'astro' && '@backgold/astro' || inputs.package == 'cli' && '@backgold/cli' || inputs.package == 'template-kit' && '@backgold/template-kit' || inputs.package == 'templates' && '@backgold/templates' || '@backgold/content' }}
+  PUBLISH_DIR: ${{ inputs.package == 'astro' && 'packages/astro-backgold' || inputs.package == 'cli' && 'packages/cli' || inputs.package == 'template-kit' && 'packages/template-kit' || inputs.package == 'templates' && 'packages/templates' || 'packages/content-client' }}
   # What to build first: @backgold/astro depends on the client through its
-  # dist; the client bundles the contract slice, plain files; the CLI's one
-  # dependency, fflate, comes from npm.
-  PUBLISH_BUILD_FIRST: ${{ inputs.package == 'astro' && '@backgold/content' || '' }}
+  # dist, and the kit's lint reads both; the client, the kit and the CLI
+  # bundle their contract slices, plain files; the CLI's one dependency,
+  # fflate, comes from npm; the templates copy files.
+  PUBLISH_BUILD_FIRST: ${{ inputs.package == 'astro' && '@backgold/content' || inputs.package == 'template-kit' && '@backgold/content @backgold/astro' || '' }}
 
 jobs:
   pack:
@@ -121,9 +129,11 @@ jobs:
       - name: Lint, build and test
         run: |
           for dep in $PUBLISH_BUILD_FIRST; do pnpm --filter "$dep" build; done
+          # The kit's lint reads its own built contract slice.
+          if [ "$PUBLISH_PACKAGE" = "@backgold/template-kit" ]; then pnpm --filter "$PUBLISH_PACKAGE" build; fi
           pnpm --filter "$PUBLISH_PACKAGE" lint
           pnpm --filter "$PUBLISH_PACKAGE" build
-          pnpm --filter "$PUBLISH_PACKAGE" test
+          pnpm --filter "$PUBLISH_PACKAGE" run --if-present test
       - name: Pack and check the manifest
         run: |
           PACK_DIR="$GITHUB_WORKSPACE/npm-tarball"
@@ -152,6 +162,22 @@ jobs:
             fi
             echo "${name}@${range} resolves on npm"
           done < "$CHECK_DIR/deps.txt"
+          # @backgold/templates names its versions in templates.json, not as
+          # dependencies: an ejected project pins each, so each must be on npm.
+          if tar -tzf "$TARBALL" package/templates.json >/dev/null 2>&1; then
+            tar -xzOf "$TARBALL" package/templates.json > "$CHECK_DIR/templates.json"
+            node -e '
+              const t = require(process.argv[1]);
+              for (const [name, version] of Object.entries(t.versions)) console.log(name + " " + version);
+            ' "$CHECK_DIR/templates.json" > "$CHECK_DIR/pins.txt"
+            while read -r name version; do
+              if [ "$(npm view "${name}@${version}" version 2>/dev/null || true)" != "$version" ]; then
+                echo "FAIL: templates.json pins ${name}@${version}, which is not on npm. Publish ${name} first, from this commit."
+                exit 1
+              fi
+              echo "templates.json pins ${name}@${version}, on npm"
+            done < "$CHECK_DIR/pins.txt"
+          fi
           echo "Packed ${PUBLISH_PACKAGE}@${VERSION} as $(basename "$TARBALL"); the publish job runs next."
       - uses: actions/upload-artifact@v4
         with:

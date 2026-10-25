@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// The starter template (or another template under templates/) and the
-// packages it is built on, end to end on workerd: builds @backgold/content
-// and @backgold/astro, packs them (and the workspace packages a template on
-// the kit also names: @backgold/template-kit and the vendored contract,
-// @backgold/contract; and @backgold/cli for the starter, which names it),
-// installs them with npm into a copy of the template
+// The starter template (or another template under templates/, or a project
+// ejected from one) and the packages it is built on, end to end on workerd:
+// builds @backgold/content, @backgold/astro and @backgold/template-kit, packs
+// them (the kit for a template on it, and @backgold/cli for a template that
+// names it), installs them with npm into a copy of the template
 // outside the repository (its package.json pointed at the tarballs, so
 // nothing resolves through the pnpm workspace or from npm's copies of the
 // packages), checks that npm put workerd's binary for this platform there
@@ -20,6 +19,12 @@
 //                                         the same checks on templates/party
 //                                         (default: templates/astro-starter);
 //                                         combines with every flag below
+//   node scripts/starter-e2e.mjs --template ../party-site
+//                                         a path (one with a /): the same
+//                                         checks on that directory, a project
+//                                         `backgold eject` made, as the
+//                                         template its template.json names
+//                                         (its key)
 //   node scripts/starter-e2e.mjs --keep   leave it (and print where it is)
 //   node scripts/starter-e2e.mjs --serve  skip the checks: keep the fixture api
 //                                         and the configured site running until
@@ -78,12 +83,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const TEMPLATE_FLAG = process.argv.indexOf('--template')
-const TEMPLATE_NAME = TEMPLATE_FLAG === -1 ? 'astro-starter' : process.argv[TEMPLATE_FLAG + 1]
-if (!TEMPLATE_NAME || !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_NAME)) {
-  process.stderr.write('--template takes the name of a directory under templates/, for example --template party\n')
+const TEMPLATE_ARG = TEMPLATE_FLAG === -1 ? 'astro-starter' : process.argv[TEMPLATE_FLAG + 1]
+// A value with a slash is a directory (an ejected copy of a template); its
+// template.json's key picks the template's own checks.
+const TEMPLATE_PATH = TEMPLATE_ARG?.includes('/') ? resolve(TEMPLATE_ARG) : null
+if (!TEMPLATE_ARG || (!TEMPLATE_PATH && !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_ARG))) {
+  process.stderr.write('--template takes the name of a directory under templates/ (--template party) or a path to an ejected copy of one (--template ./party-site)\n')
   process.exit(2)
 }
-const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
+if (TEMPLATE_PATH && !existsSync(join(TEMPLATE_PATH, 'template.json'))) {
+  process.stderr.write(`--template ${TEMPLATE_ARG}: ${TEMPLATE_PATH} has no template.json, so it is not a copy of a template\n`)
+  process.exit(2)
+}
+const TEMPLATE = TEMPLATE_PATH ?? join(ROOT, 'templates', TEMPLATE_ARG)
+const TEMPLATE_NAME = TEMPLATE_PATH ? JSON.parse(readFileSync(join(TEMPLATE_PATH, 'template.json'), 'utf8')).key : TEMPLATE_ARG
 // The party template draws what its boards need from the Content API (live
 // counts, event types, news search, seats, the roster's levels); only it is
 // checked for those drawings.
@@ -209,8 +222,10 @@ function buildAndPack(packDir) {
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/astro-backgold'))
-  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
-  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'vendor/backgold-contract'))
+  if (ON_KIT) {
+    run('pnpm', ['--filter', '@backgold/template-kit', 'build'], ROOT)
+    run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
+  }
   // The public starter names @backgold/cli as a devDependency; a template that
   // does not is never made to build it.
   if (NAMES_CLI) {
@@ -226,8 +241,7 @@ function buildAndPack(packDir) {
   return {
     content: tarball(/^backgold-content-.*\.tgz$/),
     astro: tarball(/^backgold-astro-.*\.tgz$/),
-    kit: tarball(/^backgold-template-kit-.*\.tgz$/),
-    contract: tarball(/^backgold-contract-.*\.tgz$/),
+    kit: ON_KIT ? tarball(/^backgold-template-kit-.*\.tgz$/) : null,
     cli: NAMES_CLI ? tarball(/^backgold-cli-.*\.tgz$/) : null,
   }
 }
@@ -245,10 +259,9 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // A template on the kit names the kit and the contract (which its
-  // src/template.ts parses template.json with); neither is on npm.
-  if (pkg.dependencies['@backgold/template-kit']) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
-  if (pkg.dependencies['@backgold/contract']) pkg.dependencies['@backgold/contract'] = `file:${tarballs.contract}`
+  // A template on the kit names it (and parses its template.json with the
+  // kit's bundled copy of the manifest schema).
+  if (tarballs.kit) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
   if (tarballs.cli) pkg.devDependencies['@backgold/cli'] = `file:${tarballs.cli}`
   // @backgold/astro depends on @backgold/content, and the kit names both as
   // peers; the overrides make every one of them the tarball, never the copy
@@ -5905,7 +5918,7 @@ async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
   const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE || ACADEMY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
-  log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
+  log(`Working directory: ${work} (${TEMPLATE_PATH ?? `templates/${TEMPLATE_NAME}`})`)
   const packDir = join(work, 'pack')
   const siteDir = join(work, 'site')
   mkdirSync(packDir)

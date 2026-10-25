@@ -1,4 +1,10 @@
 {
   "key": "fixture",
-  "name": "Fixture"
+  "name": "Fixture",
+  "version": 1,
+  "variants": { "Hero": ["centered"] },
+  "areas": { "unknown": "after_page" },
+  "entryLayouts": {},
+  "chrome": { "header": ["bar"], "footer": ["compact"], "takeoverBanner": false, "legalLine": true },
+  "starter": { "pages": [], "menus": { "primary": [], "footer": [] }, "sections": [] }
 }

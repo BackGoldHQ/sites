@@ -16,7 +16,7 @@
 // (`lesson.lock.reason`); nothing here decides who qualifies.
 
 import type { Section } from '@backgold/content'
-import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '@backgold/contract/content-api'
+import type { Areas, CourseLesson, CourseProgress, EntryLock, LessonResponse, Visitor } from '#contract/content-api'
 import { renderMarkdown, safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
 import { playerOf } from '../../../lib/entries'
 import { countAndLength, inSentence, lessonSignInTitle, lockWordOf } from '../../../lib/academy'

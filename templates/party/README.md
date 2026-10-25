@@ -382,18 +382,19 @@ step by step; the steps are the same here.
 Requires Node 22.12 or later and pnpm (the version the repository root's
 `package.json` names in `packageManager`). The template is part of this repository's
 pnpm workspace and depends on `@backgold/astro`, `@backgold/content` and
-`@backgold/template-kit` as `workspace:^` (and on the vendored contract,
-`@backgold/contract`, as `workspace:*`), so it builds against the packages in
-`packages/`, not the copies on npm. From the repository root:
+`@backgold/template-kit` as `workspace:^`, so it builds against the packages
+in `packages/`, not the copies on npm. From the repository root:
 
 ```bash
 pnpm install
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
+pnpm --filter @backgold/template-kit build
 ```
 
 The template reads each package's built `dist/`, so build a package again
-after changing it; the kit has no build, and a change to it shows at once. Then, in `templates/party` (or from the root as
+after changing it; the kit's build is only its contract slice, and a change
+to the rest of it shows at once. Then, in `templates/party` (or from the root as
 `pnpm --filter backgold-template-party run <script>`):
 
 | Command | |
@@ -404,9 +405,9 @@ after changing it; the kit has no build, and a change to it shows at once. Then,
 | `pnpm run check` | Type-check the project with `astro check`. |
 | `pnpm run types` | Write `src/backgold.d.ts` from the site's content types. |
 
-The kit and the contract are private to this workspace and not on npm, so a
-copy of the template outside this repository installs only with their
-tarballs (`pnpm pack` in each), as the end-to-end check below installs it.
+Outside this repository the template installs from npm: `npx @backgold/cli
+eject --from party` writes a copy of it pinned to the published packages
+(the CLI's README has the steps).
 
 In this repository, `node scripts/starter-e2e.mjs --template party` builds
 this template against the packages' current source and checks it end to end

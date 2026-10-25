@@ -5,7 +5,7 @@
 // template's first, exactly as a section's variant falls back; a `/site`
 // answer with no `chrome` at all (an older BackGold) reads as the template's
 // firsts and no words.
-import type { SiteTemplateManifest } from '@backgold/contract/site-templates'
+import type { SiteTemplateManifest } from '#contract/site-templates'
 import { relFor, safeHref } from '@backgold/astro/server'
 
 export type HeaderLayout = SiteTemplateManifest['chrome']['header'][number]

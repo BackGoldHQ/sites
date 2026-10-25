@@ -204,6 +204,7 @@ repository root:
 pnpm install
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
+pnpm --filter @backgold/template-kit build
 pnpm --filter backgold-template-candidate run check
 ```
 

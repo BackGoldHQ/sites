@@ -17,6 +17,44 @@ npm install --save-dev @backgold/cli
 
 Requires Node 22.12 or later.
 
+## Eject a template
+
+A site on one of BackGold's templates (party, candidate, petition-drive,
+academy, nonprofit and the rest) can become a site whose code you own:
+
+```bash
+npx @backgold/cli eject --from party ./party-site
+```
+
+`eject` writes the template's source into the directory (default
+`./<key>-site`; it must be new or empty) from the newest
+[`@backgold/templates`](https://www.npmjs.com/package/@backgold/templates) on
+npm, whose `templates.json` lists the keys it accepts. The project keeps the
+template's `template.json`, so the composer in BackGold keeps offering the
+layouts it draws, and every page keeps its layout. Its `@backgold/*`
+dependencies are pinned to the exact versions that publish was built with.
+`wrangler.jsonc` loses only the `env` block of BackGold's own template
+deploys. `backgold.json`'s `ejected` and a section at the top of the README
+record the template, the `@backgold/templates` and `@backgold/template-kit`
+versions, the commit and the date. BackGold's live `template-<key>` Worker
+may be ahead of the last publish until the next one.
+
+With a deploy token in `BACKGOLD_DEPLOY_TOKEN` (or `--token`), `eject` then
+runs `link` in the new directory; without one it prints `link` among the next
+steps. Then:
+
+```bash
+cd party-site
+npm install
+npx backgold deploy --promote
+```
+
+The first deploy that goes live makes the site a custom site: from then on,
+changes to BackGold's templates no longer reach it. `--source <path>` reads the
+templates from a `@backgold/templates` tarball (`.tgz`) or unpacked directory
+instead of npm. `eject` exits 2 for a directory that is not empty or a key the
+publish does not list.
+
 ## Link the site
 
 You need a **deploy token** for the site: in BackGold, open **Sites**, choose
@@ -65,7 +103,9 @@ What a deploy carries:
   out, as are your bindings (KV, D1, R2 and the rest): BackGold gives the
   site its own connection to your organization's content, with no keys, and
   no KV, so `@backgold/astro` caches content in the Worker's memory;
-- `template.json`, when the project has one.
+- `template.json`, when the project has one. It must be a template manifest
+  BackGold can read (its `audience` is not checked); one that is not stops
+  the deploy with exit 2 and each problem the manifest schema names.
 
 Limits: the Worker's modules 10 MiB, unzipped and zipped, in at most 500
 modules; 20,000 static files, 25 MiB each and 250 MiB in all, each path at

@@ -18,27 +18,34 @@ from the public starter, or a site on the party template), read
 | `packages/content-client` | `@backgold/content` (npm): the Content API client and the `backgold-content` command. |
 | `packages/astro-backgold` | `@backgold/astro` (npm): the Astro plumbing and components. Depends on `@backgold/content`. |
 | `packages/cli` | `@backgold/cli` (npm): the `backgold` command, which deploys a built site to BackGold hosting. |
-| `packages/template-kit` | `@backgold/template-kit` (private, consumed as source, never published): the sections and their layouts, the entry layouts, the chrome, `lib/`, the styles, the Site layout and the routes every template draws. A template is its `template.json`, `src/template.ts`, `src/styles/template.css` and its own layouts. |
+| `packages/template-kit` | `@backgold/template-kit` (npm, shipped as source): the sections and their layouts, the entry layouts, the chrome, `lib/`, the styles, the Site layout and the routes every template draws, and the contract slice it and the templates import (`@backgold/template-kit/contract/*`, bundled into its `dist/` by `build`). A template is its `template.json`, `src/template.ts`, `src/styles/template.css` and its own layouts. |
+| `packages/templates` | `@backgold/templates` (npm): every template's source and `templates.json` (the keys, the exact `@backgold/*` versions, the commit), written by its `build`; what `backgold eject` scaffolds a project from. Its `lint` checks every template installs outside the workspace. |
 | `templates/astro-starter` | The public starter (`backgold-starter`), mirrored to github.com/BackGoldHQ/backgold-starter by `scripts/sync-starter.sh`. Its README is public text for outside users. |
 | `templates/party` | The party template (`backgold-template-party`, on the kit), deployed as the Worker `template-party`. Its `template.json` is its manifest. |
 | `vendor/backgold-contract` | The Content API contract snapshot (`@backgold/contract`, private, never published). Generated; never edited. |
 | `scripts/` | `starter-e2e.mjs` (the end-to-end check), `check-manifests.mjs` (every `template.json` against the contract's schema), `contract-pull.mjs` (refreshes `vendor/`), `sync-starter.sh` (the starter mirror, run only by CI). |
 | `docs/` | `CLIENT-SITES.md`, the build-out guide; `HEADLESS-CONTENT-API.md`, the Content API developer guide the `@backgold/content` README links to. |
 
-Both templates depend on the packages as `workspace:^`. Keep it that way:
-the party deploy builds from this workspace, and the starter sync writes
-published `^<version>` ranges into the public copy.
+The templates depend on the packages as `workspace:^`. Keep it that way:
+the template deploys build from this workspace, the starter sync writes
+published `^<version>` ranges into the public copy, and `backgold eject`
+writes the exact versions `@backgold/templates`' `templates.json` names. A
+template names only the four published packages (`@backgold/astro`,
+`@backgold/content`, `@backgold/template-kit`, `@backgold/cli`), never
+`@backgold/contract`: it imports the contract through the kit.
 
 ## Lint and test before every push
 
-Build `@backgold/content`, then `@backgold/astro`, first: the astro package
-reads the client's `dist/`, and the templates read both.
+Build `@backgold/content`, then `@backgold/astro`, then
+`@backgold/template-kit`, first: the astro package reads the client's
+`dist/`, the kit reads both, and the templates read all three.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
-pnpm -r lint     # tsc --noEmit in the two packages; astro check + tsc in the kit
+pnpm --filter @backgold/template-kit build
+pnpm -r lint     # tsc --noEmit in the packages; astro check + tsc in the kit; the templates' install check
 pnpm -r test     # node:test (content), vitest (astro)
 ```
 
@@ -50,7 +57,8 @@ template you touched, also run its type check and the end-to-end check:
 | `packages/content-client` | `pnpm --filter @backgold/content lint`, `build`, `test` |
 | `packages/cli` | `pnpm --filter @backgold/cli lint`, `build`, `test`, `node scripts/cli-e2e.mjs` |
 | `packages/astro-backgold` | `pnpm --filter @backgold/astro lint`, `build`, `test` |
-| `packages/template-kit` | `pnpm --filter @backgold/template-kit lint` (astro check + tsc), then every template's e2e below: the kit draws them all |
+| `packages/template-kit` | `pnpm --filter @backgold/template-kit build`, `lint` (astro check + tsc), then every template's e2e below: the kit draws them all |
+| `packages/templates`, or a template's `package.json` or imports | `pnpm --filter @backgold/templates lint`; for an ejected copy, `node scripts/starter-e2e.mjs --template <its path>` |
 | `templates/astro-starter` | `pnpm --filter backgold-starter exec astro check`, `node scripts/starter-e2e.mjs` |
 | `templates/party` | `pnpm --filter backgold-template-party exec astro check`, `node scripts/starter-e2e.mjs --template party` |
 | `templates/*/template.json` | `node scripts/check-manifests.mjs` |
@@ -95,8 +103,9 @@ Chrome or Chromium at `CHROME_BIN`.
   `scripts/sync-starter.sh`). Never push to the public repository by hand.
 - **npm publishing is a release step**, run by a person on `main`
   (`publish.yml`, Actions → Publish to npm, one package per run: `content`,
-  `astro` or `cli`) after a
-  version bump merges. Never run `npm publish`, and never commit an `.npmrc`.
+  `astro`, `cli`, `template-kit` or `templates`) after a
+  version bump merges. `templates` goes last, from the same commit as the
+  versions its `templates.json` pins; its pack refuses a pin npm lacks. Never run `npm publish`, and never commit an `.npmrc`.
   Nothing in this repository waits on a publish.
 - **Never commit a key or a secret.** `bg_site_sk_…` and `whsec_…` values go
   in a git-ignored `.dev.vars`; this repository is public.
