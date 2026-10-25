@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro build && wrangler dev",
     "deploy": "astro build && wrangler deploy",
+    "deploy:backgold": "backgold deploy --promote",
     "types": "backgold-content types --out src/backgold.d.ts",
     "check": "astro check",
     "test": "vitest run"
@@ -18,13 +19,13 @@
     "@astrojs/cloudflare": "^14.3.3",
     "@backgold/astro": "workspace:^",
     "@backgold/content": "workspace:^",
-    "@backgold/contract": "workspace:*",
     "@backgold/template-kit": "workspace:^",
     "astro": "^7.3.5",
     "minisearch": "^7.2.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@backgold/cli": "workspace:^",
     "typescript": "^6.0.3",
     "wrangler": "^4.149.0",
     "vitest": "~4.1.1"

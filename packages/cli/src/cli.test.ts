@@ -1,9 +1,12 @@
 import { after, before, beforeEach, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { strFromU8, unzipSync } from 'fflate'
+import { join, relative, resolve, sep } from 'node:path'
+import { gzipSync, strFromU8, unzipSync } from 'fflate'
 import { USAGE, run } from './cli.js'
 import { collectSite } from './collect.js'
 import type { Io } from './io.js'
@@ -254,7 +257,7 @@ test('deploy: builds, uploads the missing assets, the bundle, finishes and waits
     kit_version: '0.9.1',
     git_ref: 'feature/hero',
     git_sha: 'abcdef1234567890abcdef1234567890abcdef12',
-    template_manifest: { key: 'fixture', name: 'Fixture' },
+    template_manifest: JSON.parse(await readFile(join(FIXTURE_SITE, 'template.json'), 'utf8')),
     assets_config: site.assetsConfig,
     vars: { SITE_URL: 'https://fixture.example.org' },
   })
@@ -484,4 +487,164 @@ test('secrets: set from stdin (one trailing newline dropped), from a hidden prom
   const empty = await cli(['secrets', 'set', 'EMPTY'], { readStdin: async () => '\n' })
   assert.equal(empty.code, 2)
   assert.match(empty.stderr, /no value for EMPTY/)
+})
+
+// ── template.json ───────────────────────────────────────────────────────────
+
+test('deploy: a template.json the manifest schema refuses exits 2 with the schema\'s problems and sends nothing', async () => {
+  const manifest = JSON.parse(await readFile(join(project, 'template.json'), 'utf8')) as Record<string, unknown>
+  await writeFile(join(project, 'template.json'), JSON.stringify({ ...manifest, version: 0, chrome: { header: [], footer: ['compact'], takeoverBanner: false, legalLine: true } }))
+  const r = await cli(['deploy', '--no-build'])
+  assert.equal(r.code, 2, r.stderr)
+  assert.match(r.stderr, /template\.json is not a template manifest BackGold can read:\nversion: .*\nchrome\.header: /)
+  assert.deepEqual(fx.createBodies, [])
+})
+
+test('deploy: a template.json with any audience, or none, is uploaded as written', async () => {
+  const manifest = JSON.parse(await readFile(join(project, 'template.json'), 'utf8')) as Record<string, unknown>
+  await writeFile(join(project, 'template.json'), JSON.stringify({ ...manifest, audience: 'hidden' }))
+  const r = await cli(['deploy', '--no-build'])
+  assert.equal(r.code, 0, r.stderr)
+  assert.deepEqual((fx.createBodies[0] as { manifest: { template_manifest: unknown } }).manifest.template_manifest, { ...manifest, audience: 'hidden' })
+})
+
+// ── eject ───────────────────────────────────────────────────────────────────
+
+/** packages/cli/test-fixtures/templates: an unpacked @backgold/templates 9.9.9 with the templates `fixture` and `other`. */
+const FIXTURE_TEMPLATES = resolve(FIXTURE_SITE, '../templates')
+
+/** Every file under `dir`, by `/`-separated path. */
+async function tree(dir: string): Promise<string[]> {
+  const out: string[] = []
+  const walk = async (d: string) => {
+    for (const e of await readdir(d, { withFileTypes: true })) {
+      if (e.isDirectory()) await walk(join(d, e.name))
+      else out.push(relative(dir, join(d, e.name)).split(sep).join('/'))
+    }
+  }
+  await walk(dir)
+  return out.sort()
+}
+
+/** The fixture templates as npm packs them: a gzipped ustar with every path under package/. */
+async function fixtureTarball(): Promise<Uint8Array> {
+  const blocks: Uint8Array[] = []
+  for (const path of await tree(FIXTURE_TEMPLATES)) {
+    const body = await readFile(join(FIXTURE_TEMPLATES, path))
+    const header = new Uint8Array(512)
+    const put = (text: string, at: number) => header.set(new TextEncoder().encode(text), at)
+    put(`package/${path}`, 0)
+    put('0000644\0', 100)
+    put(`${body.length.toString(8).padStart(11, '0')}\0`, 124)
+    put('00000000000\0', 136)
+    put('        ', 148)
+    put('0', 156)
+    put('ustar\x0000', 257)
+    const sum = header.reduce((n, b) => n + b, 0)
+    put(`${sum.toString(8).padStart(6, '0')}\0 `, 148)
+    blocks.push(header, body, new Uint8Array((512 - (body.length % 512)) % 512))
+  }
+  blocks.push(new Uint8Array(1024))
+  const tar = new Uint8Array(blocks.reduce((n, b) => n + b.length, 0))
+  let at = 0
+  for (const b of blocks) {
+    tar.set(b, at)
+    at += b.length
+  }
+  return gzipSync(tar)
+}
+
+test('eject: writes the template from --source into a new directory, pinned and stamped, and prints link as a next step without a token', async () => {
+  const r = await cli(['eject', '--from', 'fixture', 'my-site', '--source', FIXTURE_TEMPLATES], { env: {}, now: () => Date.parse('2026-10-25T12:00:00Z') })
+  assert.equal(r.code, 0, r.stderr)
+  const dir = join(project, 'my-site')
+  assert.deepEqual(await tree(dir), ['.gitignore', 'README.md', 'backgold.json', 'package.json', 'src/template.ts', 'template.json', 'wrangler.jsonc'])
+  assert.equal(await readFile(join(dir, 'template.json'), 'utf8'), await readFile(join(FIXTURE_TEMPLATES, 'templates/fixture/template.json'), 'utf8'), 'template.json travels as published')
+  assert.equal(await readFile(join(dir, '.gitignore'), 'utf8'), 'dist/\nnode_modules/\n')
+  const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'))
+  assert.equal(pkg.name, 'my-site')
+  assert.deepEqual(pkg.dependencies, { '@backgold/astro': '0.8.2', '@backgold/content': '0.8.0', '@backgold/template-kit': '0.7.1', astro: '^7.3.5' })
+  assert.deepEqual(pkg.devDependencies, { '@backgold/cli': '0.3.0', wrangler: '^4.149.0' })
+  const wrangler = await readFile(join(dir, 'wrangler.jsonc'), 'utf8')
+  assert.match(wrangler, /^\/\/ The Worker that serves the site/)
+  const config = JSON.parse(wrangler.replace(/^\/\/.*\n/gm, ''))
+  assert.deepEqual(config, {
+    name: 'backgold-fixture',
+    main: '@astrojs/cloudflare/entrypoints/server',
+    compatibility_date: '2026-10-04',
+    vars: { SITE_URL: '', BACKGOLD_API_ORIGIN: 'https://api.backgold.com' },
+    kv_namespaces: [{ binding: 'BACKGOLD_CACHE' }],
+  })
+  assert.deepEqual(JSON.parse(await readFile(join(dir, 'backgold.json'), 'utf8')), {
+    site: '',
+    api: 'https://api.backgold.com',
+    ejected: { from: 'fixture', templates: '9.9.9', kit: '0.7.1', commit: '0123456789abcdef0123456789abcdef01234567', date: '2026-10-25' },
+  })
+  const readme = await readFile(join(dir, 'README.md'), 'utf8')
+  assert.match(readme, /^# The fixture template\n\n## Ejected from the fixture template\n\nThis site was ejected from the fixture template on 2026-10-25; pushes to BackGold's templates no longer change it\.\n/)
+  assert.match(readme, /@backgold\/templates 9\.9\.9 \(@backgold\/template-kit 0\.7\.1, commit 0123456789ab\)/)
+  assert.match(readme, /live `template-fixture` Worker may be ahead of that publish until the next one/)
+  assert.match(readme, /\nHow to run it\.\n$/)
+  assert.equal(r.stdout, 'Next:\n  cd my-site\n  npm install\n  npx backgold link\n  npx backgold deploy --promote\n')
+  assert.match(r.stderr, /Wrote the fixture template into my-site \(7 files; @backgold\/templates 9\.9\.9, @backgold\/template-kit 0\.7\.1\)/)
+  assert.deepEqual(fx.log, [], 'no token, no request')
+})
+
+test('eject: with a token it runs link in the new directory, keeping the stamp; the default directory is ./<key>-site', async () => {
+  const r = await cli(['eject', '--from', 'fixture', '--source', FIXTURE_TEMPLATES, '--api', fx.origin])
+  assert.equal(r.code, 0, r.stderr)
+  const file = JSON.parse(await readFile(join(project, 'fixture-site', 'backgold.json'), 'utf8'))
+  assert.equal(file.site, SITE)
+  assert.equal(file.api, fx.origin)
+  assert.equal(file.ejected.from, 'fixture')
+  assert.deepEqual(fx.log, ['GET /api/site-deploys/me'])
+  assert.equal(r.stdout, 'Linked to Fixture Party (fixture.example.org)\nNext:\n  cd fixture-site\n  npm install\n  npx backgold deploy --promote\n')
+})
+
+test('eject: refuses a non-empty directory, an unknown key and a missing --from with exit 2', async () => {
+  await mkdir(join(project, 'taken'))
+  await writeFile(join(project, 'taken', 'notes.txt'), 'mine')
+  const taken = await cli(['eject', '--from', 'fixture', 'taken', '--source', FIXTURE_TEMPLATES], { env: {} })
+  assert.equal(taken.code, 2)
+  assert.match(taken.stderr, /taken is not empty; eject writes only into a new or empty directory/)
+  assert.deepEqual(await readdir(join(project, 'taken')), ['notes.txt'])
+  const unknown = await cli(['eject', '--from', 'party', '--source', FIXTURE_TEMPLATES], { env: {} })
+  assert.equal(unknown.code, 2)
+  assert.match(unknown.stderr, /there is no party template in @backgold\/templates 9\.9\.9; it has fixture, other/)
+  const missing = await cli(['eject', 'somewhere'], { env: {} })
+  assert.equal(missing.code, 2)
+  assert.match(missing.stderr, /eject needs --from <key>/)
+})
+
+test('eject: fetches the newest @backgold/templates from the registry and checks its integrity', async () => {
+  const tarball = await fixtureTarball()
+  let integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`
+  const paths: string[] = []
+  const registry = createServer((req, res) => {
+    paths.push(req.url ?? '')
+    const origin = `http://127.0.0.1:${(registry.address() as AddressInfo).port}`
+    if (req.url === '/@backgold%2ftemplates/latest') {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ name: '@backgold/templates', version: '9.9.9', dist: { tarball: `${origin}/t.tgz`, integrity } }))
+    }
+    if (req.url === '/t.tgz') return res.end(tarball)
+    res.writeHead(404).end()
+  })
+  await new Promise<void>((done) => registry.listen(0, '127.0.0.1', done))
+  try {
+    const env = { npm_config_registry: `http://127.0.0.1:${(registry.address() as AddressInfo).port}/` }
+    const r = await cli(['eject', '--from', 'fixture', 'from-npm'], { env })
+    assert.equal(r.code, 0, r.stderr)
+    assert.deepEqual(paths, ['/@backgold%2ftemplates/latest', '/t.tgz'])
+    assert.deepEqual(await tree(join(project, 'from-npm')), ['.gitignore', 'README.md', 'backgold.json', 'package.json', 'src/template.ts', 'template.json', 'wrangler.jsonc'])
+    assert.equal(JSON.parse(await readFile(join(project, 'from-npm', 'backgold.json'), 'utf8')).ejected.templates, '9.9.9')
+
+    integrity = `sha512-${createHash('sha512').update('something else').digest('base64')}`
+    const bad = await cli(['eject', '--from', 'fixture', 'tampered'], { env })
+    assert.equal(bad.code, 1)
+    assert.match(bad.stderr, /the @backgold\/templates@9\.9\.9 tarball does not match the registry's integrity/)
+    assert.equal(await readdir(join(project, 'tampered')).catch(() => null), null, 'nothing is written')
+  } finally {
+    await new Promise((done) => registry.close(done))
+  }
 })

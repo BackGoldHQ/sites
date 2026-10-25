@@ -31,7 +31,7 @@ importers:
         version: 24.19.2
       astro:
         specifier: ^7.3.5
-        version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+        version: 7.3.8(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)
       fast-xml-parser:
         specifier: ^5.11.2
         version: 5.11.2
@@ -43,7 +43,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ~4.1.1
-        version: 4.1.11(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 4.1.11(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1))
 
   packages/cli:
     dependencies:
@@ -51,6 +51,9 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3
     devDependencies:
+      '@backgold/contract':
+        specifier: workspace:*
+        version: link:../../vendor/backgold-contract
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -81,6 +84,9 @@ importers:
       maplibre-gl:
         specifier: ^6.14.0
         version: 6.14.0
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@astrojs/check':
         specifier: ^0.9.10
@@ -97,9 +103,14 @@ importers:
       astro:
         specifier: ^7.3.5
         version: 7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.30)(typescript@6.0.3)(yaml@2.9.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  packages/templates: {}
 
   templates/academy:
     dependencies:
@@ -112,9 +123,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -125,6 +133,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -171,9 +182,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -184,6 +192,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -202,9 +213,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -215,6 +223,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -233,9 +244,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -246,6 +254,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -264,9 +275,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -277,6 +285,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -295,9 +306,6 @@ importers:
       '@backgold/content':
         specifier: workspace:^
         version: link:../../packages/content-client
-      '@backgold/contract':
-        specifier: workspace:*
-        version: link:../../vendor/backgold-contract
       '@backgold/template-kit':
         specifier: workspace:^
         version: link:../../packages/template-kit
@@ -311,6 +319,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@backgold/cli':
+        specifier: workspace:^
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -3811,6 +3822,14 @@ snapshots:
       chai: 6.3.0
       tinyrainbow: 3.2.0
 
+  '@vitest/mocker@4.1.11(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1))':
+    dependencies:
+      '@vitest/spy': 4.1.11
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)
+
   '@vitest/mocker@4.1.11(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1))':
     dependencies:
       '@vitest/spy': 4.1.11
@@ -3932,6 +3951,95 @@ snapshots:
   aria-query@5.3.2: {}
 
   assertion-error@2.0.1: {}
+
+  astro@7.3.8(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1):
+    dependencies:
+      '@astrojs/compiler-rs': 0.5.2
+      '@astrojs/internal-helpers': 0.12.0
+      '@astrojs/markdown-satteri': 0.4.3
+      '@astrojs/telemetry': 3.3.3
+      '@capsizecss/unpack': 4.0.1
+      '@clack/prompts': 1.8.1
+      '@oslojs/encoding': 1.1.0
+      am-i-vibing: 0.5.0
+      aria-query: 5.3.2
+      axobject-query: 4.1.0
+      ci-info: 4.4.0
+      clsx: 2.1.1
+      common-ancestor-path: 2.0.0
+      cookie: 2.0.1
+      devalue: 5.9.4
+      diff: 9.0.0
+      dset: 3.1.4
+      es-module-lexer: 3.0.3
+      find-proc: 0.2.0
+      flattie: 1.1.1
+      fontace: 0.4.1
+      get-tsconfig: 5.0.0-beta.6
+      github-slugger: 2.0.0
+      html-escaper: 3.0.3
+      http-cache-semantics: 4.3.0
+      jsonc-parser: 3.3.1
+      magic-string: 1.4.3
+      magicast: 0.5.5
+      mrmime: 2.0.1
+      neotraverse: 1.0.1
+      obug: 3.0.0
+      p-limit: 7.3.3
+      p-queue: 9.3.5
+      package-manager-detector: 1.9.0
+      piccolore: 0.1.3
+      picomatch: 4.0.7
+      rolldown: 1.2.14
+      shiki: 4.5.0
+      smol-toml: 1.9.1
+      svgo: 4.1.0
+      tinyclip: 1.0.3
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      ultrahtml: 1.7.0
+      unifont: 0.7.5
+      unstorage: 1.17.6
+      verkit: 0.5.0
+      vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)
+      vitefu: 1.1.3(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1))
+      xxhash-wasm: 1.1.0
+      yargs-parser: 22.0.0
+      zod: 4.6.7
+    optionalDependencies:
+      sharp: 0.35.5(@types/node@24.19.2)
+    transitivePeerDependencies:
+      - '@azure/app-configuration'
+      - '@azure/cosmos'
+      - '@azure/data-tables'
+      - '@azure/identity'
+      - '@azure/keyvault-secrets'
+      - '@azure/storage-blob'
+      - '@capacitor/preferences'
+      - '@deno/kv'
+      - '@netlify/blobs'
+      - '@planetscale/database'
+      - '@types/node'
+      - '@upstash/redis'
+      - '@vercel/blob'
+      - '@vercel/functions'
+      - '@vercel/kv'
+      - '@vitejs/devtools'
+      - aws4fetch
+      - db0
+      - esbuild
+      - idb-keyval
+      - ioredis
+      - jiti
+      - less
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - uploadthing
+      - yaml
 
   astro@7.3.8(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1):
     dependencies:
@@ -4971,6 +5079,34 @@ snapshots:
       - tsx
       - yaml
 
+  tsup@8.5.1(postcss@8.5.30)(typescript@6.0.3)(yaml@2.9.1):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.27.7)
+      cac: 6.7.14
+      chokidar: 4.0.3
+      consola: 3.4.2
+      debug: 4.4.3
+      esbuild: 0.27.7
+      fix-dts-default-cjs-exports: 1.0.1
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(postcss@8.5.30)(yaml@2.9.1)
+      resolve-from: 5.0.0
+      rollup: 4.64.6
+      source-map: 0.7.6
+      sucrase: 3.35.1
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.17
+      tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.5.30
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
   typesafe-path@0.2.2: {}
 
   typescript-auto-import-cache@0.3.6:
@@ -5061,6 +5197,19 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
+  vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.30
+      rolldown: 1.2.14
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 24.19.2
+      esbuild: 0.27.7
+      fsevents: 2.3.3
+      yaml: 2.9.1
+
   vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
@@ -5074,9 +5223,40 @@ snapshots:
       fsevents: 2.3.3
       yaml: 2.9.1
 
+  vitefu@1.1.3(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)):
+    optionalDependencies:
+      vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)
+
   vitefu@1.1.3(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)):
     optionalDependencies:
       vite: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)
+
+  vitest@4.1.11(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)):
+    dependencies:
+      '@vitest/expect': 4.1.11
+      '@vitest/mocker': 4.1.11(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1))
+      '@vitest/pretty-format': 4.1.11
+      '@vitest/runner': 4.1.11
+      '@vitest/snapshot': 4.1.11
+      '@vitest/spy': 4.1.11
+      '@vitest/utils': 4.1.11
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 0.30.21
+      obug: 2.2.1
+      pathe: 2.0.3
+      picomatch: 4.0.7
+      std-env: 4.3.0
+      tinybench: 2.9.0
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.2.0
+      vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(yaml@2.9.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 24.19.2
+    transitivePeerDependencies:
+      - msw
 
   vitest@4.1.11(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(yaml@2.9.1)):
     dependencies:

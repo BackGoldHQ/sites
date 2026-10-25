@@ -152,6 +152,10 @@ limits, and a CI example.
 `npm run deploy` still deploys to your own Cloudflare account; use one or the
 other for a site, not both.
 
+A site on one of BackGold's templates starts from that template's own source
+instead of this starter: `npx @backgold/cli eject --from <template key>` writes
+it into a new directory and links it (the package's README has the steps).
+
 ## Settings
 
 | Name | Kind | Needed | What it is |

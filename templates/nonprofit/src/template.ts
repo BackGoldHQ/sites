@@ -20,7 +20,7 @@
 // italic and its Informal and Bounce axes, which template.css sets per use)
 // and Nunito for text (400, 600, 700, 800 and the italic 400).
 
-import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+import { siteTemplateManifestSchema } from '@backgold/template-kit/contract/site-templates'
 import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import { frameColors } from './lib/frame-colors.ts'

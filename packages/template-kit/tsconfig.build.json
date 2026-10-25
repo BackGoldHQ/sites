@@ -1,0 +1,22 @@
+{
+  // The contract slice's build (tsup.config.ts): only src/contract, with the
+  // vendored contract's declarations named by path for the declaration bundler.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    // tsup's declaration build sets baseUrl, which TypeScript 6 deprecates.
+    "ignoreDeprecations": "6.0",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@backgold/contract/content-api": ["../../vendor/backgold-contract/content-api.d.ts"],
+      "@backgold/contract/site-templates": ["../../vendor/backgold-contract/site-templates.d.ts"]
+    }
+  },
+  "include": ["src/contract/*.ts"]
+}

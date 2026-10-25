@@ -3,7 +3,7 @@
 // its own two faces. A template's src/template.ts exports one, built from the
 // kit's registries with its own layouts added:
 //
-//   import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+//   import { siteTemplateManifestSchema } from '@backgold/template-kit/contract/site-templates'
 //   import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 //   import manifest from '../template.json'
 //   import HeroPortrait from './components/sections/Hero/portrait.astro'
@@ -21,7 +21,7 @@
 // as `virtual:backgold-template` and pass it to the Site layout and to
 // everything that draws a section or an entry.
 
-import type { SiteTemplateManifest } from '@backgold/contract/site-templates'
+import type { SiteTemplateManifest } from '#contract/site-templates'
 import type { AstroComponentFactory } from 'astro/runtime/server/index.js'
 import { entries } from './components/entries'
 import { sections } from './components/sections'

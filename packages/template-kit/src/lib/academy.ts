@@ -4,7 +4,7 @@
 // phrases, who can watch, and the doors' links. Every number comes from the
 // Content API; none is typed by the organization.
 
-import type { ContentAccessLevel, CourseProgress, EntryLock, LessonResponse } from '@backgold/contract/content-api'
+import type { ContentAccessLevel, CourseProgress, EntryLock, LessonResponse } from '#contract/content-api'
 
 /** The built-in content type the courses are. */
 export const COURSE_TYPE_KEY = 'course'

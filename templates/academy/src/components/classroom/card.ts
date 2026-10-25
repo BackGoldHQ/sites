@@ -9,7 +9,7 @@
 // visitor cannot open: the lock disc, the lock's word as the quiet chip,
 // the count, and for a members course "Join <org> to start this course.".
 
-import type { CourseProgress } from '@backgold/contract/content-api'
+import type { CourseProgress } from '@backgold/template-kit/contract/content-api'
 import type { CourseCard } from '@backgold/template-kit/components/sections/Classroom/classroom.ts'
 import { accessChipOf, lessonsOf, lockWordOf, stateOf } from '@backgold/template-kit/lib/academy'
 

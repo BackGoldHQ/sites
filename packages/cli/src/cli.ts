@@ -1,7 +1,8 @@
 // `backgold` — the command bin/backgold.js runs: deploys a site built on
 // @backgold/astro to BackGold hosting and manages its deploys, previews and
-// secrets through the api's deploy routes. Each step prints a short line to
-// stderr; the answer goes to stdout (`--json`: the api's `data`). No message
+// secrets through the api's deploy routes; `eject` writes a project of the
+// customer's own from a BackGold template (eject.ts). Each step prints a
+// short line to stderr; the answer goes to stdout (`--json`: the api's `data`). No message
 // it prints ever carries the deploy token.
 //
 // Exit codes: 0 done, 1 failed, 2 usage (or a limit the build is over),
@@ -12,7 +13,9 @@ import { HttpError, apiCall, checkOrigin, redact, request } from './api.js'
 import { parseArgs, type FlagKind, type Parsed } from './args.js'
 import { bucketForm, bundleZip, completionJwt } from './bundle.js'
 import { CollectError, collectSite, type Asset } from './collect.js'
+import { EjectError, TEMPLATES_PACKAGE, ejectTemplate, localSource, registrySource } from './eject.js'
 import { nodeIo, type Io } from './io.js'
+import { templateManifestProblems } from './manifest.js'
 import { LIMITS, RESERVED_SECRET_MESSAGE, SECRET_NAME, formatBytes, reservedVarName } from './limits.js'
 import { DEFAULT_API, PROJECT_FILE, kitVersion, readProjectFile, writeProjectFile, type ProjectFile } from './project.js'
 
@@ -29,6 +32,7 @@ export const USAGE = `Usage: backgold <command> [options]
 Deploys an Astro site built on @backgold/astro to BackGold hosting.
 
 Commands:
+  eject --from <key> [dir]  Make a project of your own from a BackGold template
   link                      Check a deploy token and write backgold.json for its site
   whoami                    Show the site and scopes the deploy token opens
   deploy                    Build, upload and deploy the site
@@ -51,6 +55,8 @@ interface Command {
   positionals: number
   /** Needs `site` from backgold.json. */
   site: boolean
+  /** Runs without a deploy token (and uses one when it is given). */
+  tokenOptional?: boolean
   handler: (ctx: Ctx) => Promise<number>
 }
 
@@ -343,6 +349,8 @@ async function deploy(ctx: Ctx): Promise<number> {
     if (Buffer.byteLength(JSON.stringify(templateManifest), 'utf8') > LIMITS.TEMPLATE_MANIFEST_MAX_BYTES) {
       throw new Exit(`template.json is over BackGold hosting's ${formatBytes(LIMITS.TEMPLATE_MANIFEST_MAX_BYTES)} limit`, 2)
     }
+    const problems = templateManifestProblems(templateManifest)
+    if (problems) throw new Exit(`template.json is not a template manifest BackGold can read:\n${problems}`, 2)
   }
   const kit = await kitVersion(ctx.project)
   const manifest = {
@@ -427,7 +435,62 @@ async function deploy(ctx: Ctx): Promise<number> {
   }
 }
 
+async function eject(ctx: Ctx): Promise<number> {
+  const key = ctx.args.flags['--from']
+  if (typeof key !== 'string') throw new Exit('eject needs --from <key>, the template to start from', 2)
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(key)) throw new Exit(`--from ${key} is not a template key`, 2)
+  const given = ctx.args.positionals[0] ?? `${key}-site`
+  const dir = resolve(ctx.io.cwd, given)
+  const sourceFlag = ctx.args.flags['--source']
+  // The new project's api is --api's, never a backgold.json the command was run beside.
+  const api = typeof ctx.args.flags['--api'] === 'string' ? ctx.api : DEFAULT_API
+  let ejected
+  try {
+    step(ctx, typeof sourceFlag === 'string' ? `Reading the templates from ${sourceFlag}` : `Fetching the newest ${TEMPLATES_PACKAGE}`)
+    const source = typeof sourceFlag === 'string' ? await localSource(resolve(ctx.io.cwd, sourceFlag)) : await registrySource(ctx.io.fetch, ctx.io.env)
+    ejected = await ejectTemplate(source, key, dir, api, new Date(ctx.io.now()).toISOString().slice(0, 10))
+  } catch (err) {
+    if (err instanceof EjectError) throw new Exit(err.message, err.code)
+    throw err
+  }
+  const { stamp } = ejected
+  step(ctx, `Wrote the ${key} template into ${given} (${ejected.files} files; ${TEMPLATES_PACKAGE} ${stamp.templates}, @backgold/template-kit ${stamp.kit})`)
+  const next = [`cd ${given}`, 'npm install']
+  if (ctx.token) {
+    const code = await link({ ...ctx, api, project: ejected.dir, file: await readProjectFile(ejected.dir) })
+    if (code !== 0) return code
+  } else {
+    next.push('npx backgold link')
+  }
+  next.push('npx backgold deploy --promote')
+  if (!ctx.json) ctx.io.stdout(`Next:\n${next.map((line) => `  ${line}`).join('\n')}\n`)
+  else if (!ctx.token) ctx.io.stdout(`${JSON.stringify({ dir: ejected.dir, ejected: stamp }, null, 2)}\n`)
+  return 0
+}
+
 const COMMANDS: Record<string, Command> = {
+  eject: {
+    usage: `Usage: backgold eject --from <key> [dir] [--source <path>]
+
+Makes a project of your own from one of BackGold's templates, in [dir]
+(default: ./<key>-site), which must be new or empty: the template's source
+from the newest ${TEMPLATES_PACKAGE} on npm, its template.json kept, its
+@backgold packages pinned to the versions that publish was built with,
+wrangler.jsonc without BackGold's template deploys, and backgold.json, whose
+"ejected" records where it came from. With a deploy token it then runs link
+in [dir]; without one it prints link as a next step. Its first
+deploy --promote makes the site a custom site.
+
+  --from <key>      The template: party, academy, ... (the keys the publish lists)
+  --source <path>   Read the templates from a ${TEMPLATES_PACKAGE} tarball (.tgz) or
+                    unpacked directory instead of npm
+`,
+    flags: { '--from': 'value', '--source': 'value' },
+    positionals: 1,
+    site: false,
+    tokenOptional: true,
+    handler: eject,
+  },
   link: {
     usage: `Usage: backgold link [--token <token>] [--api <origin>] [--project <dir>]
 
@@ -579,8 +642,8 @@ async function dispatch(argv: readonly string[], io: Io): Promise<number> {
       })
     ).trim()
   }
-  if (!token) throw new Exit('no deploy token: set BACKGOLD_DEPLOY_TOKEN to a token from the site\'s Developer page in BackGold', 3)
-  if (!TOKEN_PATTERN.test(token)) throw new Exit('the token must be a deploy token: bg_deploy_ followed by letters and digits', 3)
+  if (!token && !command.tokenOptional) throw new Exit('no deploy token: set BACKGOLD_DEPLOY_TOKEN to a token from the site\'s Developer page in BackGold', 3)
+  if (token && !TOKEN_PATTERN.test(token)) throw new Exit('the token must be a deploy token: bg_deploy_ followed by letters and digits', 3)
 
   return command.handler({ io, args, project, api, token, site, file, json: args.flags['--json'] === true })
 }

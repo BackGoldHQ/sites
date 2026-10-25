@@ -24,18 +24,24 @@
 #                             + template-kit + starter + every template
 #   packages/cli            → cli              (@backgold/cli on npm: lint, build,
 #                                                test, then scripts/cli-e2e.mjs)
-#                             + starter        (the e2e packs it: the starter
-#                                                names it)
-#   packages/template-kit   → template-kit     (@backgold/template-kit, private:
+#                             + starter + every template (the e2e packs it:
+#                                                each of them names it)
+#   packages/template-kit   → template-kit     (@backgold/template-kit on npm:
 #                                                what every template draws)
 #                             + every template
+#   packages/templates      → manifests        (@backgold/templates, the
+#                                                templates' source eject reads:
+#                                                every template installs
+#                                                outside the workspace)
 #   templates/astro-starter → starter          (the e2e, scripts/starter-e2e.mjs)
 #                             + cli            (scripts/cli-e2e.mjs reads its build)
 #   templates/<name>        → template <name>  (astro check, the template's own
 #                                                tests, then the same e2e with
 #                                                --template <name>)
-#   templates/*/template.json → manifests      (each manifest against the
-#                                                vendored contract's schema)
+#   templates/*/template.json, package.json, src/**
+#                           → manifests        (each manifest against the
+#                                                vendored contract's schema;
+#                                                packages/templates' check)
 #   scripts/starter-e2e.mjs → starter + every template
 #   scripts/check-manifests.mjs → manifests
 #   vendor/backgold-contract → manifests, and through the root list every
@@ -142,6 +148,7 @@ jobs:
               - *root
               - 'packages/content-client/**'
               - 'packages/astro-backgold/**'
+              - 'packages/cli/**'
               - 'packages/template-kit/**'
               - 'scripts/starter-e2e.mjs'
             party:
@@ -165,6 +172,9 @@ jobs:
             manifests:
               - *root
               - 'templates/*/template.json'
+              - 'templates/*/package.json'
+              - 'templates/*/src/**'
+              - 'packages/templates/**'
               - 'scripts/check-manifests.mjs'
       - name: Templates to check
         id: templates
@@ -271,12 +281,13 @@ jobs:
       - run: pnpm --filter @backgold/cli test
       - run: node scripts/cli-e2e.mjs
 
-  # template-kit = @backgold/template-kit (packages/template-kit), the private
-  # workspace package every template's sections, entries, chrome, Site layout
-  # and routes come from, consumed as source. Its lint is `astro check` over
-  # its .astro files with its own astro.config.mjs, then `tsc` over its .ts
-  # and the integration; both read @backgold/astro's and @backgold/content's
-  # built types, so those build first.
+  # template-kit = @backgold/template-kit (packages/template-kit), the public
+  # npm package every template's sections, entries, chrome, Site layout and
+  # routes come from, shipped as source, with the contract slice it and the
+  # templates import built to its dist. Its lint is `astro check` over its
+  # .astro files with its own astro.config.mjs, then `tsc` over its .ts and
+  # the integration; both read @backgold/astro's and @backgold/content's built
+  # types and the kit's own contract slice, so those build first.
   template-kit:
     name: Template kit
     needs: changes
@@ -291,6 +302,7 @@ jobs:
       - *install
       - run: pnpm --filter @backgold/content build
       - run: pnpm --filter @backgold/astro build
+      - run: pnpm --filter @backgold/template-kit build
       - run: pnpm --filter @backgold/template-kit lint
 
   # starter = the public starter (templates/astro-starter) end to end:
@@ -376,6 +388,7 @@ jobs:
       - *install
       - run: pnpm --filter @backgold/content build
       - run: pnpm --filter @backgold/astro build
+      - run: pnpm --filter @backgold/template-kit build
       - run: pnpm --filter "backgold-template-$TEMPLATE" exec astro check
       - run: pnpm --filter "backgold-template-$TEMPLATE" test --if-present
       - run: node scripts/starter-e2e.mjs --template "$TEMPLATE" --lighthouse
@@ -384,8 +397,11 @@ jobs:
   # siteTemplateManifestSchema from the vendored contract slice, and each
   # manifest's key against its directory (scripts/check-manifests.mjs). The
   # platform keeps a copy of each manifest and checks it with the same schema,
-  # so a manifest that passes here is one the platform can take. The install
-  # is for the slice's own import of zod.
+  # so a manifest that passes here is one the platform can take. Then
+  # @backgold/templates' check: every template installs outside the workspace
+  # (its @backgold dependencies are the published four, and no import leaves
+  # its directory), which is what `backgold eject` copies. The install is for
+  # the slice's own import of zod.
   manifests:
     name: Manifests
     needs: changes
@@ -399,6 +415,7 @@ jobs:
       - *pnpm-cache
       - *install
       - run: node scripts/check-manifests.mjs
+      - run: pnpm --filter @backgold/templates lint
 
   # The single required status check for `main`. Every job above is
   # path-filtered, so on any given PR most of them are SKIPPED, and a skipped

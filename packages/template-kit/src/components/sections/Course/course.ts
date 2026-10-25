@@ -10,7 +10,7 @@
 // them), else as the public reader. The section's own data carries no course.
 
 import type { Section } from '@backgold/content'
-import type { ContentAccessLevel, CourseDetail, CourseLesson, CourseProgress, EntryLock, Visitor } from '@backgold/contract/content-api'
+import type { ContentAccessLevel, CourseDetail, CourseLesson, CourseProgress, EntryLock, Visitor } from '#contract/content-api'
 import { safeHref, safeSrc, signInHref, signOutHref } from '@backgold/astro/server'
 import { COURSE_TYPE_KEY, finishedOn, lockWordOf, whoCanWatch } from '../../../lib/academy'
 import { SLUG, academyReads, type AcademyReads } from '../../../lib/visitor'
