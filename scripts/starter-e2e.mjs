@@ -2433,6 +2433,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   let res = await get(origin, '/')
   let html = await res.text()
   check(res.status === 200, `GET / is 200 (got ${res.status})`)
+  check(
+    res.headers.get('x-backgold-page') === fixture.data.page('home', '').page.id && !res.headers.has('x-backgold-entry'),
+    `home names the page it drew in X-BackGold-Page (${res.headers.get('x-backgold-page')})`,
+  )
   check(tags(html, 'h1').length === 1, `home has exactly one <h1> (found ${tags(html, 'h1').length})`)
   check(html.includes(disclaimer), 'home shows the disclaimer')
   check(/<link rel="canonical" href="[^"]+"/.test(html), 'home has a canonical link')
@@ -2475,6 +2479,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/blog/levy-explained')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>The levy, explained<\/h1>/.test(html), 'an entry page renders its title as the <h1>')
+  check(
+    res.headers.get('x-backgold-entry') === fixture.data.entry.post['levy-explained'].id && !res.headers.has('x-backgold-page'),
+    `an entry page names the entry it drew in X-BackGold-Entry (${res.headers.get('x-backgold-entry')})`,
+  )
   check(/<time datetime="2026-09-29T12:00:00.000Z">/.test(html), 'the entry date is a <time datetime>')
   check(html.includes(disclaimer), 'the entry page shows the disclaimer')
   check(!html.includes('data-bg-donate'), 'an entry page (no BackGold page) shows no Donate header button')
@@ -2513,6 +2521,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/endorsements')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>Endorsements<\/h1>/.test(html) && html.includes('Maple Hollow Neighbors Council'), 'a custom type index lists its entries')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'a list names no page and no entry it drew')
   const pagerOn = (page) => /<nav class="pager"[^>]*>([\s\S]*?)<\/nav>/.exec(page)?.[1] ?? ''
   const olderHref = /<a href="([^"]*)"[^>]*>Older<\/a>/.exec(pagerOn(html))?.[1]?.replace(/&amp;/g, '&') ?? ''
   check(
@@ -2587,6 +2596,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/no-such-page')
   html = await res.text()
   check(res.status === 404 && html.includes('Page not found') && html.includes(disclaimer), 'an unknown path is a 404 with the disclaimer')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'the 404 names no page and no entry')
   check(tags(html, 'h1').length === 1, 'the 404 has one <h1>')
 
   res = await get(origin, '/preview')
@@ -2597,6 +2607,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   html = await res.text()
   check(res.status === 200 && html.includes('Draft · not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
   check(/<meta name="robots" content="noindex"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'the preview is noindex and no-store')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'the preview names no page and no entry: a draft is not a view')
   check(html.includes('<meta name="backgold-preview" content="sections">'), 'the preview carries <meta name="backgold-preview" content="sections">')
   const draft = previewDraft(fixture.data.page('home', ''))
   const draftIds = [...draft.sections, ...Object.values(draft.areas).flat().flatMap((item) => item.sections)].map((s) => s.id)
@@ -2646,6 +2657,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/')
   html = await res.text()
   check(res.status === 200 && fixture.count() === before, `a second read of home makes zero Content API requests (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`)
+  check(
+    res.headers.get('x-backgold-page') === fixture.data.page('home', '').page.id,
+    `home's stored copy still names its page (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')}, X-BackGold-Page: ${res.headers.get('x-backgold-page')})`,
+  )
 
   if (ON_KIT) {
     // Home draws a Donate frame, so it names the donate query names its frame
@@ -3659,6 +3674,10 @@ async function checkPartyBoards(origin, fixture) {
   )
   check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
   check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
+  check(
+    res.headers.get('x-backgold-page') === 'lp_events' && !res.headers.has('x-backgold-entry'),
+    `/events/volunteer names the events page it drew in X-BackGold-Page (${res.headers.get('x-backgold-page')})`,
+  )
   check(
     fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer' && new URLSearchParams(s.search).get('limit') === '50'),
     "it read GET /events?type=volunteer with limit=50, the agenda's cap of 80 held to the api's maximum (the api answers 400 BAD_LIMIT above 50)",

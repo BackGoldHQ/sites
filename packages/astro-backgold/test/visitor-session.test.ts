@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runMiddleware, type MiddlewareDeps } from '../src/middleware.js'
 import { backgoldFor, type BackgoldLocals } from '../src/server/context.js'
 import type { BackgoldEnv } from '../src/server/env.js'
+import { withDrawnRecord, type DrawnRecord } from '../src/server/drawn.js'
 import { resolveRoute } from '../src/server/resolve.js'
 import { handleProgress, handleSignIn, handleSignOut, handleVisitorReturn, portalOrigin, safeReturnPath, signInHref, type VisitorRouteDeps } from '../src/server/sign-in.js'
 import { API_ORIGIN, PK, SITE_ID, fakeApi, fakeCache, fakeContext, fakeKv, type FakeApi } from './fixtures.js'
@@ -404,7 +405,7 @@ describe('safeReturnPath', () => {
 
 describe('resolveRoute: the courses', () => {
   const course: ContentTypeSummary = { key: 'course', singular_label: 'Course', plural_label: 'Courses', routable: true, url_base: 'courses', built_in: true, index: null, fields: [] }
-  const lessonAnswer = { lesson: { ...(CONTENT_API_EXAMPLES.EntryResponse as { entry: object }).entry, slug: 'one', type: 'video' }, course: { slug: 'foundations' }, previous: null, next: null, areas: { sidebar: [] } }
+  const lessonAnswer = { lesson: { ...(CONTENT_API_EXAMPLES.EntryResponse as { entry: object }).entry, id: 'ci_lesson_one', slug: 'one', type: 'video' }, course: { slug: 'foundations' }, previous: null, next: null, areas: { sidebar: [] } }
 
   function coursesApi() {
     const calls: Array<{ key: string; visitor: string | null }> = []
@@ -441,6 +442,16 @@ describe('resolveRoute: the courses', () => {
       lesson: lessonAnswer,
       areas: { sidebar: [] },
     })
+  })
+
+  it('records a lesson the request drew as the entry it is, and a course by its entry', async () => {
+    const { client } = coursesApi()
+    const lesson: DrawnRecord = { pathname: '/courses/foundations/one' }
+    await withDrawnRecord(lesson, () => resolveRoute(client, '/courses/foundations/one'))
+    expect(lesson.drawn).toEqual({ entry: lessonAnswer.lesson.id })
+    const own: DrawnRecord = { pathname: '/courses/foundations' }
+    await withDrawnRecord(own, () => resolveRoute(client, '/courses/foundations'))
+    expect(own.drawn).toEqual({ entry: (CONTENT_API_EXAMPLES.EntryResponse as { entry: { id: string } }).entry.id })
   })
 
   it('falls through to a term, then not_found, when the course has no such lesson', async () => {
