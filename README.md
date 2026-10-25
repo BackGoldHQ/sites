@@ -4,7 +4,7 @@ The public side of BackGold's websites: the two npm packages a site on
 BackGold's headless Content API is built on, the starter anyone can deploy,
 and the party template BackGold runs for state parties. The BackGold
 platform itself (the api, the app and the Content API) lives in
-gitlab.com/backgold/backgold (private).
+github.com/BackGoldHQ/backgold (private).
 
 ## Start here
 
@@ -23,7 +23,7 @@ gitlab.com/backgold/backgold (private).
 | `packages/astro-backgold` | [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro) on npm: the plumbing for an Astro site on Cloudflare Workers (routing, the edge cache keyed by content version, the webhook, preview, redirects, the SEO routes and the components). It reads content with `@backgold/content`. |
 | `packages/cli` | [`@backgold/cli`](https://www.npmjs.com/package/@backgold/cli) on npm: the `backgold` command that deploys a site built on `@backgold/astro` to BackGold hosting (link, deploy, promote, rollback, previews, secrets). |
 | `packages/template-kit` | `@backgold/template-kit`, private to this workspace: what every BackGold template draws the same way (the section, entry and chrome components, the Site layout, `lib`, the stylesheets) and an Astro integration that serves its routes with a template's config. Consumed as source; no build. A template is its manifest, its `src/template.ts`, its `src/styles/template.css` and any layouts of its own. |
-| `templates/astro-starter` | The public starter. `scripts/sync-starter.sh` mirrors it to [gitlab.com/backgold/backgold-starter](https://gitlab.com/backgold/backgold-starter), the repository Cloudflare's Deploy button clones. |
+| `templates/astro-starter` | The public starter. `scripts/sync-starter.sh` mirrors it to [github.com/BackGoldHQ/backgold-starter](https://github.com/BackGoldHQ/backgold-starter), the repository Cloudflare's Deploy button clones. |
 | `templates/party` | The party template, drawn by the template kit, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
 | `templates/candidate`, `templates/petition-drive` | The candidate and petition-drive templates, drawn by the template kit and deployed like the party: Workers `template-candidate` and `template-petition-drive`, with the CI variables `CANDIDATE_STAGING_KV_ID`, `CANDIDATE_PRODUCTION_KV_ID`, `PETITION_DRIVE_STAGING_KV_ID` and `PETITION_DRIVE_PRODUCTION_KV_ID`. |
 
@@ -89,37 +89,39 @@ snapshot came from.
 
 The platform keeps a copy of each template's `template.json` (for the party
 template, `packages/shared/site-templates/party.template.json`). A change to
-a manifest here needs that copy refreshed in a platform MR; the platform's
+a manifest here needs that copy refreshed in a platform PR; the platform's
 `templates-drift` CI job shows yellow until it is. The party template's
 README has the steps.
 
 ## CI, deploys and releases
 
-`.gitlab-ci.yml` runs only on open merge requests that are marked ready (a
-draft runs nothing), and each check job runs only when the paths it covers
-changed. Marking an MR ready does not start a pipeline:
-`glab mr update <iid> --ready && glab ci run --mr -b <branch>`.
+GitHub Actions, in `.github/workflows/` (`.gitlab-ci.yml` is the retired
+GitLab pipeline; nothing runs it). `ci.yml` runs on open pull requests that
+are marked ready (a draft runs nothing; `gh pr ready <n>` starts the run), and
+each check job runs only when the paths it covers changed; `gate`
+(`CI Passed`) is the one required check.
 
-- **Each template deploys on push to `main`.** The party, candidate and
-  petition-drive templates share one deploy shape: `deploy-<template>-staging`
-  runs by itself when a push changed that template, a package, the vendored
-  contract, the lockfile or the CI file, building everything from this
-  workspace; it never waits on npm. `deploy-<template>-production` is a manual
-  job on every `main` pipeline. All six exist only once `CLOUDFLARE_API_TOKEN`
-  is set on the project, and each reads its own KV namespace id from
-  `PARTY_`, `CANDIDATE_` or `PETITION_DRIVE_` plus `STAGING_KV_ID` or
-  `PRODUCTION_KV_ID`. Each template's README covers the one-time setup.
+- **Each template deploys on push to `main`** (`deploy-staging.yml`). The six
+  templates share one deploy shape (`scripts/deploy-template.sh`): a template
+  deploys when a push changed it, a package, the vendored contract, the
+  lockfile or the workflow file, building everything from this workspace; it
+  never waits on npm. Production is `release.yml` (Actions → Release → Run
+  workflow, on `main`): every template, one job each. Both stop before
+  deploying unless `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set
+  as repository secrets, and each template reads its own KV namespace id from
+  `<TEMPLATE>_STAGING_KV_ID` or `<TEMPLATE>_PRODUCTION_KV_ID`. Each template's
+  README covers the one-time setup.
 - **Releasing a package to npm** is for outside users (the public starter and
-  their own sites). Bump `version` in the package's `package.json` in an MR,
-  merge it, then play `pack-content`, `pack-astro` or `pack-cli` on that merge's `main`
-  pipeline; its publish job follows by itself. Publish `@backgold/content`
-  first when `@backgold/astro` needs its new version.
-- **The public starter** syncs by itself when a push to `main` changed
-  `templates/astro-starter`, a package's `package.json` or
+  their own sites). Bump `version` in the package's `package.json` in a PR,
+  merge it, then run `publish.yml` (Actions → Publish to npm) on `main` for
+  that package (`content`, `astro` or `cli`); its publish job follows the pack job by itself. Publish
+  `@backgold/content` first when `@backgold/astro` needs its new version.
+- **The public starter** syncs by itself (`sync-starter.yml`) when a push to
+  `main` changed `templates/astro-starter`, a package's `package.json` or
   `scripts/sync-starter.sh`. Its public `package.json` names `^<version>` of
-  each package as this repository has it, and the sync waits (a yellow job)
-  until npm has that version; after a release, play `sync-starter` on any
-  `main` pipeline.
+  each package as this repository has it, and the sync waits (a warning, not
+  a failure) until npm has that version; after a release, run the workflow by
+  hand.
 
 ## License
 

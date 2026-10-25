@@ -37,7 +37,8 @@
 // narrowed to that type (the Agenda's rows read from the Content API's `GET
 // /events?type=`, src/lib/events.ts; the Calendar reads its month by type
 // itself), when the path is not already a page or an entry; a type with no upcoming event, or
-// one that does not exist, is a 404. Any other `/events/<slug>` that is not
+// one that does not exist, is a 404; it answers `X-BackGold-Page` with the
+// events page's id (drawnInstead). Any other `/events/<slug>` that is not
 // a page or an entry is that event's own page (the template's `eventPage`,
 // else src/components/EventPage.astro), read from `GET /events/<slug>`; a slug the api has no event for is a 404. A
 // type's tab wins over an event slugged like the type while the type has an
@@ -64,7 +65,7 @@
 // items draw under the event, full width (board C6's "More chances").
 import type { Areas } from '@backgold/content'
 import { Area } from '@backgold/astro/components'
-import { READS_QUERY_HEADER, areaEntriesOf, atomFeed, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
+import { READS_QUERY_HEADER, areaEntriesOf, atomFeed, drawnInstead, jsonLdFor, pagerOf, relFor, resolveRoute, safeHref, safeSrc, type MenuPage, type Resolved } from '@backgold/astro/server'
 import Site from '../layouts/Site.astro'
 import EntryCard from '../components/EntryCard.astro'
 import EventPage from '../components/EventPage.astro'
@@ -115,7 +116,10 @@ if (calendarSlug !== null) {
 // The URL, not just the path: a list's `?cursor=` asks for a later page.
 let resolved: Resolved = await resolveRoute(client, Astro.url, visitorReads)
 const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
-if (typed) resolved = { kind: 'page', page: typed.page }
+if (typed) {
+  resolved = { kind: 'page', page: typed.page }
+  drawnInstead(resolved)
+}
 const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
 const rawQuery = Astro.url.searchParams.get('q')
 const calendar = Astro.url.searchParams.has(MONTH_PARAM) || (resolved.kind === 'page' && resolved.page.sections.some(drawsCalendar))

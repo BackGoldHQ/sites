@@ -7,7 +7,7 @@ account: you need no Cloudflare account, no KV namespace and no site keys.
 Every deploy is kept, so you can try one at a preview name before it goes
 live, make any kept deploy live again in a second, and roll back the same way.
 
-The [BackGold starter](https://gitlab.com/backgold/backgold-starter) already
+The [BackGold starter](https://github.com/BackGoldHQ/backgold-starter) already
 has it. To add it to another site on `@backgold/astro` and the Cloudflare
 adapter:
 

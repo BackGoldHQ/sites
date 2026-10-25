@@ -1,6 +1,6 @@
 {
   "name": "@backgold/astro",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Astro on Cloudflare Workers for a BackGold headless site: edge cache keyed by content version, webhook, preview, redirects, SEO routes and components",
   "license": "MIT",
   "type": "module",
@@ -58,7 +58,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/backgold/sites.git",
+    "url": "git+https://github.com/BackGoldHQ/sites.git",
     "directory": "packages/astro-backgold"
   },
   "keywords": [

@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest'
 
 // The published build stands alone: the private workspace package never
 // reaches dist/ or the shipped components, and the only bare imports are the
-// declared dependencies, the peer, the two runtime-only modules, and the
-// integration's Node file access (index.js only: it runs in `astro build`,
-// never in the Worker). Skips
+// declared dependencies, the peer, the two runtime-only modules,
+// `node:async_hooks` (the drawn-page record, imported only where the Worker
+// has it), and the integration's Node file access (index.js only: it runs in
+// `astro build`, never in the Worker). Skips
 // (and says so) until `pnpm build` has run; CI builds first.
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const DIST = `${ROOT}dist/`
@@ -20,6 +21,7 @@ const ALLOWED_BARE = [
   /^posthog-js$/,
   /^cloudflare:workers$/,
   /^virtual:backgold\/options$/,
+  /^node:async_hooks$/,
 ]
 
 async function files(dir: string): Promise<string[]> {

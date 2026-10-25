@@ -1,0 +1,437 @@
+# BackGold sites pull-request checks: the three public npm packages, the
+# template kit, the templates built on them (party, candidate,
+# petition-drive, academy, nonprofit, unlabeled), the public starter and
+# the template manifests.
+#
+# CUTOVER SWITCH: every job runs only when the repository variable
+# BACKGOLD_GITHUB_CI is 'on' (the `changes` job checks it and every other job
+# needs `changes`; `gate` checks it itself). Until it is set, a PR creates a
+# run whose jobs are all skipped.
+#
+# Each check job is path-filtered, so a PR that only touches the starter never
+# re-runs any template's e2e (the runners are shared with the platform's
+# suites). The `changes` job runs dorny/paths-filter once and every check job
+# gates on its outputs; each filter is that job's own paths, what it consumes
+# and the root list. The six templates share one job: `changes` lists the
+# templates whose paths changed, and `template` runs once per template in that
+# list (a matrix built from the list; empty list, no job).
+#
+# Fan-out map (a consumer resolves the packages through their built dist/, so
+# each job builds what it consumes first):
+#   packages/content-client → content-client   (@backgold/content on npm)
+#                             + astro-backgold + template-kit + starter + every template
+#   packages/astro-backgold → astro-backgold   (@backgold/astro on npm)
+#                             + template-kit + starter + every template
+#   packages/cli            → cli              (@backgold/cli on npm: lint, build,
+#                                                test, then scripts/cli-e2e.mjs)
+#                             + starter        (the e2e packs it: the starter
+#                                                names it)
+#   packages/template-kit   → template-kit     (@backgold/template-kit, private:
+#                                                what every template draws)
+#                             + every template
+#   templates/astro-starter → starter          (the e2e, scripts/starter-e2e.mjs)
+#                             + cli            (scripts/cli-e2e.mjs reads its build)
+#   templates/<name>        → template <name>  (astro check, the template's own
+#                                                tests, then the same e2e with
+#                                                --template <name>)
+#   templates/*/template.json → manifests      (each manifest against the
+#                                                vendored contract's schema)
+#   scripts/starter-e2e.mjs → starter + every template
+#   scripts/check-manifests.mjs → manifests
+#   vendor/backgold-contract → manifests, and through the root list every
+#                             check job (the Content API contract slice both
+#                             packages bundle and the e2e's fixture api serves)
+#   root config             → every check job (lockfile/workspace/vendor/this file)
+#
+# Draft PRs run nothing: `changes` (and so every job) and `gate` skip while
+# the PR is a draft, and marking it ready (`ready_for_review`) starts the run.
+#
+# Runners: the self-hosted fleet of the BackGoldHQ org, `[self-hosted,
+# docker]`: dockerized actions/runner containers with the Docker socket
+# mounted and `_work` bind-mounted at the same host path, so `container:` jobs
+# work (backgold/ci/github-runner/README.md). One arm64 Mac and one amd64
+# Linux box; images the jobs use must be multi-arch. GitHub retries nothing
+# by itself: a job that hung into its timeout is re-run by hand ("Re-run
+# failed jobs").
+#
+# Adding a package later: add its filter to `changes` (its own paths plus what
+# it consumes plus `*root`), copy a check job, and add it to `gate`'s needs.
+# Adding a template: add its filter to `changes` (copy `party`'s), its name to
+# the TEMPLATES list in the `changes` job's last step, and its deploy inputs
+# to deploy-staging.yml and release.yml.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# dorny/paths-filter reads the PR's changed files through the API.
+permissions:
+  contents: read
+  pull-requests: read
+
+# A newer push to the PR replaces the run in flight; checks are interruptible.
+# Every run: step is bash, not the sh -e GitHub uses in a container.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # Path detection. Every job below needs this one, so the cutover switch and
+  # the draft rule live here.
+  # =========================================================================
+  changes:
+    name: Detect changes
+    if: vars.BACKGOLD_GITHUB_CI == 'on' && github.event.pull_request.draft == false
+    runs-on: [self-hosted, docker]
+    timeout-minutes: 5
+    outputs:
+      content_client: ${{ steps.filter.outputs.content_client }}
+      astro_backgold: ${{ steps.filter.outputs.astro_backgold }}
+      cli: ${{ steps.filter.outputs.cli }}
+      template_kit: ${{ steps.filter.outputs.template_kit }}
+      starter: ${{ steps.filter.outputs.starter }}
+      manifests: ${{ steps.filter.outputs.manifests }}
+      # A JSON list of the templates whose paths changed, for the matrix.
+      templates: ${{ steps.templates.outputs.templates }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            root: &root
+              - '.github/workflows/ci.yml'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'vendor/**'
+            content_client:
+              - *root
+              - 'packages/content-client/**'
+            astro_backgold:
+              - *root
+              - 'packages/content-client/**'
+              - 'packages/astro-backgold/**'
+            cli:
+              - *root
+              - 'packages/cli/**'
+              - 'scripts/cli-e2e.mjs'
+              - 'templates/astro-starter/**'
+            template_kit:
+              - *root
+              - 'packages/content-client/**'
+              - 'packages/astro-backgold/**'
+              - 'packages/template-kit/**'
+            starter:
+              - *root
+              - 'packages/content-client/**'
+              - 'packages/astro-backgold/**'
+              - 'packages/cli/**'
+              - 'scripts/starter-e2e.mjs'
+              - 'templates/astro-starter/**'
+            # Each template: its own paths, the kit, the e2e script, both
+            # packages and the root list.
+            template: &template
+              - *root
+              - 'packages/content-client/**'
+              - 'packages/astro-backgold/**'
+              - 'packages/template-kit/**'
+              - 'scripts/starter-e2e.mjs'
+            party:
+              - *template
+              - 'templates/party/**'
+            candidate:
+              - *template
+              - 'templates/candidate/**'
+            petition_drive:
+              - *template
+              - 'templates/petition-drive/**'
+            academy:
+              - *template
+              - 'templates/academy/**'
+            nonprofit:
+              - *template
+              - 'templates/nonprofit/**'
+            unlabeled:
+              - *template
+              - 'templates/unlabeled/**'
+            manifests:
+              - *root
+              - 'templates/*/template.json'
+              - 'scripts/check-manifests.mjs'
+      - name: Templates to check
+        id: templates
+        env:
+          party: ${{ steps.filter.outputs.party }}
+          candidate: ${{ steps.filter.outputs.candidate }}
+          petition_drive: ${{ steps.filter.outputs.petition_drive }}
+          academy: ${{ steps.filter.outputs.academy }}
+          nonprofit: ${{ steps.filter.outputs.nonprofit }}
+          unlabeled: ${{ steps.filter.outputs.unlabeled }}
+        run: |
+          TEMPLATES="party candidate petition-drive academy nonprofit unlabeled"
+          list=""
+          for t in $TEMPLATES; do
+            key=${t//-/_}
+            if [ "${!key:-}" = "true" ]; then list="$list${list:+,}\"$t\""; fi
+          done
+          echo "templates=[$list]" >> "$GITHUB_OUTPUT"
+          echo "Templates to check: [$list]"
+
+  # =========================================================================
+  # CHECKS
+  # =========================================================================
+
+  # content-client = @backgold/content (packages/content-client), the public
+  # npm client for the headless Content API. Its response types come from the
+  # vendored contract slice and are bundled into its own declarations. `test`
+  # compiles to dist-test and runs node:test.
+  content-client:
+    name: Content client
+    needs: changes
+    if: needs.changes.outputs.content_client == 'true'
+    runs-on: [self-hosted, docker]
+    container: &node
+      image: node:24
+    timeout-minutes: 15
+    steps:
+      - &checkout
+        uses: actions/checkout@v4
+      # The container runs as root over a workspace the runner's user owns;
+      # without this every later git command stops at "dubious ownership".
+      - &trust
+        name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - &pnpm-cache
+        name: pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: .pnpm-store
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
+      - &install
+        name: Install
+        run: |
+          corepack enable
+          # Activates the exact pnpm from package.json's `packageManager` field.
+          corepack prepare --activate
+          pnpm config set store-dir .pnpm-store
+          pnpm install --frozen-lockfile
+      - run: pnpm --filter @backgold/content lint
+      - run: pnpm --filter @backgold/content build
+      - run: pnpm --filter @backgold/content test
+
+  # astro-backgold = @backgold/astro (packages/astro-backgold), the public npm
+  # package for an Astro site on Workers. It depends on @backgold/content
+  # through its built dist, so the client builds first; then its own lint
+  # (tsc), build and vitest.
+  astro-backgold:
+    name: Astro integration
+    needs: changes
+    if: needs.changes.outputs.astro_backgold == 'true'
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 15
+    steps:
+      - *checkout
+      - *trust
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/content build
+      - run: pnpm --filter @backgold/astro lint
+      - run: pnpm --filter @backgold/astro build
+      - run: pnpm --filter @backgold/astro test
+
+  # cli = @backgold/cli (packages/cli), the public npm package with the
+  # `backgold` command that deploys a site to BackGold hosting. `test` compiles
+  # to dist-test and runs node:test against an in-process fixture api; then
+  # scripts/cli-e2e.mjs builds the public starter once and reads that build as
+  # `backgold deploy` does (no network); it builds both packages first itself.
+  cli:
+    name: CLI
+    needs: changes
+    if: needs.changes.outputs.cli == 'true'
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 15
+    steps:
+      - *checkout
+      - *trust
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/cli lint
+      - run: pnpm --filter @backgold/cli build
+      - run: pnpm --filter @backgold/cli test
+      - run: node scripts/cli-e2e.mjs
+
+  # template-kit = @backgold/template-kit (packages/template-kit), the private
+  # workspace package every template's sections, entries, chrome, Site layout
+  # and routes come from, consumed as source. Its lint is `astro check` over
+  # its .astro files with its own astro.config.mjs, then `tsc` over its .ts
+  # and the integration; both read @backgold/astro's and @backgold/content's
+  # built types, so those build first.
+  template-kit:
+    name: Template kit
+    needs: changes
+    if: needs.changes.outputs.template_kit == 'true'
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 15
+    steps:
+      - *checkout
+      - *trust
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/content build
+      - run: pnpm --filter @backgold/astro build
+      - run: pnpm --filter @backgold/template-kit lint
+
+  # starter = the public starter (templates/astro-starter) end to end:
+  # scripts/starter-e2e.mjs packs both packages (and @backgold/cli, which the
+  # starter names), installs them with npm into a
+  # copy of the template outside the repository (so nothing resolves through
+  # the workspace, as on a user's machine), builds it, serves it on
+  # `wrangler dev` against a fixture api and asserts the pages, the SEO routes
+  # and the webhook, then (`--lighthouse`) scores home and an entry page with
+  # Lighthouse and fails below 95 on performance, accessibility or SEO, in the
+  # image's Chromium at CHROME_BIN. The packages are built here first so their
+  # dist exists to pack.
+  #
+  # The e2e jobs' image: Microsoft's Playwright image (Ubuntu 24.04, node 24,
+  # its Chromium under /ms-playwright), pinned to the multi-arch index digest
+  # so amd64 and arm64 runners pull the same build. wrangler dev runs workerd,
+  # which needs glibc; Ubuntu has it. The Chromium's directory carries its
+  # revision and its architecture (chrome-linux64 on amd64, chrome-linux-arm64
+  # on arm64), so the job looks the executable up instead of naming it, and
+  # stops with a sentence when the image has none.
+  #
+  # Runner architecture: the template copy's `npm install` takes workerd's
+  # platform binary (@cloudflare/workerd-linux-x64 or -arm64) as an optional
+  # dependency, and npm treats an optional dependency it fails to fetch as
+  # skippable: the install reports success and the build then stops with
+  # 'The package "@cloudflare/workerd-linux-arm64" could not be found'. On the
+  # arm64 Mac runner this is intermittent: a dropped download, not a missing
+  # platform. When it happens, re-run the job.
+  starter:
+    name: Starter e2e
+    needs: changes
+    if: needs.changes.outputs.starter == 'true'
+    runs-on: [self-hosted, docker]
+    container: &playwright
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+    timeout-minutes: 20
+    steps:
+      - *checkout
+      - *trust
+      - &chrome
+        name: Find the image's Chromium
+        run: |
+          CHROME_BIN=$(ls -d /ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | head -n 1)
+          if [ -z "$CHROME_BIN" ] || [ ! -x "$CHROME_BIN" ]; then
+            echo "FAIL: no Chromium under /ms-playwright/chromium-*/ in this image; the e2e's Lighthouse run and the template look checks need one at CHROME_BIN." >&2
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+          echo "CHROME_BIN=$CHROME_BIN"
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/content build
+      - run: pnpm --filter @backgold/astro build
+      - run: node scripts/starter-e2e.mjs --lighthouse
+
+  # template = the check every template runs, once per template whose paths
+  # changed (the matrix from `changes`): first `astro check` (the template's
+  # own `check` script) run in place from the workspace, where its @backgold
+  # dependencies resolve to the packages just built here; the template's own
+  # tests where it has them; then the same end-to-end checks as `starter`:
+  # scripts/starter-e2e.mjs with `--template <name>` copies templates/<name>
+  # in place of the starter and runs every check, Lighthouse and the
+  # template's look checks in Chromium included. Same image, timeout and
+  # runner note as `starter`.
+  template:
+    name: Template ${{ matrix.template }}
+    needs: changes
+    if: needs.changes.outputs.templates != '[]'
+    runs-on: [self-hosted, docker]
+    container: *playwright
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJSON(needs.changes.outputs.templates) }}
+    env:
+      TEMPLATE: ${{ matrix.template }}
+    steps:
+      - *checkout
+      - *trust
+      - *chrome
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/content build
+      - run: pnpm --filter @backgold/astro build
+      - run: pnpm --filter "backgold-template-$TEMPLATE" exec astro check
+      - run: pnpm --filter "backgold-template-$TEMPLATE" test --if-present
+      - run: node scripts/starter-e2e.mjs --template "$TEMPLATE" --lighthouse
+
+  # manifests = every templates/<dir>/template.json against
+  # siteTemplateManifestSchema from the vendored contract slice, and each
+  # manifest's key against its directory (scripts/check-manifests.mjs). The
+  # platform keeps a copy of each manifest and checks it with the same schema,
+  # so a manifest that passes here is one the platform can take. The install
+  # is for the slice's own import of zod.
+  manifests:
+    name: Manifests
+    needs: changes
+    if: needs.changes.outputs.manifests == 'true'
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 10
+    steps:
+      - *checkout
+      - *trust
+      - *pnpm-cache
+      - *install
+      - run: node scripts/check-manifests.mjs
+
+  # The single required status check for `main`. Every job above is
+  # path-filtered, so on any given PR most of them are SKIPPED, and a skipped
+  # job reports no status; requiring them directly would hang every PR that
+  # doesn't touch their paths. This job needs all of them, runs whatever they
+  # did, and fails only when one of them failed or was cancelled. Skipped is a
+  # pass.
+  gate:
+    name: CI Passed
+    needs:
+      - changes
+      - content-client
+      - astro-backgold
+      - cli
+      - template-kit
+      - starter
+      - template
+      - manifests
+    if: always() && vars.BACKGOLD_GITHUB_CI == 'on' && github.event.pull_request.draft == false
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 5
+    steps:
+      - name: Every job that ran passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node -e '
+            const needs = JSON.parse(process.env.NEEDS);
+            const bad = [];
+            for (const [name, job] of Object.entries(needs)) {
+              console.log(`${name}: ${job.result}`);
+              if (job.result === "failure" || job.result === "cancelled") bad.push(name);
+            }
+            if (bad.length) { console.error(`FAIL: ${bad.join(", ")}`); process.exit(1); }
+          '

@@ -1,0 +1,216 @@
+# NPM — BY HAND ONLY. Publishes one of the three public packages to the npm
+# registry: `package: content` for @backgold/content (packages/content-client),
+# `package: astro` for @backgold/astro (packages/astro-backgold), `package:
+# cli` for @backgold/cli (packages/cli). Run it from
+# Actions → Publish to npm → Run workflow, on main. With the starter sync they
+# are the only jobs that put source in a public place. Nothing in this
+# repository waits on a publish: the templates deploy from the workspace. A
+# release is for outside users, the public starter among them.
+#
+# CUTOVER SWITCH: every job runs only when the repository variable
+# BACKGOLD_GITHUB_CI is 'on'.
+#
+# Two jobs. `pack` does everything that runs repository or dependency code:
+# `pnpm install` (with dependency install scripts), builds what the package
+# links against, the package's lint, build and test, then `pnpm pack` (which
+# rewrites `workspace:` ranges to real ones). It refuses a version already on
+# npm, a packed manifest that still names a `workspace:` range, and one that
+# depends on an @backgold version npm does not have, so @backgold/astro never
+# ships pointing at an unpublished client. Its only output is the tarball, an
+# artifact kept for a day. It never sees the npm token; every read it makes
+# of npm is anonymous.
+#
+# `publish` holds the token and runs no repository or dependency code: no
+# checkout, no install, no cache, and only the pack job's artifact as input.
+# It checks the token is set, writes an npmrc into its own temp dir holding
+# the literal `${NPM_TOKEN}` reference (npm expands it when it sends a
+# request, so the token never reaches disk), runs `npm whoami`, re-checks the
+# version is not on npm, and runs `npm publish <tarball> --access public`. No
+# line prints the token and nothing runs under `set -x`. Never commit an
+# .npmrc.
+#
+# NPM_TOKEN is a repository secret holding a granular npm token with 2FA
+# bypass. The publish job declares the environment `npm`; moving the secret
+# to that environment (Settings → Environments → npm) limits it to this job.
+#
+# REVISIT BEFORE JANUARY 2027: npm retires token publishing in early 2027
+# (github.blog changelog, 2026-07-08). Its replacement, trusted publishing,
+# takes GitHub Actions' OIDC token (`id-token: write`), which this workflow
+# can carry once the package's trusted publisher is set on npmjs.com; the
+# token and the npmrc go then.
+#
+# To release: bump `version` in the package's package.json in a PR, merge,
+# then run this workflow on main for that package. Publish @backgold/content
+# first when @backgold/astro needs its new version, and @backgold/astro before
+# @backgold/cli when a CLI release leans on a new kit. A version already on npm
+# is refused up front, so re-running after a half-finished attempt stops with
+# a message instead of a registry error.
+
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        type: choice
+        options: [content, astro, cli]
+        required: true
+
+permissions:
+  contents: read
+
+# Every run: step is bash, not the sh -e GitHub uses in a container.
+defaults:
+  run:
+    shell: bash
+
+# A pack cancelled halfway leaves nothing to publish; one cancelled while its
+# publish job waits would strand a release. Never interrupt a release.
+concurrency:
+  group: npm-${{ inputs.package }}
+  cancel-in-progress: false
+
+env:
+  PUBLISH_PACKAGE: ${{ inputs.package == 'astro' && '@backgold/astro' || inputs.package == 'cli' && '@backgold/cli' || '@backgold/content' }}
+  PUBLISH_DIR: ${{ inputs.package == 'astro' && 'packages/astro-backgold' || inputs.package == 'cli' && 'packages/cli' || 'packages/content-client' }}
+  # What to build first: @backgold/astro depends on the client through its
+  # dist; the client bundles the contract slice, plain files; the CLI's one
+  # dependency, fflate, comes from npm.
+  PUBLISH_BUILD_FIRST: ${{ inputs.package == 'astro' && '@backgold/content' || '' }}
+
+jobs:
+  pack:
+    name: Pack ${{ inputs.package }}
+    if: vars.BACKGOLD_GITHUB_CI == 'on' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, docker]
+    container: &node
+      image: node:24
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # The container runs as root over a workspace the runner's user owns;
+      # without this every git command stops at "dubious ownership".
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: The version is not on npm yet
+        run: |
+          VERSION=$(node -p "require('./${PUBLISH_DIR}/package.json').version")
+          # `npm view` prints the version when it exists, prints nothing when the
+          # package exists without it, and exits non-zero when the package does not
+          # exist yet (the first publish).
+          PUBLISHED=$(npm view "${PUBLISH_PACKAGE}@${VERSION}" version 2>/dev/null || true)
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "FAIL: ${PUBLISH_PACKAGE}@${VERSION} is already on npm. Bump the version in ${PUBLISH_DIR}/package.json in a PR, then publish from main once it merges."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: .pnpm-store
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
+      - name: Install
+        run: |
+          corepack enable
+          # Activates the exact pnpm from package.json's `packageManager` field.
+          corepack prepare --activate
+          pnpm config set store-dir .pnpm-store
+          pnpm install --frozen-lockfile
+      - name: Lint, build and test
+        run: |
+          for dep in $PUBLISH_BUILD_FIRST; do pnpm --filter "$dep" build; done
+          pnpm --filter "$PUBLISH_PACKAGE" lint
+          pnpm --filter "$PUBLISH_PACKAGE" build
+          pnpm --filter "$PUBLISH_PACKAGE" test
+      - name: Pack and check the manifest
+        run: |
+          PACK_DIR="$GITHUB_WORKSPACE/npm-tarball"
+          rm -rf "$PACK_DIR"
+          mkdir -p "$PACK_DIR"
+          (cd "$PUBLISH_DIR" && pnpm pack --pack-destination "$PACK_DIR")
+          TARBALL=$(ls "$PACK_DIR"/*.tgz)
+          CHECK_DIR=$(mktemp -d)
+          tar -xzOf "$TARBALL" package/package.json > "$CHECK_DIR/manifest.json"
+          node -e '
+            const m = require(process.argv[1]);
+            const deps = { ...m.peerDependencies, ...m.optionalDependencies, ...m.dependencies };
+            for (const [name, range] of Object.entries(deps)) console.log(name + " " + range);
+          ' "$CHECK_DIR/manifest.json" > "$CHECK_DIR/deps.txt"
+          while read -r name range; do
+            case "$range" in
+              workspace:*)
+                echo "FAIL: the packed ${PUBLISH_PACKAGE} still depends on ${name}@${range}; pnpm pack should have rewritten it."
+                exit 1
+                ;;
+            esac
+            case "$name" in @backgold/*) ;; *) continue ;; esac
+            if [ -z "$(npm view "${name}@${range}" version 2>/dev/null || true)" ]; then
+              echo "FAIL: the packed ${PUBLISH_PACKAGE} depends on ${name}@${range}, which is not on npm. Publish ${name} first."
+              exit 1
+            fi
+            echo "${name}@${range} resolves on npm"
+          done < "$CHECK_DIR/deps.txt"
+          echo "Packed ${PUBLISH_PACKAGE}@${VERSION} as $(basename "$TARBALL"); the publish job runs next."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball
+          path: npm-tarball/*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish ${{ inputs.package }}
+    needs: pack
+    runs-on: [self-hosted, docker]
+    container: *node
+    environment: npm
+    timeout-minutes: 10
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      # No checkout: the pack job's tarball is the only input.
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-tarball
+          path: npm-tarball
+      - name: Publish
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "FAIL: NPM_TOKEN is empty. It is a repository secret (or one on the npm environment); check it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          NPM_CONFIG_USERCONFIG="$(mktemp -d)/npmrc"
+          export NPM_CONFIG_USERCONFIG
+          printf '%s\n' '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
+          npm --version
+          npm whoami
+          # ./ in front: npm reads a bare `dir/file.tgz` as a GitHub `owner/repo`
+          # shorthand and tries to clone it; a leading ./ makes it a file.
+          set -- ./npm-tarball/*.tgz
+          if [ "$#" != 1 ] || [ ! -f "$1" ]; then
+            echo "FAIL: expected exactly one tarball from the pack job in npm-tarball/."
+            exit 1
+          fi
+          TARBALL="$1"
+          ID=$(tar -xzOf "$TARBALL" package/package.json | node -e '
+            let s = "";
+            process.stdin.on("data", (d) => (s += d)).on("end", () => {
+              const m = JSON.parse(s);
+              process.stdout.write(m.name + " " + m.version);
+            });
+          ')
+          NAME=${ID% *}
+          VERSION=${ID#* }
+          if [ "$NAME" != "$PUBLISH_PACKAGE" ]; then
+            echo "FAIL: the tarball is ${NAME}, not ${PUBLISH_PACKAGE}."
+            exit 1
+          fi
+          PUBLISHED=$(npm view "${NAME}@${VERSION}" version 2>/dev/null || true)
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "FAIL: ${NAME}@${VERSION} is already on npm."
+            exit 1
+          fi
+          echo "Publishing ${NAME}@${VERSION} from $(basename "$TARBALL")"
+          npm publish "$TARBALL" --access public

@@ -233,6 +233,10 @@ const file = bg.setup === null ? await pageFile(bg.client, Astro.url.pathname) :
     margin-top: auto;
     padding-top: clamp(4rem, 2rem + 8vw, 10rem);
   }
+  /* While the video's Pause stands at the band's lower right, the words end a row above it, so the foot's buttons never run under it. */
+  :global(.u-cover:has(.u-cover-toggle:not([hidden]))) .u-cover-words {
+    padding-bottom: 3rem;
+  }
   .u-cover-stack {
     font-family: var(--font-display);
     font-weight: 500;
