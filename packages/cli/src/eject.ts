@@ -163,7 +163,11 @@ function stripJsonc(text: string): string {
   return out.replace(/,(\s*[}\]])/g, '$1')
 }
 
-/** The template's wrangler.jsonc for a project of its own: everything but `env`, which held BackGold's deploys of the template. */
+/**
+ * The template's wrangler.jsonc for a project of its own: everything but
+ * `env`, which held BackGold's deploys of the template, and the BACKGOLD_*
+ * `vars`, which BackGold hosting sets itself.
+ */
 function customerWrangler(text: string, key: string): string {
   let config: Record<string, unknown>
   try {
@@ -172,14 +176,21 @@ function customerWrangler(text: string, key: string): string {
     throw new EjectError(`the ${key} template's wrangler.jsonc does not parse`, 1)
   }
   delete config.env
+  const vars = config.vars
+  if (vars && typeof vars === 'object' && !Array.isArray(vars)) {
+    const kept = Object.fromEntries(Object.entries(vars).filter(([name]) => !name.startsWith('BACKGOLD_')))
+    if (Object.keys(kept).length) config.vars = kept
+    else delete config.vars
+  }
   const header = [
-    "// The Worker that serves the site on `wrangler dev` (npm run preview) and",
-    "// on Cloudflare (npm run deploy). `backgold deploy` (npm run",
-    "// deploy:backgold) uploads the build to BackGold hosting instead, reading",
-    "// the build's own copy of this file. `backgold eject` wrote it from the",
-    `// ${key} template's, without the \`env\` block of BackGold's template deploys.`,
-    '// Secrets are never kept here: `npx wrangler secret put <NAME>` for',
-    "// Cloudflare, `npx backgold secrets set <NAME>` for BackGold hosting.",
+    '// The Worker that serves the site on `npm run dev` and on BackGold hosting:',
+    "// `backgold deploy` (npm run deploy:backgold) uploads the build, reading the",
+    "// build's own copy of this file. `backgold eject` wrote it from the",
+    `// ${key} template's, without the \`env\` block of BackGold's template deploys`,
+    '// and without the BACKGOLD_* vars, which BackGold hosting sets itself. For',
+    '// `npm run dev`, put BACKGOLD_SITE_KEY (the publishable key from the site\'s',
+    '// Developer page) in .dev.vars, which is git-ignored. Secrets are never kept',
+    '// here: `npx backgold secrets set <NAME>`.',
   ].join('\n')
   return `${header}\n${JSON.stringify(config, null, 2)}\n`
 }
@@ -193,10 +204,23 @@ function packageName(dir: string, key: string): string {
   return name || `${key}-site`
 }
 
-/** package.json with its name and the exact @backgold/* versions of the publish. */
+/** A script that deploys to, or serves from, a Cloudflare account of the customer's own. */
+const SELF_HOSTING_SCRIPT = /\bwrangler\s+(deploy|dev)\b/
+
+/**
+ * package.json with its name and the exact @backgold/* versions of the
+ * publish, without the scripts that deploy to or serve from a Cloudflare
+ * account of the customer's own and the `cloudflare` block of the Deploy to
+ * Cloudflare button.
+ */
 function customerPackage(text: string, dir: string, key: string, index: TemplatesIndex): string {
   const pkg = JSON.parse(text) as Record<string, unknown>
   pkg.name = packageName(dir, key)
+  const scripts = pkg.scripts as Record<string, unknown> | undefined
+  if (scripts) {
+    for (const [name, command] of Object.entries(scripts)) if (typeof command === 'string' && SELF_HOSTING_SCRIPT.test(command)) delete scripts[name]
+  }
+  delete pkg.cloudflare
   for (const field of ['dependencies', 'devDependencies']) {
     const deps = pkg[field] as Record<string, string> | undefined
     if (!deps) continue
@@ -224,8 +248,9 @@ export interface Ejected {
 
 /**
  * Writes the template `key` of `source` into `dir`, which must be missing or
- * empty: its files as published, then package.json pinned, wrangler.jsonc
- * without BackGold's template deploys, backgold.json with `api` and the
+ * empty: its files as published, then package.json pinned and without the
+ * self-hosting scripts, wrangler.jsonc without BackGold's template deploys or
+ * the vars BackGold sets, backgold.json with `api` and the
  * `ejected` stamp (and no site: `link` writes it), _gitignore as .gitignore,
  * and the README's eject section.
  */
@@ -254,6 +279,11 @@ export async function ejectTemplate(source: TemplatesSource, key: string, dir: s
     `It was made from ${TEMPLATES_PACKAGE} ${source.version} (@backgold/template-kit ${kit}${index.commit ? `, commit ${index.commit.slice(0, 12)}` : ''}),`,
     `and BackGold's live \`template-${key}\` Worker may be ahead of that publish until the next one.`,
     "`backgold.json`'s `ejected` records the same.",
+    '',
+    'It deploys to BackGold hosting with `npm run deploy:backgold`. The template\'s `npm run deploy` and',
+    "`npm run preview` (a Cloudflare account of your own) are left out, and so are the `BACKGOLD_*` vars",
+    'in `wrangler.jsonc`, which BackGold hosting sets itself: for `npm run dev`, put `BACKGOLD_SITE_KEY`',
+    "(the publishable key from the site's Developer page) in `.dev.vars`.",
     '',
   ].join('\n')
 

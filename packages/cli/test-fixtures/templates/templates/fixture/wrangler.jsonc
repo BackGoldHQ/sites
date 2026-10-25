@@ -3,7 +3,7 @@
   "name": "backgold-fixture",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-10-04",
-  "vars": { "SITE_URL": "", "BACKGOLD_API_ORIGIN": "https://api.backgold.com" },
+  "vars": { "BACKGOLD_SITE_KEY": "", "SITE_URL": "", "BACKGOLD_API_ORIGIN": "https://api.backgold.com" },
   /* No id: Cloudflare creates it. */
   "kv_namespaces": [{ "binding": "BACKGOLD_CACHE" }],
   "env": {

@@ -40,6 +40,10 @@ beforeEach(async () => {
     createBodies: [],
     finishBodies: [],
     uploadAuth: [],
+    meDomain: 'fixture.example.org',
+    servedOn: 'https://fixture.example.org',
+    previewHost: null,
+    refuse: null,
   })
   fx.aliases.clear()
   fx.secrets.clear()
@@ -159,9 +163,44 @@ test('auth: no token, a malformed one, or a refused one exits 3', async () => {
   assert.deepEqual(fx.log, [])
   const refused = await cli(['deploys', '--token', 'bg_deploy_wrongwrongwrong'])
   assert.equal(refused.code, 3)
-  assert.match(refused.stderr, /Invalid deploy token \(UNAUTHORIZED, HTTP 401\)/)
+  assert.match(refused.stderr, /Invalid or expired deploy token \(INVALID_TOKEN, HTTP 401\)/)
   assert.match(refused.stderr, /The deploy token was refused/)
   assert.ok(!refused.stderr.includes('wrongwrongwrong'), 'a token in a message is redacted')
+})
+
+test('auth: a 403 blames the token only for a token code; any other prints the api\'s own refusal, exit 3 either way', async () => {
+  const hint = /The deploy token was refused/
+  fx.refuse = { status: 403, body: { error: 'This deploy token lacks the promote scope.', code: 'SCOPE' } }
+  const scope = await cli(['deploys'])
+  assert.equal(scope.code, 3)
+  assert.match(scope.stderr, /This deploy token lacks the promote scope\. \(SCOPE, HTTP 403\)/)
+  assert.match(scope.stderr, hint)
+  fx.refuse = { status: 403, body: { error: 'Writes from this origin are refused', code: 'CSRF' } }
+  const own = await cli(['deploys'])
+  assert.equal(own.code, 3)
+  assert.equal(own.stderr, 'backgold: Writes from this origin are refused (CSRF, HTTP 403)\n')
+  fx.refuse = { status: 403 }
+  const bare = await cli(['deploys'])
+  assert.equal(bare.code, 3)
+  assert.equal(bare.stderr, 'backgold: the api refused this request (HTTP 403)\n')
+})
+
+test('api: every write says application/json, so a bodyless DELETE is never read as a form post', async () => {
+  history()
+  fx.secrets.set('WIDGET_ID', { value: 'w', updated_at: '2026-10-23T10:00:00Z' })
+  let types: (string | null)[] = []
+  const recording: typeof fetch = (input, init) => {
+    if (init?.method && init.method !== 'GET') types.push(new Headers(init.headers).get('content-type'))
+    return globalThis.fetch(input, init)
+  }
+  const preview = await cli(['previews', '--delete', 'main'], { fetch: recording })
+  assert.equal(preview.code, 0, preview.stderr)
+  const secret = await cli(['secrets', 'delete', 'WIDGET_ID'], { fetch: recording })
+  assert.equal(secret.code, 0, secret.stderr)
+  assert.deepEqual(types, ['application/json', 'application/json'])
+  types = []
+  const raw = await fetch(`${fx.origin}${sitePath('/previews/none')}`, { method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` } })
+  assert.equal(raw.status, 403, 'the fixture refuses a bodyless DELETE without one, as the api\'s csrf() does')
 })
 
 test('auth: an organization without custom sites exits 3 with a plain sentence, on deploy and on promote', async () => {
@@ -202,6 +241,15 @@ test('link: checks the token and writes backgold.json, keeping other keys', asyn
   assert.match(r.stderr, /Checking the deploy token with http:\/\/127\.0\.0\.1/)
   assert.deepEqual(JSON.parse(await readFile(join(project, 'backgold.json'), 'utf8')), { note: 'kept', site: SITE, api: fx.origin })
   assert.deepEqual(fx.log, ['GET /api/site-deploys/me'])
+})
+
+test('link and whoami: a _draft-<id> placeholder domain from an older api reads as none', async () => {
+  fx.meDomain = '_draft-0123abcd'
+  const l = await cli(['link'])
+  assert.equal(l.stdout, 'Linked to Fixture Party\n')
+  const w = await cli(['whoami'])
+  assert.match(w.stdout, /^Fixture Party\nsite /)
+  assert.equal(JSON.parse((await cli(['whoami', '--json'])).stdout).domain, null)
 })
 
 test('link: on a terminal with no token it asks for one; --json prints the answer', async () => {
@@ -277,7 +325,7 @@ test('deploy: builds, uploads the missing assets, the bundle, finishes and waits
 
   assert.deepEqual(fx.finishBodies, [{ assets_jwt: COMPLETION_JWT, promote: true, preview: 'feature-hero' }])
   assert.equal(fx.live, id)
-  assert.equal(r.stdout, `Deploy ${id} is ready and live.\nPreview feature-hero: set\n`)
+  assert.equal(r.stdout, `Deploy ${id} is live at https://fixture.example.org.\nPreview feature-hero points at ${id}; previews have no address on this BackGold yet.\n`)
   assert.match(r.stderr, /Building: npm run build/)
   assert.match(r.stderr, /Found the Worker in dist\/server \(6 modules, .*\) and 4 assets/)
   assert.match(r.stderr, /warning: dist\/server\/wrangler\.json's vars BACKGOLD_SITE_KEY are left out/)
@@ -406,8 +454,13 @@ test('promote: by a unique prefix; an ambiguous one is a usage error; a refusal 
   history()
   const r = await cli(['promote', 'dddd'])
   assert.equal(r.code, 0, r.stderr)
-  assert.equal(r.stdout, 'Deploy dddd5555000000000000000000000005 is live.\n')
+  assert.equal(r.stdout, 'Deploy dddd5555000000000000000000000005 is live at https://fixture.example.org.\n')
   assert.equal(fx.live, 'dddd5555000000000000000000000005')
+  const noDomain = "is live, but this site has no domain yet, so nobody can reach it. Connect one on the site's Domain page in BackGold.\n"
+  fx.servedOn = null
+  assert.equal((await cli(['promote', 'cccc'])).stdout, `Deploy cccc4444000000000000000000000004 ${noDomain}`)
+  fx.servedOn = undefined
+  assert.equal((await cli(['promote', 'dddd'])).stdout, `Deploy dddd5555000000000000000000000005 ${noDomain}`, 'an older api without served_on reads as no domain')
   const ambiguous = await cli(['promote', 'bbbb'])
   assert.equal(ambiguous.code, 2)
   assert.match(ambiguous.stderr, /bbbb matches 2 deploys/)
@@ -424,7 +477,7 @@ test('rollback: the newest ready deploy older than the live one, skipping failed
   fx.deploys.find((d) => d.id.startsWith('cccc'))!.status = 'failed'
   const r = await cli(['rollback'])
   assert.equal(r.code, 0, r.stderr)
-  assert.equal(r.stdout, 'Rolled back: deploy bbbb3333000000000000000000000003 is live (was dddd5555).\n')
+  assert.equal(r.stdout, 'Rolled back from deploy dddd5555.\nDeploy bbbb3333000000000000000000000003 is live at https://fixture.example.org.\n')
   assert.equal(fx.live, 'bbbb3333000000000000000000000003')
   const given = await cli(['rollback', 'aaaa1111'])
   assert.equal(given.code, 0, given.stderr)
@@ -449,7 +502,9 @@ test('rollback: refuses when nothing is older, or nothing is live', async () => 
 test('previews: lists the names; --delete removes one', async () => {
   history()
   const r = await cli(['previews'])
-  assert.equal(r.stdout, 'NAME  DEPLOY    UPDATED\nmain  dddd5555  2026-10-23 10:00\n')
+  assert.equal(r.stdout, 'Preview main points at dddd5555000000000000000000000005; previews have no address on this BackGold yet.\n')
+  fx.previewHost = 'preview.example.org'
+  assert.equal((await cli(['previews'])).stdout, 'Preview main: https://main.preview.example.org\n')
   const d = await cli(['previews', '--delete', 'main'])
   assert.equal(d.code, 0, d.stderr)
   assert.equal(d.stdout, 'Deleted the preview main.\n')
@@ -565,14 +620,17 @@ test('eject: writes the template from --source into a new directory, pinned and 
   assert.equal(pkg.name, 'my-site')
   assert.deepEqual(pkg.dependencies, { '@backgold/astro': '0.8.2', '@backgold/content': '0.8.0', '@backgold/template-kit': '0.7.1', astro: '^7.3.5' })
   assert.deepEqual(pkg.devDependencies, { '@backgold/cli': '0.3.0', wrangler: '^4.149.0' })
+  assert.deepEqual(pkg.scripts, { dev: 'astro dev', build: 'astro build', 'deploy:backgold': 'backgold deploy --promote', check: 'astro check' }, 'no wrangler deploy or wrangler dev script')
+  assert.equal('cloudflare' in pkg, false, 'no Deploy to Cloudflare bindings')
   const wrangler = await readFile(join(dir, 'wrangler.jsonc'), 'utf8')
-  assert.match(wrangler, /^\/\/ The Worker that serves the site/)
+  assert.match(wrangler, /^\/\/ The Worker that serves the site on `npm run dev` and on BackGold hosting/)
+  assert.ok(!/npm run (deploy|preview)(?![:\w])|wrangler secret/.test(wrangler), 'the header points at no self-hosting')
   const config = JSON.parse(wrangler.replace(/^\/\/.*\n/gm, ''))
   assert.deepEqual(config, {
     name: 'backgold-fixture',
     main: '@astrojs/cloudflare/entrypoints/server',
     compatibility_date: '2026-10-04',
-    vars: { SITE_URL: '', BACKGOLD_API_ORIGIN: 'https://api.backgold.com' },
+    vars: { SITE_URL: '' },
     kv_namespaces: [{ binding: 'BACKGOLD_CACHE' }],
   })
   assert.deepEqual(JSON.parse(await readFile(join(dir, 'backgold.json'), 'utf8')), {
@@ -584,6 +642,7 @@ test('eject: writes the template from --source into a new directory, pinned and 
   assert.match(readme, /^# The fixture template\n\n## Ejected from the fixture template\n\nThis site was ejected from the fixture template on 2026-10-25; pushes to BackGold's templates no longer change it\.\n/)
   assert.match(readme, /@backgold\/templates 9\.9\.9 \(@backgold\/template-kit 0\.7\.1, commit 0123456789ab\)/)
   assert.match(readme, /live `template-fixture` Worker may be ahead of that publish until the next one/)
+  assert.match(readme, /It deploys to BackGold hosting with `npm run deploy:backgold`\./)
   assert.match(readme, /\nHow to run it\.\n$/)
   assert.equal(r.stdout, 'Next:\n  cd my-site\n  npm install\n  npx backgold link\n  npx backgold deploy --promote\n')
   assert.match(r.stderr, /Wrote the fixture template into my-site \(7 files; @backgold\/templates 9\.9\.9, @backgold\/template-kit 0\.7\.1\)/)

@@ -4,8 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "astro dev",
     "build": "astro build",
-    "deploy:backgold": "backgold deploy --promote"
+    "preview": "astro build && wrangler dev",
+    "deploy": "astro build && wrangler deploy",
+    "deploy:backgold": "backgold deploy --promote",
+    "check": "astro check"
   },
   "dependencies": {
     "@backgold/astro": "workspace:^",
@@ -16,5 +20,10 @@
   "devDependencies": {
     "@backgold/cli": "workspace:^",
     "wrangler": "^4.149.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BACKGOLD_SITE_KEY": { "description": "The site's publishable key." }
+    }
   }
 }

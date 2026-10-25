@@ -81,12 +81,24 @@ interface Deploy {
   git_sha: string | null
   error: string | null
   preview_url: string | null
+  /** On a promote's answer: the `https://<verified domain>` the live deploy serves on, null without one (missing from an older api). */
+  served_on?: string | null
 }
 
 interface DeployList {
   deploys: Deploy[]
   live_deploy_id: string | null
-  aliases: { name: string; deploy_id: string; updated_at: string }[]
+  aliases: Preview[]
+  /** The `https://<verified domain>` the live deploy serves on, null without one (missing from an older api). */
+  served_on?: string | null
+}
+
+interface Preview {
+  name: string
+  deploy_id: string
+  updated_at: string
+  /** The address the preview serves at, null while BackGold has no preview host (missing from an older api). */
+  url?: string | null
 }
 
 interface Me {
@@ -105,6 +117,8 @@ interface CreateAnswer {
 }
 
 const TOKEN_PATTERN = /^bg_deploy_[A-Za-z0-9]+$/
+/** The api's codes for a deploy token it will not take: unknown, revoked or expired (401), or missing a scope (403). */
+const TOKEN_CODES = new Set(['INVALID_TOKEN', 'SCOPE'])
 const POLL_MS = 2000
 const POLL_LIMIT_MS = 10 * 60 * 1000
 
@@ -147,6 +161,24 @@ function resolveDeployId(given: string, deploys: readonly Deploy[]): string {
   return given
 }
 
+/** The /me answer, with a `_draft-<id>` placeholder an older api gives for a site with no domain read as none. */
+async function readMe(ctx: Ctx): Promise<Me> {
+  const me = await apiCall<Me>(ctx.io.fetch, meUrl(ctx.api), { bearer: ctx.token })
+  return me.domain?.startsWith('_draft-') ? { ...me, domain: null } : me
+}
+
+/** Where a live deploy can be reached, or that nobody can reach it yet. */
+function liveSentence(id: string, servedOn: string | null | undefined): string {
+  return servedOn
+    ? `Deploy ${id} is live at ${servedOn}.`
+    : `Deploy ${id} is live, but this site has no domain yet, so nobody can reach it. Connect one on the site's Domain page in BackGold.`
+}
+
+/** A preview's address, or what it points at while it has none. */
+function previewSentence(p: Pick<Preview, 'name' | 'deploy_id' | 'url'>): string {
+  return p.url ? `Preview ${p.name}: ${p.url}` : `Preview ${p.name} points at ${p.deploy_id}; previews have no address on this BackGold yet.`
+}
+
 /** The site's name and domain; a site with no name shows its domain, else its id. */
 function siteLabel(me: Me): string {
   if (!me.site_name) return me.domain ?? me.site_id
@@ -157,7 +189,7 @@ function siteLabel(me: Me): string {
 
 async function link(ctx: Ctx): Promise<number> {
   step(ctx, `Checking the deploy token with ${ctx.api}`)
-  const me = await apiCall<Me>(ctx.io.fetch, meUrl(ctx.api), { bearer: ctx.token })
+  const me = await readMe(ctx)
   await writeProjectFile(ctx.project, ctx.file, me.site_id, ctx.api)
   step(ctx, `Wrote ${PROJECT_FILE} (site ${me.site_id})`)
   if (!ctx.io.env.BACKGOLD_DEPLOY_TOKEN) step(ctx, 'To deploy, keep the token in BACKGOLD_DEPLOY_TOKEN (your shell, or a CI secret).')
@@ -166,7 +198,7 @@ async function link(ctx: Ctx): Promise<number> {
 }
 
 async function whoami(ctx: Ctx): Promise<number> {
-  const me = await apiCall<Me>(ctx.io.fetch, meUrl(ctx.api), { bearer: ctx.token })
+  const me = await readMe(ctx)
   if (ctx.file?.site && ctx.file.site !== me.site_id) {
     step(ctx, `warning: ${PROJECT_FILE} names site ${ctx.file.site}, and this token opens site ${me.site_id}`)
   }
@@ -203,7 +235,7 @@ async function promote(ctx: Ctx): Promise<number> {
   if (!given) throw new Exit('promote needs a deploy id (backgold deploys lists them)', 2)
   const list = await apiCall<DeployList>(ctx.io.fetch, sitePath(ctx), { bearer: ctx.token })
   const deploy = await promoteTo(ctx, resolveDeployId(given, list.deploys))
-  answer(ctx, deploy, `Deploy ${deploy.id} is live.`)
+  answer(ctx, deploy, liveSentence(deploy.id, deploy.served_on ?? list.served_on))
   return 0
 }
 
@@ -224,7 +256,8 @@ async function rollback(ctx: Ctx): Promise<number> {
     target = earlier[0]!.id
   }
   const deploy = await promoteTo(ctx, target)
-  answer(ctx, deploy, `Rolled back: deploy ${deploy.id} is live${live && live !== deploy.id ? ` (was ${short(live)})` : ''}.`)
+  const from = live && live !== deploy.id ? `Rolled back from deploy ${short(live)}.\n` : ''
+  answer(ctx, deploy, `${from}${liveSentence(deploy.id, deploy.served_on ?? list.served_on)}`)
   return 0
 }
 
@@ -236,9 +269,8 @@ async function previews(ctx: Ctx): Promise<number> {
     answer(ctx, null, `Deleted the preview ${name}.`)
     return 0
   }
-  const list = await apiCall<{ name: string; deploy_id: string; updated_at: string }[]>(ctx.io.fetch, sitePath(ctx, '/previews'), { bearer: ctx.token })
-  const rows = list.map((p) => [p.name, short(p.deploy_id), when(p.updated_at)])
-  answer(ctx, list, rows.length ? table(['NAME', 'DEPLOY', 'UPDATED'], rows) : 'No previews.')
+  const list = await apiCall<Preview[]>(ctx.io.fetch, sitePath(ctx, '/previews'), { bearer: ctx.token })
+  answer(ctx, list, list.length ? list.map(previewSentence).join('\n') : 'No previews.')
   return 0
 }
 
@@ -418,9 +450,13 @@ async function deploy(ctx: Ctx): Promise<number> {
   for (;;) {
     const current = await apiCall<Deploy>(ctx.io.fetch, sitePath(ctx, `/${encodeURIComponent(id)}`), { bearer: ctx.token })
     if (current.status === 'ready') {
-      const lines = [current.live ? `Deploy ${id} is ready and live.` : `Deploy ${id} is ready. It is not live: backgold promote ${short(id)} makes it live.`]
-      if (preview) lines.push(`Preview ${preview}: ${current.preview_url ?? 'set'}`)
-      else if (current.preview_url) lines.push(`Preview: ${current.preview_url}`)
+      // Where the site is served and the preview's address are on the site's lists, not on the deploy.
+      const list = current.live ? await apiCall<DeployList>(ctx.io.fetch, sitePath(ctx), { bearer: ctx.token }) : null
+      const lines = [list ? liveSentence(id, list.served_on) : `Deploy ${id} is ready. It is not live: backgold promote ${short(id)} makes it live.`]
+      if (preview) {
+        const aliases = list?.aliases ?? (await apiCall<Preview[]>(ctx.io.fetch, sitePath(ctx, '/previews'), { bearer: ctx.token }))
+        lines.push(previewSentence(aliases.find((a) => a.name === preview) ?? { name: preview, deploy_id: id }))
+      } else if (current.preview_url) lines.push(`Preview: ${current.preview_url}`)
       answer(ctx, current, lines.join('\n'))
       return 0
     }
@@ -476,7 +512,9 @@ Makes a project of your own from one of BackGold's templates, in [dir]
 (default: ./<key>-site), which must be new or empty: the template's source
 from the newest ${TEMPLATES_PACKAGE} on npm, its template.json kept, its
 @backgold packages pinned to the versions that publish was built with,
-wrangler.jsonc without BackGold's template deploys, and backgold.json, whose
+no scripts or settings for a Cloudflare account of your own, wrangler.jsonc
+without BackGold's template deploys or the BACKGOLD_* vars BackGold hosting
+sets, and backgold.json, whose
 "ejected" records where it came from. With a deploy token it then runs link
 in [dir]; without one it prints link as a next step. Its first
 deploy --promote makes the site a custom site.
@@ -563,7 +601,8 @@ deploy given.
   previews: {
     usage: `Usage: backgold previews [--delete <name>]
 
-Lists the site's preview names and the deploy each points at.
+Lists the site's previews: each one's address, or the deploy it points at
+while previews have no address.
 
   --delete <name>   Remove the preview <name>
 `,
@@ -663,8 +702,11 @@ export async function run(argv: readonly string[], io: Partial<Io> = {}): Promis
       return err.exitCode
     }
     if (err instanceof HttpError) {
-      const hint = err.status === 401 || err.status === 403 ? '\nThe deploy token was refused: check BACKGOLD_DEPLOY_TOKEN, or make a new one on the site\'s Developer page.' : ''
-      full.stderr(`backgold: ${redact(err.message)}${hint}\n`)
+      const tokenRefused = err.status === 401 || (err.code !== null && TOKEN_CODES.has(err.code))
+      const hint = tokenRefused ? '\nThe deploy token was refused: check BACKGOLD_DEPLOY_TOKEN, or make a new one on the site\'s Developer page.' : ''
+      // Any other 403 is the api's own refusal, never the token's.
+      const message = err.status === 403 && !tokenRefused && !err.apiError ? 'the api refused this request (HTTP 403)' : err.message
+      full.stderr(`backgold: ${redact(message)}${hint}\n`)
       return err.exitCode
     }
     full.stderr(`backgold: ${redact(err instanceof Error ? err.message : String(err))}\n`)

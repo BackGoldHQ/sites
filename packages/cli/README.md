@@ -129,17 +129,20 @@ npx backgold rollback 7f3a91c2 # or the one you name
 ```
 
 Promote and rollback upload nothing: they move the live site to a deploy
-BackGold already holds, so they take a second.
+BackGold already holds, so they take a second. Each then prints the address
+the site is live at, or says that the site has no domain yet, so nobody can
+reach it until you connect one on the site's Domain page in BackGold.
 
 ## Previews
 
 ```bash
-npx backgold previews                    # each preview name and the deploy it shows
+npx backgold previews                    # each preview's address, or the deploy it points at
 npx backgold previews --delete my-branch
 ```
 
 A preview name points at one deploy; deploying with the same
-`--preview <name>` moves it.
+`--preview <name>` moves it. While BackGold has no address for previews, both
+print the deploy a preview points at instead of its address.
 
 ## Secrets
 
