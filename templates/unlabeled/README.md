@@ -31,8 +31,8 @@ gallery offers it. Staff point her site at it with the template switch.
 | `src/components/sections/Hero/cover.astro`, `framed.astro`, `src/lib/file-number.ts` | Hero · Cover: its running head names the page as a file (`File 001 — Home`, numbered by the header menu); the headline (else the site's title) as a cap stack, one sentence a line on its own black slab, over the photo, or the video playing muted on a loop over its still, through the halftone screen. A centered Hero with a photo or a video draws as the cover (`framed.astro`). |
 | `src/components/sections/MovementTicker/index.astro` | The ticker: one line under the header, "Live //", BackGold's live feed when the api sends it, else her typed figures running at a reading pace, still under reduced motion. |
 | `src/components/sections/Petition/Sheet.astro` | Petition: the default layout puts the heading and her typed figures huge beside BackGold's sign sheet; map, coverage and image are the kit's. Every layout anchors at `#petition`. |
-| `src/components/Mark.astro` | Her mark inline in the text colour (`wordmark`, `skull`, `horns`), for markup that places it itself. |
-| `src/assets/mark.svg`, `skull.svg`, `horns.svg` | The mark: a trace of her `unlabeled-logo.png`, all `currentColor`. The header, footer, chapter mark, watermark and divider draw them as CSS masks. |
+| `src/components/Mark.astro` | Her mark as an image, for markup that places it itself: `wordmark` or `skull`. |
+| `src/assets/wordmark.png`, `skull.png`, `horns.png` | The mark, cut from her own file, white on a clear ground: the wordmark (UNLA, the longhorn skull as the B, ELED) for the header, the footer and the archive's door; the skull and horns alone for the chapter mark, the 404 and the watermark; the horns alone for the divider. |
 | `src/archive.ts`, `src/pages/archive/**`, `src/lib/archive/**`, `src/components/archive/**`, `src/components/entries/**` | The archive (boards U2–U5, U10): its routes, index and record layouts. |
 | `src/middleware.ts` | Names a source document's query names (`find`, `all`) to BackGold's edge cache, so a stored bare page never answers them (docs/ARCHIVE.md). |
 | `src/lib/next-meeting.ts` | The next board meeting on Events, for the latest meeting in the archive to point forward to (board U4). |
@@ -185,7 +185,7 @@ names: the Worker `template-unlabeled` in `sites-staging`, the job
 
 ```bash
 npx wrangler kv namespace create backgold-unlabeled-staging-cache
-glab variable set UNLABELED_STAGING_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set UNLABELED_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 The api dispatches a site to `template-unlabeled` once the platform knows the
@@ -201,7 +201,7 @@ As the party template's (its README, Production deploy): the Worker
 
 ```bash
 npx wrangler kv namespace create backgold-unlabeled-production-cache
-glab variable set UNLABELED_PRODUCTION_KV_ID <id> --masked --protected -R backgold/sites
+gh secret set UNLABELED_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
 ```
 
 ## Not done here

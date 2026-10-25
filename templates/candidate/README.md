@@ -33,7 +33,7 @@ from the vendored contract (`vendor/backgold-contract`); this repository's
 `templates/*/template.json` with it, so a manifest that passes here is one
 BackGold can read. After a change to `template.json` merges here, refresh the
 platform's copy (`packages/shared/site-templates/candidate.template.json`) in a
-platform MR and run `pnpm --filter @givegold/shared templates:build` there.
+platform PR and run `pnpm --filter @givegold/shared templates:build` there.
 
 ## Where the files live
 
@@ -172,7 +172,7 @@ pictures (a section without its picture draws without one).
 ## Decisions built as drawn
 
 These follow the boards; none is ruled yet, and each is listed for JHL in
-the merge request (README §17, Decisions needed).
+the pull request (README §17, Decisions needed).
 
 - **C-1 Hero `portrait`** is proposed, in the contract as a proposed layout.
 - **C-2 Endorsements ride QuoteStrip** (an endorsement is a quote, optional,

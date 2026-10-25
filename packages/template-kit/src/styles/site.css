@@ -1693,8 +1693,9 @@ details summary {
   font-style: normal;
 }
 /*
-  The copyright line and "Powered by BackGold" at the bottom row's end; the
-  copyright is the footer's own line, else "© year name".
+  The copyright line and "Powered by BackGold" (a link to backgold.com, in the
+  row's own link style) at the bottom row's end; the copyright is the footer's
+  own line, else "© year name".
 */
 .footer-copyright {
   margin-left: auto;

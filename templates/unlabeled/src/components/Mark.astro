@@ -1,31 +1,21 @@
 ---
-// Her mark, inline, in the current text colour: `wordmark` (UNLA·skull·ELED,
-// src/assets/mark.svg), `skull` (the skull and horns alone: the chapter mark,
-// the watermark), or `horns` (drawn out to a rule: the divider). The header,
-// the footer and the bands draw the same files as CSS masks
-// (src/styles/template.css); this is for markup that places the mark itself,
-// as the archive's pages and `.u-chapter` do. Each copy gets its own mask ids,
-// so a page can hold several. With a `label` it is an image named for screen
-// readers; without one it is decoration.
-import horns from '../assets/horns.svg?raw'
-import mark from '../assets/mark.svg?raw'
-import skull from '../assets/skull.svg?raw'
+// Her mark, for markup that places it itself, as the archive's door, the
+// chapter mark and the 404 do: `wordmark` (UNLA·skull·ELED,
+// src/assets/wordmark.png) or `skull` (the skull and horns alone,
+// src/assets/skull.png), each cut from her own file, white on a clear ground.
+// The header, the footer, the divider and the watermark draw the same files
+// as CSS masks (src/styles/template.css). With a `label` it is an image named
+// for screen readers; without one it is decoration.
+import skull from '../assets/skull.png'
+import wordmark from '../assets/wordmark.png'
 
 interface Props {
-  kind?: 'wordmark' | 'skull' | 'horns'
+  kind?: 'wordmark' | 'skull'
   label?: string
   class?: string
 }
 
 const { kind = 'wordmark', label, class: className } = Astro.props
-const SOURCES = { wordmark: mark, skull, horns } as const
-let copies = (Astro.locals as { unlabeledMarks?: number }).unlabeledMarks ?? 0
-copies += 1
-;(Astro.locals as { unlabeledMarks?: number }).unlabeledMarks = copies
-const suffix = `-${copies}`
-const svg = SOURCES[kind]
-  .replace(/<!--[\s\S]*?-->\s*/g, '')
-  .replace(/u-cut-(around|head)/g, (id) => `${id}${suffix}`)
-  .replace('<svg ', `<svg class="u-mark u-mark-${kind}${className ? ` ${className}` : ''}" ${label ? `role="img" aria-label="${label.replace(/[&<>"]/g, '')}"` : 'aria-hidden="true"'} focusable="false" `)
+const image = kind === 'skull' ? skull : wordmark
 ---
-<Fragment set:html={svg} />
+<img class:list={['u-mark', `u-mark-${kind}`, className]} src={image.src} width={image.width} height={image.height} alt={label ?? ''} decoding="async" />
