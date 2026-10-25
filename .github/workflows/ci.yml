@@ -1,4 +1,4 @@
-# BackGold sites pull-request checks: the two public npm packages, the
+# BackGold sites pull-request checks: the three public npm packages, the
 # template kit, the templates built on them (party, candidate,
 # petition-drive, academy, nonprofit, unlabeled), the public starter and
 # the template manifests.
@@ -22,10 +22,15 @@
 #                             + astro-backgold + template-kit + starter + every template
 #   packages/astro-backgold → astro-backgold   (@backgold/astro on npm)
 #                             + template-kit + starter + every template
+#   packages/cli            → cli              (@backgold/cli on npm: lint, build,
+#                                                test, then scripts/cli-e2e.mjs)
+#                             + starter        (the e2e packs it: the starter
+#                                                names it)
 #   packages/template-kit   → template-kit     (@backgold/template-kit, private:
 #                                                what every template draws)
 #                             + every template
 #   templates/astro-starter → starter          (the e2e, scripts/starter-e2e.mjs)
+#                             + cli            (scripts/cli-e2e.mjs reads its build)
 #   templates/<name>        → template <name>  (astro check, the template's own
 #                                                tests, then the same e2e with
 #                                                --template <name>)
@@ -90,6 +95,7 @@ jobs:
     outputs:
       content_client: ${{ steps.filter.outputs.content_client }}
       astro_backgold: ${{ steps.filter.outputs.astro_backgold }}
+      cli: ${{ steps.filter.outputs.cli }}
       template_kit: ${{ steps.filter.outputs.template_kit }}
       starter: ${{ steps.filter.outputs.starter }}
       manifests: ${{ steps.filter.outputs.manifests }}
@@ -113,6 +119,11 @@ jobs:
               - *root
               - 'packages/content-client/**'
               - 'packages/astro-backgold/**'
+            cli:
+              - *root
+              - 'packages/cli/**'
+              - 'scripts/cli-e2e.mjs'
+              - 'templates/astro-starter/**'
             template_kit:
               - *root
               - 'packages/content-client/**'
@@ -122,6 +133,7 @@ jobs:
               - *root
               - 'packages/content-client/**'
               - 'packages/astro-backgold/**'
+              - 'packages/cli/**'
               - 'scripts/starter-e2e.mjs'
               - 'templates/astro-starter/**'
             # Each template: its own paths, the kit, the e2e script, both
@@ -237,6 +249,28 @@ jobs:
       - run: pnpm --filter @backgold/astro build
       - run: pnpm --filter @backgold/astro test
 
+  # cli = @backgold/cli (packages/cli), the public npm package with the
+  # `backgold` command that deploys a site to BackGold hosting. `test` compiles
+  # to dist-test and runs node:test against an in-process fixture api; then
+  # scripts/cli-e2e.mjs builds the public starter once and reads that build as
+  # `backgold deploy` does (no network); it builds both packages first itself.
+  cli:
+    name: CLI
+    needs: changes
+    if: needs.changes.outputs.cli == 'true'
+    runs-on: [self-hosted, docker]
+    container: *node
+    timeout-minutes: 15
+    steps:
+      - *checkout
+      - *trust
+      - *pnpm-cache
+      - *install
+      - run: pnpm --filter @backgold/cli lint
+      - run: pnpm --filter @backgold/cli build
+      - run: pnpm --filter @backgold/cli test
+      - run: node scripts/cli-e2e.mjs
+
   # template-kit = @backgold/template-kit (packages/template-kit), the private
   # workspace package every template's sections, entries, chrome, Site layout
   # and routes come from, consumed as source. Its lint is `astro check` over
@@ -260,7 +294,8 @@ jobs:
       - run: pnpm --filter @backgold/template-kit lint
 
   # starter = the public starter (templates/astro-starter) end to end:
-  # scripts/starter-e2e.mjs packs both packages, installs them with npm into a
+  # scripts/starter-e2e.mjs packs both packages (and @backgold/cli, which the
+  # starter names), installs them with npm into a
   # copy of the template outside the repository (so nothing resolves through
   # the workspace, as on a user's machine), builds it, serves it on
   # `wrangler dev` against a fixture api and asserts the pages, the SEO routes
@@ -377,6 +412,7 @@ jobs:
       - changes
       - content-client
       - astro-backgold
+      - cli
       - template-kit
       - starter
       - template

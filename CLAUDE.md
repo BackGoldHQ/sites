@@ -17,6 +17,7 @@ from the public starter, or a site on the party template), read
 | --- | --- |
 | `packages/content-client` | `@backgold/content` (npm): the Content API client and the `backgold-content` command. |
 | `packages/astro-backgold` | `@backgold/astro` (npm): the Astro plumbing and components. Depends on `@backgold/content`. |
+| `packages/cli` | `@backgold/cli` (npm): the `backgold` command, which deploys a built site to BackGold hosting. |
 | `packages/template-kit` | `@backgold/template-kit` (private, consumed as source, never published): the sections and their layouts, the entry layouts, the chrome, `lib/`, the styles, the Site layout and the routes every template draws. A template is its `template.json`, `src/template.ts`, `src/styles/template.css` and its own layouts. |
 | `templates/astro-starter` | The public starter (`backgold-starter`), mirrored to github.com/BackGoldHQ/backgold-starter by `scripts/sync-starter.sh`. Its README is public text for outside users. |
 | `templates/party` | The party template (`backgold-template-party`, on the kit), deployed as the Worker `template-party`. Its `template.json` is its manifest. |
@@ -47,6 +48,7 @@ template you touched, also run its type check and the end-to-end check:
 | Changed | Run |
 | --- | --- |
 | `packages/content-client` | `pnpm --filter @backgold/content lint`, `build`, `test` |
+| `packages/cli` | `pnpm --filter @backgold/cli lint`, `build`, `test`, `node scripts/cli-e2e.mjs` |
 | `packages/astro-backgold` | `pnpm --filter @backgold/astro lint`, `build`, `test` |
 | `packages/template-kit` | `pnpm --filter @backgold/template-kit lint` (astro check + tsc), then every template's e2e below: the kit draws them all |
 | `templates/astro-starter` | `pnpm --filter backgold-starter exec astro check`, `node scripts/starter-e2e.mjs` |
@@ -92,7 +94,8 @@ Chrome or Chromium at `CHROME_BIN`.
   touches `templates/astro-starter/`, a package's `package.json` or
   `scripts/sync-starter.sh`). Never push to the public repository by hand.
 - **npm publishing is a release step**, run by a person on `main`
-  (`publish.yml`, Actions → Publish to npm, one package per run) after a
+  (`publish.yml`, Actions → Publish to npm, one package per run: `content`,
+  `astro` or `cli`) after a
   version bump merges. Never run `npm publish`, and never commit an `.npmrc`.
   Nothing in this repository waits on a publish.
 - **Never commit a key or a secret.** `bg_site_sk_…` and `whsec_…` values go

@@ -46,7 +46,8 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
 | `BACKGOLD_SITE_ID` | var | single-site first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
-| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint. `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. Without `BACKGOLD_SITE_ID` it makes the Worker a template's shared Worker (below). |
+| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint (a custom site's: `FirstPartyCustom`). `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. Without `BACKGOLD_SITE_ID` it makes the Worker a template's shared Worker (below). |
+| `BACKGOLD_SITE_TOKEN` | secret | never set it | BackGold sets it on a custom site's Worker, and the site never configures it. With it, every first-party read also sends `X-BackGold-Site-Token`, which proves the site to the api's `FirstPartyCustom` entrypoint; it is read only from the environment and never reaches a page, a response or a log. Template Workers have none. |
 
 First-party mode is for a site Worker inside BackGold's own namespace, and
 BackGold sets these names up for it. A site built elsewhere never sets them: it

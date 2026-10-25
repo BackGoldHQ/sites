@@ -3,7 +3,8 @@
 // packages it is built on, end to end on workerd: builds @backgold/content
 // and @backgold/astro, packs them (and the workspace packages a template on
 // the kit also names: @backgold/template-kit and the vendored contract,
-// @backgold/contract), installs them with npm into a copy of the template
+// @backgold/contract; and @backgold/cli for the starter, which names it),
+// installs them with npm into a copy of the template
 // outside the repository (its package.json pointed at the tarballs, so
 // nothing resolves through the pnpm workspace or from npm's copies of the
 // packages), checks that npm put workerd's binary for this platform there
@@ -92,6 +93,9 @@ const PARTY = TEMPLATE_NAME === 'party'
 // and dark switch, the kit's lists, entries and 404) and is checked for it;
 // the public starter is not on the kit.
 const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
+// A template whose package.json names @backgold/cli (the public starter) gets it
+// packed and installed from the tarball like the other @backgold packages.
+const NAMES_CLI = Boolean(JSON.parse(readFileSync(join(TEMPLATE, 'package.json'), 'utf8')).devDependencies?.['@backgold/cli'])
 // The face a kit template's module frames are asked for: its config's
 // `frameFont`, else the kit's Public Sans.
 const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
@@ -207,6 +211,12 @@ function buildAndPack(packDir) {
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/astro-backgold'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'vendor/backgold-contract'))
+  // The public starter names @backgold/cli as a devDependency; a template that
+  // does not is never made to build it.
+  if (NAMES_CLI) {
+    run('pnpm', ['--filter', '@backgold/cli', 'build'], ROOT)
+    run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/cli'))
+  }
   const files = readdirSync(packDir)
   const tarball = (pattern) => {
     const file = files.find((f) => pattern.test(f))
@@ -218,6 +228,7 @@ function buildAndPack(packDir) {
     astro: tarball(/^backgold-astro-.*\.tgz$/),
     kit: tarball(/^backgold-template-kit-.*\.tgz$/),
     contract: tarball(/^backgold-contract-.*\.tgz$/),
+    cli: NAMES_CLI ? tarball(/^backgold-cli-.*\.tgz$/) : null,
   }
 }
 
@@ -238,6 +249,7 @@ function installTemplate(siteDir, tarballs) {
   // src/template.ts parses template.json with); neither is on npm.
   if (pkg.dependencies['@backgold/template-kit']) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
   if (pkg.dependencies['@backgold/contract']) pkg.dependencies['@backgold/contract'] = `file:${tarballs.contract}`
+  if (tarballs.cli) pkg.devDependencies['@backgold/cli'] = `file:${tarballs.cli}`
   // @backgold/astro depends on @backgold/content, and the kit names both as
   // peers; the overrides make every one of them the tarball, never the copy
   // on npm.
@@ -256,6 +268,8 @@ function installTemplate(siteDir, tarballs) {
   }
   run('npm', ['run', 'build'], siteDir, { PATH: `${process.env.PATH}${delimiter}/${BUILD_CANARY}` })
   run('npm', ['run', 'check'], siteDir)
+  // The packed CLI runs from the install, outside the workspace.
+  if (tarballs.cli) run('npx', ['--no-install', 'backgold', '--help'], siteDir)
 }
 
 /**

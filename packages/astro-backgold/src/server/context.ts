@@ -1,7 +1,7 @@
 import { createClient, kvStore, memoryCache } from '@backgold/content'
 import type { BackgoldContent, ContentApiLegal, KvLike, SiteResponse, Visitor, VisitorOptions } from '@backgold/content'
 import { analyticsOf, type BackgoldAnalytics } from './analytics.js'
-import { DEFAULT_API_ORIGIN, SITE_ID_PATTERN, firstPartyOf, isDispatched, kvBinding, namesNoSite, serviceBinding, text, workerEnv, type BackgoldEnv } from './env.js'
+import { DEFAULT_API_ORIGIN, SITE_ID_PATTERN, firstPartyFetch, firstPartyOf, isDispatched, kvBinding, namesNoSite, serviceBinding, text, workerEnv, type BackgoldEnv } from './env.js'
 import { withTimeout } from './timeout.js'
 import { readVisitorId } from './visitor.js'
 
@@ -141,13 +141,13 @@ function siteUrlOf(env: BackgoldEnv, requestUrl: URL): string {
 /** The most sites an isolate keeps a client for; past it the least recently used is dropped. */
 const MAX_HELD_CLIENTS = 32
 
-const held = new Map<string, { kv: KvLike | undefined; binding: object | undefined; client: BackgoldContent }>()
+const held = new Map<string, { kv: KvLike | undefined; binding: object | undefined; token: string | undefined; client: BackgoldContent }>()
 
 /**
  * One client per site per isolate, keyed by the key (or first-party site id)
- * and the origin, and rebuilt only if the KV binding or the service binding
- * changes. A dispatched Worker serves many sites, so the map holds up to
- * MAX_HELD_CLIENTS of them. Each client's store keys carry its own scope (a
+ * and the origin, and rebuilt only if the KV binding, the service binding or
+ * the site token changes. A dispatched Worker serves many sites, so the map
+ * holds up to MAX_HELD_CLIENTS of them. Each client's store keys carry its own scope (a
  * hash of the key, or of `first-party:<site id>`), so sites sharing one
  * `BACKGOLD_CACHE` never read each other's values.
  */
@@ -155,17 +155,18 @@ function siteClient(env: BackgoldEnv, apiOrigin: string, firstParty: ReturnType<
   const kv = kvBinding(env.BACKGOLD_CACHE)
   const signature = firstParty ? `first-party\n${firstParty.siteId}\n${apiOrigin}` : `key\n${text(env.BACKGOLD_SITE_KEY)!}\n${apiOrigin}`
   const binding = firstParty?.binding
+  const token = firstParty?.token
   const kept = held.get(signature)
   held.delete(signature)
-  if (kept && kept.kv === kv && kept.binding === binding) {
+  if (kept && kept.kv === kv && kept.binding === binding && kept.token === token) {
     held.set(signature, kept)
     return kept.client
   }
   const cache = kv ? kvStore(kv) : memoryCache()
   const client = firstParty
-    ? createClient({ firstParty: { siteId: firstParty.siteId }, apiOrigin, cache, fetch: withTimeout((input, init) => firstParty.binding.fetch(input, init)) })
+    ? createClient({ firstParty: { siteId: firstParty.siteId }, apiOrigin, cache, fetch: withTimeout(firstPartyFetch(firstParty)) })
     : createClient({ key: text(env.BACKGOLD_SITE_KEY)!, apiOrigin, cache, fetch: withTimeout() })
-  held.set(signature, { kv, binding, client })
+  held.set(signature, { kv, binding, token, client })
   while (held.size > MAX_HELD_CLIENTS) held.delete(held.keys().next().value!)
   return client
 }

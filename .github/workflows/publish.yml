@@ -1,6 +1,7 @@
-# NPM — BY HAND ONLY. Publishes one of the two public packages to the npm
+# NPM — BY HAND ONLY. Publishes one of the three public packages to the npm
 # registry: `package: content` for @backgold/content (packages/content-client),
-# `package: astro` for @backgold/astro (packages/astro-backgold). Run it from
+# `package: astro` for @backgold/astro (packages/astro-backgold), `package:
+# cli` for @backgold/cli (packages/cli). Run it from
 # Actions → Publish to npm → Run workflow, on main. With the starter sync they
 # are the only jobs that put source in a public place. Nothing in this
 # repository waits on a publish: the templates deploy from the workspace. A
@@ -40,7 +41,8 @@
 #
 # To release: bump `version` in the package's package.json in a PR, merge,
 # then run this workflow on main for that package. Publish @backgold/content
-# first when @backgold/astro needs its new version. A version already on npm
+# first when @backgold/astro needs its new version, and @backgold/astro before
+# @backgold/cli when a CLI release leans on a new kit. A version already on npm
 # is refused up front, so re-running after a half-finished attempt stops with
 # a message instead of a registry error.
 
@@ -52,7 +54,7 @@ on:
       package:
         description: Package to publish
         type: choice
-        options: [content, astro]
+        options: [content, astro, cli]
         required: true
 
 permissions:
@@ -70,10 +72,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PUBLISH_PACKAGE: ${{ inputs.package == 'astro' && '@backgold/astro' || '@backgold/content' }}
-  PUBLISH_DIR: ${{ inputs.package == 'astro' && 'packages/astro-backgold' || 'packages/content-client' }}
+  PUBLISH_PACKAGE: ${{ inputs.package == 'astro' && '@backgold/astro' || inputs.package == 'cli' && '@backgold/cli' || '@backgold/content' }}
+  PUBLISH_DIR: ${{ inputs.package == 'astro' && 'packages/astro-backgold' || inputs.package == 'cli' && 'packages/cli' || 'packages/content-client' }}
   # What to build first: @backgold/astro depends on the client through its
-  # dist; the client bundles the contract slice, plain files.
+  # dist; the client bundles the contract slice, plain files; the CLI's one
+  # dependency, fflate, comes from npm.
   PUBLISH_BUILD_FIRST: ${{ inputs.package == 'astro' && '@backgold/content' || '' }}
 
 jobs:

@@ -158,6 +158,14 @@ adds its own. Then finish the Developer page's steps 3 to 5: test a preview at
 `https://<site>/api/backgold/webhook` and turn on all five content events, and
 add the domain to the Worker (the edge cache works only on a custom domain).
 
+BackGold hosting is the alternative to the client's own Cloudflare account:
+with a deploy token from the Developer page, `npx backgold link` and then
+`npm run deploy:backgold` (the `backgold` command, `@backgold/cli` in
+`packages/cli`) upload the same build into BackGold's sites namespace, with
+kept deploys, previews and rollback. Its steps are in the starter README's
+"Deploy to BackGold hosting" section; that site needs no Cloudflare account,
+KV namespace or site keys.
+
 ### 6. Keep it current
 
 The packages are ordinary npm dependencies. `npm update` takes new releases

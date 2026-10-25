@@ -24,16 +24,17 @@
 # build output) and nothing from outside the template can reach the public
 # repository. Files deleted from the template are deleted there.
 #
-# In this workspace the template depends on `@backgold/astro` and
-# `@backgold/content` as `workspace:^`, which only pnpm inside this repository
+# In this workspace the template depends on `@backgold/astro`,
+# `@backgold/content` and (a devDependency) `@backgold/cli` as `workspace:^`,
+# which only pnpm inside this repository
 # can resolve. The public repository gets a package.json with each
 # `workspace:` range on an `@backgold/*` dependency written as `^<version>`,
 # the version in that package's packages/<dir>/package.json in the same source
 # commit (read with `git show`, never from the working tree). Everything else
 # in the file is as committed.
 #
-# Before anything is pushed, the `@backgold/astro` and `@backgold/content`
-# ranges in that rewritten package.json must resolve on npm: the public
+# Before anything is pushed, the `@backgold/astro`, `@backgold/content` and
+# `@backgold/cli` ranges in that rewritten package.json must resolve on npm: the public
 # repository is what Deploy to Cloudflare clones, so it must always install.
 # A version bump in packages/ therefore reaches the public starter only once
 # that version is published.
@@ -176,14 +177,14 @@ write_public_manifest() {
 
 # --- The npm guard -----------------------------------------------------------
 # Reads PUBLIC_MANIFEST, so it checks the ranges the public repository gets.
-# Prints one line per package. Returns 0 when both ranges resolve on npm, 3
+# Prints one line per package. Returns 0 when every range resolves on npm, 3
 # when a range is a published-style range no npm version satisfies yet, and 1
 # when a range is not an npm range at all (that is a template defect, not a
 # wait for a publish, so it wins over 3).
 check_npm_ranges() {
   local manifest="$PUBLIC_MANIFEST"
   local failed=0 name range resolved
-  for name in @backgold/astro @backgold/content; do
+  for name in @backgold/astro @backgold/content @backgold/cli; do
     range=$(node -e '
       const m = require(process.argv[1]);
       const n = process.argv[2];

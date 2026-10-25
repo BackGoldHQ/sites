@@ -13,8 +13,8 @@
 # scripts/sync-starter.sh does the work. It always syncs main's NEWEST
 # commit, whichever run it is in: it fetches this repository's origin main
 # (the job's shallow, detached checkout is fine) and takes the template from
-# that commit. It refuses to push unless the @backgold/astro and
-# @backgold/content ranges the public template's package.json names resolve
+# that commit. It refuses to push unless the @backgold/astro,
+# @backgold/content and @backgold/cli ranges the public template's package.json names resolve
 # on npm (the public starter must always install, so publish first),
 # replaces the public tree with the template as committed, commits as
 # `BackGold <noreply@backgold.com>` with `Sync from backgold@<short sha>`, and

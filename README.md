@@ -21,6 +21,7 @@ github.com/BackGoldHQ/backgold (private).
 | --- | --- |
 | `packages/content-client` | [`@backgold/content`](https://www.npmjs.com/package/@backgold/content) on npm: the typed, cache-aware client for the Content API (`/api/content/v1`), and the `backgold-content` command that writes a site's content types. |
 | `packages/astro-backgold` | [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro) on npm: the plumbing for an Astro site on Cloudflare Workers (routing, the edge cache keyed by content version, the webhook, preview, redirects, the SEO routes and the components). It reads content with `@backgold/content`. |
+| `packages/cli` | [`@backgold/cli`](https://www.npmjs.com/package/@backgold/cli) on npm: the `backgold` command that deploys a site built on `@backgold/astro` to BackGold hosting (link, deploy, promote, rollback, previews, secrets). |
 | `packages/template-kit` | `@backgold/template-kit`, private to this workspace: what every BackGold template draws the same way (the section, entry and chrome components, the Site layout, `lib`, the stylesheets) and an Astro integration that serves its routes with a template's config. Consumed as source; no build. A template is its manifest, its `src/template.ts`, its `src/styles/template.css` and any layouts of its own. |
 | `templates/astro-starter` | The public starter. `scripts/sync-starter.sh` mirrors it to [github.com/BackGoldHQ/backgold-starter](https://github.com/BackGoldHQ/backgold-starter), the repository Cloudflare's Deploy button clones. |
 | `templates/party` | The party template, drawn by the template kit, which BackGold deploys as the Worker `template-party` into its Workers for Platforms dispatch namespaces. Its `template.json` tells BackGold's composer which layouts it draws. See [its README](templates/party/README.md). |
@@ -113,7 +114,7 @@ each check job runs only when the paths it covers changed; `gate`
 - **Releasing a package to npm** is for outside users (the public starter and
   their own sites). Bump `version` in the package's `package.json` in a PR,
   merge it, then run `publish.yml` (Actions → Publish to npm) on `main` for
-  that package; its publish job follows the pack job by itself. Publish
+  that package (`content`, `astro` or `cli`); its publish job follows the pack job by itself. Publish
   `@backgold/content` first when `@backgold/astro` needs its new version.
 - **The public starter** syncs by itself (`sync-starter.yml`) when a push to
   `main` changed `templates/astro-starter`, a package's `package.json` or
