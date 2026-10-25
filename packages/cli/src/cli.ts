@@ -5,7 +5,7 @@
 // it prints ever carries the deploy token.
 //
 // Exit codes: 0 done, 1 failed, 2 usage (or a limit the build is over),
-// 3 no token or a refused one.
+// 3 no token, a refused one, or an organization without custom sites.
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { HttpError, apiCall, checkOrigin, redact, request } from './api.js'
@@ -13,7 +13,7 @@ import { parseArgs, type FlagKind, type Parsed } from './args.js'
 import { bucketForm, bundleZip, completionJwt } from './bundle.js'
 import { CollectError, collectSite, type Asset } from './collect.js'
 import { nodeIo, type Io } from './io.js'
-import { RESERVED_SECRET_MESSAGE, formatBytes, reservedVarName } from './limits.js'
+import { LIMITS, RESERVED_SECRET_MESSAGE, SECRET_NAME, formatBytes, reservedVarName } from './limits.js'
 import { DEFAULT_API, PROJECT_FILE, kitVersion, readProjectFile, writeProjectFile, type ProjectFile } from './project.js'
 
 const GLOBAL_HELP = `Options for every command:
@@ -86,7 +86,7 @@ interface DeployList {
 interface Me {
   org_id: string
   site_id: string
-  site_name: string
+  site_name: string | null
   domain: string | null
   scopes: string[]
   api_origin: string
@@ -99,7 +99,6 @@ interface CreateAnswer {
 }
 
 const TOKEN_PATTERN = /^bg_deploy_[A-Za-z0-9]+$/
-const SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
 const POLL_MS = 2000
 const POLL_LIMIT_MS = 10 * 60 * 1000
 
@@ -142,6 +141,12 @@ function resolveDeployId(given: string, deploys: readonly Deploy[]): string {
   return given
 }
 
+/** The site's name and domain; a site with no name shows its domain, else its id. */
+function siteLabel(me: Me): string {
+  if (!me.site_name) return me.domain ?? me.site_id
+  return `${me.site_name}${me.domain ? ` (${me.domain})` : ''}`
+}
+
 // ── Commands ────────────────────────────────────────────────────────────────
 
 async function link(ctx: Ctx): Promise<number> {
@@ -150,7 +155,7 @@ async function link(ctx: Ctx): Promise<number> {
   await writeProjectFile(ctx.project, ctx.file, me.site_id, ctx.api)
   step(ctx, `Wrote ${PROJECT_FILE} (site ${me.site_id})`)
   if (!ctx.io.env.BACKGOLD_DEPLOY_TOKEN) step(ctx, 'To deploy, keep the token in BACKGOLD_DEPLOY_TOKEN (your shell, or a CI secret).')
-  answer(ctx, me, `Linked to ${me.site_name}${me.domain ? ` (${me.domain})` : ''}`)
+  answer(ctx, me, `Linked to ${siteLabel(me)}`)
   return 0
 }
 
@@ -162,7 +167,7 @@ async function whoami(ctx: Ctx): Promise<number> {
   answer(
     ctx,
     me,
-    [`${me.site_name}${me.domain ? ` (${me.domain})` : ''}`, `site    ${me.site_id}`, `scopes  ${me.scopes.join(', ') || 'none'}`, `api     ${ctx.api}`].join('\n'),
+    [siteLabel(me), `site    ${me.site_id}`, `scopes  ${me.scopes.join(', ') || 'none'}`, `api     ${ctx.api}`].join('\n'),
   )
   return 0
 }
@@ -235,7 +240,7 @@ function secretName(ctx: Ctx, verb: string): string {
   const name = ctx.args.positionals[1]
   if (!name) throw new Exit(`secrets ${verb} needs a NAME`, 2)
   if (reservedVarName(name)) throw new Exit(RESERVED_SECRET_MESSAGE, 2)
-  if (!SECRET_NAME.test(name)) throw new Exit('a secret name is letters, digits and _, not starting with a digit', 2)
+  if (!SECRET_NAME.test(name)) throw new Exit('a secret name is upper-case letters, digits and _, starting with a letter, at most 64', 2)
   return name
 }
 
@@ -260,6 +265,7 @@ async function secrets(ctx: Ctx): Promise<number> {
       value = (await ctx.io.readStdin()).replace(/\r?\n$/, '')
     }
     if (!value) throw new Exit(`no value for ${name}: type it at the prompt, or pipe it in`, 2)
+    if (Buffer.byteLength(value, 'utf8') > LIMITS.SECRET_MAX_BYTES) throw new Exit(`the value for ${name} is over the ${formatBytes(LIMITS.SECRET_MAX_BYTES)} limit`, 2)
     await apiCall<null>(ctx.io.fetch, sitePath(ctx, `/secrets/${encodeURIComponent(name)}`), { method: 'PUT', bearer: ctx.token, json: { value } })
     answer(ctx, null, `Set ${name}. A live site gets it on its next deploy.`)
     return 0
@@ -333,6 +339,9 @@ async function deploy(ctx: Ctx): Promise<number> {
       templateManifest = JSON.parse(templateText)
     } catch {
       throw new Exit('template.json is not valid JSON', 1)
+    }
+    if (Buffer.byteLength(JSON.stringify(templateManifest), 'utf8') > LIMITS.TEMPLATE_MANIFEST_MAX_BYTES) {
+      throw new Exit(`template.json is over BackGold hosting's ${formatBytes(LIMITS.TEMPLATE_MANIFEST_MAX_BYTES)} limit`, 2)
     }
   }
   const kit = await kitVersion(ctx.project)
@@ -508,7 +517,7 @@ Lists the site's preview names and the deploy each points at.
 The site's secrets: values its Worker reads, kept encrypted by BackGold and
 never shown again. set asks for the value (not shown as you type), or reads it
 from stdin when it is piped in. A change reaches a live site on its next deploy.
-BACKGOLD_* names and ENVIRONMENT are reserved.
+BACKGOLD_* names, ENVIRONMENT and ASSETS are reserved.
 `,
     flags: {},
     positionals: 2,
@@ -586,8 +595,12 @@ export async function run(argv: readonly string[], io: Partial<Io> = {}): Promis
       full.stderr(`backgold: ${redact(err.message)}\n`)
       return err.code
     }
+    if (err instanceof HttpError && err.code === 'NOT_ENTITLED') {
+      full.stderr(`backgold: this organization does not have custom sites on BackGold yet, so it cannot deploy or promote a site.\n`)
+      return err.exitCode
+    }
     if (err instanceof HttpError) {
-      const hint = err.exitCode === 3 ? '\nThe deploy token was refused: check BACKGOLD_DEPLOY_TOKEN, or make a new one on the site\'s Developer page.' : ''
+      const hint = err.status === 401 || err.status === 403 ? '\nThe deploy token was refused: check BACKGOLD_DEPLOY_TOKEN, or make a new one on the site\'s Developer page.' : ''
       full.stderr(`backgold: ${redact(err.message)}${hint}\n`)
       return err.exitCode
     }

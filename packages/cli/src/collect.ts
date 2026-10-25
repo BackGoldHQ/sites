@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { ignoreMatcher } from './ignore.js'
-import { LIMITS, formatBytes, reservedVarName } from './limits.js'
+import { LIMITS, VAR_NAME, deployModulePath, formatBytes, reservedVarName } from './limits.js'
 
 export type ModuleType = 'esm' | 'commonjs' | 'text' | 'data' | 'wasm'
 
@@ -184,7 +184,8 @@ function droppedBindings(config: WorkerConfig): string[] {
   for (const path of BINDING_LISTS) {
     const value = path.split('.').reduce<unknown>((v, key) => (v && typeof v === 'object' ? (v as Record<string, unknown>)[key] : undefined), config)
     if (!Array.isArray(value)) continue
-    // BackGold gives every site its own BACKGOLD_CACHE.
+    // The kit's BACKGOLD_CACHE KV goes without a warning: BackGold binds none,
+    // and the kit then caches in the isolate's memory.
     const named = value.filter((b) => !(path === 'kv_namespaces' && (b as { binding?: unknown })?.binding === 'BACKGOLD_CACHE'))
     if (named.length) dropped.push(path)
   }
@@ -200,9 +201,11 @@ function workerVars(config: WorkerConfig, configName: string, warnings: string[]
   const given = config.vars
   if (!given || typeof given !== 'object' || Array.isArray(given)) return vars
   const reserved: string[] = []
+  const badName: string[] = []
   const notText: string[] = []
   for (const [name, value] of Object.entries(given)) {
     if (reservedVarName(name)) reserved.push(name)
+    else if (!VAR_NAME.test(name)) badName.push(name)
     else if (typeof value !== 'string') notText.push(name)
     else {
       if (Buffer.byteLength(value, 'utf8') > LIMITS.VAR_MAX_BYTES) {
@@ -214,7 +217,10 @@ function workerVars(config: WorkerConfig, configName: string, warnings: string[]
   if (Object.keys(vars).length > LIMITS.VARS_MAX) {
     throw new CollectError(`${configName} has ${Object.keys(vars).length} vars, over the limit of ${LIMITS.VARS_MAX}`, 2)
   }
-  if (reserved.length) warnings.push(`${configName}'s vars ${reserved.join(', ')} are left out: BackGold sets BACKGOLD_* and ENVIRONMENT itself`)
+  if (reserved.length) warnings.push(`${configName}'s vars ${reserved.join(', ')} are left out: BackGold sets BACKGOLD_*, ENVIRONMENT and ASSETS itself`)
+  if (badName.length) {
+    warnings.push(`${configName}'s vars ${badName.join(', ')} are left out: a var's name is letters, digits and _, not starting with a digit, at most 64`)
+  }
   if (notText.length) warnings.push(`${configName}'s vars ${notText.join(', ')} are left out: only text values are kept`)
   return vars
 }
@@ -260,10 +266,20 @@ export async function collectSite(projectDir: string): Promise<BuiltSite> {
     modules.push({ name, type: moduleType(name), bytes: (await stat(file)).size, file })
   }
   if (!modules.some((m) => m.name === mainModule)) throw new CollectError(`${configName}'s main module ${mainModule} was not found`, 1)
-  const modulesBytes = modules.reduce((n, m) => n + m.bytes, 0)
-  if (modulesBytes > LIMITS.MODULES_MAX_BYTES) {
+  const misnamed = modules.find((m) => !deployModulePath(m.name))
+  if (misnamed) {
     throw new CollectError(
-      `the Worker's modules come to ${formatBytes(modulesBytes)}, over BackGold hosting's ${formatBytes(LIMITS.MODULES_MAX_BYTES)} Worker limit`,
+      `the Worker module ${misnamed.name} has a name BackGold hosting cannot take: letters, digits and ._@+- in each path segment, at most 256 characters, and not manifest.json or metadata`,
+      2,
+    )
+  }
+  if (modules.length > LIMITS.MODULES_MAX) {
+    throw new CollectError(`the Worker has ${modules.length} modules, over BackGold hosting's limit of ${LIMITS.MODULES_MAX}`, 2)
+  }
+  const modulesBytes = modules.reduce((n, m) => n + m.bytes, 0)
+  if (modulesBytes > LIMITS.BUNDLE_MAX_BYTES) {
+    throw new CollectError(
+      `the Worker's modules come to ${formatBytes(modulesBytes)}, over BackGold hosting's ${formatBytes(LIMITS.BUNDLE_MAX_BYTES)} Worker limit`,
       2,
     )
   }
@@ -301,6 +317,9 @@ export async function collectSite(projectDir: string): Promise<BuiltSite> {
       if (isInside(workerDir, file)) continue
       const path = toPosix(relative(assetsDir, file))
       if (ignored(path)) continue
+      if (path.length + 1 > LIMITS.ASSET_PATH_MAX_CHARS) {
+        throw new CollectError(`the asset /${path.slice(0, 80)}… has a path over BackGold hosting's ${LIMITS.ASSET_PATH_MAX_CHARS}-character limit`, 2)
+      }
       const asset = await hashAsset(file)
       if (asset.size > LIMITS.ASSET_FILE_MAX_BYTES) {
         throw new CollectError(`the asset /${path} is ${formatBytes(asset.size)}, over the ${formatBytes(LIMITS.ASSET_FILE_MAX_BYTES)} limit per file`, 2)

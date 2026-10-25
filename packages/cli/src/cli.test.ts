@@ -29,6 +29,8 @@ beforeEach(async () => {
     known: new Set(),
     bucketSize: 2,
     bundleMaxBytes: 10 * 1024 * 1024,
+    entitled: true,
+    siteMode: 'hosted',
     outcome: { status: 'ready' },
     pollsBeforeSettled: 1,
     log: [],
@@ -119,8 +121,10 @@ test('usage: every usage problem exits 2 without a request', async () => {
     [['secrets'], /secrets needs list, set or delete/],
     [['secrets', 'rotate'], /unknown secrets command rotate/],
     [['secrets', 'set'], /secrets set needs a NAME/],
-    [['secrets', 'set', 'BACKGOLD_SITE_KEY'], /BACKGOLD_\* names and ENVIRONMENT are reserved: BackGold sets them on every deploy/],
+    [['secrets', 'set', 'BACKGOLD_SITE_KEY'], /BACKGOLD_\* names, ENVIRONMENT and ASSETS are reserved: BackGold sets them on every deploy/],
     [['secrets', 'delete', 'ENVIRONMENT'], /reserved/],
+    [['secrets', 'set', 'ASSETS'], /reserved/],
+    [['secrets', 'set', 'widget_id'], /a secret name is upper-case letters, digits and _, starting with a letter/],
     [['secrets', 'set', '9LIVES'], /letters, digits and _/],
   ]
   for (const [argv, problem] of cases) {
@@ -155,6 +159,28 @@ test('auth: no token, a malformed one, or a refused one exits 3', async () => {
   assert.match(refused.stderr, /Invalid deploy token \(UNAUTHORIZED, HTTP 401\)/)
   assert.match(refused.stderr, /The deploy token was refused/)
   assert.ok(!refused.stderr.includes('wrongwrongwrong'), 'a token in a message is redacted')
+})
+
+test('auth: an organization without custom sites exits 3 with a plain sentence, on deploy and on promote', async () => {
+  fx.entitled = false
+  const d = await cli(['deploy', '--no-build'])
+  assert.equal(d.code, 3)
+  assert.equal(d.stderr.split('\n').filter((l) => l.startsWith('backgold:')).join('\n'), 'backgold: this organization does not have custom sites on BackGold yet, so it cannot deploy or promote a site.')
+  assert.ok(!d.stderr.includes('token was refused'))
+  assert.ok(!fx.log.some((l) => l.endsWith('/bundle')), 'nothing is uploaded')
+  history()
+  const p = await cli(['promote', 'dddd5555'])
+  assert.equal(p.code, 3)
+  assert.match(p.stderr, /this organization does not have custom sites on BackGold yet/)
+  assert.equal(fx.live, 'cccc4444000000000000000000000004')
+})
+
+test('deploy: a headless site is refused with the api\'s sentence and exit 1', async () => {
+  fx.siteMode = 'headless'
+  const r = await cli(['deploy', '--no-build'])
+  assert.equal(r.code, 1)
+  assert.match(r.stderr, /This site is built elsewhere and takes no deploy \(SITE_MODE, HTTP 409\)/)
+  assert.ok(!fx.log.some((l) => l.endsWith('/bundle')))
 })
 
 test('api: an unreachable api exits 1 after one retry', async () => {

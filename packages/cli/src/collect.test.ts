@@ -120,6 +120,27 @@ test('collect: modules over 10 MiB are refused with exit 2', async () => {
   })
 })
 
+test('collect: a module named metadata or manifest.json is refused with exit 2', async () => {
+  for (const name of ['metadata', 'manifest.json']) {
+    await withCopy(async (dir) => {
+      await writeFile(join(dir, 'dist/server', name), 'x')
+      const err = await refusal(dir)
+      assert.equal(err.code, 2)
+      assert.match(err.message, new RegExp(`the Worker module ${name.replace('.', '\\.')} has a name BackGold hosting cannot take`))
+    })
+  }
+})
+
+test('collect: ASSETS and a var name the Worker cannot read are left out with warnings', async () => {
+  await withCopy(async (dir) => {
+    await editConfig(dir, (c) => (c.vars = { SITE_URL: 'https://fixture.example.org', ASSETS: 'x', 'bad-name': 'y' }))
+    const site = await collectSite(dir)
+    assert.deepEqual(site.vars, { SITE_URL: 'https://fixture.example.org' })
+    assert.match(site.warnings.join('\n'), /vars ASSETS are left out: BackGold sets BACKGOLD_\*, ENVIRONMENT and ASSETS itself/)
+    assert.match(site.warnings.join('\n'), /vars bad-name are left out: a var's name is letters/)
+  })
+})
+
 test('collect: an asset over 25 MiB is refused with exit 2', async () => {
   await withCopy(async (dir) => {
     await writeFile(join(dir, 'dist/client/video.mp4'), Buffer.alloc(25 * 1024 * 1024 + 1))

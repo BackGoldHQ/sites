@@ -15,9 +15,9 @@ export class HttpError extends Error {
   ) {
     super(message)
   }
-  /** 3 for a refused token, else 1. */
+  /** 3 for a refused token, or an organization without custom sites (402 NOT_ENTITLED); else 1. */
   get exitCode(): 1 | 3 {
-    return this.status === 401 || this.status === 403 ? 3 : 1
+    return this.status === 401 || this.status === 403 || (this.status === 402 && this.code === 'NOT_ENTITLED') ? 3 : 1
   }
 }
 

@@ -61,13 +61,16 @@ What a deploy carries:
 - `_headers` and `_redirects`, which apply to the static files as on
   Cloudflare;
 - the `vars` in your `wrangler.jsonc` with text values. BackGold sets every
-  `BACKGOLD_*` name and `ENVIRONMENT` itself, so those are left out, as are
-  your bindings (KV, D1, R2 and the rest): BackGold gives the site its own
-  cache and its own connection to your organization's content, with no keys;
+  `BACKGOLD_*` name, `ENVIRONMENT` and `ASSETS` itself, so those are left
+  out, as are your bindings (KV, D1, R2 and the rest): BackGold gives the
+  site its own connection to your organization's content, with no keys, and
+  no KV, so `@backgold/astro` caches content in the Worker's memory;
 - `template.json`, when the project has one.
 
-Limits: the Worker's modules 10 MiB; 20,000 static files, 25 MiB each and
-250 MiB in all; `_headers` and `_redirects` 64 KiB each; 64 vars of 5 KiB.
+Limits: the Worker's modules 10 MiB, unzipped and zipped, in at most 500
+modules; 20,000 static files, 25 MiB each and 250 MiB in all, each path at
+most 1,024 characters; `_headers` and `_redirects` 64 KiB each; 64 vars of
+5 KiB; `template.json` 256 KiB; secrets 5 KiB each.
 The compatibility flags may be `nodejs_compat` and
 `global_fetch_strictly_public`. A build over a limit stops before anything is
 uploaded and names the limit.
@@ -111,7 +114,9 @@ npx backgold secrets delete NEWSLETTER_API_KEY
 ```
 
 A value is never a command-line argument. A change reaches the live site on
-its next deploy. `BACKGOLD_*` names and `ENVIRONMENT` are reserved.
+its next deploy. A secret's name is upper case (letters, digits and `_`,
+starting with a letter). `BACKGOLD_*` names, `ENVIRONMENT` and `ASSETS` are
+reserved.
 
 ## From CI
 
@@ -157,7 +162,7 @@ piped.
 | 0 | Done |
 | 1 | Failed: the deploy, the build, or a request BackGold refused |
 | 2 | Usage, or a limit the build is over |
-| 3 | No deploy token, or one BackGold refused |
+| 3 | No deploy token, one BackGold refused, or an organization that does not have custom sites on BackGold yet |
 
 ## License
 

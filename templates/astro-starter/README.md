@@ -140,9 +140,10 @@ already in this repository's devDependencies.
    Promote and rollback upload nothing, so they take a second.
 
 Your `wrangler.jsonc` still serves `npm run dev` and `npm run preview`. On
-BackGold hosting its text `vars` are kept, except the `BACKGOLD_*` ones, which
-BackGold sets itself; its KV namespace is left out (BackGold gives the site a
-cache of its own). A secret your own code reads is set with
+BackGold hosting its text `vars` are kept, except the `BACKGOLD_*` ones,
+`ENVIRONMENT` and `ASSETS`, which BackGold sets itself; its KV namespace is
+left out (BackGold binds none, so the site keeps its BackGold reads in the
+Worker's memory). A secret your own code reads is set with
 `npx backgold secrets set <NAME>`, which asks for the value, and reaches the
 site on its next deploy. The package's
 [README](https://www.npmjs.com/package/@backgold/cli) has every command, the

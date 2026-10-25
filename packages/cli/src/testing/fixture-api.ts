@@ -48,6 +48,10 @@ export interface Fixture {
   known: Set<string>
   bucketSize: number
   bundleMaxBytes: number
+  /** False: the organization has no custom sites, and create, finish and promote answer 402 NOT_ENTITLED. */
+  entitled: boolean
+  /** The site's mode; 'headless' makes create and finish answer 409 SITE_MODE. */
+  siteMode: string
   /** What a finished deploy becomes, and its error when it fails. */
   outcome: { status: 'ready' | 'failed'; error?: string }
   /** GETs of a deploying deploy before it settles. */
@@ -122,6 +126,8 @@ export async function startFixture(): Promise<Fixture> {
     known: new Set(),
     bucketSize: 2,
     bundleMaxBytes: 10 * 1024 * 1024,
+    entitled: true,
+    siteMode: 'hosted',
     outcome: { status: 'ready' },
     pollsBeforeSettled: 1,
     dropOnce: new Set(),
@@ -168,6 +174,15 @@ export async function startFixture(): Promise<Fixture> {
     const rest = m[2] ?? ''
     const body = method === 'GET' || method === 'DELETE' ? Buffer.alloc(0) : await readBody(req)
     const json = () => JSON.parse(body.toString('utf8') || '{}') as Record<string, unknown>
+    const creates = rest === '' && method === 'POST'
+    const finishes = /^\/[^/]+\/finish$/.test(rest) && method === 'POST'
+    const promotes = /^\/[^/]+\/promote$/.test(rest) && method === 'POST'
+    if ((creates || finishes || promotes) && !fx.entitled) {
+      return send(res, 402, { error: 'Custom sites are not part of this plan', code: 'NOT_ENTITLED' })
+    }
+    if ((creates || finishes) && fx.siteMode === 'headless') {
+      return send(res, 409, { error: 'This site is built elsewhere and takes no deploy', code: 'SITE_MODE' })
+    }
 
     if (rest === '' && method === 'GET') {
       const deploys = [...fx.deploys].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map(view)
@@ -220,8 +235,11 @@ export async function startFixture(): Promise<Fixture> {
     if (secret) {
       const name = decodeURIComponent(secret[1]!)
       if (method === 'PUT') {
-        if (name.startsWith('BACKGOLD_') || name === 'ENVIRONMENT') {
-          return send(res, 400, { error: 'BACKGOLD_* names and ENVIRONMENT are reserved: BackGold sets them on every deploy', code: 'RESERVED_NAME' })
+        if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(name)) {
+          return send(res, 400, { error: 'A secret name is upper-case letters, digits and underscores, starting with a letter (at most 64).', code: 'BAD_NAME' })
+        }
+        if (name.startsWith('BACKGOLD_') || name === 'ENVIRONMENT' || name === 'ASSETS') {
+          return send(res, 400, { error: 'BACKGOLD_ names and ENVIRONMENT are set by BackGold.', code: 'RESERVED_NAME' })
         }
         fx.secrets.set(name, { value: String(json().value), updated_at: now() })
         return send(res, 204)
