@@ -67,6 +67,14 @@ export interface Fixture {
   uploaded: Map<string, { bytes: Buffer; type: string }>
   /** The Authorization header of each request to the assets upload. */
   uploadAuth: string[]
+  /** `/me`'s domain: a placeholder `_draft-<id>` stands in for an older api's answer on a site with no domain. */
+  meDomain: string | null
+  /** The `served_on` promote and the deploy list answer; undefined leaves the field out, as an older api does. */
+  servedOn: string | null | undefined
+  /** The host previews serve on (`https://<name>.<host>`); null while previews have no address. */
+  previewHost: string | null
+  /** An answer every api request gets once its token passes (a 403 the token is not the cause of, say). */
+  refuse: { status: number; body?: unknown } | null
 }
 
 const now = () => new Date().toISOString()
@@ -137,7 +145,14 @@ export async function startFixture(): Promise<Fixture> {
     bundles: new Map(),
     uploaded: new Map(),
     uploadAuth: [],
+    meDomain: 'fixture.example.org',
+    servedOn: 'https://fixture.example.org',
+    previewHost: null,
+    refuse: null,
   }
+
+  const served = () => (fx.servedOn === undefined ? {} : { served_on: fx.servedOn })
+  const aliasView = (name: string, a: { deploy_id: string; updated_at: string }) => ({ name, ...a, url: fx.previewHost ? `https://${name}.${fx.previewHost}` : null })
 
   const view = (d: FixtureDeploy): FixtureDeploy => ({
     ...d,
@@ -161,11 +176,18 @@ export async function startFixture(): Promise<Fixture> {
   }
 
   async function api(req: IncomingMessage, res: ServerResponse, path: string) {
-    if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'Invalid deploy token', code: 'UNAUTHORIZED' })
+    if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'Invalid or expired deploy token', code: 'INVALID_TOKEN' })
+    if (fx.refuse) return send(res, fx.refuse.status, fx.refuse.body)
     const method = req.method ?? 'GET'
+    // Hono's csrf(): a write whose content type is a form's, or none (read as text/plain), from no allowed origin is refused.
+    const type = String(req.headers['content-type'] ?? 'text/plain')
+    if (method !== 'GET' && /^(application\/x-www-form-urlencoded|multipart\/form-data|text\/plain)\b/i.test(type)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Forbidden')
+      return
+    }
     if (path === '/api/site-deploys/me' && method === 'GET') {
       return send(res, 200, {
-        data: { org_id: 'org1', site_id: SITE, site_name: 'Fixture Party', domain: 'fixture.example.org', scopes: ['deploy', 'promote'], api_origin: fx.origin },
+        data: { org_id: 'org1', site_id: SITE, site_name: 'Fixture Party', domain: fx.meDomain, scopes: ['deploy', 'promote'], api_origin: fx.origin },
       })
     }
     const m = /^\/api\/orgs\/domains\/([^/]+)\/deploys(\/.*)?$/.exec(path)
@@ -186,8 +208,8 @@ export async function startFixture(): Promise<Fixture> {
 
     if (rest === '' && method === 'GET') {
       const deploys = [...fx.deploys].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map(view)
-      const aliases = [...fx.aliases].map(([name, a]) => ({ name, ...a }))
-      return send(res, 200, { data: { deploys, live_deploy_id: fx.live, aliases } })
+      const aliases = [...fx.aliases].map(([name, a]) => aliasView(name, a))
+      return send(res, 200, { data: { deploys, live_deploy_id: fx.live, aliases, ...served() } })
     }
     if (rest === '' && method === 'POST') {
       const input = json()
@@ -220,7 +242,7 @@ export async function startFixture(): Promise<Fixture> {
       })
     }
     if (rest === '/previews' && method === 'GET') {
-      return send(res, 200, { data: [...fx.aliases].map(([name, a]) => ({ name, ...a })) })
+      return send(res, 200, { data: [...fx.aliases].map(([name, a]) => aliasView(name, a)) })
     }
     const preview = /^\/previews\/([^/]+)$/.exec(rest)
     if (preview && method === 'DELETE') {
@@ -271,7 +293,7 @@ export async function startFixture(): Promise<Fixture> {
       if (deploy.status !== 'ready') return send(res, 409, { error: 'The deploy is not ready', code: 'DEPLOY_NOT_READY' })
       fx.live = deploy.id
       deploy.promoted_at = now()
-      return send(res, 200, { data: view(deploy) })
+      return send(res, 200, { data: { ...view(deploy), ...served() } })
     }
     if (action === '' && method === 'GET') {
       const left = pending.get(deploy.id)

@@ -12,6 +12,8 @@ export class HttpError extends Error {
     message: string,
     readonly status: number | null,
     readonly code: string | null,
+    /** The answer's own `error` sentence, when it had one. */
+    readonly apiError: string | null = null,
   ) {
     super(message)
   }
@@ -40,7 +42,7 @@ async function failure(url: string, res: Response): Promise<HttpError> {
   const code = typeof body?.code === 'string' ? body.code : null
   const status = `HTTP ${res.status}`
   const message = error && code ? `${error} (${code}, ${status})` : error ? `${error} (${status})` : `${new URL(url).origin} answered ${status}`
-  return new HttpError(redact(message), res.status, code)
+  return new HttpError(redact(message), res.status, code, error && redact(error))
 }
 
 export async function request(doFetch: typeof fetch, url: string, options: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
@@ -52,6 +54,9 @@ export async function request(doFetch: typeof fetch, url: string, options: Reque
     body = JSON.stringify(options.json)
   } else if (options.contentType) {
     headers['Content-Type'] = options.contentType
+  } else if (body === undefined && (options.method ?? 'GET') !== 'GET') {
+    // A bodyless DELETE says JSON too, so the api's CSRF filter never reads it as a form post.
+    headers['Content-Type'] = 'application/json'
   }
   const init: RequestInit = { method: options.method ?? 'GET', headers, redirect: 'manual', ...(body !== undefined ? { body } : {}) }
   let res: Response
