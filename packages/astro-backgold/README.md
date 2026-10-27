@@ -307,10 +307,11 @@ canonical link on `SITE_URL` (the query and fragment dropped), Open Graph
 (`og:title`, `og:description`, `og:url`, `og:site_name`, `og:type`, and
 `og:image` when there is an image), the Twitter card
 (`summary_large_image` with an image, else `summary`), `robots: noindex`
-when asked, the favicon from `/site`, the blog feed link while `feeds` is on,
-and the JSON-LD. A missing title or description falls back to the site's SEO
-title and description from BackGold. An image must be an absolute http(s)
-URL or a path on the site; anything else is left out. `og:type` is `article`
+when asked, the favicon from `/site`, the `facebook-domain-verification` tag
+when `/site` has a `meta_domain_verification`, the blog feed link while
+`feeds` is on, and the JSON-LD. A missing title or description falls back to
+the site's SEO title and description from BackGold. An image must be an
+absolute http(s) URL or a path on the site; anything else is left out. `og:type` is `article`
 when the JSON-LD describes an `Article` or `BlogPosting`.
 
 `seoHead(props, locals.backgold, feeds)` returns the same values for a site

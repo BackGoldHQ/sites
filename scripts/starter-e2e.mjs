@@ -1004,7 +1004,7 @@ function kitchenSinkDocument() {
  * `/news`, and a published page sits at `/news` (on the party template, the
  * starter's News page) with a Hero and a call to action, the list's intro.
  * On a template on the kit its home's Blog section is the List layout, so the
- * section draws "All news".
+ * section draws "All news". The site has no Meta domain-verification value.
  */
 function newsBaseData(data, ex) {
   const move = (value) => JSON.parse(JSON.stringify(value).replaceAll('/blog/', '/news/').replaceAll('/blog"', '/news"'))
@@ -1028,6 +1028,7 @@ function newsBaseData(data, ex) {
   const page = data.page
   return {
     ...data,
+    site: { ...data.site, meta_domain_verification: null },
     types: data.types.map((t) => (t.index === 'blog' ? { ...t, url_base: 'news' } : t)),
     menus: move(data.menus),
     pages: [...data.pages.filter((p) => p.slug !== 'news'), { id: 'lp_news', slug: 'news', title: 'News', url: '/news', is_home: false, published_at: '2026-10-13T14:00:00.000Z', updated_at: '2026-10-13T14:00:00.000Z' }],
@@ -2467,6 +2468,12 @@ async function checkConfigured(origin, fixture, disclaimer) {
   check(tags(html, 'h1').length === 1, `home has exactly one <h1> (found ${tags(html, 'h1').length})`)
   check(html.includes(disclaimer), 'home shows the disclaimer')
   check(/<link rel="canonical" href="[^"]+"/.test(html), 'home has a canonical link')
+  const verification = `<meta name="facebook-domain-verification" content="${fixture.data.site.meta_domain_verification}">`
+  const head = /<head\b[^>]*>([\s\S]*?)<\/head>/.exec(html)?.[1] ?? ''
+  check(
+    head.split(verification).length === 2 && html.split('facebook-domain-verification').length === 2,
+    "home's <head> carries the site's Meta domain-verification tag, once",
+  )
   const ld = jsonLdBlocks(html)
   check(ld.length > 0 && ld.every((b) => Array.isArray(JSON.parse(b)) || typeof JSON.parse(b) === 'object'), `home JSON-LD parses (${ld.length} block)`)
   check(
@@ -2916,6 +2923,7 @@ async function checkNewsBase(origin, fixture) {
     res.status === 200 && (ON_KIT ? /<a href="\/news"[^>]*>All news<\/a>/ : /<a href="\/news"[^>]*>All posts<\/a>/).test(html) && !html.includes('href="/blog'),
     `home's Blog section links ${ON_KIT ? '"All news"' : '"All posts"'} to /news, and nothing on home points at /blog`,
   )
+  check(!html.includes('facebook-domain-verification'), 'home draws no Meta domain-verification tag for a site without one')
   res = await get(origin, '/kitchen-sink')
   html = await res.text()
   check(res.status === 200 && html.includes('href="/news/levy-explained"') && !html.includes('href="/blog'), 'the featured post (ContentPost) links /news/<slug>')
