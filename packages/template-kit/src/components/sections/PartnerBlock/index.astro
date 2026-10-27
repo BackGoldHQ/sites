@@ -1,0 +1,109 @@
+---
+// PartnerBlock · Spotlight (the default): a ready-made module BackGold owns
+// (the World's Smallest Political Quiz, the Human Respect Pledge) set out as a
+// section of its own. The kicker, heading and words at the left with the
+// launch button under them, and the module's chart at the right: the quiz's
+// diamond with nobody on it yet, its marker drifting (BackGold draws it, as
+// `media.chart`, in this band's colours; it rests for a visitor who asks for
+// less motion). A module with no chart is one column, never an empty half.
+// The button opens the module in a dialog (Launch.astro).
+import type { Section } from '@backgold/content'
+import Band from '../Band.astro'
+import Prose from '../../Prose.astro'
+import Launch from './Launch.astro'
+import { SECTION_BANDS, appearanceOf, chartColours, type SectionBand } from '../../../lib/brand'
+import { text } from '../../../lib/format'
+
+interface Props {
+  section: Section
+  variant?: string
+}
+
+const { section } = Astro.props
+const kicker = text(section.copy.kicker)
+const heading = text(section.copy.heading)
+const bg = Astro.locals.backgold
+const brand = bg.setup === null ? bg.site.brand : null
+const appearance = bg.setup === null ? appearanceOf(bg.site.style) : 'auto'
+const band: SectionBand = SECTION_BANDS.includes(section.band as SectionBand) ? (section.band as SectionBand) : 'plain'
+
+/** The chart's address in one mode's colours of this band, or null when BackGold sent none. */
+function chartIn(mode: 'light' | 'dark'): string | null {
+  const sent = section.media.chart?.url
+  if (!sent) return null
+  let url: URL
+  try {
+    url = new URL(sent)
+  } catch {
+    return null
+  }
+  for (const [key, value] of Object.entries(chartColours(brand, band, mode))) url.searchParams.set(key, value)
+  return url.toString()
+}
+
+const light = appearance === 'dark' ? null : chartIn('light')
+const dark = appearance === 'light' ? null : chartIn('dark')
+const chart = light ?? dark
+---
+<Band section={section} class="partner partner-spotlight">
+  <div class:list={['partner-spot', !chart && 'partner-spot-solo']}>
+    <div class="partner-copy">
+      {kicker && <p class="kicker">{kicker}</p>}
+      {heading && <h2>{heading}</h2>}
+      <Prose value={section.copy.body} class="lede" />
+      <Launch section={section} />
+    </div>
+    {chart && (
+      // Decoration: the words beside it say what it is.
+      <div class="partner-chart" aria-hidden="true">
+        {light && <img src={light} alt="" loading="lazy" class:list={[dark && 'partner-chart-light']} />}
+        {dark && <img src={dark} alt="" loading="lazy" class:list={[light && 'partner-chart-dark']} />}
+      </div>
+    )}
+  </div>
+</Band>
+
+<style>
+  .partner-spot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(1.75rem, 4vw, 3.5rem);
+    align-items: center;
+  }
+  .partner-spot-solo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (max-width: 760px) {
+    .partner-spot {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .partner-copy :global(.lede) {
+    margin-bottom: 1.5rem;
+  }
+  .partner-chart img {
+    display: block;
+    width: 100%;
+    max-width: 28rem;
+    height: auto;
+    margin: 0 auto;
+  }
+  /* Both modes are sent under an automatic appearance: the one the page wears shows. */
+  .partner-chart-dark {
+    display: none !important;
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-gg-mode='light'])) .partner-chart-light {
+      display: none !important;
+    }
+    :global(:root:not([data-gg-mode='light'])) .partner-chart-dark {
+      display: block !important;
+    }
+  }
+  :global(:root[data-gg-mode='dark']) .partner-chart-light {
+    display: none !important;
+  }
+  :global(:root[data-gg-mode='dark']) .partner-chart-dark {
+    display: block !important;
+  }
+</style>

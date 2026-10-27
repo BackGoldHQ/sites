@@ -532,3 +532,14 @@ export function moduleLook(
   if (appearance === 'dark') return { look: dark }
   return { look: light, look_dark: dark }
 }
+
+/**
+ * The colours a ready-made module's chart is drawn in where it sits, as the
+ * query BackGold's chart image takes (`accent`, `bg`, `ink`, `muted`, `line`,
+ * `line_strong`): the band's own, in one mode. Every value is a `#rrggbb`
+ * built above, never text from BackGold.
+ */
+export function chartColours(brand: BrandColors | null | undefined, band: SectionBand, mode: 'light' | 'dark'): Record<string, string> {
+  const b = (mode === 'dark' ? darkPalette(brand) : lightPalette(brand)).bands[band]
+  return { accent: b.accent, bg: b.ground, ink: b.ink, muted: b.muted, line: b.line, line_strong: b.lineStrong }
+}

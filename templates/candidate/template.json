@@ -110,6 +110,10 @@
       "card",
       "wide"
     ],
+    "PartnerBlock": [
+      "spotlight",
+      "button"
+    ],
     "PollBlock": [
       "card"
     ],
