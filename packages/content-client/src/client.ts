@@ -60,14 +60,13 @@ import type {
   VisitorOptions,
   VisitorResponse,
 } from './contract.js'
+import { SITE_HEADER } from '@backgold/contract/api-operations'
 import { holdsQuery } from './areas.js'
 import { memoryCache } from './cache.js'
 import { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 import { sha256Hex } from './hash.js'
 import { DEFAULT_API_ORIGIN, SITE_KEY_PATTERN, contentApiBase } from './request.js'
 
-/** The header a first-party request names its site with (the api's SITE_HEADER, middleware/site-content-key.ts). */
-const SITE_HEADER = 'X-BackGold-Site'
 /** A site id as a first-party client accepts it. */
 const SITE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 

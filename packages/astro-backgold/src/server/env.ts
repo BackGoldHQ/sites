@@ -4,6 +4,7 @@
 // imported lazily so `@backgold/astro/server` still loads where that module
 // does not exist (Node tests, tooling); there the environment is empty.
 
+import { SITE_HEADER, SITE_TOKEN_HEADER } from '@backgold/contract/api-operations'
 import type { KvLike } from '@backgold/content'
 
 /** Every name the package reads. There is no analytics variable: its switch lives in BackGold. */
@@ -74,12 +75,6 @@ export function serviceBinding(value: unknown): { fetch: typeof fetch } | undefi
   const binding = value as { fetch?: unknown } | null | undefined
   return binding && typeof binding.fetch === 'function' ? (binding as { fetch: typeof fetch }) : undefined
 }
-
-/** The request header the api names a dispatched site's id in (the api's `SITE_HEADER`). */
-const SITE_HEADER = 'X-BackGold-Site'
-
-/** The request header a custom site's Worker proves its site in, from `BACKGOLD_SITE_TOKEN`. */
-const SITE_TOKEN_HEADER = 'X-BackGold-Site-Token'
 
 /** A site id as `@backgold/content` accepts it for first-party reads. */
 export const SITE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/

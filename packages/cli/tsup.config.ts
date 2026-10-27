@@ -3,7 +3,8 @@ import { defineConfig } from 'tsup'
 // `cli` is what the bin runs; `collect` and `bundle` are the build-output
 // reader and the zip on their own, for scripts/cli-e2e.mjs. fflate stays a
 // dependency, not bundled. The template manifest schema `deploy` checks
-// template.json with comes from `@backgold/contract`, the Content API
+// template.json with, and the deploy limits and name rules a build is held
+// to (`site-deploys`), come from `@backgold/contract`, the Content API
 // contract vendored from the platform (vendor/backgold-contract), a private
 // workspace package: it and zod, which the schema is written in, are BUNDLED
 // (noExternal), so the published tarball depends on neither.

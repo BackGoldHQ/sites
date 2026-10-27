@@ -8,6 +8,11 @@
 // Exit codes: 0 done, 1 failed, 2 usage (or a limit the build is over),
 // 3 no token, a refused one, or an organization without custom sites.
 import { readFile } from 'node:fs/promises'
+import {
+  SITE_DEPLOY_LIMITS as LIMITS,
+  SITE_DEPLOY_SECRET_NAME_PATTERN,
+  isReservedDeploySecretName,
+} from '@backgold/contract/site-deploys'
 import { join, resolve } from 'node:path'
 import { HttpError, apiCall, checkOrigin, redact, request } from './api.js'
 import { parseArgs, type FlagKind, type Parsed } from './args.js'
@@ -16,7 +21,7 @@ import { CollectError, collectSite, type Asset } from './collect.js'
 import { EjectError, TEMPLATES_PACKAGE, ejectTemplate, localSource, registrySource } from './eject.js'
 import { nodeIo, type Io } from './io.js'
 import { templateManifestProblems } from './manifest.js'
-import { LIMITS, RESERVED_SECRET_MESSAGE, SECRET_NAME, formatBytes, reservedVarName } from './limits.js'
+import { formatBytes } from './bytes.js'
 import { DEFAULT_API, PROJECT_FILE, kitVersion, readProjectFile, writeProjectFile, type ProjectFile } from './project.js'
 
 const GLOBAL_HELP = `Options for every command:
@@ -274,11 +279,14 @@ async function previews(ctx: Ctx): Promise<number> {
   return 0
 }
 
+/** The refusal for a secret named like something BackGold binds itself (the contract's isReservedDeploySecretName). */
+const RESERVED_SECRET_MESSAGE = 'BACKGOLD_* names, ENVIRONMENT and ASSETS are reserved: BackGold sets them on every deploy'
+
 function secretName(ctx: Ctx, verb: string): string {
   const name = ctx.args.positionals[1]
   if (!name) throw new Exit(`secrets ${verb} needs a NAME`, 2)
-  if (reservedVarName(name)) throw new Exit(RESERVED_SECRET_MESSAGE, 2)
-  if (!SECRET_NAME.test(name)) throw new Exit('a secret name is upper-case letters, digits and _, starting with a letter, at most 64', 2)
+  if (isReservedDeploySecretName(name)) throw new Exit(RESERVED_SECRET_MESSAGE, 2)
+  if (!SITE_DEPLOY_SECRET_NAME_PATTERN.test(name)) throw new Exit('a secret name is upper-case letters, digits and _, starting with a letter, at most 64', 2)
   return name
 }
 
