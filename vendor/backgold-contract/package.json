@@ -20,6 +20,14 @@
     "./site-templates": {
       "types": "./site-templates.d.ts",
       "import": "./site-templates.js"
+    },
+    "./api-operations": {
+      "types": "./api-operations.d.ts",
+      "import": "./api-operations.js"
+    },
+    "./site-deploys": {
+      "types": "./site-deploys.d.ts",
+      "import": "./site-deploys.js"
     }
   },
   "dependencies": {

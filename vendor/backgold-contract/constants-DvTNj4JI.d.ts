@@ -40,7 +40,7 @@ declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", 
 type BuiltInContentTypeKey = (typeof BUILT_IN_CONTENT_TYPE_KEYS)[number];
 declare const BUILT_IN_TAXONOMY_KEYS: readonly ["category", "tag"];
 type BuiltInTaxonomyKey = (typeof BUILT_IN_TAXONOMY_KEYS)[number];
-declare const SITE_MODES: readonly ["hosted", "headless", "template"];
+declare const SITE_MODES: readonly ["hosted", "headless", "template", "custom"];
 type SiteMode = (typeof SITE_MODES)[number];
 declare const SITE_API_KEY_KINDS: readonly ["publishable", "secret"];
 type SiteApiKeyKind = (typeof SITE_API_KEY_KINDS)[number];

@@ -4,8 +4,14 @@
 import { createHash } from 'node:crypto'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import {
+  SITE_DEPLOY_LIMITS as LIMITS,
+  SITE_DEPLOY_VAR_NAME_PATTERN,
+  isDeployModulePath,
+  isReservedDeploySecretName,
+} from '@backgold/contract/site-deploys'
+import { formatBytes } from './bytes.js'
 import { ignoreMatcher } from './ignore.js'
-import { LIMITS, VAR_NAME, deployModulePath, formatBytes, reservedVarName } from './limits.js'
 
 export type ModuleType = 'esm' | 'commonjs' | 'text' | 'data' | 'wasm'
 
@@ -204,8 +210,8 @@ function workerVars(config: WorkerConfig, configName: string, warnings: string[]
   const badName: string[] = []
   const notText: string[] = []
   for (const [name, value] of Object.entries(given)) {
-    if (reservedVarName(name)) reserved.push(name)
-    else if (!VAR_NAME.test(name)) badName.push(name)
+    if (isReservedDeploySecretName(name)) reserved.push(name)
+    else if (!SITE_DEPLOY_VAR_NAME_PATTERN.test(name)) badName.push(name)
     else if (typeof value !== 'string') notText.push(name)
     else {
       if (Buffer.byteLength(value, 'utf8') > LIMITS.VAR_MAX_BYTES) {
@@ -266,7 +272,7 @@ export async function collectSite(projectDir: string): Promise<BuiltSite> {
     modules.push({ name, type: moduleType(name), bytes: (await stat(file)).size, file })
   }
   if (!modules.some((m) => m.name === mainModule)) throw new CollectError(`${configName}'s main module ${mainModule} was not found`, 1)
-  const misnamed = modules.find((m) => !deployModulePath(m.name))
+  const misnamed = modules.find((m) => !isDeployModulePath(m.name))
   if (misnamed) {
     throw new CollectError(
       `the Worker module ${misnamed.name} has a name BackGold hosting cannot take: letters, digits and ._@+- in each path segment, at most 256 characters, and not manifest.json or metadata`,

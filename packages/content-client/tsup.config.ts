@@ -13,7 +13,7 @@ export default defineConfig({
   format: ['esm'],
   // Only the contract modules are resolved into the declarations; every
   // other package a declaration names stays an import.
-  dts: { resolve: ['@backgold/contract/content-api', '@backgold/contract/content-api-examples'] },
+  dts: { resolve: ['@backgold/contract/content-api', '@backgold/contract/content-api-examples', '@backgold/contract/api-operations'] },
   noExternal: ['@backgold/contract', /^@backgold\/contract\//],
   target: 'es2022',
   platform: 'neutral',
