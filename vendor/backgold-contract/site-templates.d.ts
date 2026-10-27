@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S as SiteNavItemType } from './constants-DuDgs06x.js';
+import { S as SiteNavItemType } from './constants-DvTNj4JI.js';
 
 /**
  * A site template's manifest: the `template.json` at the root of each
@@ -90,13 +90,13 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     }, z.core.$catchall<z.ZodString>>;
     entryLayouts: z.ZodRecord<z.ZodEnum<{
         post: "post";
-        podcast: "podcast";
         video: "video";
+        course: "course";
+        podcast: "podcast";
         plank: "plank";
         team_member: "team_member";
         open_role: "open_role";
         newsletter: "newsletter";
-        course: "course";
     }> & z.core.$partial, z.ZodObject<{
         entry: z.ZodString;
         list: z.ZodString;
@@ -107,10 +107,10 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             centered: "centered";
         }>>;
         footer: z.ZodArray<z.ZodEnum<{
-            compact: "compact";
-            giving: "giving";
             columns: "columns";
             closing: "closing";
+            compact: "compact";
+            giving: "giving";
         }>>;
         takeoverBanner: z.ZodBoolean;
         legalLine: z.ZodBoolean;
@@ -143,9 +143,9 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
+                            page: "page";
                             section: "section";
                             external: "external";
-                            page: "page";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -159,8 +159,8 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
-                        petition: "petition";
                         issues: "issues";
+                        petition: "petition";
                         dates: "dates";
                         platform: "platform";
                         ladder: "ladder";
@@ -194,10 +194,10 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             key: z.ZodString;
             label: z.ZodString;
             kind: z.ZodEnum<{
+                sidebar: "sidebar";
                 custom: "custom";
                 announcement: "announcement";
                 pre_footer: "pre_footer";
-                sidebar: "sidebar";
             }>;
             document: z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
@@ -223,9 +223,9 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
+                            page: "page";
                             section: "section";
                             external: "external";
-                            page: "page";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -239,8 +239,8 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
-                        petition: "petition";
                         issues: "issues";
+                        petition: "petition";
                         dates: "dates";
                         platform: "platform";
                         ladder: "ladder";
@@ -268,12 +268,12 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             rules: z.ZodArray<z.ZodObject<{
                 area_key: z.ZodString;
                 shows_on: z.ZodEnum<{
-                    store: "store";
                     events: "events";
-                    entries: "entries";
+                    store: "store";
                     every_page: "every_page";
-                    every_page_except: "every_page_except";
                     pages: "pages";
+                    entries: "entries";
+                    every_page_except: "every_page_except";
                     pages_holding: "pages_holding";
                     entry_types: "entry_types";
                     type_lists: "type_lists";
@@ -282,11 +282,11 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 content_types: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 modules: z.ZodOptional<z.ZodArray<z.ZodObject<{
                     kind: z.ZodEnum<{
-                        event: "event";
+                        store: "store";
                         petition: "petition";
                         form: "form";
-                        store: "store";
                         poll: "poll";
+                        event: "event";
                         signup: "signup";
                         donation_form: "donation_form";
                         advocacy: "advocacy";
@@ -297,6 +297,244 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 type SiteTemplateManifest = z.infer<typeof siteTemplateManifestSchema>;
+/**
+ * A manifest a custom site's deploy carries (the project's template.json,
+ * site_deploys.manifest_json `template_manifest`): the template manifest
+ * with its audience ignored, since a deploy is never offered in the gallery.
+ */
+declare const deployTemplateManifestSchema: z.ZodObject<{
+    name: z.ZodString;
+    key: z.ZodString;
+    starter: z.ZodObject<{
+        pages: z.ZodArray<z.ZodObject<{
+            slug: z.ZodString;
+            title: z.ZodString;
+            sections: z.ZodArray<z.ZodObject<{
+                id: z.ZodString;
+                type: z.ZodString;
+                band: z.ZodEnum<{
+                    plain: "plain";
+                    tint: "tint";
+                    panel: "panel";
+                    wash: "wash";
+                    contrast: "contrast";
+                }>;
+                bleed: z.ZodEnum<{
+                    full: "full";
+                    contained: "contained";
+                }>;
+                variant: z.ZodNullable<z.ZodString>;
+                copy: z.ZodRecord<z.ZodString, z.ZodString>;
+                media: z.ZodRecord<z.ZodString, z.ZodObject<{
+                    url: z.ZodString;
+                    alt: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                links: z.ZodArray<z.ZodObject<{
+                    label: z.ZodString;
+                    target: z.ZodObject<{
+                        kind: z.ZodEnum<{
+                            page: "page";
+                            section: "section";
+                            external: "external";
+                            surface: "surface";
+                        }>;
+                        slug: z.ZodOptional<z.ZodString>;
+                        anchor: z.ZodOptional<z.ZodString>;
+                        url: z.ZodOptional<z.ZodString>;
+                        path: z.ZodOptional<z.ZodString>;
+                    }, z.core.$strip>;
+                    url: z.ZodString;
+                    style: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
+                data: z.ZodOptional<z.ZodObject<{
+                    source: z.ZodEnum<{
+                        issues: "issues";
+                        petition: "petition";
+                        dates: "dates";
+                        platform: "platform";
+                        ladder: "ladder";
+                        ballot: "ballot";
+                        words: "words";
+                        credentials: "credentials";
+                        stats: "stats";
+                        quotes: "quotes";
+                        votes: "votes";
+                        faq: "faq";
+                        comparison: "comparison";
+                        stories: "stories";
+                        share: "share";
+                        financials: "financials";
+                        services: "services";
+                        cases: "cases";
+                        resources: "resources";
+                        pathways: "pathways";
+                        work: "work";
+                        mediakit: "mediakit";
+                    }>;
+                    items: z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+        menus: z.ZodObject<{
+            primary: z.ZodArray<z.ZodType<SiteTemplateMenuItem, unknown, z.core.$ZodTypeInternals<SiteTemplateMenuItem, unknown>>>;
+            footer: z.ZodArray<z.ZodType<SiteTemplateMenuItem, unknown, z.core.$ZodTypeInternals<SiteTemplateMenuItem, unknown>>>;
+        }, z.core.$strip>;
+        sections: z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            label: z.ZodString;
+            kind: z.ZodEnum<{
+                sidebar: "sidebar";
+                custom: "custom";
+                announcement: "announcement";
+                pre_footer: "pre_footer";
+            }>;
+            document: z.ZodArray<z.ZodObject<{
+                id: z.ZodString;
+                type: z.ZodString;
+                band: z.ZodEnum<{
+                    plain: "plain";
+                    tint: "tint";
+                    panel: "panel";
+                    wash: "wash";
+                    contrast: "contrast";
+                }>;
+                bleed: z.ZodEnum<{
+                    full: "full";
+                    contained: "contained";
+                }>;
+                variant: z.ZodNullable<z.ZodString>;
+                copy: z.ZodRecord<z.ZodString, z.ZodString>;
+                media: z.ZodRecord<z.ZodString, z.ZodObject<{
+                    url: z.ZodString;
+                    alt: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                links: z.ZodArray<z.ZodObject<{
+                    label: z.ZodString;
+                    target: z.ZodObject<{
+                        kind: z.ZodEnum<{
+                            page: "page";
+                            section: "section";
+                            external: "external";
+                            surface: "surface";
+                        }>;
+                        slug: z.ZodOptional<z.ZodString>;
+                        anchor: z.ZodOptional<z.ZodString>;
+                        url: z.ZodOptional<z.ZodString>;
+                        path: z.ZodOptional<z.ZodString>;
+                    }, z.core.$strip>;
+                    url: z.ZodString;
+                    style: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
+                data: z.ZodOptional<z.ZodObject<{
+                    source: z.ZodEnum<{
+                        issues: "issues";
+                        petition: "petition";
+                        dates: "dates";
+                        platform: "platform";
+                        ladder: "ladder";
+                        ballot: "ballot";
+                        words: "words";
+                        credentials: "credentials";
+                        stats: "stats";
+                        quotes: "quotes";
+                        votes: "votes";
+                        faq: "faq";
+                        comparison: "comparison";
+                        stories: "stories";
+                        share: "share";
+                        financials: "financials";
+                        services: "services";
+                        cases: "cases";
+                        resources: "resources";
+                        pathways: "pathways";
+                        work: "work";
+                        mediakit: "mediakit";
+                    }>;
+                    items: z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+            rules: z.ZodArray<z.ZodObject<{
+                area_key: z.ZodString;
+                shows_on: z.ZodEnum<{
+                    events: "events";
+                    store: "store";
+                    every_page: "every_page";
+                    pages: "pages";
+                    entries: "entries";
+                    every_page_except: "every_page_except";
+                    pages_holding: "pages_holding";
+                    entry_types: "entry_types";
+                    type_lists: "type_lists";
+                }>;
+                pages: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                content_types: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                modules: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    kind: z.ZodEnum<{
+                        store: "store";
+                        petition: "petition";
+                        form: "form";
+                        poll: "poll";
+                        event: "event";
+                        signup: "signup";
+                        donation_form: "donation_form";
+                        advocacy: "advocacy";
+                    }>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    chrome: z.ZodObject<{
+        header: z.ZodArray<z.ZodEnum<{
+            bar: "bar";
+            centered: "centered";
+        }>>;
+        footer: z.ZodArray<z.ZodEnum<{
+            columns: "columns";
+            closing: "closing";
+            compact: "compact";
+            giving: "giving";
+        }>>;
+        takeoverBanner: z.ZodBoolean;
+        legalLine: z.ZodBoolean;
+    }, z.core.$strip>;
+    version: z.ZodNumber;
+    variants: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
+    areas: z.ZodObject<{
+        unknown: z.ZodLiteral<"after_page">;
+    }, z.core.$catchall<z.ZodString>>;
+    entryLayouts: z.ZodRecord<z.ZodEnum<{
+        post: "post";
+        video: "video";
+        course: "course";
+        podcast: "podcast";
+        plank: "plank";
+        team_member: "team_member";
+        open_role: "open_role";
+        newsletter: "newsletter";
+    }> & z.core.$partial, z.ZodObject<{
+        entry: z.ZodString;
+        list: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+/**
+ * The layouts a site's composer offers (GET /api/orgs/domains/:id/layouts):
+ * the name of what draws them, each section type's layouts (its default
+ * first), and the header's and footer's. Built from a template's manifest
+ * (siteLayoutsOf); null where a site offers each section type with its
+ * default layout only.
+ */
+interface SiteLayouts {
+    name: string;
+    variants: Readonly<Record<string, readonly string[]>>;
+    chrome: {
+        header: readonly string[];
+        footer: readonly string[];
+    };
+}
+/** The layouts a manifest offers, as the composer reads them. */
+declare function siteLayoutsOf(manifest: Pick<SiteTemplateManifest, 'name' | 'variants' | 'chrome'>): SiteLayouts;
 /**
  * One section a template switch draws differently
  * (GET /api/orgs/domains/:id/template/switch, PUT /api/orgs/domains/:id/template):
@@ -318,4 +556,4 @@ interface LostLayout {
     undrawn?: true;
 }
 
-export { HIDDEN_SITE_TEMPLATE_AUDIENCE, type LostLayout, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, siteTemplateManifestSchema };
+export { HIDDEN_SITE_TEMPLATE_AUDIENCE, type LostLayout, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, type SiteLayouts, type SiteTemplateKey, type SiteTemplateManifest, type SiteTemplateMenuItem, deployTemplateManifestSchema, siteLayoutsOf, siteTemplateManifestSchema };

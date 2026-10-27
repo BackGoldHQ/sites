@@ -1,5 +1,5 @@
-import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-2YT5KOC4.js';
-import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-7JGFDKCW.js';
+import { SECTION_BLEEDS, SECTION_BANDS, SITE_CHROME_LAYOUTS } from './chunk-3KB7ZRTE.js';
+import { SITE_AREA_KEY_RE, SITE_NAV_SHOWS_ON, SITE_NAV_ITEM_TYPES, SITE_PAGE_MODULE_KINDS, SITE_SECTION_RULE_SHOWS_ON, SITE_SECTION_KINDS, BUILT_IN_CONTENT_TYPE_KEYS, TEMPLATE_KEY_PATTERN } from './chunk-LK52PNGL.js';
 import { z } from 'zod';
 
 var SITE_TEMPLATE_KEYS = ["party", "candidate", "petition-drive", "academy", "nonprofit", "unlabeled"];
@@ -183,5 +183,13 @@ var siteTemplateManifestSchema = z.object({
     sections: z.array(starterReusableSectionSchema)
   })
 });
+var deployTemplateManifestSchema = siteTemplateManifestSchema.omit({ audience: true });
+function siteLayoutsOf(manifest) {
+  return {
+    name: manifest.name,
+    variants: manifest.variants,
+    chrome: { header: manifest.chrome.header, footer: manifest.chrome.footer }
+  };
+}
 
-export { HIDDEN_SITE_TEMPLATE_AUDIENCE, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, siteTemplateManifestSchema };
+export { HIDDEN_SITE_TEMPLATE_AUDIENCE, SITE_TEMPLATE_AUTHORED_DATA, SITE_TEMPLATE_AUTHORED_DATA_SOURCES, SITE_TEMPLATE_KEYS, deployTemplateManifestSchema, siteLayoutsOf, siteTemplateManifestSchema };
