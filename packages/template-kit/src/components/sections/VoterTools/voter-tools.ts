@@ -1,9 +1,10 @@
 // A VoterTools section as its layouts draw it: its words, its two links and
 // its key dates. The links go to the official lookups the organization
-// names (its state's registration check and polling-place finder); BackGold
-// has no lookup of its own yet, so nothing here asks the visitor for
-// anything. The Content API sends the links without their keys, so each is
-// told apart by its label: the one labelled with `registerLabel` is the
+// names (its state's registration check and polling-place finder). With the
+// section's Polling place lookup on, the Content API also sends BackGold's
+// own lookup as the section's embed, which each layout mounts (Lookup.astro)
+// beside these. The Content API sends the links without their keys, so each
+// is told apart by its label: the one labelled with `registerLabel` is the
 // registration link, the one labelled with `pollingLabel` the polling link.
 // A date row is drawn when it has a label; its `date` (YYYY-MM-DD, a
 // calendar day) is kept only when it is one.

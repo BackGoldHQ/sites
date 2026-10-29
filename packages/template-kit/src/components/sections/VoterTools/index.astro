@@ -1,11 +1,11 @@
 ---
-// VoterTools, 'register' layout, the default (mock 02, A, without its lookup
-// form: BackGold has no registration check of its own, so the check is the
-// official one the organization links to). Two cards side by side, stacked
-// on a phone. The first asks: the kicker, the heading and the body, then the
-// registration link as the main call and the polling-place link as an
-// outline beside it (the polling link is the main call when there is no
-// registration link). The second, raised on the band's card colour, is the
+// VoterTools, 'register' layout, the default (mock 02, A; the registration
+// check is the official one the organization links to). Two cards side by
+// side, stacked on a phone. The first asks: the kicker, the heading and the
+// body, then BackGold's polling-place lookup when the section carries it
+// (Lookup.astro), then the registration link as the main call and the
+// polling-place link as an outline beside it (the polling link is the main
+// call when there is no registration link). The second, raised on the band's card colour, is the
 // visitor's plan: the election-day line in the display face, the early
 // voting line under it, the ID note as a chip, then the key dates under
 // `datesHeading`, each with its label, its day and its note; DaysLeft writes
@@ -17,6 +17,7 @@ import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
 import DaysLeft from './DaysLeft.astro'
+import Lookup from './Lookup.astro'
 import { voterTools } from './voter-tools'
 import { prose } from '../../../lib/format'
 
@@ -28,9 +29,10 @@ interface Props {
 const { section } = Astro.props
 const vt = voterTools(section)
 const buttons = [vt.register, vt.polling].filter((link) => link !== null)
-const asks = !!(vt.kicker || vt.heading || prose(section.copy.body) || buttons.length > 0)
+const lookup = !!section.embed
+const asks = !!(vt.kicker || vt.heading || prose(section.copy.body) || buttons.length > 0 || lookup)
 const plan = !!(vt.electionDay || vt.earlyVoting || vt.idNote || vt.dates.length > 0)
-const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0)
+const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0 || lookup)
 ---
 {shown && (
   <Band section={section} class="voter-tools vt-register">
@@ -40,6 +42,7 @@ const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0)
           {vt.kicker && <p class="kicker">{vt.kicker}</p>}
           {vt.heading && <h2>{vt.heading}</h2>}
           <Prose value={section.copy.body} class="vt-body" />
+          {lookup && <Lookup section={section} />}
           {buttons.length > 0 && (
             <p class="actions vt-actions">
               {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
