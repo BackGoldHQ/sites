@@ -118,6 +118,16 @@ const FRAME_RADIUS = (ON_KIT && /\bframeRadius:\s*(\d+)/.exec(readFileSync(join(
 // light and dark, the corners and the face (the skin is asked for only on
 // an https site, which the e2e is not).
 const FRAME_TAIL = `&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}`
+/**
+ * Whether an <iframe> tag's src is this embed address: on the kit, the
+ * address with the frame's layout (`layout`, a regex source) and FRAME_TAIL
+ * appended (and `extra` after them); off it, the address as sent.
+ */
+function carriesFrame(tag, iframe, layout, extra = '') {
+  const src = iframe.replace(/&/g, '&amp;')
+  if (!ON_KIT) return tag.includes(`src="${src}"`)
+  return new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=${layout}${FRAME_TAIL}${extra}"`).test(tag)
+}
 // ── petition-drive (begin) ──
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
@@ -3277,12 +3287,10 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       const own = /<(form|input|button|select|textarea)\b/.exec(markup)
       if (own) failures.push(`${type}: renders a <${own[1]}> of its own`)
       if (section.embed?.iframe) {
-        const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
         // A Petition on a template that draws its text beside the sheet also asks the frame to collapse the text.
         const extra = type === 'Petition' && DRAWS_PETITION_TEXT ? '&amp;text=collapsed' : ''
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}${extra}"`) : null
-        if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
+        if (frames.length !== 1 || !carriesFrame(frames[0], section.embed.iframe, '[a-z_]+', extra)) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
         if (type === 'Petition') {
           // The petition's text after the sheet (and the frame told to collapse
           // its copy), or neither. The asks are the page's Issues band's and the
@@ -3308,11 +3316,12 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       continue
     }
 
-    // A Hero with its capture on frames BackGold's form below its words.
+    // A Hero with its capture on frames BackGold's form below its words (on
+    // the kit, through ModuleFrame as a card wearing the site).
     if (type === 'Hero') {
       const frames = tags(markup, 'iframe')
       const want = section.embed?.iframe ? 1 : 0
-      if (frames.length !== want || (want && !frames[0].includes(`src="${section.embed.iframe}"`))) {
+      if (frames.length !== want || (want && !carriesFrame(frames[0], section.embed.iframe, 'card'))) {
         failures.push(`Hero: expected ${want} iframe(s)${want ? ` of ${section.embed.iframe}` : ''}, found ${frames.length}`)
       }
       if (!want) failures.push('Hero: the kitchen sink hero has its capture on, so it must carry an embed')
@@ -5376,7 +5385,7 @@ async function checkCandidateLook(origin, chrome, fixture) {
         // The deadline is 26 days, 9 hours and 41 minutes after the run started; the minutes move with the run.
         check(home.tiles?.[0] === '26' && home.tiles[1] === '09' && /^[0-4]\d$/.test(home.tiles[2]), `${where}: the tiles count the days, hours and minutes left in the browser (${JSON.stringify(home.tiles)})`)
         check(home.face.startsWith('"Roboto Slab"'), `${where}: the name is set in the site's theme heading face, which wins over the template's (${home.face})`)
-        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor, over the stripe (${home.floor}px)`)
+        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor (${home.floor}px)`)
         check(home.beside === (width >= 768), `${where}: the portrait is ${width >= 768 ? 'beside' : 'under'} the words`)
         await browser.open(`${origin}${at('events')}`, scheme)
         const events = await browser.evaluate(`({ overflow: document.documentElement.scrollWidth - window.innerWidth, left: document.querySelector('.ci-left')?.hidden === false ? document.querySelector('.ci-left').textContent : null })`)
@@ -5469,7 +5478,7 @@ async function checkCandidateLook(origin, chrome, fixture) {
           probe.remove()
           return { accent, stripe: band ? getComputedStyle(band, '::after').backgroundColor : null, rule: office ? getComputedStyle(office, '::before').backgroundColor : null }
         })()`)
-        check(stripe.stripe === stripe.accent && stripe.rule === stripe.accent, `${where}: Hero · portrait's stripe and office-line rule are the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
+        check(stripe.stripe === 'rgba(0, 0, 0, 0)' && stripe.rule === stripe.accent, `${where}: Hero · portrait draws no stripe under the band, and its office-line rule is the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
         await browser.open(`${origin}${at('endorsements')}`, scheme)
         const editorial = await browser.evaluate(`(() => { const p = document.querySelector('.single-quote blockquote p'); return p ? getComputedStyle(p).fontStyle + ' ' + getComputedStyle(p).fontWeight : null })()`)
         check(editorial === 'normal 700', `${where}: QuoteStrip · single sets the editorial upright and bold, template.css over the kit's italic (${editorial})`)
