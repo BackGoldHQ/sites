@@ -196,7 +196,12 @@ jobs:
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      # No checkout: the pack job's tarball is the only input.
+      # No checkout: the pack job's tarball is the only input. A self-hosted
+      # runner keeps its workspace between jobs, so an earlier publish's
+      # tarball would still be there beside this one; empty the directory
+      # first (the 2026-10-29 @backgold/templates publish found the CLI's).
+      - name: Empty the tarball directory
+        run: rm -rf npm-tarball
       - uses: actions/download-artifact@v4
         with:
           name: npm-tarball
