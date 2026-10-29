@@ -73,7 +73,10 @@ BackGold and writes `backgold.json`:
 ```
 
 Commit `backgold.json`; it holds nothing secret. The token itself is never
-written anywhere. Every other command reads it from the environment variable
+written anywhere. It is sent to the `api` that file names, so when that is
+not `https://api.backgold.com` (and not a local api on this machine), every
+command says so on stderr before it starts: read the warning before running
+a project you did not write. Every other command reads it from the environment variable
 `BACKGOLD_DEPLOY_TOKEN`: keep it in your shell's environment, a password
 manager, or your CI's secret variables, never in the repository.
 

@@ -14,7 +14,7 @@ import {
   isReservedDeploySecretName,
 } from '@backgold/contract/site-deploys'
 import { join, resolve } from 'node:path'
-import { HttpError, apiCall, checkOrigin, redact, request } from './api.js'
+import { HttpError, apiCall, checkOrigin, isLocalHost, redact, request } from './api.js'
 import { parseArgs, type FlagKind, type Parsed } from './args.js'
 import { bucketForm, bundleZip, completionJwt } from './bundle.js'
 import { CollectError, collectSite, type Asset } from './collect.js'
@@ -329,8 +329,7 @@ function checkUploadUrl(value: unknown): string {
   if (typeof value === 'string') {
     try {
       const url = new URL(value)
-      const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-      if (url.protocol === 'https:' || (url.protocol === 'http:' && local)) return url.href
+      if (url.protocol === 'https:' || (url.protocol === 'http:' && isLocalHost(url.hostname))) return url.href
     } catch {
       // falls through
     }
@@ -691,6 +690,12 @@ async function dispatch(argv: readonly string[], io: Io): Promise<number> {
   }
   if (!token && !command.tokenOptional) throw new Exit('no deploy token: set BACKGOLD_DEPLOY_TOKEN to a token from the site\'s Developer page in BackGold', 3)
   if (token && !TOKEN_PATTERN.test(token)) throw new Exit('the token must be a deploy token: bg_deploy_ followed by letters and digits', 3)
+  // The token goes to whatever origin backgold.json (or --api) names. A cloned
+  // repository whose file points elsewhere would send it there, so say so
+  // first; a local api is this machine's own and needs no notice.
+  if (token && api !== DEFAULT_API && !isLocalHost(new URL(api).hostname)) {
+    step({ io }, `warning: the deploy token goes to ${api} (${apiGiven ? '--api' : `${PROJECT_FILE}'s "api"`}), not ${DEFAULT_API}`)
+  }
 
   return command.handler({ io, args, project, api, token, site, file, json: args.flags['--json'] === true })
 }

@@ -85,6 +85,9 @@ export async function apiCall<T>(doFetch: typeof fetch, url: string, options: Re
   return (body as { data: T }).data
 }
 
+/** This machine: a local api (`backgold dev`, a test fixture), never a place a token leaves for. */
+export const isLocalHost = (hostname: string) => ['localhost', '127.0.0.1', '[::1]'].includes(hostname)
+
 /** An http(s) origin the token may be sent to: https anywhere, http only to this machine. */
 export function checkOrigin(value: string): string | null {
   let url: URL
@@ -93,7 +96,7 @@ export function checkOrigin(value: string): string | null {
   } catch {
     return null
   }
-  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  const local = isLocalHost(url.hostname)
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) return null
   if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash || url.username || url.password) return null
   return url.origin

@@ -280,6 +280,25 @@ test('whoami: the site, scopes and api; warns when backgold.json names another s
   assert.match((await cli(['whoami'])).stderr, /names site other, and this token opens site/)
 })
 
+test('any command: the token going anywhere but api.backgold.com is said first; a local api is not', async () => {
+  const seen: string[] = []
+  const elsewhere: typeof fetch = async (input) => {
+    seen.push(String(input))
+    return new Response(JSON.stringify({ data: { org_id: 'org', site_id: SITE, site_name: 'Elsewhere', domain: null, scopes: [], api_origin: 'https://elsewhere.example' } }), { headers: { 'Content-Type': 'application/json' } })
+  }
+  await writeFile(join(project, 'backgold.json'), JSON.stringify({ site: SITE, api: 'https://elsewhere.example' }))
+  const file = await cli(['whoami'], { fetch: elsewhere })
+  assert.equal(file.code, 0, file.stderr)
+  assert.match(file.stderr, /^warning: the deploy token goes to https:\/\/elsewhere\.example \(backgold\.json's "api"\), not https:\/\/api\.backgold\.com\n/)
+  assert.deepEqual(seen, ['https://elsewhere.example/api/site-deploys/me'])
+  const flag = await cli(['whoami', '--api', 'https://elsewhere.example'], { fetch: elsewhere })
+  assert.match(flag.stderr, /goes to https:\/\/elsewhere\.example \(--api\)/)
+  await writeFile(join(project, 'backgold.json'), JSON.stringify({ site: SITE, api: fx.origin }))
+  const local = await cli(['whoami'])
+  assert.equal(local.code, 0, local.stderr)
+  assert.ok(!local.stderr.includes('warning'), `a local api says nothing: ${local.stderr}`)
+})
+
 // ── deploy ──────────────────────────────────────────────────────────────────
 
 test('deploy: builds, uploads the missing assets, the bundle, finishes and waits until ready and live', async () => {
