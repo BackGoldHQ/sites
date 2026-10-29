@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:vendor/backgold-contract/chunk-3KB7ZRTE.js
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-LK52PNGL.js';
-========
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-XH5WEM3Q.js';
->>>>>>>> 373ef2c (The kit's ContentPost reads the whole post in place as its Prose layout; the candidate template draws it by default):vendor/backgold-contract/chunk-6L74ALML.js
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-J4FAYFD2.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
