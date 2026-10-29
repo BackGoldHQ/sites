@@ -216,17 +216,19 @@ their own addresses, the starter's menus and the boards' brand, to look at.
 
 ## Deploys
 
-BackGold runs this template as one Worker, `template-candidate`, in the
-Workers for Platforms dispatch namespaces `sites-staging` and
-`sites-production`, exactly as the party template runs `template-party`
-(see the party template's README, Staging deploy and Production deploy).
-The `env.staging` and `env.production` blocks in `wrangler.jsonc` hold that
-form; the CI jobs write the `CANDIDATE_STAGING_KV_ID` and
-`CANDIDATE_PRODUCTION_KV_ID` variables over the `__CANDIDATE_STAGING_KV_ID__`
-and `__CANDIDATE_PRODUCTION_KV_ID__` placeholders before they build. Each
-cache's KV namespace is created once, by hand:
-`npx wrangler kv namespace create backgold-candidate-staging-cache` (and
-`backgold-candidate-production-cache`).
+BackGold deploys this template itself, as the Worker `template-candidate` in its
+Workers for Platforms dispatch namespaces: `sites-staging` on a push to
+`main`, `sites-production` from the Release workflow, built from this
+workspace, never from npm. The `env.staging` and `env.production` blocks in
+`wrangler.jsonc` hold that form, and the deploy job writes the cache
+namespace's id over the `__CANDIDATE_STAGING_KV_ID__` and
+`__CANDIDATE_PRODUCTION_KV_ID__` placeholders before it builds. How the jobs
+run, how to tell a deploy worked and the one-time account steps are in the
+repository's [docs/TEMPLATE-DEPLOYS.md](https://github.com/BackGoldHQ/sites/blob/main/docs/TEMPLATE-DEPLOYS.md).
+
+A copy of this template outside this repository (one `backgold eject`
+made) deletes both `env` blocks and deploys with `npx backgold deploy`; the
+`@backgold/cli` README has the steps.
 
 ## License
 

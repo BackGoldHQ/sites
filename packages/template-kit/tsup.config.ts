@@ -11,10 +11,14 @@ import { defineConfig } from 'tsup'
 // bundler resolves the contract's subpaths through tsconfig.build.json's
 // `paths`, not the package's exports map, which it does not read.
 export default defineConfig({
-  entry: { 'contract/content-api': 'src/contract/content-api.ts', 'contract/site-templates': 'src/contract/site-templates.ts' },
+  entry: {
+    'contract/content-api': 'src/contract/content-api.ts',
+    'contract/content-api-examples': 'src/contract/content-api-examples.ts',
+    'contract/site-templates': 'src/contract/site-templates.ts',
+  },
   format: ['esm'],
   tsconfig: 'tsconfig.build.json',
-  dts: { resolve: ['@backgold/contract/content-api', '@backgold/contract/site-templates'] },
+  dts: { resolve: ['@backgold/contract/content-api', '@backgold/contract/content-api-examples', '@backgold/contract/site-templates'] },
   noExternal: ['@backgold/contract', /^@backgold\/contract\//],
   external: ['zod'],
   target: 'es2022',

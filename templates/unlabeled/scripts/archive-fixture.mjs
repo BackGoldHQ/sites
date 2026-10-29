@@ -22,7 +22,7 @@
 import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
-import { siteExample } from '@backgold/contract/content-api-examples'
+import { siteExample } from '@backgold/template-kit/contract/content-api-examples'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name)

@@ -33,8 +33,7 @@
 # CLOUDFLARE_ENV set and refuses to deploy unless the built config names
 # template-<template>. Before building it reads the namespace and stops with
 # a sentence when it does not exist (wrangler's code 100119): creating it is
-# a one-time account step (templates/<template>/README.md, Staging deploy or
-# Production deploy).
+# a one-time account step (docs/TEMPLATE-DEPLOYS.md, One-time account setup).
 #
 # wrangler reads CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the
 # environment. The KV namespace id comes from <TEMPLATE>_<ENV>_KV_ID
@@ -75,7 +74,7 @@ done
 KV_VAR="$(printf '%s' "$TEMPLATE" | tr '[:lower:]-' '[:upper:]_')_$(printf '%s' "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')_KV_ID"
 kv_id="${!KV_VAR:-}"
 if ! printf '%s' "$kv_id" | grep -Eq '^[0-9a-f]{32}$'; then
-  echo "FAIL: $KV_VAR must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (templates/$TEMPLATE/README.md) and set the repository secret." >&2
+  echo "FAIL: $KV_VAR must be the BACKGOLD_CACHE namespace's 32-character id. Create the namespace once (docs/TEMPLATE-DEPLOYS.md) and set the repository secret." >&2
   exit 1
 fi
 sed -i "s/__${KV_VAR}__/$kv_id/" "templates/$TEMPLATE/wrangler.jsonc"
@@ -86,7 +85,7 @@ fi
 
 if ! ns_out=$(pnpm --filter "backgold-template-$TEMPLATE" exec wrangler dispatch-namespace get "$namespace" 2>&1); then
   if printf '%s' "$ns_out" | grep -q 'code: 100119'; then
-    echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (templates/$TEMPLATE/README.md), then run the job again." >&2
+    echo "FAIL: the dispatch namespace $namespace does not exist on this account. Create it once (docs/TEMPLATE-DEPLOYS.md), then run the job again." >&2
   else
     printf '%s\n' "$ns_out" >&2
     echo "FAIL: could not read the dispatch namespace $namespace (wrangler's error above); not deploying." >&2

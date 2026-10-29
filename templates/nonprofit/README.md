@@ -228,32 +228,21 @@ checks it end to end, its starter pages at `/nonprofit-<slug>`. With
 addresses, its menus and the boards' brand; `NONPROFIT_BRAND` (JSON:
 `primary_color`, `secondary_color`, `accent_color`) swaps the brand.
 
-## Staging deploy
+## Deploys
 
-As the party template's (its README, Staging deploy), with this template's
-names: the Worker `template-nonprofit` in `sites-staging`, the job
-`deploy-nonprofit-staging`, and the cache's KV namespace
-`backgold-nonprofit-staging-cache` with its id in the
-`NONPROFIT_STAGING_KV_ID` CI variable. Before the first deploy, once:
+BackGold deploys this template itself, as the Worker `template-nonprofit` in its
+Workers for Platforms dispatch namespaces: `sites-staging` on a push to
+`main`, `sites-production` from the Release workflow, built from this
+workspace, never from npm. The `env.staging` and `env.production` blocks in
+`wrangler.jsonc` hold that form, and the deploy job writes the cache
+namespace's id over the `__NONPROFIT_STAGING_KV_ID__` and
+`__NONPROFIT_PRODUCTION_KV_ID__` placeholders before it builds. How the jobs
+run, how to tell a deploy worked and the one-time account steps are in the
+repository's [docs/TEMPLATE-DEPLOYS.md](https://github.com/BackGoldHQ/sites/blob/main/docs/TEMPLATE-DEPLOYS.md).
 
-```bash
-npx wrangler kv namespace create backgold-nonprofit-staging-cache
-gh secret set NONPROFIT_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
-```
-
-The api dispatches a site to `template-nonprofit` once the platform knows the
-`nonprofit` template key.
-
-## Production deploy
-
-As the party template's (its README, Production deploy): the Worker
-`template-nonprofit` in `sites-production`, deployed by
-`deploy-nonprofit-production` from the `deploy-production` button. Once:
-
-```bash
-npx wrangler kv namespace create backgold-nonprofit-production-cache
-gh secret set NONPROFIT_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
-```
+A copy of this template outside this repository (one `backgold eject`
+made) deletes both `env` blocks and deploys with `npx backgold deploy`; the
+`@backgold/cli` README has the steps.
 
 ## License
 

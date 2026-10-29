@@ -175,34 +175,21 @@ As the party template (its README has the settings table and the commands):
 against the fixture Content API; with `--serve` it serves her starter pages
 in her brand, her menus and her two areas.
 
-## Staging deploy
+## Deploys
 
-As the party template's (its README, Staging deploy), with this template's
-names: the Worker `template-unlabeled` in `sites-staging`, the job
-`deploy-unlabeled-staging`, and the cache's KV namespace
-`backgold-unlabeled-staging-cache` with its id in the
-`UNLABELED_STAGING_KV_ID` CI variable. Before the first deploy, once:
+BackGold deploys this template itself, as the Worker `template-unlabeled` in its
+Workers for Platforms dispatch namespaces: `sites-staging` on a push to
+`main`, `sites-production` from the Release workflow, built from this
+workspace, never from npm. The `env.staging` and `env.production` blocks in
+`wrangler.jsonc` hold that form, and the deploy job writes the cache
+namespace's id over the `__UNLABELED_STAGING_KV_ID__` and
+`__UNLABELED_PRODUCTION_KV_ID__` placeholders before it builds. How the jobs
+run, how to tell a deploy worked and the one-time account steps are in the
+repository's [docs/TEMPLATE-DEPLOYS.md](https://github.com/BackGoldHQ/sites/blob/main/docs/TEMPLATE-DEPLOYS.md).
 
-```bash
-npx wrangler kv namespace create backgold-unlabeled-staging-cache
-gh secret set UNLABELED_STAGING_KV_ID --body <id> -R BackGoldHQ/sites
-```
-
-The api dispatches a site to `template-unlabeled` once the platform knows the
-`unlabeled` template key. **Deploy after the platform's embed look accepts
-`ubuntu-sans-mono`**: the api drops a frame's whole look (its colours too)
-when its `font` is one it does not know.
-
-## Production deploy
-
-As the party template's (its README, Production deploy): the Worker
-`template-unlabeled` in `sites-production`, deployed by
-`deploy-unlabeled-production` from the `deploy-production` button. Once:
-
-```bash
-npx wrangler kv namespace create backgold-unlabeled-production-cache
-gh secret set UNLABELED_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites
-```
+A copy of this template outside this repository (one `backgold eject`
+made) deletes both `env` blocks and deploys with `npx backgold deploy`; the
+`@backgold/cli` README has the steps.
 
 ## Not done here
 

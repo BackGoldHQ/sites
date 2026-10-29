@@ -413,177 +413,26 @@ In this repository, `node scripts/starter-e2e.mjs --template party` builds
 this template against the packages' current source and checks it end to end
 against a fixture Content API (`--serve` keeps it running to look at).
 
-## Staging deploy
+## Deploys
 
-BackGold runs this template on staging as one Worker, `template-party`, in
-the Workers for Platforms dispatch namespace `sites-staging` in BackGold's
-Cloudflare account. The staging api Worker answers every `*.backgold.dev`
-host; for a site on the party template it hands the request to the
-namespace's Worker `template-<template key>` (the key is `party`, from
-`template.json`) with the site's id in the `X-BackGold-Site` header. The
-Worker reads the Content API first-party, through the `BACKGOLD_API` service
-binding to the api's `FirstParty` entrypoint, with no site key, and draws the
-site the header names at the request's own address. One deploy serves every
-party-template site on staging; the Westmark Liberty Party demo at
-`https://westmark.backgold.dev` (the `seed-westmark` fixture's site,
-`dom_westmark`) is the first.
-
-The `env.staging` block in `wrangler.jsonc` holds that form: the name, the
-service binding (Worker `givegold-api-staging`, entrypoint `FirstParty`),
-`BACKGOLD_API_ORIGIN` = `https://api.backgold.dev`, and the cache's KV
-namespace. It has no routes, Custom Domain or `workers.dev` address: a Worker
-in a dispatch namespace is reached only through the api's dispatch, so the
-deploy touches no DNS. A copy of this template for another organization can
-delete the block; the default configuration above it is what the Deploy
-button and `npm run deploy` use.
-
-**Account setup.** In place today: the dispatch namespace `sites-staging`,
-the KV namespace `backgold-party-staging-cache` with its id in the
-`PARTY_STAGING_KV_ID` repository secret, and `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID`, each a repository secret on this repository. To set
-it up again from nothing, in BackGold's account, in this order:
-
-1. Create the dispatch namespace `sites-staging`, with the `cf` CLI
-   (`cf workers-for-platforms dispatch-namespaces create --name sites-staging`)
-   or with wrangler (`npx wrangler dispatch-namespace create sites-staging`),
-   whichever the operator uses.
-2. Create the cache's KV namespace and put its id in the
-   `PARTY_STAGING_KV_ID` repository secret:
-   `npx wrangler kv namespace create backgold-party-staging-cache`, then
-   `gh secret set PARTY_STAGING_KV_ID --body <id> -R BackGoldHQ/sites`.
-3. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` on this repository,
-   under **Settings → Secrets and variables → Actions** (or with
-   `gh secret set … -R BackGoldHQ/sites`). The deploy jobs stop before
-   deploying while `CLOUDFLARE_API_TOKEN` is unset. This repository is the
-   only one that deploys `template-party`.
-
-The job needs no site key and no secrets: a first-party read needs no key,
-`/preview` reads drafts through the same binding, and the api keeps `/api/*`
-on every site host, so the template's webhook route
-(`/api/backgold/webhook`) is never reached and needs no signing secret.
-
-**The job.** The `party` job of `.github/workflows/deploy-staging.yml` runs
-by itself on a push to `main` that changed `templates/party/`, `packages/`,
-`vendor/`, `pnpm-lock.yaml` or the workflow file, and by hand (Actions →
-Deploy staging → Run workflow, `template: party` or `all`) to redeploy
-`main`'s head. It deploys the template and the packages as committed there,
-built from this workspace, so it never waits on npm. After the job's
-`pnpm install --frozen-lockfile`, `scripts/deploy-template.sh staging party`:
-
-1. refuses to start without `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID`, or without a `PARTY_STAGING_KV_ID` that is a
-   32-character namespace id;
-2. writes `PARTY_STAGING_KV_ID` over the `__PARTY_STAGING_KV_ID__`
-   placeholder in `wrangler.jsonc`, and stops when there is no placeholder;
-3. reads the namespace `sites-staging` and stops, saying it does not exist
-   on this account, when step 1 of the one-time list has not been done;
-4. builds `@backgold/content` and `@backgold/astro`, then the template with
-   `CLOUDFLARE_ENV=staging pnpm --filter backgold-template-party build`. The
-   Cloudflare adapter writes the deploy configuration
-   (`dist/server/wrangler.json`) during the build and picks the environment
-   then, so `wrangler deploy --env staging` on its own would deploy the
-   default configuration. The job refuses to deploy unless the built
-   configuration names `template-party`;
-5. uploads with
-   `pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace sites-staging`.
-
-**How to tell it worked.** The job's log ends with `Dispatch Namespace:
-sites-staging` and the new version's id. The namespace's script list shows
-`template-party`:
-`cf workers-for-platforms dispatch-namespaces scripts list --dispatch-namespace sites-staging`.
-`https://westmark.backgold.dev/` answers with the Westmark home page.
+BackGold deploys this template itself, as the Worker `template-party` in its
+Workers for Platforms dispatch namespaces: `sites-staging` on a push to
+`main`, `sites-production` from the Release workflow, built from this
+workspace, never from npm. The `env.staging` and `env.production` blocks in
+`wrangler.jsonc` hold that form, and the deploy job writes the cache
+namespace's id over the `__PARTY_STAGING_KV_ID__` and
+`__PARTY_PRODUCTION_KV_ID__` placeholders before it builds. How the jobs
+run, how to tell a deploy worked and the one-time account steps are in the
+repository's [docs/TEMPLATE-DEPLOYS.md](https://github.com/BackGoldHQ/sites/blob/main/docs/TEMPLATE-DEPLOYS.md).
 
 **Content never needs a redeploy.** Publishing in BackGold bumps the site's
 content version, the client notices within a minute when it next checks the
 version, and a new version is a miss in the site's cache. A change to the
-template or the packages deploys with the push to `main` that carries it;
-play the job by hand only to redeploy what is already there.
+template or the packages deploys with the push to `main` that carries it.
 
-## Production deploy
-
-BackGold runs this template in production the same way as on staging: one
-Worker, `template-party`, in the Workers for Platforms dispatch namespace
-`sites-production` in BackGold's Cloudflare account. The production api Worker
-(`backgold-api`, which binds the namespace as `SITES`) answers every
-`*.backgold.com` host and each verified tenant custom domain; for a site on
-the party template it hands the request to the namespace's Worker
-`template-<template key>` with the site's id in the `X-BackGold-Site` header,
-and the Worker reads the Content API first-party through the `BACKGOLD_API`
-service binding to the api's `FirstParty` entrypoint, with no site key.
-
-**While `sites-production` holds no `template-party` script, every
-production template site answers 503 "This site isn't ready yet."** (with a
-`Retry-After` of 60 seconds). The namespace holds one today; a new namespace
-holds none until the job is played.
-
-The `env.production` block in `wrangler.jsonc` holds that form: the name, the
-service binding (Worker `backgold-api`, entrypoint `FirstParty`),
-`BACKGOLD_API_ORIGIN` = `https://api.backgold.com`, and the cache's KV
-namespace. Like staging's it has no routes, Custom Domain or `workers.dev`
-address, and sets neither `BACKGOLD_SITE_KEY` nor `SITE_URL`: the dispatch
-names the site per request.
-
-**Account setup.** In place today: the dispatch namespace `sites-production`
-holding `template-party`, the KV namespace `backgold-party-production-cache`
-with its id in the `PARTY_PRODUCTION_KV_ID` CI variable, and the two
-Cloudflare variables staging uses. To set it up again from nothing, in
-BackGold's account, in this order. There is more than one Cloudflare account
-on the operator's login, so every command below names the account
-(`247651947e3b35805b31daef5ab9eab9`):
-
-1. Make sure the dispatch namespace `sites-production` exists. The production
-   api's deploy binds it, so it may already be there: read it with
-   `CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace get sites-production`
-   (from `templates/party`, or anywhere wrangler runs). Only when that reports
-   it missing, create it, with the `cf` CLI
-   (`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 cf workers-for-platforms dispatch-namespaces create --name sites-production`)
-   or with wrangler
-   (`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace create sites-production`),
-   whichever the operator uses.
-2. Create the cache's KV namespace, a new one, never staging's
-   `backgold-party-staging-cache`:
-   `CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler kv namespace create backgold-party-production-cache`.
-   Copy the `id` it prints (32 hex characters).
-3. Put that id in the `PARTY_PRODUCTION_KV_ID` repository secret:
-   `gh secret set PARTY_PRODUCTION_KV_ID --body <id> -R BackGoldHQ/sites`.
-   It is the only secret production adds. Staging reads `PARTY_STAGING_KV_ID`
-   and nothing else of its own; both jobs use `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID` (staging's step 3), and need no site key and no
-   secrets.
-4. Check the one thing the job cannot fix: the production api must already
-   be deployed with the `FirstParty` entrypoint, because the service binding
-   names `backgold-api` and that export; if production's api predates it,
-   run the platform repository's Release workflow first.
-5. Run this repository's Release workflow (Actions → Release → Run workflow,
-   on `main`); it deploys `party` (and every other template), one job each.
-
-**The job.** The `party` job of `.github/workflows/release.yml` runs when the
-Release workflow is run by hand on `main` (environment `production`); it is
-never run on its own. It is the staging job with the production names, step
-for step (`scripts/deploy-template.sh production party`; see Staging deploy
-above): it refuses to
-start without `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and a
-`PARTY_PRODUCTION_KV_ID` that is a 32-character namespace id, writes the id
-over the `__PARTY_PRODUCTION_KV_ID__` placeholder in `wrangler.jsonc`, reads
-the namespace `sites-production` and stops, saying it does not exist on this
-account, when step 1 was not done, builds the two packages from this
-workspace and the template with
-`CLOUDFLARE_ENV=production pnpm --filter backgold-template-party build`,
-refuses to deploy unless the built configuration names `template-party`, and
-uploads with
-`pnpm --filter backgold-template-party exec wrangler deploy --dispatch-namespace sites-production`.
-
-**How to tell it worked.** The job's log ends with `Dispatch Namespace:
-sites-production` and the new version's id. The namespace now holds one
-script (`script_count: 1` in
-`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 npx wrangler dispatch-namespace get sites-production`;
-the list is
-`CLOUDFLARE_ACCOUNT_ID=247651947e3b35805b31daef5ab9eab9 cf workers-for-platforms dispatch-namespaces scripts list --dispatch-namespace sites-production`),
-and a production site in template mode answers with its home page on its
-`*.backgold.com` address instead of the 503.
-
-**Content never needs a redeploy**, in production either; play the job again
-only for a template change or a package update.
+A copy of this template outside this repository (one `backgold eject`
+made) deletes both `env` blocks and deploys with `npx backgold deploy`; the
+`@backgold/cli` README has the steps.
 
 ## License
 
