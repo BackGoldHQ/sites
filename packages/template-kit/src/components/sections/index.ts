@@ -38,6 +38,7 @@ import ContentPost from './ContentPost/index.astro'
 import ContentPostPlayer from './ContentPost/player.astro'
 import ContentPostBanner from './ContentPost/banner.astro'
 import ContentPostTheater from './ContentPost/theater.astro'
+import ContentPostProse from './ContentPost/prose.astro'
 import Countdown from './Countdown/index.astro'
 import Course from './Course/index.astro'
 import CourseOutline from './Course/outline.astro'
@@ -275,9 +276,11 @@ export const sections = {
   'Collection:shelves': CollectionShelves,
   'Collection:outline': CollectionOutline,
   ContentPost,
+  'ContentPost:card': ContentPost,
   'ContentPost:banner': ContentPostBanner,
   'ContentPost:player': ContentPostPlayer,
   'ContentPost:theater': ContentPostTheater,
+  'ContentPost:prose': ContentPostProse,
   PlatformPlanks,
   'PlatformPlanks:columns': PlatformPlanksColumns,
   'PlatformPlanks:longread': PlatformPlanksLongread,

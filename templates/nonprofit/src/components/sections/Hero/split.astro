@@ -10,7 +10,7 @@
 // (`level={1}`); any other Hero's is an <h2>. A Hero with its signup form on
 // carries an `embed`: BackGold's own form, framed under the buttons.
 import type { ComponentProps } from 'astro/types'
-import { Embed } from '@backgold/astro/components'
+import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
 import { heroPhoto, links } from '@backgold/template-kit/lib/section'
@@ -38,7 +38,7 @@ const buttons = links(section)
           {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
         </p>
       )}
-      {section.embed && <Embed embed={section.embed} title="Sign up" />}
+      {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
     </div>
     {picture && (
       <div class="split-photo">
@@ -77,7 +77,7 @@ const buttons = links(section)
   .split-words .actions {
     margin-top: 1.75rem;
   }
-  .split-words > :global(.bg-embed) {
+  .split-words > :global(.hero-signup) {
     margin-top: 1.5rem;
   }
   .split-photo {

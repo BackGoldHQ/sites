@@ -31,7 +31,9 @@
 // A page that draws a Donate frame (a section or an area item of type Donate)
 // names the donate query names its frame copies (READS_QUERY_HEADER,
 // lib/donate-frame.ts), so the edge cache never answers `?amount=25` with
-// the bare page's copy, and a request that carries one is never stored.
+// the bare page's copy, and a request that carries one is never stored. A
+// page that draws a form frame names `pick`, the choice the form opens on,
+// the same way.
 //
 // `/events/<type>` is the events page with its Agenda and Calendar sections
 // narrowed to that type (the Agenda's rows read from the Content API's `GET
@@ -71,12 +73,13 @@ import EntryCard from '../components/EntryCard.astro'
 import EventPage from '../components/EventPage.astro'
 import NotFound from '../components/NotFound.astro'
 import PageSections from '../components/PageSections.astro'
-import { entryLayoutFor, lessonLayoutFor, listLayoutFor } from '../components/entries'
+import { entryLayoutFor, lessonLayoutFor, listLayoutFor, volunteerLayoutFor } from '../components/entries'
 import type { ListLayoutProps } from '../components/entries/props'
 import { basePath, filterOf, listName, searchNews, searchQuery } from '../lib/entries'
 import { EVENTS_CALENDAR_PATH, MONTH_PARAM, calendarSlugOf, drawsCalendar, eventCalendar, eventPage, eventsCalendar, typedEventsPage } from '../lib/events'
 import { entryCard, leadsWithHero } from '../lib/section'
-import { DONATE_READS_QUERY, carriesDonateQuery, drawsDonateFrame } from '../lib/donate-frame'
+import { DONATE_READS_QUERY, FORM_READS_QUERY, carriesDonateQuery, carriesPickQuery, drawsDonateFrame, drawsFormFrame } from '../lib/donate-frame'
+import { VOLUNTEER_PATH, openShifts, volunteerAreas } from '../lib/shifts'
 import { markReading } from '../lib/reading'
 import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
 import template from 'virtual:backgold-template'
@@ -121,6 +124,11 @@ if (typed) {
   drawnInstead(resolved)
 }
 const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
+// `/volunteer` with no page of the site's own at that address is the kit's
+// open-shifts list (lib/shifts.ts); a published Volunteer page there, the
+// candidate starter's among them, is the page.
+const volunteerList = resolved.kind === 'not_found' && !event && pathname === VOLUNTEER_PATH
+const shifts = volunteerList ? await openShifts(client) : null
 const rawQuery = Astro.url.searchParams.get('q')
 const calendar = Astro.url.searchParams.has(MONTH_PARAM) || (resolved.kind === 'page' && resolved.page.sections.some(drawsCalendar))
 if (rawQuery !== null || calendar) Astro.response.headers.set('Cache-Control', 'no-store')
@@ -130,7 +138,7 @@ if (resolved.kind === 'feed') {
     headers: { 'Content-Type': 'application/atom+xml; charset=utf-8' },
   })
 }
-if (resolved.kind === 'not_found' && !event) Astro.response.status = 404
+if (resolved.kind === 'not_found' && !event && !volunteerList) Astro.response.status = 404
 
 let head: { title?: string; description?: string; image?: string; canonicalPath: string; noindex?: boolean; jsonLd?: object[] }
 switch (resolved.kind) {
@@ -193,7 +201,9 @@ switch (resolved.kind) {
   default:
     head = event
       ? { title: `${event.event.title} · ${siteName}`, image: safeSrc(event.event.image_url) ?? undefined, canonicalPath: pathname }
-      : { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
+      : volunteerList
+        ? { title: `Volunteer · ${siteName}`, description: `Open volunteer shifts with ${siteName}.`, canonicalPath: VOLUNTEER_PATH }
+        : { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
 }
 const menuPage: MenuPage | null =
   resolved.kind === 'page' ? { id: resolved.page.page.id, takes_donations: resolved.page.page.takes_donations } : null
@@ -202,10 +212,22 @@ const areas: Areas | null =
     ? resolved.page.areas
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term' || resolved.kind === 'lesson'
       ? resolved.areas
-      : event?.areas ?? null
-if (drawsDonateFrame(resolved.kind === 'page' ? resolved.page.sections : [], areas)) {
-  Astro.response.headers.set(READS_QUERY_HEADER, DONATE_READS_QUERY)
-  if (carriesDonateQuery(Astro.url.searchParams)) Astro.response.headers.set('Cache-Control', 'no-store')
+      : volunteerList
+        ? await volunteerAreas(client)
+        : event?.areas ?? null
+{
+  const pageSections = resolved.kind === 'page' ? resolved.page.sections : []
+  const reads = [
+    ...(drawsDonateFrame(pageSections, areas) ? [DONATE_READS_QUERY] : []),
+    ...(drawsFormFrame(pageSections, areas) ? [FORM_READS_QUERY] : []),
+  ]
+  if (reads.length > 0) {
+    Astro.response.headers.set(READS_QUERY_HEADER, reads.join(','))
+    const carries =
+      (drawsDonateFrame(pageSections, areas) && carriesDonateQuery(Astro.url.searchParams)) ||
+      (drawsFormFrame(pageSections, areas) && carriesPickQuery(Astro.url.searchParams))
+    if (carries) Astro.response.headers.set('Cache-Control', 'no-store')
+  }
 }
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
@@ -243,6 +265,7 @@ if (resolved.kind === 'index' || resolved.kind === 'term') {
 const ListLayout = list?.Layout ?? null
 const EntryLayout = resolved.kind === 'entry' ? entryLayoutFor(template, resolved.entry.type) : null
 const LessonLayout = resolved.kind === 'lesson' ? lessonLayoutFor(template) : null
+const VolunteerListLayout = volunteerList ? volunteerLayoutFor(template, 'list') : null
 /** What the header's Sign in names to the portal's door: a lesson, or a course's title on the course's page. */
 const signInTitle =
   resolved.kind === 'lesson'
@@ -268,7 +291,13 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'not_found' && (event ? <EventLayout event={event.event} /> : <NotFoundLayout />)}
+  {resolved.kind === 'not_found' && !volunteerList && (event ? <EventLayout event={event.event} /> : <NotFoundLayout />)}
+  {VolunteerListLayout && (
+    <div class:list={['layout', sidebar && 'layout-split']}>
+      <div class="layout-main"><VolunteerListLayout shifts={shifts ?? []} siteName={siteName} /></div>
+      {sidebar && <div class="layout-rail"><Area name="sidebar" areas={areas} components={sections} class="rail" /></div>}
+    </div>
+  )}
   {eventMore && event && <Area name="sidebar" areas={event.areas} components={sections} class="event-more" />}
 
   {heroOverSplit && resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only="lead" />}
