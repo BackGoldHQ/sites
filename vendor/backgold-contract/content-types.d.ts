@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { n as BuiltInContentTypeKey, o as ContentTypeIcon, p as BuiltInTaxonomyKey, C as ContentFieldKind, q as ContentReferenceTarget } from './constants-DuDgs06x.js';
+import { o as BuiltInContentTypeKey, p as ContentTypeIcon, q as BuiltInTaxonomyKey, C as ContentFieldKind, r as ContentReferenceTarget } from './constants-BUwZrnwi.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
@@ -72,7 +72,7 @@ interface BuiltInContentType {
 /**
  * The built-in types a new org is given (lib/content-types.ts
  * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party), 0453
- * (newsletter) and 0552 (course) seeded the same rows for the orgs that existed then, with one
+ * (newsletter), 0552 (course) and 0704 (collection) seeded the same rows for the orgs that existed then, with one
  * difference: the post row's url_base — the org's blog base — was `blog`
  * (BLOG_URL_BASE_LEGACY) there and is `news` for a new org.
  */
@@ -239,7 +239,7 @@ interface BuiltInTaxonomy {
     label: string;
     hierarchical: boolean;
 }
-/** The built-in taxonomies, exactly as migration 0372 seeds them. */
+/** The built-in taxonomies, exactly as migrations 0372 (category, tag) and 0704 (department) seed them. */
 declare const BUILT_IN_TAXONOMIES: readonly BuiltInTaxonomy[];
 /** The blog type key whose entries are stored with `kind`. */
 declare function builtInTypeKeyForKind(kind: ContentKind): BuiltInContentTypeKey;
@@ -271,6 +271,7 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
         video: "video";
+        tag: "tag";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -279,7 +280,6 @@ declare const contentTypeCreateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodDefault<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -295,6 +295,7 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
         video: "video";
+        tag: "tag";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -303,15 +304,14 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     default_access: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
-        tag: "tag";
         public: "public";
         signed_in: "signed_in";
         members: "members";
+        tag: "tag";
     }>>>;
 }, z.core.$strict>;
 type ContentTypeUpdateInput = z.infer<typeof contentTypeUpdateSchema>;
@@ -321,17 +321,17 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
+        date: "date";
+        link: "link";
+        list: "list";
         short_text: "short_text";
         long_text: "long_text";
-        rich_text: "rich_text";
-        image: "image";
-        pdf: "pdf";
-        link: "link";
-        date: "date";
-        datetime: "datetime";
         choice: "choice";
         choices: "choices";
-        list: "list";
+        pdf: "pdf";
+        image: "image";
+        rich_text: "rich_text";
+        datetime: "datetime";
         reference: "reference";
     }>;
     required: z.ZodDefault<z.ZodBoolean>;

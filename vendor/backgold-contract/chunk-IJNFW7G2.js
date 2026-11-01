@@ -1,4 +1,4 @@
-import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-7JGFDKCW.js';
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-PXMISJLZ.js';
 
 // src/safe-href.ts
 function isSafeContentHref(href) {
@@ -1224,6 +1224,11 @@ var CONTENT_API_BLOCKS = {
             slug: "slug",
             description: "description",
             duration_minutes: { prop: "duration_minutes", as: "number" },
+            // Every length the link offers (duration_minutes first) and the
+            // host's first name (null on a pooled link): the row's facts
+            // line, "30 or 45 min · video · Rowan" (board 11).
+            durations: "durations",
+            host_first_name: "host_first_name",
             location_kind: "location_kind",
             price_cents: { prop: "price_cents", as: "number" },
             url: "url"
