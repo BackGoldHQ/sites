@@ -19,7 +19,7 @@
 
 import { BackgoldApiError, createClient, memoryCache, previewFromRequest } from '@backgold/content'
 import type { PreviewResponse, SiteResponse } from '@backgold/content'
-import { DEFAULT_API_ORIGIN, firstPartyOf, namesNoSite, text, workerEnv } from './env.js'
+import { DEFAULT_API_ORIGIN, firstPartyFetch, firstPartyOf, namesNoSite, text, workerEnv } from './env.js'
 import { errorResponse, noSite } from './respond.js'
 import { isApiTimeout, withTimeout } from './timeout.js'
 
@@ -38,7 +38,8 @@ export interface PreviewDeps {
   /** Default `globalThis.fetch`. */
   fetch?: typeof fetch
   /**
-   * First-party mode: the site id and the `BACKGOLD_API` binding's fetch.
+   * First-party mode: the site id and the `BACKGOLD_API` binding's fetch
+   * (`firstPartyFetch`: it carries the site token when the Worker has one).
    * When given the draft is read through it, and `secretKey` and `fetch` are not used.
    */
   firstParty?: { siteId: string; fetch: typeof fetch }
@@ -121,6 +122,6 @@ export async function loadPreview(request: Request): Promise<PreviewResult> {
   return handlePreview(request, {
     secretKey: text(env.BACKGOLD_SECRET_KEY),
     apiOrigin: text(env.BACKGOLD_API_ORIGIN) ?? DEFAULT_API_ORIGIN,
-    ...(firstParty ? { firstParty: { siteId: firstParty.siteId, fetch: (input, init) => firstParty.binding.fetch(input, init) } } : {}),
+    ...(firstParty ? { firstParty: { siteId: firstParty.siteId, fetch: firstPartyFetch(firstParty) } } : {}),
   })
 }

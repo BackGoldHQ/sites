@@ -7,7 +7,7 @@ draft previews, the site's redirects, `sitemap.xml`, `robots.txt`, `llms.txt`
 and an Atom feed, route resolution, and the components a page is built from.
 
 It reads content with [`@backgold/content`](https://www.npmjs.com/package/@backgold/content).
-The starter template (gitlab.com/backgold/backgold-starter, with a Deploy to
+The starter template (github.com/BackGoldHQ/backgold-starter, with a Deploy to
 Cloudflare button) is a complete site built on it.
 
 Requires Astro 7 with `@astrojs/cloudflare` 14 and Node 22.12+ to build.
@@ -46,13 +46,28 @@ Set on the Worker (`wrangler.jsonc` vars, `wrangler secret put` for secrets,
 | `BACKGOLD_WEBHOOK_SECRET` | secret | for webhooks | The webhook endpoint's signing secret, `whsec_…`. Also the bearer token for `/api/backgold/revalidate`. |
 | `BACKGOLD_REBUILD_HOOK_URL` | secret | no | POSTed after each verified content event, for a site that rebuilds statically. Failures are logged, never surfaced. |
 | `BACKGOLD_SITE_ID` | var | single-site first-party only | The site's id. Set, it makes the site first-party: every read, previews included, goes through `BACKGOLD_API` as that site, and `BACKGOLD_SITE_KEY` and `BACKGOLD_SECRET_KEY` are not read. |
-| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint. `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. Without `BACKGOLD_SITE_ID` it makes the Worker a template's shared Worker (below). |
+| `BACKGOLD_API` | service binding | first-party only | The binding to the api's `FirstParty` entrypoint (a custom site's: `FirstPartyCustom`). `BACKGOLD_API_ORIGIN` still names the origin the addresses are built on; the binding ignores the host. Without `BACKGOLD_SITE_ID` it makes the Worker a template's shared Worker (below). |
+| `BACKGOLD_SITE_TOKEN` | secret | never set it | BackGold sets it on a custom site's Worker, and the site never configures it. With it, every first-party read also sends `X-BackGold-Site-Token`, which proves the site to the api's `FirstPartyCustom` entrypoint; it is read only from the environment and never reaches a page, a response or a log. Template Workers have none. |
 
 First-party mode is for a site Worker inside BackGold's own namespace, and
 BackGold sets these names up for it. A site built elsewhere never sets them: it
 reads with its site keys, and an `X-BackGold-Site` header a visitor sends it
 is ignored. `Astro.locals.backgold.firstParty` says which mode the request
 ran in, and `Astro.locals.backgold.siteId` which site it rendered.
+
+Every drawn page answers `X-BackGold-Page: <page id>`, every entry (a lesson
+included) `X-BackGold-Entry: <entry id>`; BackGold's dispatch counts the view
+and strips the header; a site built elsewhere may ignore or strip them. The
+id is what `resolveRoute` first resolved the request's own address to, on a
+`GET` that renders a 200 HTML page; a list, a term, an author, a feed, the
+SEO routes, the 404, the setup page and `/preview` carry neither. A route
+that draws a page where its address resolved to nothing (the template kit's
+`/events/<type>`, the events page narrowed to a type) names it with
+`drawnInstead(resolved)` from `@backgold/astro/server`. The header
+is stored with the edge-cache copy, so a hit carries it too. It needs
+`AsyncLocalStorage`: the `nodejs_compat` or `nodejs_als` compatibility flag,
+which the starter and BackGold's templates set; without either, pages render
+without the header.
 
 ### A template's shared Worker (the dispatched form)
 

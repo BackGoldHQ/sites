@@ -53,15 +53,14 @@ function mediaOf(row: Record<string, unknown>): LessonMedia | null {
 const escapeText = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
- * The notes as HTML a page can emit: the bake's HTML through the allowlist, or
- * plain text as paragraphs (a blank line between them). The body's headings
- * move down two levels (h2 → h4, h3 → h5) to sit under the section's title
- * (h2) and the notes' own heading (h3).
+ * The body as HTML a page can emit: the bake's HTML through the allowlist, or
+ * plain text as paragraphs (a blank line between them). The Prose layout
+ * emits it as it is, under the section's title.
  */
-function notesOf(value: unknown): string {
+export function bodyOf(value: unknown): string {
   const raw = text(value)?.trim()
   if (!raw) return ''
-  const html = raw.startsWith('<')
+  return raw.startsWith('<')
     ? sanitizeRichText(raw)
     : raw
         .split(/\n{2,}/)
@@ -69,7 +68,15 @@ function notesOf(value: unknown): string {
         .filter(Boolean)
         .map((p) => `<p>${escapeText(p)}</p>`)
         .join('')
-  return html.replace(/<(\/?)h([23])>/g, (_, slash: string, level: string) => `<${slash}h${Number(level) + 2}>`)
+}
+
+/**
+ * The notes: the body (bodyOf) with its headings moved down two levels
+ * (h2 → h4, h3 → h5) to sit under the section's title (h2) and the notes'
+ * own heading (h3).
+ */
+function notesOf(value: unknown): string {
+  return bodyOf(value).replace(/<(\/?)h([23])>/g, (_, slash: string, level: string) => `<${slash}h${Number(level) + 2}>`)
 }
 
 /**

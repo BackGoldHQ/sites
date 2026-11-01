@@ -9,7 +9,7 @@
 // always read zero.
 
 import type { Section } from '@backgold/content'
-import type { ContentAccessLevel, CourseProgress, CourseSummary, EntryLock, Visitor } from '@backgold/contract/content-api'
+import type { ContentAccessLevel, CourseProgress, CourseSummary, EntryLock, Visitor } from '#contract/content-api'
 import { safeHref, safeSrc, signInHref } from '@backgold/astro/server'
 import { rows } from '../../../lib/section'
 import { text } from '../../../lib/format'

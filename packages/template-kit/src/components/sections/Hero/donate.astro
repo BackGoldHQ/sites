@@ -20,7 +20,7 @@
 // other Hero's is an <h2>. A Hero with its signup form on carries an `embed`:
 // BackGold's own form, framed under the words.
 import type { ComponentProps } from 'astro/types'
-import { Embed } from '@backgold/astro/components'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import Band from '../Band.astro'
 import DonateCard from '../QuickDonate/DonateCard.astro'
 import { quickDonate } from '../QuickDonate/donate'
@@ -70,7 +70,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
             <a class="button button-quiet" href={second.href} rel={second.rel}>{second.label}</a>
           </p>
         )}
-        {section.embed && <Embed embed={section.embed} title="Sign up" />}
+        {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
       </div>
       <DonateCard qd={qd} />
     </div>
@@ -158,7 +158,7 @@ const [lead, last] = split ? [split[1]!, split[2]!] : [headline ?? '', null]
   .donate-words .actions {
     margin-top: 1.75rem;
   }
-  .donate-words > :global(.bg-embed) {
+  .donate-words > :global(.hero-signup) {
     margin-top: 1.5rem;
   }
   .donate-grid > :global(.qd-card) {

@@ -17,7 +17,8 @@
     "paths": {
       "@backgold/content": ["./src/index.ts"],
       "@backgold/contract/content-api": ["../../vendor/backgold-contract/content-api.d.ts"],
-      "@backgold/contract/content-api-examples": ["../../vendor/backgold-contract/content-api-examples.d.ts"]
+      "@backgold/contract/content-api-examples": ["../../vendor/backgold-contract/content-api-examples.d.ts"],
+      "@backgold/contract/api-operations": ["../../vendor/backgold-contract/api-operations.d.ts"]
     }
   },
   "include": ["src/**/*.ts"],

@@ -1,2 +1,4 @@
 # astro check's generated types
 .astro/
+# the contract slice's build
+dist/

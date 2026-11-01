@@ -1,0 +1,10 @@
+{
+  "name": "fixture-site",
+  "main": "entry.mjs",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "binding": "ASSETS", "directory": "../client" },
+  "vars": { "SITE_URL": "https://fixture.example.org", "BACKGOLD_SITE_KEY": "", "RETRIES": 3 },
+  "kv_namespaces": [{ "binding": "BACKGOLD_CACHE" }],
+  "no_bundle": true
+}

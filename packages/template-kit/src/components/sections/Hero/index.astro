@@ -9,7 +9,7 @@
 // A Hero with its signup form on carries an `embed`: BackGold's own form,
 // framed below the words (never rebuild it here; consent stays with BackGold).
 import type { Section } from '@backgold/content'
-import { Embed } from '@backgold/astro/components'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import Band from '../Band.astro'
 import { heroPhoto, links } from '../../../lib/section'
 import { text } from '../../../lib/format'
@@ -34,7 +34,7 @@ const split = section.variant === 'split' && picture !== null
     {headline && <Heading class="hero-headline">{headline}</Heading>}
     {subheadline && <p class="hero-lede">{subheadline}</p>}
     {cta && <p class="actions"><a class="button" href={cta.href} rel={cta.rel}>{cta.label}</a></p>}
-    {section.embed && <Embed embed={section.embed} title="Sign up" />}
+    {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
   </div>
   {picture && (
     <div class="hero-photo">

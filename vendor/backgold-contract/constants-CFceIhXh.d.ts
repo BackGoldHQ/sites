@@ -61,4 +61,8 @@ type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
 declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "run", "privacy", "sms-terms"];
 type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
 
+<<<<<<<< HEAD:vendor/backgold-contract/constants-CFceIhXh.d.ts
 export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type ItemQuestionScope as I, type LiveStreamStatus as L, type ProductAvailability as P, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type StoreAttributeKind as e, type ProductShipTo as f, type SiteSectionKind as g, type SiteSectionRole as h, type ShiftPublicState as i, type ShiftPublicSubjectKind as j, type SiteMode as k, type SiteApiKeyKind as l, type ContentWebhookEvent as m, SITE_KEY_PREFIXES as n, type SitePageModuleKind as o, type BuiltInContentTypeKey as p, type ContentTypeIcon as q, type BuiltInTaxonomyKey as r, type ContentReferenceTarget as s };
+========
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type LiveStreamStatus as L, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type SiteSectionKind as e, type SiteSectionRole as f, type ShiftPublicState as g, type ShiftPublicSubjectKind as h, type SiteMode as i, type SiteApiKeyKind as j, type ContentWebhookEvent as k, SITE_KEY_PREFIXES as l, type SitePageModuleKind as m, type BuiltInContentTypeKey as n, type ContentTypeIcon as o, type BuiltInTaxonomyKey as p, type ContentReferenceTarget as q };
+>>>>>>>> github/main:vendor/backgold-contract/constants-DvTNj4JI.d.ts

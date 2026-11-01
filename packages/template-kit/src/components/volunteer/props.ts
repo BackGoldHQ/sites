@@ -1,4 +1,4 @@
-// What the volunteer layouts are given, by src/routes/volunteer.astro and
+// What the volunteer layouts are given, by src/routes/catch-all.astro (the list) and
 // src/routes/volunteer-shift.astro. A template registers its own as
 // 'volunteer:list' and 'volunteer:detail' in its `entries`
 // (components/entries/index.ts volunteerLayoutFor).

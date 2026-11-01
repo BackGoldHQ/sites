@@ -33,7 +33,7 @@ from the vendored contract (`vendor/backgold-contract`); this repository's
 `templates/*/template.json` with it, so a manifest that passes here is one
 BackGold can read. After a change to `template.json` merges here, refresh the
 platform's copy (`packages/shared/site-templates/candidate.template.json`) in a
-platform MR and run `pnpm --filter @givegold/shared templates:build` there.
+platform PR and run `pnpm --filter @givegold/shared templates:build` there.
 
 ## Where the files live
 
@@ -172,7 +172,7 @@ pictures (a section without its picture draws without one).
 ## Decisions built as drawn
 
 These follow the boards; none is ruled yet, and each is listed for JHL in
-the merge request (README §17, Decisions needed).
+the pull request (README §17, Decisions needed).
 
 - **C-1 Hero `portrait`** is proposed, in the contract as a proposed layout.
 - **C-2 Endorsements ride QuoteStrip** (an endorsement is a quote, optional,
@@ -204,6 +204,7 @@ repository root:
 pnpm install
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
+pnpm --filter @backgold/template-kit build
 pnpm --filter backgold-template-candidate run check
 ```
 
@@ -215,17 +216,19 @@ their own addresses, the starter's menus and the boards' brand, to look at.
 
 ## Deploys
 
-BackGold runs this template as one Worker, `template-candidate`, in the
-Workers for Platforms dispatch namespaces `sites-staging` and
-`sites-production`, exactly as the party template runs `template-party`
-(see the party template's README, Staging deploy and Production deploy).
-The `env.staging` and `env.production` blocks in `wrangler.jsonc` hold that
-form; the CI jobs write the `CANDIDATE_STAGING_KV_ID` and
-`CANDIDATE_PRODUCTION_KV_ID` variables over the `__CANDIDATE_STAGING_KV_ID__`
-and `__CANDIDATE_PRODUCTION_KV_ID__` placeholders before they build. Each
-cache's KV namespace is created once, by hand:
-`npx wrangler kv namespace create backgold-candidate-staging-cache` (and
-`backgold-candidate-production-cache`).
+BackGold deploys this template itself, as the Worker `template-candidate` in its
+Workers for Platforms dispatch namespaces: `sites-staging` on a push to
+`main`, `sites-production` from the Release workflow, built from this
+workspace, never from npm. The `env.staging` and `env.production` blocks in
+`wrangler.jsonc` hold that form, and the deploy job writes the cache
+namespace's id over the `__CANDIDATE_STAGING_KV_ID__` and
+`__CANDIDATE_PRODUCTION_KV_ID__` placeholders before it builds. How the jobs
+run, how to tell a deploy worked and the one-time account steps are in the
+repository's [docs/TEMPLATE-DEPLOYS.md](https://github.com/BackGoldHQ/sites/blob/main/docs/TEMPLATE-DEPLOYS.md).
+
+A copy of this template outside this repository (one `backgold eject`
+made) deletes both `env` blocks and deploys with `npx backgold deploy`; the
+`@backgold/cli` README has the steps.
 
 ## License
 

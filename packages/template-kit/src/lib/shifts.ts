@@ -1,5 +1,6 @@
 // The organization's volunteer shifts as the kit's volunteer pages draw them
-// (src/routes/volunteer.astro, `/volunteer`, and
+// (`/volunteer`, the open-shifts list src/routes/catch-all.astro draws when
+// the site has no page of its own at that address, and
 // src/routes/volunteer-shift.astro, `/volunteer/<slug>`), read from the
 // Content API's `GET /shifts`: every open shift, soonest first, each with its
 // counts, its state (`open`, `full`, `waitlist`, `closed`), what it belongs to

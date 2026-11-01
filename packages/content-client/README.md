@@ -13,7 +13,7 @@ JSON, unchanged and typed.
 The full API reference is at
 <https://api.backgold.com/api/content/v1/docs>. The developer guide,
 [docs/HEADLESS-CONTENT-API.md](../../docs/HEADLESS-CONTENT-API.md)
-(<https://gitlab.com/backgold/sites/-/blob/main/docs/HEADLESS-CONTENT-API.md>),
+(<https://github.com/BackGoldHQ/sites/blob/main/docs/HEADLESS-CONTENT-API.md>),
 covers keys, rendering, caching, preview and webhooks in depth.
 
 ## Install

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:vendor/backgold-contract/chunk-IJNFW7G2.js
 import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-PXMISJLZ.js';
+========
+import { SITE_KEY_PREFIXES, MAP_REGION_STATUSES, BACKGOLD_SURFACE_PATHS } from './chunk-J4FAYFD2.js';
+>>>>>>>> github/main:vendor/backgold-contract/chunk-SWGZRJ7S.js
 
 // src/safe-href.ts
 function isSafeContentHref(href) {

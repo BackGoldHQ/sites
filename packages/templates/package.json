@@ -1,0 +1,29 @@
+{
+  "name": "@backgold/templates",
+  "version": "0.1.0",
+  "description": "The source of BackGold's Astro templates, the one `backgold eject` scaffolds a project from",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "templates",
+    "templates.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "lint": "node build.mjs --check"
+  },
+  "engines": {
+    "node": ">= 22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BackGoldHQ/sites.git",
+    "directory": "packages/templates"
+  },
+  "keywords": [
+    "backgold",
+    "astro",
+    "template"
+  ]
+}

@@ -4,7 +4,7 @@
 // astro.config.mjs names this file to the kit's integration, whose routes
 // draw every page with it.
 
-import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+import { siteTemplateManifestSchema } from '@backgold/template-kit/contract/site-templates'
 import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import './styles/template.css'

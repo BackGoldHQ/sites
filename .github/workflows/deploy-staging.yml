@@ -1,0 +1,192 @@
+# STAGING — automatic on every push to main: each template whose paths
+# changed is deployed as the Worker `template-<name>` into the Workers for
+# Platforms dispatch namespace `sites-staging` (scripts/deploy-template.sh
+# says how). CI already ran and passed on the PR, so this deploys straight off
+# the push rather than re-running checks. The templates deploy from this
+# workspace; they never wait on npm.
+#
+# CUTOVER SWITCH: every job runs only when the repository variable
+# BACKGOLD_GITHUB_CI is 'on' (the `changes` job checks it and every other job
+# needs `changes`). Until it is set, a push to main creates a run whose jobs
+# are all skipped.
+#
+# Change → deploy mapping: a template deploys when the push changed its own
+# directory, a package (`packages/**`, the two npm packages and the kit are
+# built into every template), the vendored contract, the lockfile or this
+# file. What changed is measured from the head of the last SUCCESSFUL run of
+# this workflow, not from the push's `before`, so a cancelled or failed run's
+# paths land in the next run and no merge's change is left undeployed. The
+# `staging` concurrency group keeps one run going and at most ONE waiting.
+#
+# `workflow_dispatch` redeploys by hand, from main's head: one template
+# (`template: party`) or every template (`template: all`), whatever changed.
+#
+# wrangler reads CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID from the
+# environment (repository secrets, the BackGold account), and each template's
+# KV namespace id from <TEMPLATE>_STAGING_KV_ID (PARTY_STAGING_KV_ID, ...),
+# repository secrets passed through below. The deploy jobs run on the
+# `deploy` runners (long-lived; never an instance that can vanish mid-job).
+# The public starter's sync is its own workflow (sync-starter.yml).
+
+name: Deploy staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      template:
+        description: Template to redeploy (all = every template)
+        type: choice
+        options: [party, candidate, petition-drive, academy, nonprofit, unlabeled, all]
+        default: all
+
+permissions:
+  contents: read
+  actions: read
+
+# Never cancel a deploy: a newer merge waits. Every run: step is bash, not
+# the sh -e GitHub uses in a container.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  changes:
+    name: Detect changes
+    if: vars.BACKGOLD_GITHUB_CI == 'on' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, docker]
+    container: &node
+      image: node:24
+    timeout-minutes: 10
+    outputs:
+      # A JSON list of the templates to deploy, for the matrix.
+      templates: ${{ steps.templates.outputs.templates }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # The container runs as root over a workspace the runner's user owns;
+      # without this every git command stops at "dubious ownership".
+      - &trust
+        name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Last successful staging run
+        id: base
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          node -e '
+            const url = `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}/actions/workflows/deploy-staging.yml/runs?branch=main&status=success&per_page=1`;
+            fetch(url, { headers: { authorization: `Bearer ${process.env.GH_TOKEN}`, accept: "application/vnd.github+json" } })
+              .then((r) => r.json())
+              .then((body) => { console.log(body.workflow_runs?.[0]?.head_sha ?? ""); })
+              .catch(() => console.log(""));
+          ' > /tmp/base-sha
+          SHA=$(cat /tmp/base-sha)
+          # No earlier success (or it is not in this history): the push's own range.
+          if [ -z "$SHA" ] || ! git cat-file -e "$SHA^{commit}" 2>/dev/null; then SHA="$BEFORE"; fi
+          if [ -z "$SHA" ] || [ "$SHA" = "0000000000000000000000000000000000000000" ]; then SHA=$(git rev-parse HEAD^); fi
+          echo "Changes since $SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          base: ${{ steps.base.outputs.sha }}
+          filters: |
+            shared: &shared
+              - '.github/workflows/deploy-staging.yml'
+              - 'scripts/deploy-template.sh'
+              - 'packages/**'
+              - 'vendor/**'
+              - 'pnpm-lock.yaml'
+            party:
+              - *shared
+              - 'templates/party/**'
+            candidate:
+              - *shared
+              - 'templates/candidate/**'
+            petition_drive:
+              - *shared
+              - 'templates/petition-drive/**'
+            academy:
+              - *shared
+              - 'templates/academy/**'
+            nonprofit:
+              - *shared
+              - 'templates/nonprofit/**'
+            unlabeled:
+              - *shared
+              - 'templates/unlabeled/**'
+      - name: Templates to deploy
+        id: templates
+        env:
+          REQUESTED: ${{ inputs.template }}
+          party: ${{ steps.filter.outputs.party }}
+          candidate: ${{ steps.filter.outputs.candidate }}
+          petition_drive: ${{ steps.filter.outputs.petition_drive }}
+          academy: ${{ steps.filter.outputs.academy }}
+          nonprofit: ${{ steps.filter.outputs.nonprofit }}
+          unlabeled: ${{ steps.filter.outputs.unlabeled }}
+        run: |
+          TEMPLATES="party candidate petition-drive academy nonprofit unlabeled"
+          list=""
+          for t in $TEMPLATES; do
+            key=${t//-/_}
+            if [ "$REQUESTED" = "all" ] || [ "$REQUESTED" = "$t" ] || [ "${!key:-}" = "true" ]; then
+              list="$list${list:+,}\"$t\""
+            fi
+          done
+          echo "templates=[$list]" >> "$GITHUB_OUTPUT"
+          echo "Templates to deploy: [$list]"
+
+  deploy-staging:
+    name: Deploy ${{ matrix.template }} (staging)
+    needs: changes
+    if: needs.changes.outputs.templates != '[]'
+    runs-on: [self-hosted, docker, deploy]
+    container: *node
+    environment: staging
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      # At most two at a time: each deploy builds the whole workspace and the
+      # Mac runner has one slot.
+      max-parallel: 2
+      matrix:
+        template: ${{ fromJSON(needs.changes.outputs.templates) }}
+    env:
+      PARTY_STAGING_KV_ID: ${{ secrets.PARTY_STAGING_KV_ID }}
+      CANDIDATE_STAGING_KV_ID: ${{ secrets.CANDIDATE_STAGING_KV_ID }}
+      PETITION_DRIVE_STAGING_KV_ID: ${{ secrets.PETITION_DRIVE_STAGING_KV_ID }}
+      ACADEMY_STAGING_KV_ID: ${{ secrets.ACADEMY_STAGING_KV_ID }}
+      NONPROFIT_STAGING_KV_ID: ${{ secrets.NONPROFIT_STAGING_KV_ID }}
+      UNLABELED_STAGING_KV_ID: ${{ secrets.UNLABELED_STAGING_KV_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - *trust
+      - name: pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: .pnpm-store
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
+      - name: Install
+        run: |
+          corepack enable
+          # Activates the exact pnpm from package.json's `packageManager` field.
+          corepack prepare --activate
+          pnpm config set store-dir .pnpm-store
+          pnpm install --frozen-lockfile
+      - run: bash scripts/deploy-template.sh staging "${{ matrix.template }}"

@@ -13,7 +13,7 @@
 // monospace for those instead. src/styles/template.css sets the three as
 // --font-display, --font and --font-mono.
 
-import { siteTemplateManifestSchema } from '@backgold/contract/site-templates'
+import { siteTemplateManifestSchema } from '@backgold/template-kit/contract/site-templates'
 import { defineTemplate, kitEntries, kitSections } from '@backgold/template-kit/template'
 import manifest from '../template.json'
 import EventsListList from './components/sections/EventsList/list.astro'

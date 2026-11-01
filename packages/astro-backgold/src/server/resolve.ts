@@ -13,6 +13,7 @@ import type {
   VisitorOptions,
 } from '@backgold/content'
 import { CURSOR_PARAM, validCursor } from './cursor.js'
+import { recordDrawn } from './drawn.js'
 import { blogBaseOf, isBlogType } from './format.js'
 
 /**
@@ -200,9 +201,20 @@ async function listPage(
  * signed-in visitor, so their locks open; without it every read is the
  * anonymous, cached one. Redirects are the middleware's. A malformed path is
  * `not_found`; an api failure throws.
+ *
+ * The first resolution of the request's own path names what the request drew
+ * (server/drawn.ts): a page's id, or an entry's or a lesson's, which the
+ * middleware sends as `X-BackGold-Page` or `X-BackGold-Entry`.
  */
 export async function resolveRoute(bg: BackgoldContent, location: string | URL, visitor?: VisitorOptions): Promise<Resolved> {
-  const { pathname, cursor } = locate(location)
+  const located = locate(location)
+  const resolved = await resolvePath(bg, located, visitor)
+  const segments = segmentsOf(located.pathname)
+  recordDrawn(resolved, (requestPath) => segments !== null && samePath(requestPath, segments))
+  return resolved
+}
+
+async function resolvePath(bg: BackgoldContent, { pathname, cursor }: { pathname: string; cursor: string | null }, visitor: VisitorOptions | undefined): Promise<Resolved> {
   const segments = segmentsOf(pathname)
   if (!segments) return NOT_FOUND
   if (segments.length === 0) {

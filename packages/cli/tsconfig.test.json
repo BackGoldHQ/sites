@@ -1,0 +1,11 @@
+{
+  // The test build — the only one that compiles *.test.ts (tsconfig.json
+  // excludes them so they never reach dist). Output goes to the gitignored
+  // dist-test/ and runs under node:test.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "dist-test"]
+}

@@ -1,0 +1,95 @@
+# STARTER SYNC — templates/astro-starter → github.com/BackGoldHQ/backgold-starter
+# (public), the repository Cloudflare's Deploy button clones, with the Astro
+# starter as its root. AUTOMATIC on a push to main that touched the template,
+# a package's package.json (the sync writes ^<version> of each package into
+# the public package.json) or the script; BY HAND (`workflow_dispatch`) to
+# re-run it, after publishing a package the template needs, or to restore a
+# public repository someone edited. This job is the public repository's only
+# writer.
+#
+# CUTOVER SWITCH: the job runs only when the repository variable
+# BACKGOLD_GITHUB_CI is 'on'.
+#
+# scripts/sync-starter.sh does the work. It always syncs main's NEWEST
+# commit, whichever run it is in: it fetches this repository's origin main
+# (the job's shallow, detached checkout is fine) and takes the template from
+# that commit. It refuses to push unless the @backgold/astro,
+# @backgold/content and @backgold/cli ranges the public template's package.json names resolve
+# on npm (the public starter must always install, so publish first),
+# replaces the public tree with the template as committed, commits as
+# `BackGold <noreply@backgold.com>` with `Sync from backgold@<short sha>`, and
+# pushes to main as a plain fast-forward. Nothing changed, nothing pushed.
+#
+# A starter range that is not on npm yet exits 3, which the job turns into a
+# warning (the run stays green): the merge that adds or bumps a template
+# dependency leaves the sync waiting until the package is published; then
+# run this workflow by hand. Every other failure (main cannot be fetched, bad
+# key, unreadable repository, a range npm cannot install at all, a rejected
+# push) fails the job.
+#
+# It pushes over SSH with the write deploy key on BackGoldHQ/backgold-starter:
+# STARTER_SYNC_KEY is a repository secret holding the private half (the whole
+# unencrypted key, BEGIN line to END line). The script wants a file, so the
+# job writes the secret to one it alone can read and names it in the
+# variable; the script pins github.com's host keys rather than trusting a scan
+# at run time. The `starter-sync` concurrency group keeps two syncs from
+# racing for the same branch.
+
+name: Sync starter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'templates/astro-starter/**'
+      - 'packages/*/package.json'
+      - 'scripts/sync-starter.sh'
+      - '.github/workflows/sync-starter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Every run: step is bash, not the sh -e GitHub uses in a container.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: starter-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-starter:
+    name: Sync the public starter
+    if: vars.BACKGOLD_GITHUB_CI == 'on' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, docker]
+    # git, ssh and npm come with node:24; nothing from the workspace is needed.
+    container:
+      image: node:24
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # The container runs as root over a workspace the runner's user owns;
+      # without this every git command stops at "dubious ownership".
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Sync
+        env:
+          STARTER_SYNC_KEY_VALUE: ${{ secrets.STARTER_SYNC_KEY }}
+        run: |
+          if [ -z "${STARTER_SYNC_KEY_VALUE:-}" ]; then
+            echo "FAIL: STARTER_SYNC_KEY is not set as a repository secret; not syncing." >&2
+            exit 1
+          fi
+          KEY_DIR=$(mktemp -d)
+          (umask 077 && printf '%s\n' "$STARTER_SYNC_KEY_VALUE" > "$KEY_DIR/key")
+          export STARTER_SYNC_KEY="$KEY_DIR/key"
+          rc=0
+          bash scripts/sync-starter.sh || rc=$?
+          rm -rf "$KEY_DIR"
+          if [ "$rc" = 3 ]; then
+            echo "::warning::The public starter was not synced: a package range it names is not on npm yet. Publish it, then run this workflow by hand."
+            exit 0
+          fi
+          exit "$rc"

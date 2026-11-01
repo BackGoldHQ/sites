@@ -11,6 +11,7 @@ import './locals.js'
 import type { MiddlewareHandler } from 'astro'
 import options from 'virtual:backgold/options'
 import { backgoldFor, type BackgoldContextLike } from './server/context.js'
+import { drawnHeaders, withDrawnRecord, type DrawnRecord } from './server/drawn.js'
 import { CACHE_STATUS_HEADER, cacheKey, fromCache, isPreviewPath, isStorable, isUncachedPath, openEdgeCache, readsRequestQuery, toStore, type EdgeCache } from './server/edge-cache.js'
 import { namesNoSite, waitUntilOf, workerEnv, type BackgoldEnv } from './server/env.js'
 import { liveStreamOf, liveVariant } from './server/live-stream.js'
@@ -67,12 +68,22 @@ function withHeaders(response: Response, headers: Record<string, string>): Respo
 export async function runMiddleware(context: MiddlewareContextLike, next: MiddlewareNext, deps: MiddlewareDeps): Promise<Response> {
   const preview = isPreviewPath(context.url.pathname)
   try {
-    const response = await pipeline(context, next, deps)
+    const response = await pipeline(context, preview || context.request.method !== 'GET' ? next : drawing(context.url.pathname, next), deps)
     return preview ? withHeaders(response, PREVIEW_HEADERS) : response
   } catch (error) {
     if (isApiTimeout(error)) return preview ? withHeaders(apiUnavailable(), PREVIEW_HEADERS) : apiUnavailable()
     if (preview) return errorResponse(502, 'PREVIEW_UNAVAILABLE', 'This preview could not be shown. Try again.', PREVIEW_HEADERS)
     throw error
+  }
+}
+
+/** `next`, its render run where `resolveRoute` records what it drew, and that named on the response. */
+function drawing(pathname: string, next: MiddlewareNext): MiddlewareNext {
+  return async (...rewrite) => {
+    const record: DrawnRecord = { pathname }
+    const response = await withDrawnRecord(record, () => next(...rewrite))
+    const headers = drawnHeaders(record, response)
+    return Object.keys(headers).length > 0 ? withHeaders(response, headers) : response
   }
 }
 

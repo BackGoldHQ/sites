@@ -5,7 +5,7 @@
 // line. The page-opening Hero's headline is the page's <h1> (`level={1}`);
 // any other Hero's is an <h2>. The signup form is BackGold's own (`embed`).
 import type { ComponentProps } from 'astro/types'
-import { Embed } from '@backgold/astro/components'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import Band from '../Band.astro'
 import type Default from './index.astro'
 import { links } from '../../../lib/section'
@@ -30,7 +30,7 @@ const buttons = links(section)
         {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
       </p>
     )}
-    {section.embed && <Embed embed={section.embed} title="Sign up" />}
+    {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
   </div>
 </Band>
 
@@ -48,7 +48,7 @@ const buttons = links(section)
     max-width: 40em;
     margin: 1.25rem 0 0;
   }
-  .statement > :global(.bg-embed) {
+  .statement > :global(.hero-signup) {
     margin-top: 1.5rem;
     max-width: 40rem;
   }

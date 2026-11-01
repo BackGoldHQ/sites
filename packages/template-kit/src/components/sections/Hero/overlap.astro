@@ -13,7 +13,7 @@
 // A Hero with its signup form on carries an `embed`: BackGold's own form,
 // framed under the buttons.
 import type { ComponentProps } from 'astro/types'
-import { Embed } from '@backgold/astro/components'
+import ModuleFrame from '../modules/ModuleFrame.astro'
 import Band from '../Band.astro'
 import type Default from './index.astro'
 import { heroPhoto, links } from '../../../lib/section'
@@ -53,7 +53,7 @@ const buttons = links(section)
         {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}
       </p>
     )}
-    {section.embed && <Embed embed={section.embed} title="Sign up" />}
+    {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
   </div>
 </Band>
 
@@ -123,7 +123,7 @@ const buttons = links(section)
   .overlap-panel .actions {
     margin: 1.625rem 0 0;
   }
-  .overlap-panel > :global(.bg-embed) {
+  .overlap-panel > :global(.hero-signup) {
     margin-top: 1.5rem;
   }
   .overlap-panel > :last-child {

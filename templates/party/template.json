@@ -22,7 +22,7 @@
     "EventsList": ["list", "cards", "agenda", "compact", "calendar", "shifts", "week", "cohorts", "map"],
     "Blog": ["cards", "list", "feature"],
     "Collection": ["cards", "list", "compact", "feature", "library", "shelves", "outline"],
-    "ContentPost": ["card", "banner", "player", "theater"],
+    "ContentPost": ["card", "banner", "player", "theater", "prose"],
     "PlatformPlanks": ["numbered", "columns", "longread"],
     "CandidateRoster": ["cards", "ballot", "compact"],
     "TeamGrid": ["grid", "board", "list"],

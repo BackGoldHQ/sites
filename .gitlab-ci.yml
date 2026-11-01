@@ -1,4 +1,4 @@
-# BackGold sites pipeline: the two public npm packages, the templates built on
+# BackGold sites pipeline: the three public npm packages, the templates built on
 # them, and the six templates' deploys (party, candidate, petition-drive,
 # academy, nonprofit, unlabeled).
 #
@@ -17,12 +17,18 @@
 #                             + template-kit + starter + every template
 #                             deploy-<name>-staging on main (automatic)
 #                             pack-astro → publish-astro (manual release)
+#   packages/cli            → cli              (@backgold/cli on npm: lint, build,
+#                                                test, then scripts/cli-e2e.mjs)
+#                             + starter        (the e2e packs it: the starter
+#                                                names it)
+#                             pack-cli → publish-cli (manual release)
 #   packages/template-kit   → template-kit     (@backgold/template-kit, private:
 #                                                what every template draws)
 #                             + every template
 #                             deploy-<name>-staging on main (automatic)
 #   templates/astro-starter → starter          (the e2e, with
-#                                                scripts/starter-e2e.mjs);
+#                                                scripts/starter-e2e.mjs)
+#                             + cli            (scripts/cli-e2e.mjs reads its build);
 #                             sync-starter on main (automatic: mirrors it to
 #                                                gitlab.com/backgold/backgold-starter)
 #   templates/<name>        → <name>           (astro check, then the same e2e
@@ -62,7 +68,7 @@
 #                            deploy-petition-drive-staging, deploy-petition-drive-production
 #   ACADEMY_STAGING_KV_ID, ACADEMY_PRODUCTION_KV_ID
 #                            deploy-academy-staging, deploy-academy-production
-#   NPM_TOKEN                publish-content, publish-astro
+#   NPM_TOKEN                publish-content, publish-astro, publish-cli
 #   STARTER_SYNC_KEY         sync-starter (a FILE variable, not masked: it is
 #                            a multi-line private key)
 # All six are set on this project, which is the only repository that deploys
@@ -184,6 +190,36 @@ content-client:
     - pnpm --filter @backgold/content build
     - pnpm --filter @backgold/content test
 
+# cli = @backgold/cli (packages/cli), the public npm package with the
+# `backgold` command that deploys a site to BackGold hosting. `test` compiles
+# to dist-test and runs node:test against an in-process fixture api; then
+# scripts/cli-e2e.mjs builds the public starter once and reads that build as
+# `backgold deploy` does (no network). Same seatbelt as `content-client`.
+cli:
+  stage: check
+  timeout: 15m
+  retry:
+    max: 1
+    when:
+      - job_execution_timeout
+      - stuck_or_timeout_failure
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/cli/**/*
+        - scripts/cli-e2e.mjs
+        - templates/astro-starter/**/*
+        - .gitlab-ci.yml
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - vendor/**/*
+  script:
+    - pnpm --filter @backgold/cli lint
+    - pnpm --filter @backgold/cli build
+    - pnpm --filter @backgold/cli test
+    - node scripts/cli-e2e.mjs
+
 # astro-backgold = @backgold/astro (packages/astro-backgold), the public npm
 # package for an Astro site on Workers. It depends on @backgold/content
 # through its built dist, so the client builds first; then its own lint (tsc),
@@ -244,7 +280,8 @@ template-kit:
     - pnpm --filter @backgold/template-kit lint
 
 # starter = the public starter (templates/astro-starter) end to end:
-# scripts/starter-e2e.mjs packs both packages, installs them with npm into a
+# scripts/starter-e2e.mjs packs both packages (and @backgold/cli, which the
+# starter names), installs them with npm into a
 # copy of the template outside the repository (so nothing resolves through
 # the workspace, as on a user's machine), builds it, serves it on
 # `wrangler dev` against a fixture api and asserts the pages, the SEO routes
@@ -279,6 +316,7 @@ starter:
         - scripts/starter-e2e.mjs
         - packages/astro-backgold/**/*
         - packages/content-client/**/*
+        - packages/cli/**/*
         - .gitlab-ci.yml
         - package.json
         - pnpm-lock.yaml
@@ -828,10 +866,11 @@ deploy-unlabeled-production:
   resource_group: unlabeled-production
 
 # =========================================================================
-# NPM — MANUAL ONLY. Publishes the two public packages to the npm registry,
+# NPM — MANUAL ONLY. Publishes the three public packages to the npm registry,
 # each through a pair of jobs:
 #   pack-content → publish-content   @backgold/content (packages/content-client)
 #   pack-astro   → publish-astro     @backgold/astro   (packages/astro-backgold)
+#   pack-cli     → publish-cli       @backgold/cli     (packages/cli)
 # A person plays ONE job, the pack job, on a main pipeline; its publish job
 # starts by itself when the pack job succeeds. With `sync-starter` they are
 # the only jobs that put source in a public place. Nothing in this repository
@@ -863,7 +902,7 @@ deploy-unlabeled-production:
 # scoped to `npm` but records no deployment, so the publish history stays in
 # npm and in these job logs). Until the variable is scoped to that
 # environment, every job of a main pipeline receives it; scoping it limits it
-# to the two publish jobs, and both jobs work either way. GitLab's API needs
+# to the publish jobs, and every job works either way. GitLab's API needs
 # the value to change a variable's scope, so the scope change is a second
 # variable plus a delete, with the token piped in from the clipboard so it
 # never sits on a command line (JHL, once, on a Mac with the token copied):
@@ -1023,6 +1062,21 @@ publish-astro:
   variables:
     PUBLISH_PACKAGE: "@backgold/astro"
 
+pack-cli:
+  extends: .pack-npm
+  variables:
+    PUBLISH_PACKAGE: "@backgold/cli"
+    PUBLISH_DIR: packages/cli
+    # Nothing to build first: its one dependency, fflate, comes from npm.
+
+publish-cli:
+  extends: .publish-npm
+  needs:
+    - job: pack-cli
+      artifacts: true
+  variables:
+    PUBLISH_PACKAGE: "@backgold/cli"
+
 # =========================================================================
 # STARTER SYNC — templates/astro-starter → gitlab.com/backgold/backgold-starter
 # (public), the repository Cloudflare's Deploy button clones, with the Astro
@@ -1038,7 +1092,7 @@ publish-astro:
 # pipeline's job pushes the newest template or finds nothing to change, so it
 # can never revert the public repository, and two merges landing close
 # together both end with the newest template synced. It refuses to push
-# unless the @backgold/astro and @backgold/content ranges the public
+# unless the @backgold/astro, @backgold/content and @backgold/cli ranges the public
 # template's package.json names resolve on npm (the public starter must
 # always install, so publish first), replaces the public tree with the
 # template as committed (deletions propagate, nothing outside the template is

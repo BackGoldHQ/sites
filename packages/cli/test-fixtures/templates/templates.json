@@ -1,0 +1,13 @@
+{
+  "versions": {
+    "@backgold/template-kit": "0.7.1",
+    "@backgold/astro": "0.8.2",
+    "@backgold/content": "0.8.0",
+    "@backgold/cli": "0.3.0"
+  },
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "templates": [
+    { "key": "fixture", "name": "Fixture", "audience": "party" },
+    { "key": "other", "name": "Other", "audience": "hidden" }
+  ]
+}

@@ -1,9 +1,8 @@
 {
   "name": "@backgold/template-kit",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
-  "description": "What every BackGold Astro template draws the same way: the section, entry and chrome components, the Site layout, the routes, lib and the stylesheets, consumed as source.",
+  "description": "What every BackGold Astro template draws the same way: the section, entry and chrome components, the Site layout, the routes, lib and the stylesheets, shipped as source, with the Content API contract names they use.",
   "type": "module",
   "exports": {
     ".": {
@@ -11,17 +10,35 @@
       "import": "./src/index.js"
     },
     "./template": "./src/template.ts",
+    "./contract/*": {
+      "types": "./dist/contract/*.d.ts",
+      "import": "./dist/contract/*.js"
+    },
     "./routes/*": "./src/routes/*",
     "./layouts/*": "./src/layouts/*",
     "./components/*": "./src/components/*",
     "./lib/*": "./src/lib/*.ts",
     "./styles/*": "./src/styles/*"
   },
+  "imports": {
+    "#contract/*": {
+      "types": "./dist/contract/*.d.ts",
+      "import": "./dist/contract/*.js"
+    }
+  },
   "files": [
-    "src"
+    "src",
+    "!src/contract",
+    "dist",
+    "README.md"
   ],
   "scripts": {
+    "build": "tsup",
     "lint": "astro check && tsc --noEmit"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.14.0",
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "@backgold/astro": "workspace:^",
@@ -34,12 +51,23 @@
     "@backgold/content": "workspace:^",
     "@backgold/contract": "workspace:*",
     "astro": "^7.3.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "tsup": "^8.5.1"
   },
   "engines": {
     "node": ">= 22.12"
   },
-  "dependencies": {
-    "maplibre-gl": "^6.14.0"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BackGoldHQ/sites.git",
+    "directory": "packages/template-kit"
+  },
+  "keywords": [
+    "backgold",
+    "astro",
+    "astro-integration",
+    "withastro",
+    "cloudflare-workers",
+    "template"
+  ]
 }

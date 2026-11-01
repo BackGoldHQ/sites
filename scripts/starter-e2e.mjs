@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// The starter template (or another template under templates/) and the
-// packages it is built on, end to end on workerd: builds @backgold/content
-// and @backgold/astro, packs them (and the workspace packages a template on
-// the kit also names: @backgold/template-kit and the vendored contract,
-// @backgold/contract), installs them with npm into a copy of the template
+// The starter template (or another template under templates/, or a project
+// ejected from one) and the packages it is built on, end to end on workerd:
+// builds @backgold/content, @backgold/astro and @backgold/template-kit, packs
+// them (the kit for a template on it, and @backgold/cli for a template that
+// names it), installs them with npm into a copy of the template
 // outside the repository (its package.json pointed at the tarballs, so
 // nothing resolves through the pnpm workspace or from npm's copies of the
 // packages), checks that npm put workerd's binary for this platform there
@@ -19,6 +19,12 @@
 //                                         the same checks on templates/party
 //                                         (default: templates/astro-starter);
 //                                         combines with every flag below
+//   node scripts/starter-e2e.mjs --template ../party-site
+//                                         a path (one with a /): the same
+//                                         checks on that directory, a project
+//                                         `backgold eject` made, as the
+//                                         template its template.json names
+//                                         (its key)
 //   node scripts/starter-e2e.mjs --keep   leave it (and print where it is)
 //   node scripts/starter-e2e.mjs --serve  skip the checks: keep the fixture api
 //                                         and the configured site running until
@@ -77,12 +83,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const TEMPLATE_FLAG = process.argv.indexOf('--template')
-const TEMPLATE_NAME = TEMPLATE_FLAG === -1 ? 'astro-starter' : process.argv[TEMPLATE_FLAG + 1]
-if (!TEMPLATE_NAME || !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_NAME)) {
-  process.stderr.write('--template takes the name of a directory under templates/, for example --template party\n')
+const TEMPLATE_ARG = TEMPLATE_FLAG === -1 ? 'astro-starter' : process.argv[TEMPLATE_FLAG + 1]
+// A value with a slash is a directory (an ejected copy of a template); its
+// template.json's key picks the template's own checks.
+const TEMPLATE_PATH = TEMPLATE_ARG?.includes('/') ? resolve(TEMPLATE_ARG) : null
+if (!TEMPLATE_ARG || (!TEMPLATE_PATH && !/^[a-z0-9][a-z0-9-]*$/.test(TEMPLATE_ARG))) {
+  process.stderr.write('--template takes the name of a directory under templates/ (--template party) or a path to an ejected copy of one (--template ./party-site)\n')
   process.exit(2)
 }
-const TEMPLATE = join(ROOT, 'templates', TEMPLATE_NAME)
+if (TEMPLATE_PATH && !existsSync(join(TEMPLATE_PATH, 'template.json'))) {
+  process.stderr.write(`--template ${TEMPLATE_ARG}: ${TEMPLATE_PATH} has no template.json, so it is not a copy of a template\n`)
+  process.exit(2)
+}
+const TEMPLATE = TEMPLATE_PATH ?? join(ROOT, 'templates', TEMPLATE_ARG)
+const TEMPLATE_NAME = TEMPLATE_PATH ? JSON.parse(readFileSync(join(TEMPLATE_PATH, 'template.json'), 'utf8')).key : TEMPLATE_ARG
 // The party template draws what its boards need from the Content API (live
 // counts, event types, news search, seats, the roster's levels); only it is
 // checked for those drawings.
@@ -92,6 +106,9 @@ const PARTY = TEMPLATE_NAME === 'party'
 // and dark switch, the kit's lists, entries and 404) and is checked for it;
 // the public starter is not on the kit.
 const ON_KIT = existsSync(join(TEMPLATE, 'src/template.ts'))
+// A template whose package.json names @backgold/cli (the public starter) gets it
+// packed and installed from the tarball like the other @backgold packages.
+const NAMES_CLI = Boolean(JSON.parse(readFileSync(join(TEMPLATE, 'package.json'), 'utf8')).devDependencies?.['@backgold/cli'])
 // The face a kit template's module frames are asked for: its config's
 // `frameFont`, else the kit's Public Sans.
 const FRAME_FONT = (ON_KIT && /\bframeFont:\s*'([a-z-]+)'/.exec(readFileSync(join(TEMPLATE, 'src/template.ts'), 'utf8'))?.[1]) || 'public-sans'
@@ -101,6 +118,16 @@ const FRAME_RADIUS = (ON_KIT && /\bframeRadius:\s*(\d+)/.exec(readFileSync(join(
 // light and dark, the corners and the face (the skin is asked for only on
 // an https site, which the e2e is not).
 const FRAME_TAIL = `&amp;look=[0-9a-f.]+&amp;look_dark=[0-9a-f.]+&amp;radius=${FRAME_RADIUS}&amp;font=${FRAME_FONT}`
+/**
+ * Whether an <iframe> tag's src is this embed address: on the kit, the
+ * address with the frame's layout (`layout`, a regex source) and FRAME_TAIL
+ * appended (and `extra` after them); off it, the address as sent.
+ */
+function carriesFrame(tag, iframe, layout, extra = '') {
+  const src = iframe.replace(/&/g, '&amp;')
+  if (!ON_KIT) return tag.includes(`src="${src}"`)
+  return new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=${layout}${FRAME_TAIL}${extra}"`).test(tag)
+}
 // ── petition-drive (begin) ──
 const PETITION_DRIVE = TEMPLATE_NAME === 'petition-drive'
 // ── petition-drive (end) ──
@@ -205,8 +232,16 @@ function buildAndPack(packDir) {
   run('pnpm', ['--filter', '@backgold/astro', 'build'], ROOT)
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/content-client'))
   run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/astro-backgold'))
-  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
-  run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'vendor/backgold-contract'))
+  if (ON_KIT) {
+    run('pnpm', ['--filter', '@backgold/template-kit', 'build'], ROOT)
+    run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/template-kit'))
+  }
+  // The public starter names @backgold/cli as a devDependency; a template that
+  // does not is never made to build it.
+  if (NAMES_CLI) {
+    run('pnpm', ['--filter', '@backgold/cli', 'build'], ROOT)
+    run('pnpm', ['pack', '--pack-destination', packDir], join(ROOT, 'packages/cli'))
+  }
   const files = readdirSync(packDir)
   const tarball = (pattern) => {
     const file = files.find((f) => pattern.test(f))
@@ -216,8 +251,8 @@ function buildAndPack(packDir) {
   return {
     content: tarball(/^backgold-content-.*\.tgz$/),
     astro: tarball(/^backgold-astro-.*\.tgz$/),
-    kit: tarball(/^backgold-template-kit-.*\.tgz$/),
-    contract: tarball(/^backgold-contract-.*\.tgz$/),
+    kit: ON_KIT ? tarball(/^backgold-template-kit-.*\.tgz$/) : null,
+    cli: NAMES_CLI ? tarball(/^backgold-cli-.*\.tgz$/) : null,
   }
 }
 
@@ -234,10 +269,10 @@ function installTemplate(siteDir, tarballs) {
   const astro = `file:${tarballs.astro}`
   pkg.dependencies['@backgold/content'] = content
   pkg.dependencies['@backgold/astro'] = astro
-  // A template on the kit names the kit and the contract (which its
-  // src/template.ts parses template.json with); neither is on npm.
-  if (pkg.dependencies['@backgold/template-kit']) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
-  if (pkg.dependencies['@backgold/contract']) pkg.dependencies['@backgold/contract'] = `file:${tarballs.contract}`
+  // A template on the kit names it (and parses its template.json with the
+  // kit's bundled copy of the manifest schema).
+  if (tarballs.kit) pkg.dependencies['@backgold/template-kit'] = `file:${tarballs.kit}`
+  if (tarballs.cli) pkg.devDependencies['@backgold/cli'] = `file:${tarballs.cli}`
   // @backgold/astro depends on @backgold/content, and the kit names both as
   // peers; the overrides make every one of them the tarball, never the copy
   // on npm.
@@ -256,6 +291,8 @@ function installTemplate(siteDir, tarballs) {
   }
   run('npm', ['run', 'build'], siteDir, { PATH: `${process.env.PATH}${delimiter}/${BUILD_CANARY}` })
   run('npm', ['run', 'check'], siteDir)
+  // The packed CLI runs from the install, outside the workspace.
+  if (tarballs.cli) run('npx', ['--no-install', 'backgold', '--help'], siteDir)
 }
 
 /**
@@ -2631,6 +2668,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   let res = await get(origin, '/')
   let html = await res.text()
   check(res.status === 200, `GET / is 200 (got ${res.status})`)
+  check(
+    res.headers.get('x-backgold-page') === fixture.data.page('home', '').page.id && !res.headers.has('x-backgold-entry'),
+    `home names the page it drew in X-BackGold-Page (${res.headers.get('x-backgold-page')})`,
+  )
   check(tags(html, 'h1').length === 1, `home has exactly one <h1> (found ${tags(html, 'h1').length})`)
   check(html.includes(disclaimer), 'home shows the disclaimer')
   check(/<link rel="canonical" href="[^"]+"/.test(html), 'home has a canonical link')
@@ -2679,6 +2720,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/blog/levy-explained')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>The levy, explained<\/h1>/.test(html), 'an entry page renders its title as the <h1>')
+  check(
+    res.headers.get('x-backgold-entry') === fixture.data.entry.post['levy-explained'].id && !res.headers.has('x-backgold-page'),
+    `an entry page names the entry it drew in X-BackGold-Entry (${res.headers.get('x-backgold-entry')})`,
+  )
   check(/<time datetime="2026-09-29T12:00:00.000Z">/.test(html), 'the entry date is a <time datetime>')
   check(html.includes(disclaimer), 'the entry page shows the disclaimer')
   check(!html.includes('data-bg-donate'), 'an entry page (no BackGold page) shows no Donate header button')
@@ -2717,6 +2762,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/endorsements')
   html = await res.text()
   check(res.status === 200 && /<h1[^>]*>Endorsements<\/h1>/.test(html) && html.includes('Maple Hollow Neighbors Council'), 'a custom type index lists its entries')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'a list names no page and no entry it drew')
   const pagerOn = (page) => /<nav class="pager"[^>]*>([\s\S]*?)<\/nav>/.exec(page)?.[1] ?? ''
   const olderHref = /<a href="([^"]*)"[^>]*>Older<\/a>/.exec(pagerOn(html))?.[1]?.replace(/&amp;/g, '&') ?? ''
   check(
@@ -2791,6 +2837,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/no-such-page')
   html = await res.text()
   check(res.status === 404 && html.includes('Page not found') && html.includes(disclaimer), 'an unknown path is a 404 with the disclaimer')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'the 404 names no page and no entry')
   check(tags(html, 'h1').length === 1, 'the 404 has one <h1>')
 
   res = await get(origin, '/preview')
@@ -2801,6 +2848,7 @@ async function checkConfigured(origin, fixture, disclaimer) {
   html = await res.text()
   check(res.status === 200 && html.includes('Draft · not published') && html.includes('A draft headline'), 'a valid preview renders the draft under the preview bar')
   check(/<meta name="robots" content="noindex"/.test(html) && /no-store/.test(res.headers.get('cache-control') ?? ''), 'the preview is noindex and no-store')
+  check(!res.headers.has('x-backgold-page') && !res.headers.has('x-backgold-entry'), 'the preview names no page and no entry: a draft is not a view')
   check(html.includes('<meta name="backgold-preview" content="sections">'), 'the preview carries <meta name="backgold-preview" content="sections">')
   const draft = previewDraft(fixture.data.page('home', ''))
   const draftIds = [...draft.sections, ...Object.values(draft.areas).flat().flatMap((item) => item.sections)].map((s) => s.id)
@@ -2850,6 +2898,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   res = await get(origin, '/')
   html = await res.text()
   check(res.status === 200 && fixture.count() === before, `a second read of home makes zero Content API requests (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')})`)
+  check(
+    res.headers.get('x-backgold-page') === fixture.data.page('home', '').page.id,
+    `home's stored copy still names its page (X-Backgold-Cache: ${res.headers.get('x-backgold-cache')}, X-BackGold-Page: ${res.headers.get('x-backgold-page')})`,
+  )
 
   if (ON_KIT) {
     // Home draws a Donate frame, so it names the donate query names its frame
@@ -3432,12 +3484,10 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       const own = /<(form|input|button|select|textarea)\b/.exec(markup)
       if (own) failures.push(`${type}: renders a <${own[1]}> of its own`)
       if (section.embed?.iframe) {
-        const src = section.embed.iframe.replace(/&/g, '&amp;')
         // A template on the kit asks the frame to wear the site: the same address with its layout and look appended.
         // A Petition on a template that draws its text beside the sheet also asks the frame to collapse the text.
         const extra = type === 'Petition' && DRAWS_PETITION_TEXT ? '&amp;text=collapsed' : ''
-        const placed = ON_KIT ? new RegExp(`src="${src.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\?layout=[a-z_]+${FRAME_TAIL}${extra}"`) : null
-        if (frames.length !== 1 || !(placed ? placed.test(frames[0]) : frames[0].includes(`src="${src}"`))) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
+        if (frames.length !== 1 || !carriesFrame(frames[0], section.embed.iframe, '[a-z_]+', extra)) failures.push(`${type}: expected one iframe of ${section.embed.iframe}, found ${frames.length}`)
         if (type === 'Petition') {
           // The petition's text after the sheet (and the frame told to collapse
           // its copy), or neither. The asks are the page's Issues band's and the
@@ -3463,11 +3513,12 @@ async function checkKitchenSink(origin, kitchen, disclaimer) {
       continue
     }
 
-    // A Hero with its capture on frames BackGold's form below its words.
+    // A Hero with its capture on frames BackGold's form below its words (on
+    // the kit, through ModuleFrame as a card wearing the site).
     if (type === 'Hero') {
       const frames = tags(markup, 'iframe')
       const want = section.embed?.iframe ? 1 : 0
-      if (frames.length !== want || (want && !frames[0].includes(`src="${section.embed.iframe}"`))) {
+      if (frames.length !== want || (want && !carriesFrame(frames[0], section.embed.iframe, 'card'))) {
         failures.push(`Hero: expected ${want} iframe(s)${want ? ` of ${section.embed.iframe}` : ''}, found ${frames.length}`)
       }
       if (!want) failures.push('Hero: the kitchen sink hero has its capture on, so it must carry an embed')
@@ -3864,6 +3915,10 @@ async function checkPartyBoards(origin, fixture) {
   )
   check(plain(sectionWith(html, 'EventsList', 'class="ev-cards"')).includes('Harlow County candidate forum'), 'the Cards section there keeps its baked rows')
   check(/<link rel="canonical" href="[^"]*\/events\/volunteer"/.test(html) && tags(html, 'h1').length === 1, '/events/volunteer is its own canonical address, with one <h1>')
+  check(
+    res.headers.get('x-backgold-page') === 'lp_events' && !res.headers.has('x-backgold-entry'),
+    `/events/volunteer names the events page it drew in X-BackGold-Page (${res.headers.get('x-backgold-page')})`,
+  )
   check(
     fixture.state.seen.some((s) => s.path === '/events' && new URLSearchParams(s.search).get('type') === 'volunteer' && new URLSearchParams(s.search).get('limit') === '50'),
     "it read GET /events?type=volunteer with limit=50, the agenda's cap of 80 held to the api's maximum (the api answers 400 BAD_LIMIT above 50)",
@@ -5633,7 +5688,7 @@ async function checkCandidateLook(origin, chrome, fixture) {
         // The deadline is 26 days, 9 hours and 41 minutes after the run started; the minutes move with the run.
         check(home.tiles?.[0] === '26' && home.tiles[1] === '09' && /^[0-4]\d$/.test(home.tiles[2]), `${where}: the tiles count the days, hours and minutes left in the browser (${JSON.stringify(home.tiles)})`)
         check(home.face.startsWith('"Roboto Slab"'), `${where}: the name is set in the site's theme heading face, which wins over the template's (${home.face})`)
-        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor, over the stripe (${home.floor}px)`)
+        check(home.floor !== null && home.floor <= 12, `${where}: the portrait stands on the band's floor (${home.floor}px)`)
         check(home.beside === (width >= 768), `${where}: the portrait is ${width >= 768 ? 'beside' : 'under'} the words`)
         await browser.open(`${origin}${at('events')}`, scheme)
         const events = await browser.evaluate(`({ overflow: document.documentElement.scrollWidth - window.innerWidth, left: document.querySelector('.ci-left')?.hidden === false ? document.querySelector('.ci-left').textContent : null })`)
@@ -5726,7 +5781,7 @@ async function checkCandidateLook(origin, chrome, fixture) {
           probe.remove()
           return { accent, stripe: band ? getComputedStyle(band, '::after').backgroundColor : null, rule: office ? getComputedStyle(office, '::before').backgroundColor : null }
         })()`)
-        check(stripe.stripe === stripe.accent && stripe.rule === stripe.accent, `${where}: Hero · portrait's stripe and office-line rule are the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
+        check(stripe.stripe === 'rgba(0, 0, 0, 0)' && stripe.rule === stripe.accent, `${where}: Hero · portrait draws no stripe under the band, and its office-line rule is the brand's accent (${stripe.stripe}, ${stripe.rule}; accent ${stripe.accent})`)
         await browser.open(`${origin}${at('endorsements')}`, scheme)
         const editorial = await browser.evaluate(`(() => { const p = document.querySelector('.single-quote blockquote p'); return p ? getComputedStyle(p).fontStyle + ' ' + getComputedStyle(p).fontWeight : null })()`)
         check(editorial === 'normal 700', `${where}: QuoteStrip · single sets the editorial upright and bold, template.css over the kit's italic (${editorial})`)
@@ -6183,7 +6238,7 @@ async function main() {
   // Before the long build: --lighthouse or the party template without a Chrome fails now, never skips.
   const chrome = LIGHTHOUSE || PARTY || PETITION_DRIVE || CANDIDATE || ACADEMY ? chromeBin(LIGHTHOUSE ? '--lighthouse' : `--template ${TEMPLATE_NAME}`) : null
   work = mkdtempSync(join(tmpdir(), 'backgold-starter-e2e-'))
-  log(`Working directory: ${work} (templates/${TEMPLATE_NAME})`)
+  log(`Working directory: ${work} (${TEMPLATE_PATH ?? `templates/${TEMPLATE_NAME}`})`)
   const packDir = join(work, 'pack')
   const siteDir = join(work, 'site')
   mkdirSync(packDir)

@@ -1,4 +1,4 @@
-> **This repository is synced from `templates/astro-starter` in [gitlab.com/backgold/sites](https://gitlab.com/backgold/sites), and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
+> **This repository is synced from `templates/astro-starter` in [github.com/BackGoldHQ/sites](https://github.com/BackGoldHQ/sites), and direct pushes here are overwritten.** To build a site from it, press **Deploy to Cloudflare** below or clone it into your own repository. Do not push changes here.
 
 # BackGold starter for Astro
 
@@ -10,7 +10,7 @@ Workers with [Astro](https://astro.build), keeps every page cached at the edge
 until the content changes, and comes with a sitemap, `robots.txt`, `llms.txt`,
 Atom feeds and structured data already in place.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://gitlab.com/backgold/backgold-starter)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/BackGoldHQ/backgold-starter)
 
 It is built on two packages: [`@backgold/content`](https://www.npmjs.com/package/@backgold/content),
 the typed client for the Content API, and [`@backgold/astro`](https://www.npmjs.com/package/@backgold/astro),
@@ -92,6 +92,69 @@ npx wrangler secret put BACKGOLD_WEBHOOK_SECRET
 ```
 
 A secret takes effect as soon as it is deployed; nothing needs rebuilding.
+
+## Deploy to BackGold hosting
+
+Instead of your own Cloudflare account, BackGold can run the site for you.
+You keep this repository and build it as before; BackGold keeps every deploy,
+so you can look at one under a preview name before it goes live, and make any
+kept deploy live again in a second. The site then needs no Cloudflare
+account, no KV namespace and no site keys: it reads the organization's
+content through BackGold's own connection, drafts for `/preview` included.
+The command is `backgold`, from [`@backgold/cli`](https://www.npmjs.com/package/@backgold/cli),
+already in this repository's devDependencies.
+
+1. **Get a deploy token.** On the site's **Developer** page in BackGold, make
+   a deploy token. It starts with `bg_deploy_`, is shown once, and opens only
+   this one site: it can deploy it, and nothing else in the organization.
+2. **Link the repository to the site.**
+
+   ```bash
+   npx backgold link
+   ```
+
+   It asks for the token (not shown as you type) and fills in
+   `backgold.json` with the site's id. Commit `backgold.json`; it holds
+   nothing secret. The token is never written to a file: keep it in the
+   environment variable `BACKGOLD_DEPLOY_TOKEN` for the commands below (in
+   your shell, or as a masked CI variable).
+3. **Deploy.**
+
+   ```bash
+   npm run deploy:backgold                   # build, upload, and make it the live site
+   npx backgold deploy                       # build and upload; the live site stays as it is
+   npx backgold deploy --preview my-branch   # the same, shown under the preview name my-branch
+   ```
+
+   A deploy waits until it is ready and prints its id. If it fails, it says
+   why and the live site does not change.
+4. **Promote and roll back.**
+
+   ```bash
+   npx backgold deploys            # every kept deploy, and which one is live
+   npx backgold promote 7f3a91c2   # make that deploy live (its id, or the start of it)
+   npx backgold rollback           # the deploy before the live one, live again
+   npx backgold previews           # the preview names; --delete <name> removes one
+   ```
+
+   Promote and rollback upload nothing, so they take a second.
+
+Your `wrangler.jsonc` still serves `npm run dev` and `npm run preview`. On
+BackGold hosting its text `vars` are kept, except the `BACKGOLD_*` ones,
+`ENVIRONMENT` and `ASSETS`, which BackGold sets itself; its KV namespace is
+left out (BackGold binds none, so the site keeps its BackGold reads in the
+Worker's memory). A secret your own code reads is set with
+`npx backgold secrets set <NAME>`, which asks for the value, and reaches the
+site on its next deploy. The package's
+[README](https://www.npmjs.com/package/@backgold/cli) has every command, the
+limits, and a CI example.
+
+`npm run deploy` still deploys to your own Cloudflare account; use one or the
+other for a site, not both.
+
+A site on one of BackGold's templates starts from that template's own source
+instead of this starter: `npx @backgold/cli eject --from <template key>` writes
+it into a new directory and links it (the package's README has the steps).
 
 ## Settings
 
@@ -373,6 +436,7 @@ With the publishable key in `wrangler.jsonc` under `vars`:
 | `npm run dev` | Astro's dev server on workerd, reloading as you edit. No edge cache. |
 | `npm run preview` | Build, then serve the built Worker with `wrangler dev`, as Cloudflare will run it. |
 | `npm run deploy` | Build and deploy with `wrangler deploy`. |
+| `npm run deploy:backgold` | Build and deploy to BackGold hosting, live at once (see [Deploy to BackGold hosting](#deploy-to-backgold-hosting)). |
 | `npm run check` | Type-check the project with `astro check`. |
 | `npm run types` | Write `src/backgold.d.ts` from the site's content types. |
 

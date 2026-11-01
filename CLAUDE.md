@@ -1,9 +1,9 @@
 # BackGold sites — agent rules
 
-This repository (gitlab.com/backgold/sites, public) holds the two npm
+This repository (github.com/BackGoldHQ/sites, public) holds the two npm
 packages a BackGold site is built on, the public starter and the party
 template. It follows the house rules of the BackGold platform repository
-(gitlab.com/backgold/backgold, private): its `CLAUDE.md` and
+(github.com/BackGoldHQ/backgold, private): its `CLAUDE.md` and
 `docs/contributing-with-agents.md`. Read both before landing code here when
 you can reach them; the rules that apply here are below.
 
@@ -17,27 +17,35 @@ from the public starter, or a site on the party template), read
 | --- | --- |
 | `packages/content-client` | `@backgold/content` (npm): the Content API client and the `backgold-content` command. |
 | `packages/astro-backgold` | `@backgold/astro` (npm): the Astro plumbing and components. Depends on `@backgold/content`. |
-| `packages/template-kit` | `@backgold/template-kit` (private, consumed as source, never published): the sections and their layouts, the entry layouts, the chrome, `lib/`, the styles, the Site layout and the routes every template draws. A template is its `template.json`, `src/template.ts`, `src/styles/template.css` and its own layouts. |
-| `templates/astro-starter` | The public starter (`backgold-starter`), mirrored to gitlab.com/backgold/backgold-starter by `scripts/sync-starter.sh`. Its README is public text for outside users. |
+| `packages/cli` | `@backgold/cli` (npm): the `backgold` command, which deploys a built site to BackGold hosting. |
+| `packages/template-kit` | `@backgold/template-kit` (npm, shipped as source): the sections and their layouts, the entry layouts, the chrome, `lib/`, the styles, the Site layout and the routes every template draws, and the contract slice it and the templates import (`@backgold/template-kit/contract/*`, bundled into its `dist/` by `build`). A template is its `template.json`, `src/template.ts`, `src/styles/template.css` and its own layouts. |
+| `packages/templates` | `@backgold/templates` (npm): every template's source and `templates.json` (the keys, the exact `@backgold/*` versions, the commit), written by its `build`; what `backgold eject` scaffolds a project from. Its `lint` checks every template installs outside the workspace. |
+| `templates/astro-starter` | The public starter (`backgold-starter`), mirrored to github.com/BackGoldHQ/backgold-starter by `scripts/sync-starter.sh`. Its README is public text for outside users. |
 | `templates/party` | The party template (`backgold-template-party`, on the kit), deployed as the Worker `template-party`. Its `template.json` is its manifest. |
 | `vendor/backgold-contract` | The Content API contract snapshot (`@backgold/contract`, private, never published). Generated; never edited. |
 | `scripts/` | `starter-e2e.mjs` (the end-to-end check), `check-manifests.mjs` (every `template.json` against the contract's schema), `contract-pull.mjs` (refreshes `vendor/`), `sync-starter.sh` (the starter mirror, run only by CI). |
 | `docs/` | `CLIENT-SITES.md`, the build-out guide; `HEADLESS-CONTENT-API.md`, the Content API developer guide the `@backgold/content` README links to. |
 
-Both templates depend on the packages as `workspace:^`. Keep it that way:
-the party deploy builds from this workspace, and the starter sync writes
-published `^<version>` ranges into the public copy.
+The templates depend on the packages as `workspace:^`. Keep it that way:
+the template deploys build from this workspace, the starter sync writes
+published `^<version>` ranges into the public copy, and `backgold eject`
+writes the exact versions `@backgold/templates`' `templates.json` names. A
+template names only the four published packages (`@backgold/astro`,
+`@backgold/content`, `@backgold/template-kit`, `@backgold/cli`), never
+`@backgold/contract`: it imports the contract through the kit.
 
 ## Lint and test before every push
 
-Build `@backgold/content`, then `@backgold/astro`, first: the astro package
-reads the client's `dist/`, and the templates read both.
+Build `@backgold/content`, then `@backgold/astro`, then
+`@backgold/template-kit`, first: the astro package reads the client's
+`dist/`, the kit reads both, and the templates read all three.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter @backgold/content build
 pnpm --filter @backgold/astro build
-pnpm -r lint     # tsc --noEmit in the two packages; astro check + tsc in the kit
+pnpm --filter @backgold/template-kit build
+pnpm -r lint     # tsc --noEmit in the packages; astro check + tsc in the kit; the templates' install check
 pnpm -r test     # node:test (content), vitest (astro)
 ```
 
@@ -47,8 +55,10 @@ template you touched, also run its type check and the end-to-end check:
 | Changed | Run |
 | --- | --- |
 | `packages/content-client` | `pnpm --filter @backgold/content lint`, `build`, `test` |
+| `packages/cli` | `pnpm --filter @backgold/cli lint`, `build`, `test`, `node scripts/cli-e2e.mjs` |
 | `packages/astro-backgold` | `pnpm --filter @backgold/astro lint`, `build`, `test` |
-| `packages/template-kit` | `pnpm --filter @backgold/template-kit lint` (astro check + tsc), then every template's e2e below: the kit draws them all |
+| `packages/template-kit` | `pnpm --filter @backgold/template-kit build`, `lint` (astro check + tsc), then every template's e2e below: the kit draws them all |
+| `packages/templates`, or a template's `package.json` or imports | `pnpm --filter @backgold/templates lint`; for an ejected copy, `node scripts/starter-e2e.mjs --template <its path>` |
 | `templates/astro-starter` | `pnpm --filter backgold-starter exec astro check`, `node scripts/starter-e2e.mjs` |
 | `templates/party` | `pnpm --filter backgold-template-party exec astro check`, `node scripts/starter-e2e.mjs --template party` |
 | `templates/*/template.json` | `node scripts/check-manifests.mjs` |
@@ -58,16 +68,16 @@ Chrome or Chromium at `CHROME_BIN`.
 
 ## Rules
 
-- **Merge requests via `glab mr create` against `main`.** Never push to
-  `main`, never stack MRs, squash-merge once green. Open a draft while work
-  is still landing; CI runs only on an open, ready MR, and marking it ready
-  does not start a pipeline:
-  `glab mr update <iid> --ready && glab ci run --mr -b <branch>`. The
-  runners are shared with the platform, so never push a branch lint would
-  have failed.
+- **Pull requests via `gh pr create` against `main`.** Never push to
+  `main`, never stack PRs, squash-merge once the required check `gate`
+  (`CI Passed`) is green. Open a draft (`--draft`) while work is still
+  landing; CI (`.github/workflows/ci.yml`) runs nothing on a draft, and
+  `gh pr ready <n>` starts the run. The runners are the owner's own machines,
+  shared with the platform, so never push a branch lint would have failed.
+  `.gitlab-ci.yml` is the retired GitLab pipeline; nothing runs it.
 - **No AI attribution** anywhere: no `Co-Authored-By`, no "Generated with".
 - **Product, pricing and taxonomy decisions belong to JHL.** Put the question
-  under `Decisions needed` in the MR description. Do not widen scope.
+  under `Decisions needed` in the PR description. Do not widen scope.
 - **A comment describes what the code does now.** No narration of removed or
   moved code.
 - **The contract is a snapshot. Never edit `vendor/`.** Change the contract
@@ -80,21 +90,24 @@ Chrome or Chromium at `CHROME_BIN`.
 - **A `template.json` change needs the platform's copy refreshed.** The
   platform keeps `packages/shared/site-templates/<key>.template.json`; after
   the change merges here, copy the file there and run
-  `pnpm --filter @givegold/shared templates:build` in a platform MR. Until
-  then the platform's `templates-drift` job is yellow. Say so in the MR.
+  `pnpm --filter @givegold/shared templates:build` in a platform PR. Until
+  then the platform's `templates-drift` job is yellow. Say so in the PR.
 - **A push to `main` deploys each changed template to staging**
-  (`deploy-<template>-staging`, when it touches that template, `packages/`,
-  `vendor/`, `pnpm-lock.yaml` or `.gitlab-ci.yml`). Production is the manual
-  `deploy-<template>-production` job. Never merge something you would not put
-  on staging.
-- **A push to `main` syncs the public starter** (`sync-starter`, when it
+  (`.github/workflows/deploy-staging.yml`, one job per template the push
+  touched, or that `packages/`, `vendor/`, `pnpm-lock.yaml` or the workflow
+  file did). Production is the Release workflow (`release.yml`), run by hand
+  on `main`; it deploys every template. Never merge something you would not
+  put on staging.
+- **A push to `main` syncs the public starter** (`sync-starter.yml`, when it
   touches `templates/astro-starter/`, a package's `package.json` or
   `scripts/sync-starter.sh`). Never push to the public repository by hand.
-- **npm publishing is a release step**, played by a person on a `main`
-  pipeline (`pack-content`, `pack-astro`; each publish job follows) after a
-  version bump merges. Never run `npm publish`, and never commit an `.npmrc`.
+- **npm publishing is a release step**, run by a person on `main`
+  (`publish.yml`, Actions → Publish to npm, one package per run: `content`,
+  `astro`, `cli`, `template-kit` or `templates`) after a
+  version bump merges. `templates` goes last, from the same commit as the
+  versions its `templates.json` pins; its pack refuses a pin npm lacks. Never run `npm publish`, and never commit an `.npmrc`.
   Nothing in this repository waits on a publish.
 - **Never commit a key or a secret.** `bg_site_sk_…` and `whsec_…` values go
   in a git-ignored `.dev.vars`; this repository is public.
-- **Never play a deploy, pack, publish or sync job** unless a person asked
-  for that job by name.
+- **Never run a deploy, publish or sync workflow by hand** unless a person
+  asked for it by name.
