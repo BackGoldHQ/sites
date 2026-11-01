@@ -44,7 +44,10 @@
 //   the fragment, never the query, so answers reach no server log. The
 //   checkout replaces its cart for the organization with the lines handed
 //   over (the site's cart is what the buyer saw), takes at most 50 lines and
-//   64 KB, drops a malformed line and clears the fragment; it quotes prices
+//   64 KB, one line per item, a quantity of 1 to 99, names of at most 255
+//   characters, `units` no longer than the quantity and answers that are
+//   strings or lists of strings (a line that breaks one is dropped), and
+//   clears the fragment; it quotes prices
 //   again itself, so a line's `unit_price_cents` is for display only. The
 //   site keeps its cart after the hand-over: a later hand-over replaces the
 //   checkout's cart again, never adds to it.

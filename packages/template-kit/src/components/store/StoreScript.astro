@@ -37,8 +37,11 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
     var key = script.getAttribute('data-bg-store-key')
     var vocab = JSON.parse(script.getAttribute('data-bg-store-words') || '{}')
     var PREFIX = 'gg-cart:'
-    /** The most lines the checkout takes in a hand-over. */
+    /** The checkout's bounds for a hand-over: lines, a line's quantity, the JSON's size, a name's length. */
     var MOST_LINES = 50
+    var MOST_QUANTITY = 99
+    var MOST_BYTES = 64 * 1024
+    var MOST_TEXT = 255
 
     // ── The cart ──
     function readCart(org) {
@@ -66,19 +69,27 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       if (units.length > 0) out.units = units
       return out
     }
+    /**
+     * Adds the line, merged into the item's own line when it has one (the
+     * checkout keeps one line per item). False, and nothing written, when
+     * the cart would break the checkout's bounds for a hand-over: at most
+     * MOST_LINES lines, a quantity of at most MOST_QUANTITY per line, and
+     * at most MOST_BYTES of JSON.
+     */
     function addLine(org, line) {
-      var lines = readCart(org)
-      for (var i = 0; i < lines.length; i++) {
-        if (lines[i] && lines[i].variant_id === line.variant_id) {
-          var merged = Object.assign({}, lines[i], { quantity: lines[i].quantity + line.quantity })
-          if (lines[i].answers || line.answers) merged.answers = mergeAnswers(lines[i].answers, line.answers)
-          lines[i] = merged
-          writeCart(org, lines)
-          return true
-        }
+      var lines = readCart(org).slice()
+      var at = -1
+      for (var i = 0; i < lines.length; i++) if (lines[i] && lines[i].variant_id === line.variant_id) at = i
+      if (at >= 0) {
+        var merged = Object.assign({}, lines[at], { quantity: lines[at].quantity + line.quantity })
+        if (lines[at].answers || line.answers) merged.answers = mergeAnswers(lines[at].answers, line.answers)
+        if (merged.quantity > MOST_QUANTITY) return false
+        lines[at] = merged
+      } else {
+        if (lines.length >= MOST_LINES) return false
+        lines.push(line)
       }
-      if (lines.length >= MOST_LINES) return false
-      lines.push(line)
+      if (new TextEncoder().encode(JSON.stringify(lines)).length > MOST_BYTES) return false
       writeCart(org, lines)
       return true
     }
@@ -418,8 +429,8 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       var line = {
         variant_id: item.id,
         product_slug: product.slug,
-        product_name: product.name,
-        variant_name: item.name,
+        product_name: String(product.name).slice(0, MOST_TEXT),
+        variant_name: String(item.name || product.name).slice(0, MOST_TEXT),
         unit_price_cents: now.price_cents,
         quantity: n,
         photo_url: product.photo_url,
@@ -435,7 +446,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
         line.answers = answers
       }
       if (!addLine(org, line)) {
-        statusEl.textContent = 'Your cart is full. Check out, then come back for more.'
+        statusEl.textContent = 'That is more than one cart can hold. Check out what is in it, then come back for more.'
         return
       }
       questionsEl.textContent = ''
