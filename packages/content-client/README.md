@@ -206,7 +206,8 @@ its order. Each listing carries its `url` on your site (`/store/<slug>`),
 `preorder`), never a count.
 
 **`product(slug)`**: one listing for its own page, or `null`: its items,
-`description_html`, the `attributes` its department defines (in their order),
+`manufacturer`, `ship_to` (`buyer`, `store` or `third_party`),
+`counts_as_contribution`, `description_html`, the `attributes` its department defines (in their order),
 `seo`, `structured_data` (a schema.org `Product` with an `Offer` per item,
 ready to serialize into the page), up to eight `related` listings from its
 collections, and the `areas` of a page that holds the store.
@@ -220,8 +221,8 @@ const { products, departments, collections } = await bg.products({ department: '
 const page = await bg.product('westmark-liberty-tee')
 ```
 
-**`productsLive({ ids })`**: each named listing's items' price and
-availability now, and the checkout `questions` its line asks (`scope`
+**`productsLive({ ids })`**: each named listing's items' price, compare-at
+price and availability now, and the checkout `questions` its line asks (`scope`
 `order` or `unit`), from `GET /products/live?ids=` (1 to 50 ids; a TypeError
 before any request otherwise). A sale moves these without a publish, so this
 read is never stored and never keyed on the content version. From a browser,

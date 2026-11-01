@@ -355,7 +355,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
 ---
 <Site {...head} template={template} page={menuPage} areas={areas} signInTitle={signInTitle} cart={store ? checkout : null}>
   {store?.kind === 'store' && <StorePage template={template} siteName={siteName} shop={store.shop} department={store.department} intro={store.intro} pager={storePager} />}
-  {store?.kind === 'product' && <ProductPage product={store.product} />}
+  {store?.kind === 'product' && <ProductPage product={store.product} siteName={siteName} />}
   {store?.kind === 'collection' && <CollectionPage collection={store.collection} />}
   {storeMore && <Area name="sidebar" areas={areas} components={sections} class="store-more" />}
   {store && <StoreScript />}

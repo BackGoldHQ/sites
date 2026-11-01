@@ -173,6 +173,8 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
 
     if (fallback) fallback.hidden = true
     form.hidden = false
+    var contribution = island.querySelector('[data-bg-contribution]')
+    if (contribution) addEl.parentNode.insertBefore(contribution, addEl)
     for (var r = 0; r < radios.length; r++) radios[r].disabled = false
 
     function money(cents) {
@@ -217,14 +219,57 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
     }
     function scoped(scope) {
       return ((live && live.questions) || []).filter(function (q) {
-        return q.type !== 'note' && q.scope === scope
+        return q.scope === scope
       })
+    }
+    /** True when a list holds a question that takes an answer (a note takes none). */
+    function asks(questions) {
+      return questions.some(function (q) {
+        return q.type !== 'note'
+      })
+    }
+    /** The value a choice's "Other" carries until the typed text replaces it. */
+    var OTHER = '__other__'
+    function otherBox(name, keep) {
+      var other = document.createElement('input')
+      other.type = 'text'
+      other.name = name + '#other'
+      other.className = 'island-other'
+      other.setAttribute('aria-label', 'Other')
+      other.placeholder = 'Other'
+      if (typeof keep[name + '#other'] === 'string') other.value = keep[name + '#other']
+      return other
+    }
+    /** Shows a choice's "Other" text field while Other is chosen, and asks for it then. */
+    function syncOther(wrap) {
+      var other = wrap.querySelector('.island-other')
+      if (!other) return
+      var select = wrap.querySelector('select')
+      var tick = wrap.querySelector('input[type="checkbox"][value="' + OTHER + '"]')
+      var on = select ? select.value === OTHER : !!(tick && tick.checked)
+      other.hidden = !on
+      other.required = on
     }
     var AGREE = ['checkbox', 'sms_consent', 'email_consent']
     var INPUTS = { text: 'text', email: 'email', phone: 'tel', date: 'date' }
     function field(q, name, label, keep) {
       var wrap = document.createElement('div')
       wrap.className = 'island-field'
+      if (q.type === 'note') {
+        String(q.body || '')
+          .split(/\n{2,}/)
+          .map(function (para) {
+            return para.trim()
+          })
+          .filter(Boolean)
+          .forEach(function (para) {
+            var p = document.createElement('p')
+            p.className = 'island-note-text'
+            p.textContent = para
+            wrap.appendChild(p)
+          })
+        return wrap
+      }
       var id = 'bg-q-' + name.replace(/[^a-z0-9]+/gi, '-')
       if (AGREE.indexOf(q.type) >= 0) {
         var box = document.createElement('label')
@@ -246,6 +291,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
           row.className = 'island-agree'
           var tick = document.createElement('input')
           tick.type = 'checkbox'
+          tick.setAttribute('data-multi', '')
           tick.name = name
           tick.value = option
           tick.checked = Array.isArray(keep[name]) && keep[name].indexOf(option) >= 0
@@ -253,6 +299,20 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
           row.appendChild(document.createTextNode(' ' + option))
           set.appendChild(row)
         })
+        if (q.allow_other) {
+          var otherRow = document.createElement('label')
+          otherRow.className = 'island-agree'
+          var otherTick = document.createElement('input')
+          otherTick.type = 'checkbox'
+          otherTick.setAttribute('data-multi', '')
+          otherTick.name = name
+          otherTick.value = OTHER
+          otherTick.checked = Array.isArray(keep[name]) && keep[name].indexOf(OTHER) >= 0
+          otherRow.appendChild(otherTick)
+          otherRow.appendChild(document.createTextNode(' Other'))
+          set.appendChild(otherRow)
+          set.appendChild(otherBox(name, keep))
+        }
         wrap.appendChild(set)
       } else {
         var lab = document.createElement('label')
@@ -275,6 +335,12 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
             o.textContent = option
             control.appendChild(o)
           })
+          if (q.allow_other) {
+            var o2 = document.createElement('option')
+            o2.value = OTHER
+            o2.textContent = 'Other'
+            control.appendChild(o2)
+          }
         } else {
           control = document.createElement('input')
           control.type = INPUTS[q.type] || 'text'
@@ -285,6 +351,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
         if (q.placeholder && control.tagName !== 'SELECT') control.placeholder = q.placeholder
         if (typeof keep[name] === 'string') control.value = keep[name]
         wrap.appendChild(control)
+        if (q.allow_other && control.tagName === 'SELECT') wrap.appendChild(otherBox(name, keep))
       }
       if (q.help) {
         var help = document.createElement('p')
@@ -292,6 +359,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
         help.textContent = q.help
         wrap.appendChild(help)
       }
+      syncOther(wrap)
       return wrap
     }
     /** What every drawn field holds now, by name, so a redraw keeps it. */
@@ -300,7 +368,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       var controls = questionsEl.querySelectorAll('input, select, textarea')
       for (var i = 0; i < controls.length; i++) {
         var c = controls[i]
-        if (c.type === 'checkbox' && questionsEl.querySelectorAll('[name="' + c.name + '"]').length > 1) {
+        if (c.type === 'checkbox' && c.hasAttribute('data-multi')) {
           out[c.name] = out[c.name] || []
           if (c.checked) out[c.name].push(c.value)
         } else if (c.type === 'checkbox') {
@@ -320,21 +388,34 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       order.forEach(function (q, i) {
         questionsEl.appendChild(field(q, 'o:' + i, q.label, keep))
       })
-      for (var u = 0; u < (unit.length > 0 ? n : 0); u++) {
+      for (var u = 0; u < (asks(unit) ? n : 0); u++) {
         unit.forEach(function (q, i) {
           questionsEl.appendChild(field(q, 'u:' + u + ':' + i, n > 1 ? q.label + ' · unit ' + (u + 1) : q.label, keep))
         })
       }
-      unitNote.hidden = !(unit.length > 0 && n > 1)
+      unitNote.hidden = !(asks(unit) && n > 1)
     }
+    questionsEl.addEventListener('change', function (event) {
+      var wrap = event.target instanceof Element ? event.target.closest('.island-field') : null
+      if (wrap) syncOther(wrap)
+    })
     function answersOf(prefix, questions) {
       var keys = keysOf(questions)
       var out = {}
       var now = held()
       questions.forEach(function (q, i) {
+        if (q.type === 'note') return
         var value = now[prefix + i]
         if (value === undefined) return
+        // "Other" is answered by the text typed beside it.
+        var typed = String(now[prefix + i + '#other'] || '').trim()
+        if (value === OTHER) value = typed
         if (Array.isArray(value)) {
+          value = value
+            .map(function (v) {
+              return v === OTHER ? typed : v
+            })
+            .filter(Boolean)
           if (value.length > 0) out[keys[i]] = value
         } else if (value !== '') out[keys[i]] = value
       })
@@ -359,7 +440,9 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       }
       priceEl.textContent = money(now.price_cents * n)
       var moved = now.price_cents !== item.price_cents
-      var compare = !moved && item.compare_at_cents !== null && item.compare_at_cents > now.price_cents ? item.compare_at_cents : null
+      // The live compare-at price when the read carries one, else the build's.
+      var compareAt = typeof now.compare_at_cents === 'number' || now.compare_at_cents === null ? now.compare_at_cents : item.compare_at_cents
+      var compare = !moved && compareAt !== null && compareAt > now.price_cents ? compareAt : null
       wasEl.hidden = !(moved || compare !== null)
       wasEl.textContent = moved ? money(item.price_cents * n) : compare !== null ? money(compare * n) : ''
       var each = n > 1 ? n + ' × ' + money(now.price_cents) + ' · ' : ''
@@ -434,12 +517,12 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
         unit_price_cents: now.price_cents,
         quantity: n,
         photo_url: product.photo_url,
-        needs_shipping: product.ships,
+        needs_shipping: product.ships && product.ship_to !== 'store',
       }
-      if (order.length > 0 || unit.length > 0) {
+      if (asks(order) || asks(unit)) {
         var answers = {}
-        if (order.length > 0) answers.order = answersOf('o:', order)
-        if (unit.length > 0) {
+        if (asks(order)) answers.order = answersOf('o:', order)
+        if (asks(unit)) {
           answers.units = []
           for (var u = 0; u < n; u++) answers.units.push(answersOf('u:' + u + ':', unit))
         }

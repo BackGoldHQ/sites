@@ -537,8 +537,11 @@ the ones placed on this site.
   collections it is in), with `departments` (the whole tree, each node counted
   with its descendants) and the site's published `collections`.
 - `GET /products/{slug}`: one listing for its page: the summary plus
-  `description_html` (sanitized), `items` (each sellable unit with its price,
-  compare-at price and availability word), `attributes` from its department's
+  `description_html` (sanitized), `manufacturer` (`{ name }` or null),
+  `ship_to` (`buyer`, `store` for a pickup, `third_party` for a licensed
+  dealer the buyer names at checkout; one value, never a choice),
+  `counts_as_contribution` (say so before Add to cart when true), `items`
+  (each sellable unit with its price, compare-at price and availability word), `attributes` from its department's
   definitions in their order, `seo`, `structured_data` (a schema.org
   `Product` with an `Offer` per item, ready to serialize) and up to eight
   `related` listings from its collections, with the `areas` of a page that
@@ -553,9 +556,11 @@ count. A price change moves the content version (and sends
 `site.content.product.updated`); a sale does not. For price and availability
 as they stand now, ask `GET /products/live?ids=<id>,<id>` (1 to 50 listing
 ids) from the browser: it answers `{ products: [{ id, items: [{ id,
-price_cents, availability }], questions }] }`, where `questions` are the
-checkout questions the listing's line asks (`scope` `order`, once per order,
-or `unit`, once per unit in the line). It is cached for 30 seconds and never
+price_cents, compare_at_cents, availability }], questions }] }`, where
+`questions` are the checkout questions the listing's line asks (`scope`
+`order`, once per order, or `unit`, once per unit in the line; a `note`
+carries its plain `body`, and a choice with `allow_other` takes a written-in
+answer). It is cached for 30 seconds and never
 keyed on the content version.
 
 ```bash

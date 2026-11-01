@@ -376,6 +376,21 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.island-ship {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.island-contribution {
+  font-size: var(--text-sm);
+}
+.island-note-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.product-maker {
+  margin-bottom: 0.5rem;
+}
 .island-line,
 .island-help,
 .island-note {

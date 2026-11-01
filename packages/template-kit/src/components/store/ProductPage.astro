@@ -1,14 +1,18 @@
 ---
 // One listing's page at /store/<slug> (board 06, "Product page"): the path
 // back through the store and the listing's department, the gallery, the
-// title as the page's one <h1> and its short line, the island, the long copy,
+// manufacturer over the title (the page's one <h1>) and its short line, the
+// island, the long copy,
 // the details table from the department's attribute definitions in their
 // order (a value left blank leaves its row out), and the related listings
 // under the collection each shares with this one.
 //
 // The island as built reads with scripts off: the build's price (struck
 // against a compare-at price above it), when the build read it, the
-// availability word, the items by name, and Add to cart as a link to the
+// availability word, where the order goes (one line: a pickup, a licensed
+// dealer, or shipped to the buyer), the items by name, for a listing that
+// counts as a political contribution the sentence that says so, right
+// above Add to cart, and Add to cart as a link to the
 // listing's page on BackGold, where the cart works without this site's
 // script. With scripts on, StoreScript reads GET /products/live on view and
 // redraws it as one of five states (in stock, few left, sold out, the price
@@ -19,14 +23,17 @@ import type { ProductDetail } from '@backgold/content'
 import { safeHref, safeSrc, sanitizeRichText } from '@backgold/astro/server'
 import ProductGrid from './ProductGrid.astro'
 import { formatDay } from '../../lib/format'
-import { AVAILABILITY_CHIPS, AVAILABILITY_WORDS, STORE_PATH, attributeText, departmentPath, firstBuyable, islandProduct, money, relatedGroups } from '../../lib/store'
+import { AVAILABILITY_CHIPS, AVAILABILITY_WORDS, STORE_PATH, attributeText, contributionLine, departmentPath, firstBuyable, islandProduct, money, relatedGroups, shipLine } from '../../lib/store'
 import '../../styles/store.css'
 
 interface Props {
   product: ProductDetail
+  /** The site's name, for the contribution sentence. */
+  siteName: string
 }
 
-const { product } = Astro.props
+const { product, siteName } = Astro.props
+const ship = shipLine(product)
 const photos = product.photos.map((p) => safeSrc(p.url)).filter((u): u is string => u !== null)
 const [cover, ...more] = photos
 const item = firstBuyable(product.items)
@@ -61,6 +68,7 @@ const buyHref = safeHref(product.buy_url)
     </div>
 
     <div class="product-words">
+      {product.manufacturer && <p class="kicker product-maker">{product.manufacturer.name}</p>}
       <h1>{product.name}</h1>
       {product.short_description && <p class="lede">{product.short_description}</p>}
 
@@ -71,6 +79,7 @@ const buyHref = safeHref(product.buy_url)
         </p>
         <p class="island-line" data-bg-line>{built ? `As of the last build, ${built}.` : 'As of the last build.'}</p>
         {item && <p class="island-word"><span class:list={['chip', AVAILABILITY_CHIPS[item.availability]]} data-bg-word>{AVAILABILITY_WORDS[item.availability]}</span></p>}
+        {ship && <p class="island-ship">{ship}</p>}
         {product.items.length > 1 && (
           <fieldset class="island-items">
             <legend>Choose one</legend>
@@ -82,6 +91,7 @@ const buyHref = safeHref(product.buy_url)
             ))}
           </fieldset>
         )}
+        {product.counts_as_contribution && <p class="island-contribution" data-bg-contribution>{contributionLine(siteName)}</p>}
         {buyHref && <a class="button island-fallback" href={buyHref} data-bg-fallback>Add to cart</a>}
         <form class="island-form" data-bg-form hidden novalidate>
           <div class="island-qty-row">

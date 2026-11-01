@@ -1853,8 +1853,12 @@ const SHIFT_FRAMES = /https:\/\/api\.backgold\.com\/embed\/shift\//g
 // out), two collections, and the five island states board 06 draws: the
 // tee in stock, the yard sign few left, the decal sold out, the beanie's
 // price moved since the build (built at $25, live at $20), the cap's live
-// read failing (503); the torch pin asks a per-unit engraving and a
-// once-per-order gift line. Photos are uploads the fixture serves.
+// read failing (503); the torch pin asks a per-unit engraving under a
+// note, a once-per-order gift line and a chapter with a write-in. The tee
+// names its maker and its live compare-at price ($30) is not the build's;
+// the yard sign is picked up at the store, the beanie ships to a licensed
+// dealer, the handbook ships nothing and is the one listing that is not a
+// contribution. Photos are uploads the fixture serves.
 function storeFixture() {
   const photo = (id) => [{ url: `https://api.backgold.com/api/media-files/store/${id}.jpg` }]
   const term = (slug, label) => ({ taxonomy: 'department', slug, label })
@@ -1920,6 +1924,9 @@ function storeFixture() {
   const detail = (p) => ({
     ...p,
     description_html: `<p>${p.short_description} Made for the people who show up.</p>`,
+    manufacturer: p.id === 'prd_tee' ? { name: 'Fenwick Print Co.' } : null,
+    ship_to: p.id === 'prd_sign' ? 'store' : p.id === 'prd_beanie' ? 'third_party' : 'buyer',
+    counts_as_contribution: p.id !== 'prd_book',
     items: items[p.id],
     attributes:
       p.id === 'prd_tee'
@@ -1935,9 +1942,12 @@ function storeFixture() {
     structured_data: { '@context': 'https://schema.org', '@type': 'Product', name: p.name },
     related: products.filter((o) => o.id !== p.id && o.collections.some((c) => p.collections.some((mine) => mine.slug === c.slug))).slice(0, 8),
   })
+  const question = (q) => ({ required: false, options: null, placeholder: null, help: null, body: null, allow_other: false, ...q })
   const pinQuestions = [
-    { label: 'Engraving', type: 'text', required: true, options: null, placeholder: 'Up to 12 letters', help: null, scope: 'unit' },
-    { label: 'Gift message', type: 'textarea', required: false, options: null, placeholder: null, help: 'Printed on the card in the box.', scope: 'order' },
+    question({ label: 'About the engraving', type: 'note', body: 'We engrave each pin by hand.\n\nAllow a week before it ships.', scope: 'unit' }),
+    question({ label: 'Engraving', type: 'text', required: true, placeholder: 'Up to 12 letters', scope: 'unit' }),
+    question({ label: 'Gift message', type: 'textarea', help: 'Printed on the card in the box.', scope: 'order' }),
+    question({ label: 'Chapter', type: 'select', options: ['Alder', 'Fenwick'], allow_other: true, scope: 'order' }),
   ]
   // GET /products/live: the beanie at $20 now; the cap's read fails.
   const live = Object.fromEntries(
@@ -1947,7 +1957,12 @@ function storeFixture() {
         ? 'fail'
         : {
             id: p.id,
-            items: items[p.id].map((i) => ({ id: i.id, price_cents: p.id === 'prd_beanie' ? 2000 : i.price_cents, availability: i.availability })),
+            items: items[p.id].map((i) => ({
+              id: i.id,
+              price_cents: p.id === 'prd_beanie' ? 2000 : i.price_cents,
+              compare_at_cents: p.id === 'prd_tee' ? 3000 : i.compare_at_cents,
+              availability: i.availability,
+            })),
             questions: p.id === 'prd_pin' ? pinQuestions : [],
           },
     ]),
@@ -4917,6 +4932,9 @@ async function checkStore(origin, fixture) {
     `the HTML carries Product JSON-LD with an Offer per item, price and availability from the build (${JSON.stringify(product)?.slice(0, 200)})`,
   )
   check(/data-bg-island/.test(body) && /data-bg-price>\$25</.test(body) && /As of the last build, /.test(body), 'the island as built shows the price and when the build read it')
+  check(/<p class="kicker product-maker">Fenwick Print Co\.<\/p>\s*<h1>/.test(body) && product?.brand?.name === 'Fenwick Print Co.', "the maker is the eyebrow over the title and the JSON-LD's brand")
+  check(/<p class="island-ship">Ships to you<\/p>/.test(body), 'where the order goes is one line under the word')
+  check(/<p class="island-contribution" data-bg-contribution>A purchase is a political contribution to [^<]+\.<\/p>\s*<a class="button island-fallback"/.test(body), 'a listing that counts as a contribution says so right above Add to cart')
   check(/<a class="button island-fallback" href="https:\/\/secure\.backgold\.com\/s\/pine-valley\/pine-valley-tee" data-bg-fallback>Add to cart<\/a>/.test(body), "with scripts off, Add to cart is the listing's page on BackGold")
   check((body.match(/class="button\b(?! button-quiet)/g) ?? []).length === 2 && /<form class="island-form" data-bg-form hidden/.test(body), 'the page has one call: the fallback link, or the form that replaces it (hidden until the script runs)')
   check(!/Engraving|Gift message/.test(html), 'no question is in the static HTML')
@@ -4926,6 +4944,12 @@ async function checkStore(origin, fixture) {
   )
   check(/From <a href="\/collections\/fall-drop">Fall drop<\/a>/.test(body) && /href="\/store\/knit-beanie"/.test(body) && /href="\/store\/yard-sign"/.test(body), 'related listings are under the collection they share')
   check(/href="\/store\/departments\/apparel">Apparel<\/a>/.test(body), "the breadcrumb runs through the listing's departments")
+  for (const [slug, line] of [['yard-sign', 'Pick up at the store'], ['knit-beanie', 'Ships to a licensed dealer you name at checkout']]) {
+    const page = storeBody(await (await get(origin, `/store/${slug}`)).text())
+    check(page.includes(`<p class="island-ship">${line}</p>`), `${slug}: "${line}"`)
+  }
+  const book = storeBody(await (await get(origin, '/store/county-handbook')).text())
+  check(!/island-ship|island-contribution|political contribution/.test(book), 'a download ships nothing and, not a contribution, carries no contribution sentence')
   res = await get(origin, '/store/no-such-listing')
   await res.text()
   check(res.status === 404, `an unknown listing is a 404 (got ${res.status})`)

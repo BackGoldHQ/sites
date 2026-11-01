@@ -282,6 +282,7 @@ export function productJsonLd(product: ProductDetail, siteUrl: string): Record<s
     ...(description ? { description } : {}),
     ...(product.photos.length > 0 ? { image: product.photos.map((p) => p.url) } : {}),
     ...(sku ? { sku } : {}),
+    ...(product.manufacturer ? { brand: { '@type': 'Brand', name: product.manufacturer.name } } : {}),
     ...(product.department.length > 0 ? { category: product.department.map((d) => d.label).join(' > ') } : {}),
     offers: product.items.map((item) => ({
       '@type': 'Offer',
@@ -295,6 +296,21 @@ export function productJsonLd(product: ProductDetail, siteUrl: string): Record<s
     })),
   }
 }
+
+/**
+ * Where the order goes, as the one line under the availability word (never
+ * a choice): picked up at the store, shipped to a licensed dealer the buyer
+ * names at checkout, or shipped to the buyer when there is something to
+ * ship; null for a listing with nothing to ship to the buyer.
+ */
+export function shipLine(product: Pick<ProductDetail, 'ship_to' | 'ships'>): string | null {
+  if (product.ship_to === 'store') return 'Pick up at the store'
+  if (product.ship_to === 'third_party') return 'Ships to a licensed dealer you name at checkout'
+  return product.ships ? 'Ships to you' : null
+}
+
+/** The sentence a listing that counts as a political contribution carries before Add to cart (DS §18.1). */
+export const contributionLine = (siteName: string): string => `A purchase is a political contribution to ${siteName}.`
 
 // ── The checkout ─────────────────────────────────────────────────────────────
 
@@ -334,6 +350,8 @@ export interface IslandProduct {
   name: string
   photo_url: string | null
   ships: boolean
+  /** Where the order goes: a pickup at the store ships nothing to the buyer. */
+  ship_to: ProductDetail['ship_to']
   buy_url: string
   /** When the build read the listing (its `updated_at`), for "As of the last build". */
   built_at: string
@@ -347,6 +365,7 @@ export function islandProduct(product: ProductDetail): IslandProduct {
     name: product.name,
     photo_url: product.photos[0]?.url ?? null,
     ships: product.ships,
+    ship_to: product.ship_to,
     buy_url: product.buy_url,
     built_at: product.updated_at,
     items: product.items.map(({ id, name, price_cents, compare_at_cents, availability }) => ({ id, name, price_cents, compare_at_cents, availability })),
