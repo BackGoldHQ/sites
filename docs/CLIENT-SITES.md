@@ -155,7 +155,7 @@ A repository made with the Deploy button deploys on every push. Otherwise
 signed in to. The starter carries no CI file; a client that wants a pipeline
 adds its own. Then finish the Developer page's steps 3 to 5: test a preview at
 `https://<site>/preview`, add the webhook endpoint
-`https://<site>/api/backgold/webhook` and turn on all five content events, and
+`https://<site>/api/backgold/webhook` and turn on all seven content events, and
 add the domain to the Worker (the edge cache works only on a custom domain).
 
 ### 6. Keep it current
@@ -264,13 +264,16 @@ What `@backgold/content` reads, one method per endpoint: `site()` (name,
 brand, social links, SEO defaults, the legal line and the content version),
 `menu(key)`, `pages()`, `page(slug)`, `section(key)`, `types()`,
 `entries(type)` and `allEntries(type)`, `entry(type, slug)`, `events()`,
+`products()`, `product(slug)`, `productsLive({ ids })`, `collections()` and
+`collection(slug)`,
 `terms(taxonomy)`, `authors()` and `author(slug)`, `redirects()`,
 `sitemap()`, `areas({ holds })`, `preview(token)`, and `raw(path)` for any
 other `GET`. Every published read is cached under the site's **content
 version**, which BackGold raises on every change, so a publish never needs a
-purge. The webhook's five content events (`site.published`,
+purge. The webhook's seven content events (`site.published`,
 `content.published`, `content.unpublished`, `menu.updated`,
-`redirects.updated`) move a site to the new version at once; without them each
+`redirects.updated`, `site.content.product.updated`,
+`site.content.collection.updated`) move a site to the new version at once; without them each
 copy of the Worker re-checks within a minute.
 
 ### Sections, layouts, bands, areas and menus
@@ -315,6 +318,19 @@ BackGold serves, placed with the package's `<Embed>`. Style the section around
 it (heading, band, spacing); never cover, restyle or imitate what is inside
 the frame, and never collect donations, signatures, RSVPs, sign-ups or consent
 in a form of your own.
+
+### The store on the kit
+
+Every template on the kit draws the store as its own static pages, from the
+Content API's catalog reads (`packages/template-kit/src/lib/store.ts`):
+`/store` (the departments rail, the collections, the grid and one
+collection band), `/store/departments/<slug>`, `/store/<slug>` (with the
+Product and Offer JSON-LD in the HTML) and `/collections/<slug>`. A
+published page at `/store` becomes the shop's opening. A listing's price,
+availability, its checkout questions and Add to cart are a small script that
+reads `GET /products/live` on view; the cart is kept on the site under
+`gg-cart:<org>` and handed to BackGold's checkout in the address's fragment,
+where the money is taken. Availability is always a word, never a count.
 
 ### The legal line
 

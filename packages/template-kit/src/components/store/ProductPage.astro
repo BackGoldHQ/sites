@@ -1,0 +1,134 @@
+---
+// One listing's page at /store/<slug> (board 06, "Product page"): the path
+// back through the store and the listing's department, the gallery, the
+// title as the page's one <h1> and its short line, the island, the long copy,
+// the details table from the department's attribute definitions in their
+// order (a value left blank leaves its row out), and the related listings
+// under the collection each shares with this one.
+//
+// The island as built reads with scripts off: the build's price (struck
+// against a compare-at price above it), when the build read it, the
+// availability word, the items by name, and Add to cart as a link to the
+// listing's page on BackGold, where the cart works without this site's
+// script. With scripts on, StoreScript reads GET /products/live on view and
+// redraws it as one of five states (in stock, few left, sold out, the price
+// moved since the build, the read failed), with the item choice, a quantity,
+// the questions the line asks (each per-unit question once per unit) and
+// Add to cart as the page's one call.
+import type { ProductDetail } from '@backgold/content'
+import { safeHref, safeSrc, sanitizeRichText } from '@backgold/astro/server'
+import ProductGrid from './ProductGrid.astro'
+import { formatDay } from '../../lib/format'
+import { AVAILABILITY_CHIPS, AVAILABILITY_WORDS, STORE_PATH, attributeText, departmentPath, firstBuyable, islandProduct, money, relatedGroups } from '../../lib/store'
+import '../../styles/store.css'
+
+interface Props {
+  product: ProductDetail
+}
+
+const { product } = Astro.props
+const photos = product.photos.map((p) => safeSrc(p.url)).filter((u): u is string => u !== null)
+const [cover, ...more] = photos
+const item = firstBuyable(product.items)
+const built = formatDay(product.updated_at)
+const description = product.description_html.trim() ? sanitizeRichText(product.description_html) : ''
+const details = product.attributes.map((a) => ({ label: a.label, kind: a.kind, text: attributeText(a.value) })).filter((a) => a.text !== null)
+const groups = relatedGroups(product)
+const struck = item && item.compare_at_cents !== null && item.compare_at_cents > item.price_cents ? item.compare_at_cents : null
+const buyHref = safeHref(product.buy_url)
+---
+<div class="store-page product-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href={STORE_PATH}>Store</a>
+    {product.department.map((d, i) => (
+      <>
+        <span aria-hidden="true"> › </span>
+        {i === product.department.length - 1 ? <span>{d.label}</span> : <a href={departmentPath(d.slug)}>{d.label}</a>}
+      </>
+    ))}
+  </nav>
+
+  <div class="product-top">
+    <div class="product-gallery" data-bg-gallery>
+      {cover ? <img class="product-photo" src={cover} alt={product.name} data-bg-gallery-main /> : <span class="product-photo product-card-blank" aria-hidden="true"></span>}
+      {more.length > 0 && (
+        <ul class="product-thumbs" role="list" aria-label="More photos">
+          {[cover!, ...more].map((src, i) => (
+            <li><a href={src} data-bg-gallery-thumb aria-current={i === 0 ? 'true' : undefined}><img src={src} alt={`Photo ${i + 1} of ${photos.length}`} loading="lazy" decoding="async" /></a></li>
+          ))}
+        </ul>
+      )}
+    </div>
+
+    <div class="product-words">
+      <h1>{product.name}</h1>
+      {product.short_description && <p class="lede">{product.short_description}</p>}
+
+      <section class="island" data-bg-island aria-label="Price and availability">
+        <p class="island-price">
+          <span class="island-now" data-bg-price>{item ? money(item.price_cents) : ''}</span>
+          <s class="island-was" data-bg-was hidden={struck === null}>{struck !== null ? money(struck) : ''}</s>
+        </p>
+        <p class="island-line" data-bg-line>{built ? `As of the last build, ${built}.` : 'As of the last build.'}</p>
+        {item && <p class="island-word"><span class:list={['chip', AVAILABILITY_CHIPS[item.availability]]} data-bg-word>{AVAILABILITY_WORDS[item.availability]}</span></p>}
+        {product.items.length > 1 && (
+          <fieldset class="island-items">
+            <legend>Choose one</legend>
+            {product.items.map((option) => (
+              <label class="island-item">
+                <input type="radio" name="item" value={option.id} checked={option.id === item?.id} disabled data-bg-item />
+                <span>{option.name}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {buyHref && <a class="button island-fallback" href={buyHref} data-bg-fallback>Add to cart</a>}
+        <form class="island-form" data-bg-form hidden novalidate>
+          <div class="island-qty-row">
+            <div class="island-qty" role="group" aria-label="Quantity">
+              <button type="button" class="island-step" data-bg-step="-1" aria-label="One fewer">−</button>
+              <input type="number" name="quantity" value="1" min="1" max="99" inputmode="numeric" aria-label="Quantity" data-bg-qty />
+              <button type="button" class="island-step" data-bg-step="1" aria-label="One more">+</button>
+            </div>
+            <span class="island-note" data-bg-unit-note hidden>One answer per unit</span>
+          </div>
+          <div class="island-questions" data-bg-questions></div>
+          <button type="submit" class="button island-add" data-bg-add disabled>Checking the price…</button>
+          <button type="button" class="button button-quiet island-retry" data-bg-retry hidden>Try again</button>
+          <p class="island-status" data-bg-status role="status" aria-live="polite"></p>
+        </form>
+      </section>
+      <script is:inline type="application/json" data-bg-island-product set:html={JSON.stringify(islandProduct(product)).replace(/</g, '\\u003c')} />
+    </div>
+  </div>
+
+  {(description || details.length > 0) && (
+    <div class="product-more">
+      {description && (
+        <section class="product-about">
+          <h2>About this item</h2>
+          <div class="prose" set:html={description} />
+        </section>
+      )}
+      {details.length > 0 && (
+        <section class="product-details">
+          <h2>Details</h2>
+          <table class="product-attributes">
+            <tbody>
+              {details.map((d) => (
+                <tr><th scope="row">{d.label}</th><td>{d.kind === 'date' ? (formatDay(d.text) ?? d.text) : d.text}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+    </div>
+  )}
+
+  {groups.map((group) => (
+    <section class="product-related">
+      <h2>{group.href ? <>From <a href={group.href}>{group.title}</a></> : group.title}</h2>
+      <ProductGrid products={group.products} level={3} />
+    </section>
+  ))}
+</div>

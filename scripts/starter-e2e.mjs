@@ -1837,6 +1837,7 @@ function fixtureData(ex, kitchenSections) {
       ],
     },
     sections: { 'town-halls': ex.SectionsResponse },
+    store: storeFixture(),
   }
 }
 
@@ -1845,6 +1846,122 @@ const UPLOADS = /https:\/\/api\.backgold\.com\/api\/(?:media-files|lp-assets|con
 const GEO_FILES = /https:\/\/api\.backgold\.com\/lp-runtime\//g
 // A shift's sign-up frame lives on the api; the fixture serves a stand-in (shiftStubFrame).
 const SHIFT_FRAMES = /https:\/\/api\.backgold\.com\/embed\/shift\//g
+
+// ── The store (every template on the kit): GET /products, /products/live, /products/:slug, /collections/:slug ──
+//
+// Seven listings in four departments (and an empty one the rail leaves
+// out), two collections, and the five island states board 06 draws: the
+// tee in stock, the yard sign few left, the decal sold out, the beanie's
+// price moved since the build (built at $25, live at $20), the cap's live
+// read failing (503); the torch pin asks a per-unit engraving and a
+// once-per-order gift line. Photos are uploads the fixture serves.
+function storeFixture() {
+  const photo = (id) => [{ url: `https://api.backgold.com/api/media-files/store/${id}.jpg` }]
+  const term = (slug, label) => ({ taxonomy: 'department', slug, label })
+  const summary = (row) => ({
+    short_description: null,
+    url: `https://pinevalleyliberty.org/store/${row.slug}`,
+    buy_url: `https://secure.backgold.com/s/pine-valley/${row.slug}`,
+    photos: photo(row.id),
+    price_to_cents: row.price_from_cents,
+    tags: [],
+    collections: [],
+    offering_kind: null,
+    ships: true,
+    ...row,
+  })
+  const fallDrop = { slug: 'fall-drop', title: 'Fall drop' }
+  const underTwenty = { slug: 'under-20', title: 'Under $20' }
+  const products = [
+    summary({ id: 'prd_tee', slug: 'pine-valley-tee', name: 'Pine Valley tee', short_description: 'Heavyweight cotton, printed in the county.', price_from_cents: 2500, availability: 'in_stock', department: [term('apparel', 'Apparel'), term('tees', 'Tees')], collections: [fallDrop], updated_at: '2026-10-29T16:40:00.000Z' }),
+    summary({ id: 'prd_sign', slug: 'yard-sign', name: 'Yard sign, 18 × 24', short_description: 'Two-sided, with the stake.', price_from_cents: 1500, availability: 'low', department: [term('signs', 'Signs')], collections: [fallDrop, underTwenty], updated_at: '2026-10-28T12:00:00.000Z' }),
+    summary({ id: 'prd_decal', slug: 'window-decal', name: 'Window decal', short_description: 'Clear vinyl, four inches across.', price_from_cents: 500, availability: 'out', department: [term('signs', 'Signs')], collections: [underTwenty], updated_at: '2026-10-27T12:00:00.000Z' }),
+    summary({ id: 'prd_beanie', slug: 'knit-beanie', name: 'Knit beanie', short_description: 'Heavy rib knit, the torch on the cuff.', price_from_cents: 2500, availability: 'low', department: [term('apparel', 'Apparel')], collections: [fallDrop], updated_at: '2026-10-26T12:00:00.000Z' }),
+    summary({ id: 'prd_cap', slug: 'chapter-cap', name: 'Chapter cap', short_description: 'Six-panel cotton, adjustable strap.', price_from_cents: 2500, availability: 'in_stock', department: [term('apparel', 'Apparel')], updated_at: '2026-10-25T12:00:00.000Z' }),
+    summary({ id: 'prd_pin', slug: 'torch-pin', name: 'Engraved torch pin', short_description: 'Enamel, with your chapter on the back.', price_from_cents: 1000, availability: 'in_stock', department: [term('accessories', 'Accessories')], collections: [underTwenty], updated_at: '2026-10-24T12:00:00.000Z' }),
+    summary({ id: 'prd_book', slug: 'county-handbook', name: 'County chapter handbook', short_description: 'Instant download.', price_from_cents: 1000, availability: 'in_stock', department: [term('digital', 'Digital')], collections: [underTwenty], ships: false, updated_at: '2026-10-23T12:00:00.000Z' }),
+  ]
+  const departments = [
+    { id: 'trm_app', slug: 'apparel', label: 'Apparel', parent_id: null, position: 0, count: 3 },
+    { id: 'trm_tee', slug: 'tees', label: 'Tees', parent_id: 'trm_app', position: 0, count: 1 },
+    { id: 'trm_sgn', slug: 'signs', label: 'Signs', parent_id: null, position: 1, count: 2 },
+    { id: 'trm_acc', slug: 'accessories', label: 'Accessories', parent_id: null, position: 2, count: 1 },
+    { id: 'trm_dig', slug: 'digital', label: 'Digital', parent_id: null, position: 3, count: 1 },
+    { id: 'trm_pos', slug: 'posters', label: 'Posters', parent_id: null, position: 4, count: 0 },
+  ]
+  const collection = (ref, intro, members, extra = {}) => ({
+    id: `col_${ref.slug}`,
+    slug: ref.slug,
+    title: ref.title,
+    intro,
+    url: `https://pinevalleyliberty.org/collections/${ref.slug}`,
+    cover: { url: `https://api.backgold.com/api/media-files/store/cover-${ref.slug}.jpg` },
+    count: members.length,
+    updated_at: '2026-10-29T16:40:00.000Z',
+    ...extra,
+  })
+  const bySlug = (slug) => products.find((p) => p.slug === slug)
+  // Fall drop as pinned: the beanie first, then the tee and the sign (a draft member is simply absent).
+  const fallMembers = ['knit-beanie', 'pine-valley-tee', 'yard-sign'].map(bySlug)
+  const underMembers = ['yard-sign', 'window-decal', 'torch-pin', 'county-handbook'].map(bySlug)
+  const fall = collection(fallDrop, 'What the county chapters are wearing this fall.', fallMembers)
+  const under = collection(underTwenty, 'Small things for the table and the car.', underMembers, { cover: null })
+  const collections = [fall, under]
+  const item = (id, name, price_cents, availability, extra = {}) => ({ id, name, sku: `PV-${id.toUpperCase()}`, upc: null, price_cents, compare_at_cents: null, availability, ...extra })
+  const items = {
+    prd_tee: [item('itm_tee_s', 'S', 2500, 'in_stock'), item('itm_tee_m', 'M', 2500, 'in_stock'), item('itm_tee_l', 'L', 2500, 'low', { upc: '012345678905' })],
+    prd_sign: [item('itm_sign', 'Yard sign', 1500, 'low')],
+    prd_decal: [item('itm_decal', 'Window decal', 500, 'out')],
+    prd_beanie: [item('itm_beanie', 'One size', 2500, 'low', { compare_at_cents: 3000 })],
+    prd_cap: [item('itm_cap', 'One size', 2500, 'in_stock')],
+    prd_pin: [item('itm_pin', 'Enamel pin', 1000, 'in_stock')],
+    prd_book: [item('itm_book', 'PDF', 1000, 'in_stock')],
+  }
+  const detail = (p) => ({
+    ...p,
+    description_html: `<p>${p.short_description} Made for the people who show up.</p>`,
+    items: items[p.id],
+    attributes:
+      p.id === 'prd_tee'
+        ? [
+            { key: 'fabric', label: 'Fabric', kind: 'short_text', value: '100% cotton' },
+            { key: 'fit', label: 'Fit', kind: 'choice', value: 'Unisex' },
+            { key: 'colors', label: 'Colors', kind: 'choices', value: ['Navy', 'Gold'] },
+            { key: 'union', label: 'Union printed', kind: 'boolean', value: true },
+            { key: 'care', label: 'Care', kind: 'long_text', value: null },
+          ]
+        : [],
+    seo: { title: p.name, description: p.short_description, image_url: p.photos[0]?.url ?? null },
+    structured_data: { '@context': 'https://schema.org', '@type': 'Product', name: p.name },
+    related: products.filter((o) => o.id !== p.id && o.collections.some((c) => p.collections.some((mine) => mine.slug === c.slug))).slice(0, 8),
+  })
+  const pinQuestions = [
+    { label: 'Engraving', type: 'text', required: true, options: null, placeholder: 'Up to 12 letters', help: null, scope: 'unit' },
+    { label: 'Gift message', type: 'textarea', required: false, options: null, placeholder: null, help: 'Printed on the card in the box.', scope: 'order' },
+  ]
+  // GET /products/live: the beanie at $20 now; the cap's read fails.
+  const live = Object.fromEntries(
+    products.map((p) => [
+      p.id,
+      p.id === 'prd_cap'
+        ? 'fail'
+        : {
+            id: p.id,
+            items: items[p.id].map((i) => ({ id: i.id, price_cents: p.id === 'prd_beanie' ? 2000 : i.price_cents, availability: i.availability })),
+            questions: p.id === 'prd_pin' ? pinQuestions : [],
+          },
+    ]),
+  )
+  return {
+    products,
+    departments,
+    collections,
+    detail: Object.fromEntries(products.map((p) => [p.slug, detail(p)])),
+    collection: { 'fall-drop': fall, 'under-20': under },
+    members: { 'fall-drop': fallMembers, 'under-20': underMembers },
+    live,
+  }
+}
 
 /** A stand-in for an uploaded image: a logo mark for the logo, a landscape for anything else. */
 // ── The Map section's geometry, served at /lp-runtime/<sha-256>.json as the api serves it ──
@@ -2101,6 +2218,16 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
       return res.end(JSON.stringify({ events }))
     }
 
+    // GET /products/live?ids=: price, availability and questions now, outside the content version; the cap's read fails.
+    if (parts[0] === 'products' && parts[1] === 'live' && parts.length === 2 && data.store) {
+      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean)
+      if (ids.length === 0 || ids.length > 50) return send(400, { error: 'ids names 1 to 50 listings', code: 'BAD_IDS' })
+      if (ids.some((id) => data.store.live[id] === 'fail')) return send(503, { error: 'Try again', code: 'UNAVAILABLE' })
+      const products = ids.filter((id) => data.store.live[id]).map((id) => data.store.live[id])
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30', ...CORS })
+      return res.end(JSON.stringify({ products }).replace(UPLOADS, `${state.origin}/media/`))
+    }
+
     // GET /live: the organization's YouTube stream in the run's state, outside the content version.
     if (parts[0] === 'live' && parts.length === 1) {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...CORS })
@@ -2288,6 +2415,61 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         }
         break
       }
+      case 'products': {
+        // GET /products/:slug, and GET /products?department=&collection=&cursor=&limit=:
+        // newest first, a department with everything under it, a collection
+        // in its order; the cursor is base64url of the next row's offset.
+        if (!data.store) break
+        if (parts.length === 2) {
+          const found = data.store.detail[parts[1]]
+          body = found ? { product: found, areas: data.entryAreas } : undefined
+          break
+        }
+        if (parts.length !== 1) break
+        const limit = Number(url.searchParams.get('limit') ?? 20)
+        if (!Number.isInteger(limit) || limit < 1 || limit > 50) return send(400, { error: 'limit must be a whole number from 1 to 50', code: 'BAD_LIMIT' })
+        const department = url.searchParams.get('department')
+        const collectionSlug = url.searchParams.get('collection')
+        const under = (slug) => {
+          const node = data.store.departments.find((d) => d.slug === slug)
+          if (!node) return new Set()
+          const out = new Set([node.slug])
+          for (let grew = true; grew; ) {
+            grew = false
+            for (const d of data.store.departments) {
+              const parent = data.store.departments.find((x) => x.id === d.parent_id)
+              if (parent && out.has(parent.slug) && !out.has(d.slug)) {
+                out.add(d.slug)
+                grew = true
+              }
+            }
+          }
+          return out
+        }
+        let rows = [...data.store.products].sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))
+        if (department) {
+          const slugs = under(department)
+          rows = rows.filter((p) => p.department.some((d) => slugs.has(d.slug)))
+        }
+        if (collectionSlug) rows = data.store.members[collectionSlug] ?? []
+        const offset = Number(Buffer.from(url.searchParams.get('cursor') ?? '', 'base64url').toString('utf8').split('|')[1] ?? 0) || 0
+        const shown = rows.slice(offset, offset + limit)
+        // The cursor is shaped as the api's are (base64url of `<instant>|<id>`), the id standing in for the offset.
+        const next = offset + limit < rows.length ? Buffer.from(`2026-10-01T00:00:00.000Z|${offset + limit}`).toString('base64url') : null
+        body = { products: shown, departments: data.store.departments, collections: data.store.collections, next_cursor: next }
+        break
+      }
+      case 'collections':
+        if (!data.store) break
+        if (parts.length === 1) {
+          body = { collections: data.store.collections, next_cursor: null }
+          break
+        }
+        if (parts.length === 2 && data.store.collection[parts[1]]) {
+          const found = data.store.collection[parts[1]]
+          body = { collection: { ...found, body: { markdown: 'Pick it up at the county office the week before and skip shipping. **Choose it at checkout.**' }, products: data.store.members[parts[1]] }, areas: data.entryAreas }
+        }
+        break
       case 'areas':
         // GET /areas?holds=: the areas of a route with no BackGold page (the volunteer pages); holds names at least one module.
         if (parts.length !== 1 || !url.searchParams.get('holds')) return send(400, { error: 'holds names at least one module', code: 'BAD_HOLDS' })
@@ -4666,6 +4848,103 @@ async function checkVolunteer(origin, fixture) {
   check(res.status === 200 && (await res.text()).includes('data-bg-fr="shift"'), "the fixture's stand-in frame answers at /embed/shift/")
 }
 
+// ── The store (every template on the kit) ────────────────────────────────────
+
+/** The HTML of the page's store body: from `.store-page` to the Sidebar's items under it (an area's own calls are its), else the end of <main>. */
+function storeBody(html) {
+  const start = html.indexOf('class="store-page')
+  if (start === -1) return ''
+  const ends = [html.indexOf('class="bg-area bg-area-sidebar', start), html.indexOf('</main>', start)].filter((i) => i !== -1)
+  return html.slice(start, ends.length ? Math.min(...ends) : undefined)
+}
+
+async function checkStore(origin, fixture) {
+  log('\nThe store: /store, a department, a listing, a collection')
+  const liveReads = () => fixture.state.seen.filter((s) => s.path === '/products/live').length
+  const before = liveReads()
+  const checkoutUrl = 'https://secure.backgold.com/s/pine-valley/checkout'
+
+  let res = await get(origin, '/store')
+  let html = await res.text()
+  let body = storeBody(html)
+  check(res.status === 200 && tags(html, 'h1').length === 1, `GET /store is 200 with one <h1> (got ${res.status}, ${tags(html, 'h1').length})`)
+  const cards = [...body.matchAll(/<a class="product-card" href="([^"]+)"/g)].map((m) => m[1])
+  check(
+    cards.length === 7 && cards.every((href) => /^\/store\/[a-z0-9-]+$/.test(href)) && cards[0] === '/store/pine-valley-tee',
+    `the grid's seven cards are links to /store/<slug>, newest first (${cards.join(', ')})`,
+  )
+  const grid = body.slice(body.indexOf('class="product-grid"'), body.indexOf('</ul>', body.indexOf('class="product-grid"')))
+  check(!/<button\b/.test(grid) && !/class="button\b/.test(grid), 'the cards carry no buttons')
+  check(/data-availability="low"[\s\S]*?Only a few left/.test(body) && /data-availability="out"[\s\S]*?Sold out/.test(body), 'a card says few left and sold out on its photo, as words')
+  const rail = body.slice(body.indexOf('class="store-rail"'), body.indexOf('</nav>', body.indexOf('class="store-rail"')))
+  check(
+    /href="\/store\/departments\/apparel"[^>]*>Apparel <span>3<\/span>/.test(rail) && /Signs <span>2<\/span>/.test(rail) && !/Posters/.test(rail) && !/href="\/store\/departments\/tees"/.test(rail),
+    'the rail lists the top-level departments with their counts, the empty one left out and the one under Apparel folded',
+  )
+  check(/href="\/collections\/fall-drop"/.test(rail) && /href="\/collections\/under-20"/.test(rail), 'the collections are listed under the departments')
+  const calls = body.match(/class="button\b/g) ?? []
+  check(calls.length === 1 && /<a class="button" href="\/collections\/fall-drop">Shop Fall drop<\/a>/.test(body), `the page's one call is the collection band's (${calls.length} found)`)
+  const cart = tags(html, 'a').find((t) => t.includes('data-bg-cart='))
+  check(!!cart && /\bhidden\b/.test(cart) && cart.includes(`data-bg-checkout="${checkoutUrl}"`) && cart.includes('data-bg-cart="pine-valley"'), `the header's Cart link waits hidden for the store script, bound for ${checkoutUrl}`)
+  check(new RegExp(`data-bg-store-api="${fixture.origin}/api/content/v1/products/live"`).test(html) && html.includes(`data-bg-store-key="${SITE_KEY}"`), "the store script asks the api's /products/live with the publishable key")
+  check(html.includes('data-backgold-disclaimer'), 'the footer keeps the legal line')
+
+  res = await get(origin, '/store/departments/apparel')
+  html = await res.text()
+  body = storeBody(html)
+  const apparel = [...body.matchAll(/<a class="product-card" href="([^"]+)"/g)].map((m) => m[1])
+  check(
+    res.status === 200 && /<h1>Apparel<\/h1>/.test(html) && apparel.join() === '/store/pine-valley-tee,/store/knit-beanie,/store/chapter-cap',
+    `a department's shelf is that department and everything under it (${res.status}, ${apparel.join(', ')})`,
+  )
+  check(/href="\/store\/departments\/tees"/.test(body) && !/class="button\b/.test(body), 'it opens the departments under it in the rail, and has no band')
+  res = await get(origin, '/store/departments/posters')
+  await res.text()
+  check(res.status === 404, `a department with nothing on the site is a 404 (got ${res.status})`)
+
+  res = await get(origin, '/store/pine-valley-tee')
+  html = await res.text()
+  body = storeBody(html)
+  check(res.status === 200 && tags(html, 'h1').length === 1 && /<h1>Pine Valley tee<\/h1>/.test(html), `a listing's page is 200 with its name as the one <h1> (got ${res.status})`)
+  const product = jsonLdBlocks(html).map((b) => JSON.parse(b)).flat().find((o) => o['@type'] === 'Product')
+  check(
+    !!product &&
+      product.url === `${origin}/store/pine-valley-tee` &&
+      product.offers.length === 3 &&
+      product.offers.every((o) => o['@type'] === 'Offer' && o.price === '25.00' && o.priceCurrency === 'USD') &&
+      product.offers[2].availability === 'https://schema.org/LimitedAvailability' &&
+      product.offers[2].gtin12 === '012345678905',
+    `the HTML carries Product JSON-LD with an Offer per item, price and availability from the build (${JSON.stringify(product)?.slice(0, 200)})`,
+  )
+  check(/data-bg-island/.test(body) && /data-bg-price>\$25</.test(body) && /As of the last build, /.test(body), 'the island as built shows the price and when the build read it')
+  check(/<a class="button island-fallback" href="https:\/\/secure\.backgold\.com\/s\/pine-valley\/pine-valley-tee" data-bg-fallback>Add to cart<\/a>/.test(body), "with scripts off, Add to cart is the listing's page on BackGold")
+  check((body.match(/class="button\b(?! button-quiet)/g) ?? []).length === 2 && /<form class="island-form" data-bg-form hidden/.test(body), 'the page has one call: the fallback link, or the form that replaces it (hidden until the script runs)')
+  check(!/Engraving|Gift message/.test(html), 'no question is in the static HTML')
+  check(
+    /<th scope="row">Fabric<\/th><td>100% cotton<\/td>/.test(body) && /<th scope="row">Colors<\/th><td>Navy, Gold<\/td>/.test(body) && /<th scope="row">Union printed<\/th><td>Yes<\/td>/.test(body) && !/Care/.test(body),
+    "the details table is the department's attributes in order, a blank one left out",
+  )
+  check(/From <a href="\/collections\/fall-drop">Fall drop<\/a>/.test(body) && /href="\/store\/knit-beanie"/.test(body) && /href="\/store\/yard-sign"/.test(body), 'related listings are under the collection they share')
+  check(/href="\/store\/departments\/apparel">Apparel<\/a>/.test(body), "the breadcrumb runs through the listing's departments")
+  res = await get(origin, '/store/no-such-listing')
+  await res.text()
+  check(res.status === 404, `an unknown listing is a 404 (got ${res.status})`)
+
+  res = await get(origin, '/collections/fall-drop')
+  html = await res.text()
+  body = storeBody(html)
+  const members = [...body.matchAll(/<a class="product-card" href="([^"]+)"/g)].map((m) => m[1])
+  check(res.status === 200 && /<h1>Fall drop<\/h1>/.test(html) && /Collection · 3 items/.test(body), `a collection's page is 200 with its title as the <h1> (got ${res.status})`)
+  check(members.join() === '/store/knit-beanie,/store/pine-valley-tee,/store/yard-sign', `its grid is in the collection's order (${members.join(', ')})`)
+  check((body.match(/class="button\b/g) ?? []).length === 1 && /<a class="button" href="\/store">See everything in the store<\/a>/.test(body), 'then one call, back to the store')
+  check(/<strong>Choose it at checkout\.<\/strong>/.test(body), "the collection's body is drawn from its markdown")
+  res = await get(origin, '/collections/no-such-collection')
+  await res.text()
+  check(res.status === 404, `an unknown collection is a 404 (got ${res.status})`)
+
+  check(liveReads() === before, 'rendering the store reads no live price on the server')
+}
+
 // ── Watch Live (every template on the kit) ───────────────────────────────────
 
 /**
@@ -5953,6 +6232,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
     if (NONPROFIT) await checkNonprofit(configured.origin)
     if (PARTY || NONPROFIT) await checkVolunteer(configured.origin, fixture)
     if (ON_KIT) await checkWatchLive(configured.origin, fixture)
+    if (ON_KIT) await checkStore(configured.origin, fixture)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)

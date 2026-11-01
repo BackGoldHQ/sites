@@ -1,0 +1,32 @@
+---
+// One listing in a storefront grid (board 06): the whole card is the link to
+// its page, with its first photo, its name, its price as built ("From $X"
+// when its items differ) and its availability word; a listing that is few
+// left or sold out says so on its photo. No button: the page's one call is
+// elsewhere.
+import type { ProductSummary } from '@backgold/content'
+import { safeSrc } from '@backgold/astro/server'
+import { AVAILABILITY_WORDS, priceLabel, productPath } from '../../lib/store'
+
+interface Props {
+  product: ProductSummary
+  /** The card title's level: 2 under the page's h1, 3 under a section's h2. */
+  level?: 2 | 3
+}
+
+const { product, level = 2 } = Astro.props
+const Heading = level === 2 ? 'h2' : 'h3'
+const photo = safeSrc(product.photos[0]?.url)
+const flagged = product.availability === 'low' || product.availability === 'out'
+---
+<a class="product-card" href={productPath(product.slug)} data-availability={product.availability}>
+  <span class="product-card-photo">
+    {photo ? <img src={photo} alt="" loading="lazy" decoding="async" /> : <span class="product-card-blank" aria-hidden="true"></span>}
+    {flagged && <span class="product-card-flag">{AVAILABILITY_WORDS[product.availability]}</span>}
+  </span>
+  <span class="product-card-body">
+    <Heading class="product-card-name">{product.name}</Heading>
+    <span class="product-card-price">{priceLabel(product)}</span>
+    {!flagged && <span class="product-card-word">{AVAILABILITY_WORDS[product.availability]}</span>}
+  </span>
+</a>
