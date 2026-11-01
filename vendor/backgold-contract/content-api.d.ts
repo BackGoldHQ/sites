@@ -882,6 +882,14 @@ interface ProductSummary {
     offering_kind: string | null;
     /** True when buying the listing ships something (a physical item that is not a service). */
     ships: boolean;
+    /**
+     * True when buying the listing is a political contribution: its compliance
+     * treatment is full_price (the whole price) or above_cost (the markup over
+     * cost). False for commercial and for a listing with no treatment chosen.
+     * A site says so before the buyer adds it to the cart, and the shop page
+     * when any listing on it does.
+     */
+    counts_as_contribution: boolean;
     updated_at: string;
 }
 /** One attribute the listing's department asks for, with the listing's value. */
@@ -911,13 +919,6 @@ interface ProductDetail extends ProductSummary {
      * dealer the buyer names at checkout). One value, never a choice.
      */
     ship_to: ProductShipTo;
-    /**
-     * True when buying the listing is a political contribution: its compliance
-     * treatment is full_price (the whole price) or above_cost (the markup over
-     * cost). False for commercial and for a listing with no treatment chosen.
-     * A site says so before the buyer adds it to the cart.
-     */
-    counts_as_contribution: boolean;
     items: ProductItem[];
     attributes: ProductAttribute[];
     seo: ProductSeo;

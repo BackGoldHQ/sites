@@ -605,6 +605,7 @@ var teeSummary = {
   collections: [{ slug: "fall-drop", title: "Fall drop" }],
   offering_kind: null,
   ships: true,
+  counts_as_contribution: true,
   updated_at: "2026-10-28T15:10:00.000Z"
 };
 var yardSignSummary = {
@@ -623,6 +624,7 @@ var yardSignSummary = {
   collections: [{ slug: "fall-drop", title: "Fall drop" }],
   offering_kind: null,
   ships: true,
+  counts_as_contribution: false,
   updated_at: "2026-10-20T09:00:00.000Z"
 };
 var fallDrop = {
@@ -651,7 +653,6 @@ var productExample = {
     description_html: "<p>Printed by a union shop in Pine Valley. Wear it to the county fair.</p>",
     manufacturer: { name: "Valley Union Print Co." },
     ship_to: "buyer",
-    counts_as_contribution: true,
     items: [
       { id: "itm_1", name: "S", sku: "PV-TEE-S", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
       { id: "itm_2", name: "M", sku: "PV-TEE-M", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
