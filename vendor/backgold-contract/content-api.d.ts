@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, P as ProductAvailability, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, L as LiveStreamStatus, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as StoreAttributeKind, I as ItemQuestionScope, f as SiteSectionKind, g as SiteSectionRole, h as ShiftPublicState, i as ShiftPublicSubjectKind, j as SiteMode, k as SiteApiKeyKind } from './constants-BUwZrnwi.js';
-export { l as ContentWebhookEvent, m as SITE_KEY_PREFIXES, n as SitePageModuleKind } from './constants-BUwZrnwi.js';
+import { B as BackgoldSurfacePath, P as ProductAvailability, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, L as LiveStreamStatus, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as StoreAttributeKind, f as ProductShipTo, I as ItemQuestionScope, g as SiteSectionKind, h as SiteSectionRole, i as ShiftPublicState, j as ShiftPublicSubjectKind, k as SiteMode, l as SiteApiKeyKind } from './constants-CFceIhXh.js';
+export { m as ContentWebhookEvent, n as SITE_KEY_PREFIXES, o as SitePageModuleKind } from './constants-CFceIhXh.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -901,6 +901,23 @@ interface ProductSeo {
 interface ProductDetail extends ProductSummary {
     /** The long copy as sanitized HTML; empty when the listing has none. */
     description_html: string;
+    /** The listing's manufacturer (an archived one still names it); null when it has none. */
+    manufacturer: {
+        name: string;
+    } | null;
+    /**
+     * Where the order goes: `buyer` (ships to the buyer, or nothing to ship),
+     * `store` (picked up at the store), `third_party` (ships to a licensed
+     * dealer the buyer names at checkout). One value, never a choice.
+     */
+    ship_to: ProductShipTo;
+    /**
+     * True when buying the listing is a political contribution: its compliance
+     * treatment is full_price (the whole price) or above_cost (the markup over
+     * cost). False for commercial and for a listing with no treatment chosen.
+     * A site says so before the buyer adds it to the cart.
+     */
+    counts_as_contribution: boolean;
     items: ProductItem[];
     attributes: ProductAttribute[];
     seo: ProductSeo;
@@ -947,14 +964,22 @@ interface ProductQuestion {
     options: string[] | null;
     placeholder: string | null;
     help: string | null;
+    /** A `note` question's text, plain (the island escapes it and splits it into paragraphs); null for every other type. */
+    body: string | null;
+    /** True when a choice question (select, radio, checkboxes) takes a write-in; false otherwise. */
+    allow_other: boolean;
     scope: ItemQuestionScope;
 }
-/** One listing's live read: each item's price and availability now, and the questions its line asks. */
+/**
+ * One listing's live read: each item's price, compare-at price and
+ * availability now, and the questions its line asks.
+ */
 interface ProductLive {
     id: string;
     items: Array<{
         id: string;
         price_cents: number;
+        compare_at_cents: number | null;
         availability: ProductAvailability;
     }>;
     questions: ProductQuestion[];

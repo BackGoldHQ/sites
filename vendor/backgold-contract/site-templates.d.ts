@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S as SiteNavItemType } from './constants-BUwZrnwi.js';
+import { S as SiteNavItemType } from './constants-CFceIhXh.js';
 
 /**
  * A site template's manifest: the `template.json` at the root of each
@@ -89,9 +89,9 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
         unknown: z.ZodLiteral<"after_page">;
     }, z.core.$catchall<z.ZodString>>;
     entryLayouts: z.ZodRecord<z.ZodEnum<{
+        post: "post";
         video: "video";
         course: "course";
-        post: "post";
         podcast: "podcast";
         plank: "plank";
         team_member: "team_member";
@@ -108,10 +108,10 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             centered: "centered";
         }>>;
         footer: z.ZodArray<z.ZodEnum<{
-            compact: "compact";
-            giving: "giving";
             columns: "columns";
             closing: "closing";
+            compact: "compact";
+            giving: "giving";
         }>>;
         takeoverBanner: z.ZodBoolean;
         legalLine: z.ZodBoolean;
@@ -144,9 +144,9 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
-                            external: "external";
                             page: "page";
                             section: "section";
+                            external: "external";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -160,6 +160,7 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
+                        issues: "issues";
                         petition: "petition";
                         dates: "dates";
                         platform: "platform";
@@ -168,7 +169,6 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                         ballot: "ballot";
                         words: "words";
                         credentials: "credentials";
-                        issues: "issues";
                         stats: "stats";
                         quotes: "quotes";
                         votes: "votes";
@@ -195,10 +195,10 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             key: z.ZodString;
             label: z.ZodString;
             kind: z.ZodEnum<{
+                sidebar: "sidebar";
                 custom: "custom";
                 announcement: "announcement";
                 pre_footer: "pre_footer";
-                sidebar: "sidebar";
             }>;
             document: z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
@@ -224,9 +224,9 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
-                            external: "external";
                             page: "page";
                             section: "section";
+                            external: "external";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -240,6 +240,7 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
+                        issues: "issues";
                         petition: "petition";
                         dates: "dates";
                         platform: "platform";
@@ -248,7 +249,6 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                         ballot: "ballot";
                         words: "words";
                         credentials: "credentials";
-                        issues: "issues";
                         stats: "stats";
                         quotes: "quotes";
                         votes: "votes";
@@ -269,12 +269,12 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
             rules: z.ZodArray<z.ZodObject<{
                 area_key: z.ZodString;
                 shows_on: z.ZodEnum<{
-                    entries: "entries";
                     events: "events";
                     store: "store";
                     every_page: "every_page";
-                    every_page_except: "every_page_except";
                     pages: "pages";
+                    entries: "entries";
+                    every_page_except: "every_page_except";
                     pages_holding: "pages_holding";
                     entry_types: "entry_types";
                     type_lists: "type_lists";
@@ -283,12 +283,12 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
                 content_types: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 modules: z.ZodOptional<z.ZodArray<z.ZodObject<{
                     kind: z.ZodEnum<{
+                        store: "store";
+                        petition: "petition";
+                        form: "form";
+                        poll: "poll";
                         event: "event";
                         signup: "signup";
-                        petition: "petition";
-                        poll: "poll";
-                        form: "form";
-                        store: "store";
                         donation_form: "donation_form";
                         advocacy: "advocacy";
                     }>;
@@ -304,6 +304,8 @@ type SiteTemplateManifest = z.infer<typeof siteTemplateManifestSchema>;
  * with its audience ignored, since a deploy is never offered in the gallery.
  */
 declare const deployTemplateManifestSchema: z.ZodObject<{
+    name: z.ZodString;
+    key: z.ZodString;
     starter: z.ZodObject<{
         pages: z.ZodArray<z.ZodObject<{
             slug: z.ZodString;
@@ -332,9 +334,9 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
-                            external: "external";
                             page: "page";
                             section: "section";
+                            external: "external";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -348,6 +350,7 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
+                        issues: "issues";
                         petition: "petition";
                         dates: "dates";
                         platform: "platform";
@@ -356,7 +359,6 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                         ballot: "ballot";
                         words: "words";
                         credentials: "credentials";
-                        issues: "issues";
                         stats: "stats";
                         quotes: "quotes";
                         votes: "votes";
@@ -383,10 +385,10 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
             key: z.ZodString;
             label: z.ZodString;
             kind: z.ZodEnum<{
+                sidebar: "sidebar";
                 custom: "custom";
                 announcement: "announcement";
                 pre_footer: "pre_footer";
-                sidebar: "sidebar";
             }>;
             document: z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
@@ -412,9 +414,9 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                     label: z.ZodString;
                     target: z.ZodObject<{
                         kind: z.ZodEnum<{
-                            external: "external";
                             page: "page";
                             section: "section";
+                            external: "external";
                             surface: "surface";
                         }>;
                         slug: z.ZodOptional<z.ZodString>;
@@ -428,6 +430,7 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                 options: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>>>;
                 data: z.ZodOptional<z.ZodObject<{
                     source: z.ZodEnum<{
+                        issues: "issues";
                         petition: "petition";
                         dates: "dates";
                         platform: "platform";
@@ -436,7 +439,6 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                         ballot: "ballot";
                         words: "words";
                         credentials: "credentials";
-                        issues: "issues";
                         stats: "stats";
                         quotes: "quotes";
                         votes: "votes";
@@ -457,12 +459,12 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
             rules: z.ZodArray<z.ZodObject<{
                 area_key: z.ZodString;
                 shows_on: z.ZodEnum<{
-                    entries: "entries";
                     events: "events";
                     store: "store";
                     every_page: "every_page";
-                    every_page_except: "every_page_except";
                     pages: "pages";
+                    entries: "entries";
+                    every_page_except: "every_page_except";
                     pages_holding: "pages_holding";
                     entry_types: "entry_types";
                     type_lists: "type_lists";
@@ -471,12 +473,12 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
                 content_types: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 modules: z.ZodOptional<z.ZodArray<z.ZodObject<{
                     kind: z.ZodEnum<{
+                        store: "store";
+                        petition: "petition";
+                        form: "form";
+                        poll: "poll";
                         event: "event";
                         signup: "signup";
-                        petition: "petition";
-                        poll: "poll";
-                        form: "form";
-                        store: "store";
                         donation_form: "donation_form";
                         advocacy: "advocacy";
                     }>;
@@ -484,31 +486,29 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
             }, z.core.$strip>>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    name: z.ZodString;
     chrome: z.ZodObject<{
         header: z.ZodArray<z.ZodEnum<{
             bar: "bar";
             centered: "centered";
         }>>;
         footer: z.ZodArray<z.ZodEnum<{
-            compact: "compact";
-            giving: "giving";
             columns: "columns";
             closing: "closing";
+            compact: "compact";
+            giving: "giving";
         }>>;
         takeoverBanner: z.ZodBoolean;
         legalLine: z.ZodBoolean;
     }, z.core.$strip>;
-    key: z.ZodString;
     version: z.ZodNumber;
     variants: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
     areas: z.ZodObject<{
         unknown: z.ZodLiteral<"after_page">;
     }, z.core.$catchall<z.ZodString>>;
     entryLayouts: z.ZodRecord<z.ZodEnum<{
+        post: "post";
         video: "video";
         course: "course";
-        post: "post";
         podcast: "podcast";
         plank: "plank";
         team_member: "team_member";

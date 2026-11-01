@@ -649,6 +649,9 @@ var productExample = {
   product: {
     ...teeSummary,
     description_html: "<p>Printed by a union shop in Pine Valley. Wear it to the county fair.</p>",
+    manufacturer: { name: "Valley Union Print Co." },
+    ship_to: "buyer",
+    counts_as_contribution: true,
     items: [
       { id: "itm_1", name: "S", sku: "PV-TEE-S", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
       { id: "itm_2", name: "M", sku: "PV-TEE-M", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
@@ -685,12 +688,12 @@ var productsLiveExample = {
     {
       id: "prd_7h2",
       items: [
-        { id: "itm_1", price_cents: 2500, availability: "in_stock" },
-        { id: "itm_2", price_cents: 2500, availability: "in_stock" },
-        { id: "itm_3", price_cents: 2500, availability: "out" }
+        { id: "itm_1", price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+        { id: "itm_2", price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+        { id: "itm_3", price_cents: 2500, compare_at_cents: null, availability: "out" }
       ],
       questions: [
-        { label: "Chapter name to stitch", type: "text", required: false, options: null, placeholder: "Pine Valley", help: null, scope: "unit" }
+        { label: "Chapter name to stitch", type: "text", required: false, options: null, placeholder: "Pine Valley", help: null, body: null, allow_other: false, scope: "unit" }
       ]
     }
   ]
