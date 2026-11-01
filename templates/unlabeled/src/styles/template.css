@@ -1693,17 +1693,22 @@ strong {
     transition: color 0s linear 70ms;
   }
 
-  /* The copier develops the photo: the halftone comes up in five hard threshold steps behind a white lamp line. */
+  /*
+    The copier develops the photo: the halftone comes up in five hard threshold
+    steps behind a white lamp line. The lamp rests below the box, clipped, and
+    moves by transform: a view timeline measures the layout box, so a moving
+    offset would feed its own progress and the line would flicker in place.
+  */
   .u-halftone :is(img, video) {
     animation: u-develop 900ms steps(5, jump-end) both;
   }
   .u-halftone::before {
     content: '';
     position: absolute;
-    inset: 0 0 auto;
+    inset: 0;
     z-index: 2;
-    height: 2px;
-    background: var(--u-ink);
+    background: linear-gradient(var(--u-ink), var(--u-ink)) left top / 100% 2px no-repeat;
+    transform: translateY(100%);
     animation: u-lamp 900ms linear both;
     pointer-events: none;
   }
@@ -1714,11 +1719,7 @@ strong {
   }
   @keyframes u-lamp {
     from {
-      top: 0;
-    }
-    to {
-      top: 100%;
-      visibility: hidden;
+      transform: translateY(0);
     }
   }
 
