@@ -12,7 +12,7 @@ import { hmacSha256Hex } from './hash.js'
 const DEFAULT_TOLERANCE_SECONDS = 300
 
 /**
- * The five content events. The api's list is CONTENT_WEBHOOK_EVENTS in the
+ * The seven content events. The api's list is CONTENT_WEBHOOK_EVENTS in the
  * platform's shared constants; the vendored contract carries only its type,
  * ContentWebhookEvent, and the two checks below fail the build if this list
  * and the api's, or the contract's union, ever differ.
@@ -23,6 +23,8 @@ const CONTENT_EVENT_TYPES = [
   'content.unpublished',
   'menu.updated',
   'redirects.updated',
+  'site.content.product.updated',
+  'site.content.collection.updated',
 ] as const satisfies readonly ContentEventType[]
 type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
 const sameAsApi: Exact<(typeof CONTENT_EVENT_TYPES)[number], ContentWebhookEvent> = true
@@ -76,7 +78,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /**
- * The event when `rawBody` is one of the five content events in the house
+ * The event when `rawBody` is one of the seven content events in the house
  * envelope `{ id, type, created_at, data }` with `data.site_domain_id` and a
  * non-negative integer `data.content_version`; null for any other event, malformed JSON or
  * a missing field. Only the documented fields are copied. Never throws.
@@ -105,5 +107,7 @@ export const parseContentEvent: ParseContentEvent = (rawBody) => {
   if (typeof data.page_id === 'string') event.data.page_id = data.page_id
   if (typeof data.content_item_id === 'string') event.data.content_item_id = data.content_item_id
   if (typeof data.menu_key === 'string') event.data.menu_key = data.menu_key
+  if (typeof data.product_id === 'string') event.data.product_id = data.product_id
+  if (typeof data.collection_id === 'string') event.data.collection_id = data.collection_id
   return event
 }

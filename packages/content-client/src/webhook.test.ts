@@ -91,8 +91,16 @@ describe('parseContentEvent', () => {
   const envelope = (type: string, data: Record<string, unknown> = { site_domain_id: 'cd_8f2a', content_version: 185 }) =>
     JSON.stringify({ id: 'evt_1', type, created_at: '2026-10-02T14:13:20.000Z', data })
 
-  it('accepts the five content events', () => {
-    for (const type of ['site.published', 'content.published', 'content.unpublished', 'menu.updated', 'redirects.updated']) {
+  it('accepts the seven content events', () => {
+    for (const type of [
+      'site.published',
+      'content.published',
+      'content.unpublished',
+      'menu.updated',
+      'redirects.updated',
+      'site.content.product.updated',
+      'site.content.collection.updated',
+    ]) {
       assert.deepEqual(parseContentEvent(envelope(type)), {
         id: 'evt_1',
         type,
@@ -118,6 +126,18 @@ describe('parseContentEvent', () => {
       created_at: '2026-10-02T14:13:20.000Z',
       data: { site_domain_id: 'cd_8f2a', content_version: 186, page_id: 'lp_1', content_item_id: 'ci_1', menu_key: 'primary' },
     })
+  })
+
+  it('copies a store event\'s product_id and collection_id', () => {
+    assert.deepEqual(parseContentEvent(envelope('site.content.product.updated', { site_domain_id: 'cd_8f2a', content_version: 187, product_id: 'prd_1' }))?.data, {
+      site_domain_id: 'cd_8f2a',
+      content_version: 187,
+      product_id: 'prd_1',
+    })
+    assert.deepEqual(
+      parseContentEvent(envelope('site.content.collection.updated', { site_domain_id: 'cd_8f2a', content_version: 188, collection_id: 'ci_9' }))?.data,
+      { site_domain_id: 'cd_8f2a', content_version: 188, collection_id: 'ci_9' },
+    )
   })
 
   it('rejects other events and garbage', () => {

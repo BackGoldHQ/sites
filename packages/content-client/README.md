@@ -195,6 +195,39 @@ seconds, never by version).
 const { shifts } = await bg.shifts({ limit: 10 })
 ```
 
+**`products({ department?, collection?, cursor?, limit? })`**: the store's
+published listings, newest first, one page at a time (1 to 50, default 20),
+with `next_cursor`, the department tree (`departments`, each node counted with
+its descendants) and the site's published `collections`. `department` narrows
+to a node and everything under it; `collection` to a collection's members in
+its order. Each listing carries its `url` on your site (`/store/<slug>`),
+`buy_url` (its page on BackGold), photos, `price_from_cents` and
+`price_to_cents`, and `availability`, a word (`in_stock`, `low`, `out`,
+`preorder`), never a count.
+
+**`product(slug)`**: one listing for its own page, or `null`: its items,
+`description_html`, the `attributes` its department defines (in their order),
+`seo`, `structured_data` (a schema.org `Product` with an `Offer` per item,
+ready to serialize into the page), up to eight `related` listings from its
+collections, and the `areas` of a page that holds the store.
+
+**`collections()`** and **`collection(slug)`**: the published collections on
+the site, and one with its `body.markdown` and its member listings in order
+(`null` for an unknown slug). A member that is not published is left out.
+
+```ts
+const { products, departments, collections } = await bg.products({ department: 'apparel', limit: 12 })
+const page = await bg.product('westmark-liberty-tee')
+```
+
+**`productsLive({ ids })`**: each named listing's items' price and
+availability now, and the checkout `questions` its line asks (`scope`
+`order` or `unit`), from `GET /products/live?ids=` (1 to 50 ids; a TypeError
+before any request otherwise). A sale moves these without a publish, so this
+read is never stored and never keyed on the content version. From a browser,
+ask the address yourself with the publishable key, as for events' live
+counts.
+
 **`live()`**: the organization's YouTube stream while its connected channel
 is live or has one scheduled, else `null` (`GET /live`). It carries `status`
 (`live` or `upcoming`), `video_id`, `url` (the watch address), `embed_url`,
@@ -363,9 +396,11 @@ store's error.
 
 ## Webhooks
 
-BackGold can POST five content events to your endpoint: `site.published`,
-`content.published`, `content.unpublished`, `menu.updated` and
-`redirects.updated`. Each one carries the site's new `content_version`.
+BackGold can POST seven content events to your endpoint: `site.published`,
+`content.published`, `content.unpublished`, `menu.updated`,
+`redirects.updated`, `site.content.product.updated` (a store listing's
+public face changed) and `site.content.collection.updated` (a collection
+or its members changed). Each one carries the site's new `content_version`.
 Calling `setVersion` with it makes the next read fetch fresh content. It
 ignores a version older than the one it knows, so call it for every event.
 
@@ -395,10 +430,10 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
   secret, compared in constant time. It rejects a timestamp more than
   `toleranceSeconds` (300) from now in either direction, old or in the
   future, and answers `false`, never throws, for anything malformed.
-- `parseContentEvent` returns the event for the five content events (with a
+- `parseContentEvent` returns the event for the seven content events (with a
   whole-number `content_version` of 0 or more) and `null` for anything else. It copies only `id`, `type`, `created_at` and
   `data.site_domain_id`, `content_version`, `page_id`, `content_item_id`,
-  `menu_key`.
+  `menu_key`, `product_id`, `collection_id`.
 - One endpoint serves every site of an organization, so compare
   `data.site_domain_id` with your site's `site.id`.
 - Each event is delivered once and is not retried. The `/site` check is the
@@ -549,8 +584,8 @@ exported: `VISITOR_COOKIE` (`bg_visitor`), `VISITOR_HEADER`,
 
 ## Typed fields
 
-The eight built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
-`open_role`, `newsletter`, `course`) are typed out of the box. Any other type's `fields` are
+The nine built-in types (`post`, `podcast`, `video`, `plank`, `team_member`,
+`open_role`, `newsletter`, `course`, `collection`) are typed out of the box. Any other type's `fields` are
 `Record<string, unknown>` until the client knows the type. The
 `backgold-content types` command reads `/types` and writes a file that
 declares each type's fields:

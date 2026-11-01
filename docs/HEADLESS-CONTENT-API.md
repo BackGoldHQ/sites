@@ -523,6 +523,45 @@ entries are listed.
 }
 ```
 
+### The store: `GET /products`, `/products/{slug}`, `/collections`, `/collections/{slug}`
+
+The organization's published store listings, for a site that builds its own
+store pages (`/store`, `/store/<slug>`, `/collections/<slug>`). Products belong
+to the organization, so every site of it lists the same ones; collections are
+the ones placed on this site.
+
+- `GET /products` (`?department=<slug>`, `?collection=<slug>`, `?cursor=`,
+  `?limit=` 1–50, default 20): the listings newest first, each a summary (its
+  `url` on your site, `buy_url` on BackGold, photos, `price_from_cents` and
+  `price_to_cents`, an `availability` word, the department path, tags and the
+  collections it is in), with `departments` (the whole tree, each node counted
+  with its descendants) and the site's published `collections`.
+- `GET /products/{slug}`: one listing for its page: the summary plus
+  `description_html` (sanitized), `items` (each sellable unit with its price,
+  compare-at price and availability word), `attributes` from its department's
+  definitions in their order, `seo`, `structured_data` (a schema.org
+  `Product` with an `Offer` per item, ready to serialize) and up to eight
+  `related` listings from its collections, with the `areas` of a page that
+  holds the store.
+- `GET /collections`: every published collection on the site, one page.
+- `GET /collections/{slug}`: one collection, its `body.markdown` and its
+  member listings in the collection's order. A member that is not published
+  is left out.
+
+Availability is always a word (`in_stock`, `low`, `out`, `preorder`), never a
+count. A price change moves the content version (and sends
+`site.content.product.updated`); a sale does not. For price and availability
+as they stand now, ask `GET /products/live?ids=<id>,<id>` (1 to 50 listing
+ids) from the browser: it answers `{ products: [{ id, items: [{ id,
+price_cents, availability }], questions }] }`, where `questions` are the
+checkout questions the listing's line asks (`scope` `order`, once per order,
+or `unit`, once per unit in the line). It is cached for 30 seconds and never
+keyed on the content version.
+
+```bash
+curl -s "$BG/products?department=apparel&limit=12" -H "Authorization: Bearer $BG_SITE_KEY"
+```
+
 ### `GET /preview/{token}`
 
 Covered in section 7. It needs a secret key.
@@ -870,7 +909,7 @@ or a server-rendered site can purge its cache.
   endpoint on their own Developer page. Every payload still carries
   `data.site_domain_id` (the same value as `site.id` from `GET /site`).
 
-**The five events:**
+**The seven events:**
 
 | Event | Toggle label | Sent when |
 | --- | --- | --- |
@@ -879,6 +918,8 @@ or a server-rendered site can purge its cache.
 | `content.unpublished` | Content unpublished | A published entry goes back to draft, is unpublished, or is trashed. It is sent once per site the entry appeared on. |
 | `menu.updated` | Menu updated | The organization saves the site's menus, or adds, removes or hides a page in the site's navigation. |
 | `redirects.updated` | Redirects updated | A redirect of the site is added, changed or removed. |
+| `site.content.product.updated` | Store listing updated | A published store listing's copy, photos, price, department, tags or SEO change, or it is published, unpublished or archived. Sent to every site of the organization, with `data.product_id`. A sale, a stock count or a cost never sends it. |
+| `site.content.collection.updated` | Collection updated | A collection placed on the site is published, unpublished or edited, or its members or their order change. Sent with `data.collection_id`. |
 
 Pages are announced by `site.published`; the `content.*` events are for
 entries only. Each event is sent after the change has bumped the site's
@@ -1285,7 +1326,7 @@ it with your normal components. `link.path` is the page's path on your site,
 `verifyBackgoldWebhook` checks `X-BackGold-Signature` exactly as section 8
 describes (HMAC-SHA256 over `<t>.<raw body>`, compared in constant time, 5
 minutes either way). `parseContentEvent` answers the event when the body is
-one of the five content events, or `null`. Neither ever throws.
+one of the seven content events, or `null`. Neither ever throws.
 
 ```ts
 import { parseContentEvent, verifyBackgoldWebhook } from '@backgold/content'
@@ -1311,8 +1352,8 @@ triggers its rebuild here instead.
 ### Typed fields
 
 `entry(type, slug)` returns `fields` as a loose record until the client knows
-the type's fields. The eight built-in types (`post`, `podcast`, `video`,
-`plank`, `team_member`, `open_role`, `newsletter`, `course`) are typed already. For the
+the type's fields. The nine built-in types (`post`, `podcast`, `video`,
+`plank`, `team_member`, `open_role`, `newsletter`, `course`, `collection`) are typed already. For the
 organization's own types, the `backgold-content` command reads `GET /types`
 and writes a TypeScript file:
 

@@ -6,12 +6,17 @@ import {
   areasResponseExample,
   authorExample,
   authorsExample,
+  collectionExample,
+  collectionsExample,
   entriesExample,
   entryExample,
   eventsExample,
   menuExample,
   pageExample,
   pagesExample,
+  productExample,
+  productsExample,
+  productsLiveExample,
   redirectsExample,
   sectionsExample,
   shiftsExample,
@@ -65,6 +70,15 @@ const ROUTES: Record<string, Handler> = {
       ? { status: 400, body: { error: 'type must be one of rally, convention, fundraiser, blank', code: 'BAD_TYPE' } }
       : ok(eventsExample),
   '/shifts': () => ok(shiftsExample),
+  '/products': (url) =>
+    url.searchParams.get('department') === 'Not A Slug'
+      ? { status: 400, body: { error: 'department must be a slug', code: 'BAD_DEPARTMENT' } }
+      : ok(productsExample),
+  '/products/live': (url) =>
+    url.searchParams.has('ids') ? ok(productsLiveExample) : { status: 400, body: { error: 'ids must name 1 to 50 listings', code: 'BAD_IDS' } },
+  [`/products/${productExample.product.slug}`]: () => ok(productExample),
+  '/collections': () => ok(collectionsExample),
+  [`/collections/${collectionExample.collection.slug}`]: () => ok(collectionExample),
   '/terms/tag': () => ok(termsExample),
   '/authors': () => ok(authorsExample),
   '/authors/dana-k': () => ok(authorExample),
@@ -981,5 +995,66 @@ describe('createClient: first-party reads', () => {
     const keyed = createClient({ key: PK, fetch: api.fetch, cache: rec.store })
     await keyed.page('home')
     assert.ok(rec.keys.has(`${scopeOf(PK)}:v184:/pages/home?`))
+  })
+})
+
+describe('createClient: the store (products, productsLive, product, collections, collection)', () => {
+  it('returns each response exactly as the api sent it, and null for an unknown slug', async () => {
+    const { client } = setup()
+    assert.deepEqual(await client.products(), productsExample)
+    assert.deepEqual(await client.product(productExample.product.slug), productExample)
+    assert.deepEqual(await client.collections(), collectionsExample)
+    assert.deepEqual(await client.collection(collectionExample.collection.slug), collectionExample)
+    assert.equal(await client.product('no-such-listing'), null)
+    assert.equal(await client.collection('no-such-collection'), null)
+  })
+
+  it('sends and keys a products page by its own parameters, versioned like every published read', async () => {
+    const { api, rec, client } = setup()
+    await client.products({ department: 'apparel', limit: 12 })
+    await client.products({ collection: 'convention-2026', cursor: 'abc' })
+    await client.collections()
+    const scope = scopeOf(PK)
+    assert.deepEqual([...rec.keys].sort(), [
+      `${scope}:v184:/collections?`,
+      `${scope}:v184:/products?collection=convention-2026&cursor=abc`,
+      `${scope}:v184:/products?department=apparel&limit=12`,
+      `${scope}:v184:/site?`,
+      `${scope}:version`,
+    ])
+    const before = api.calls.length
+    await client.products({ department: 'apparel', limit: 12 })
+    assert.equal(api.calls.length, before)
+  })
+
+  it('surfaces 400 BAD_DEPARTMENT from products()', async () => {
+    const { client } = setup()
+    await assert.rejects(client.products({ department: 'Not A Slug' }), { name: 'BackgoldApiError', status: 400, code: 'BAD_DEPARTMENT' })
+  })
+
+  it('reads productsLive on every call, never from or into the store', async () => {
+    const { api, rec, client } = setup()
+    const ids = productsExample.products.map((p) => p.id)
+    assert.deepEqual(await client.productsLive({ ids }), productsLiveExample)
+    await client.productsLive({ ids })
+    const calls = api.callsTo('/products/live')
+    assert.equal(calls.length, 2)
+    assert.equal(calls[0]!.url.searchParams.get('ids'), ids.join(','))
+    assert.equal(calls[0]!.headers.get('Authorization'), `Bearer ${PK}`)
+    assert.ok(!rec.ops.some((op) => op.key?.includes('/products/live')))
+  })
+
+  it('refuses productsLive with no ids, more than 50, or an empty id, before any request', async () => {
+    const { api, client } = setup()
+    for (const ids of [[], Array.from({ length: 51 }, (_, i) => `prd_${i}`), [''], ['a,b']]) {
+      await assert.rejects(client.productsLive({ ids }), TypeError, JSON.stringify(ids))
+    }
+    assert.equal(api.calls.length, 0)
+  })
+
+  it('throws the api error a failed productsLive answers', async () => {
+    const { api, client } = setup()
+    api.routes['/products/live'] = () => ({ status: 503, body: { error: 'Try again', code: 'UNAVAILABLE' } })
+    await assert.rejects(client.productsLive({ ids: ['prd_1'] }), { name: 'BackgoldApiError', status: 503, code: 'UNAVAILABLE' })
   })
 })
