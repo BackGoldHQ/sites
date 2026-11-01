@@ -1909,6 +1909,7 @@ function storeFixture() {
     collections: [],
     offering_kind: null,
     ships: true,
+    counts_as_contribution: true,
     ...row,
   })
   const fallDrop = { slug: 'fall-drop', title: 'Fall drop' }
@@ -1920,7 +1921,7 @@ function storeFixture() {
     summary({ id: 'prd_beanie', slug: 'knit-beanie', name: 'Knit beanie', short_description: 'Heavy rib knit, the torch on the cuff.', price_from_cents: 2500, availability: 'low', department: [term('apparel', 'Apparel')], collections: [fallDrop], updated_at: '2026-10-26T12:00:00.000Z' }),
     summary({ id: 'prd_cap', slug: 'chapter-cap', name: 'Chapter cap', short_description: 'Six-panel cotton, adjustable strap.', price_from_cents: 2500, availability: 'in_stock', department: [term('apparel', 'Apparel')], updated_at: '2026-10-25T12:00:00.000Z' }),
     summary({ id: 'prd_pin', slug: 'torch-pin', name: 'Engraved torch pin', short_description: 'Enamel, with your chapter on the back.', price_from_cents: 1000, availability: 'in_stock', department: [term('accessories', 'Accessories')], collections: [underTwenty], updated_at: '2026-10-24T12:00:00.000Z' }),
-    summary({ id: 'prd_book', slug: 'county-handbook', name: 'County chapter handbook', short_description: 'Instant download.', price_from_cents: 1000, availability: 'in_stock', department: [term('digital', 'Digital')], collections: [underTwenty], ships: false, updated_at: '2026-10-23T12:00:00.000Z' }),
+    summary({ id: 'prd_book', slug: 'county-handbook', name: 'County chapter handbook', short_description: 'Instant download.', price_from_cents: 1000, availability: 'in_stock', department: [term('digital', 'Digital')], collections: [underTwenty], ships: false, counts_as_contribution: false, updated_at: '2026-10-23T12:00:00.000Z' }),
   ]
   const departments = [
     { id: 'trm_app', slug: 'apparel', label: 'Apparel', parent_id: null, position: 0, count: 3 },
@@ -1963,7 +1964,6 @@ function storeFixture() {
     description_html: `<p>${p.short_description} Made for the people who show up.</p>`,
     manufacturer: p.id === 'prd_tee' ? { name: 'Fenwick Print Co.' } : null,
     ship_to: p.id === 'prd_sign' ? 'store' : p.id === 'prd_beanie' ? 'third_party' : 'buyer',
-    counts_as_contribution: p.id !== 'prd_book',
     items: items[p.id],
     attributes:
       p.id === 'prd_tee'
@@ -4958,6 +4958,12 @@ async function checkStore(origin, fixture) {
   check(!!cart && /\bhidden\b/.test(cart) && cart.includes(`data-bg-checkout="${checkoutUrl}"`) && cart.includes('data-bg-cart="pine-valley"'), `the header's Cart link waits hidden for the store script, bound for ${checkoutUrl}`)
   check(new RegExp(`data-bg-store-api="${fixture.origin}/api/content/v1/products/live"`).test(html) && html.includes(`data-bg-store-key="${SITE_KEY}"`), "the store script asks the api's /products/live with the publishable key")
   check(html.includes('data-backgold-disclaimer'), 'the footer keeps the legal line')
+  check(
+    (body.match(/class="store-contribution"/g) ?? []).length === 1 && /<\/header>\s*<p class="store-contribution">A purchase is a political contribution to [^<]+\.<\/p>/.test(body),
+    'a shop with a listing that counts says so once, under its opening',
+  )
+  const digital = storeBody(await (await get(origin, '/store/departments/digital')).text())
+  check(digital.includes('county-handbook') && !/store-contribution|political contribution/.test(digital), 'a shelf where no listing counts carries no contribution sentence')
 
   res = await get(origin, '/store/departments/apparel')
   html = await res.text()

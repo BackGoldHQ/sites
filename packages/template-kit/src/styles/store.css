@@ -75,6 +75,11 @@
   margin-bottom: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
 }
 
+.store-contribution {
+  margin: calc(-1 * clamp(0.75rem, 0.5rem + 0.75vw, 1.125rem)) 0 clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 .store-cols {
   display: grid;
   gap: 1.5rem;

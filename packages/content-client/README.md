@@ -202,8 +202,9 @@ its descendants) and the site's published `collections`. `department` narrows
 to a node and everything under it; `collection` to a collection's members in
 its order. Each listing carries its `url` on your site (`/store/<slug>`),
 `buy_url` (its page on BackGold), photos, `price_from_cents` and
-`price_to_cents`, and `availability`, a word (`in_stock`, `low`, `out`,
-`preorder`), never a count.
+`price_to_cents`, `availability`, a word (`in_stock`, `low`, `out`,
+`preorder`), never a count, and `counts_as_contribution` (say so before the
+buyer adds a listing that counts).
 
 **`product(slug)`**: one listing for its own page, or `null`: its items,
 `manufacturer`, `ship_to` (`buyer`, `store` or `third_party`),

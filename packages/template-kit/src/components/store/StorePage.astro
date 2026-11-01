@@ -7,7 +7,9 @@
 // The opening is the published page at /store when there is one (its
 // sections, a Store section among them left out: the grid below is the
 // store), else the site's name over "Store" as the page's one <h1>; a
-// department's page is headed by the department. The rail lists every
+// department's page is headed by the department. Under the opening, when a
+// listing on the page counts as a political contribution, one sentence says
+// so (DS §18.1); never on a page where none does. The rail lists every
 // top-level department with something published in it, counted with what
 // is under it, "All" first with the shop's count; on a department's page
 // the departments under it follow it. The site's collections are listed
@@ -19,7 +21,7 @@ import type { PageResponse, ProductDepartment, ProductsResponse } from '@backgol
 import { safeSrc } from '@backgold/astro/server'
 import PageSections from '../PageSections.astro'
 import ProductGrid from './ProductGrid.astro'
-import { STORE_PATH, collectionPath, departmentRail, departmentPath, shopCount } from '../../lib/store'
+import { STORE_PATH, collectionPath, contributionLine, departmentRail, departmentPath, shopCount } from '../../lib/store'
 import '../../styles/store.css'
 import type { TemplateConfig } from '../../template'
 
@@ -42,6 +44,7 @@ const bandCover = band?.cover ? safeSrc(band.cover.url) : null
 const opening = intro && department === null ? { ...intro, sections: intro.sections.filter((s) => s.type !== 'Store') } : null
 const drawsOpening = opening !== null && opening.sections.length > 0
 const here = department ? departmentPath(department.slug) : STORE_PATH
+const contributes = shop.products.some((p) => p.counts_as_contribution)
 ---
 <div class="store-page store-home">
   {drawsOpening ? (
@@ -52,6 +55,8 @@ const here = department ? departmentPath(department.slug) : STORE_PATH
       <h1>{department ? department.label : 'Store'}</h1>
     </header>
   )}
+
+  {contributes && <p class="store-contribution">{contributionLine(siteName)}</p>}
 
   <div class="store-cols">
     <nav class="store-rail" aria-label="Store">

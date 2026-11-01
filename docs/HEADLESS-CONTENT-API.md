@@ -533,8 +533,9 @@ the ones placed on this site.
 - `GET /products` (`?department=<slug>`, `?collection=<slug>`, `?cursor=`,
   `?limit=` 1–50, default 20): the listings newest first, each a summary (its
   `url` on your site, `buy_url` on BackGold, photos, `price_from_cents` and
-  `price_to_cents`, an `availability` word, the department path, tags and the
-  collections it is in), with `departments` (the whole tree, each node counted
+  `price_to_cents`, an `availability` word, the department path, tags, the
+  collections it is in, and `counts_as_contribution`: true when buying it is
+  a political contribution, which a page says before the buyer adds it), with `departments` (the whole tree, each node counted
   with its descendants) and the site's published `collections`.
 - `GET /products/{slug}`: one listing for its page: the summary plus
   `description_html` (sanitized), `manufacturer` (`{ name }` or null),
