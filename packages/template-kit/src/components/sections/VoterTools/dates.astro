@@ -7,15 +7,17 @@
 // the visitor's browser ("12 days left", "Today", "Closed"), and its note.
 // The nearest open date's tile carries an accent rule across its top and
 // its day and state in the accent; a closed date's tile goes quiet. Under
-// the tiles, the registration link as the main call and the polling-place
-// link as an outline (the polling link is the main call when there is no
-// registration link). Nothing is drawn when the section has neither a
-// heading, a link nor a date.
+// the tiles, BackGold's polling-place lookup when the section carries it
+// (Lookup.astro), then the registration link as the main call and the
+// polling-place link as an outline (the polling link is the main call when
+// there is no registration link). Nothing is drawn when the section has
+// neither a heading, a link, a lookup nor a date.
 import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
 import SectionHead from '../SectionHead.astro'
 import DaysLeft from './DaysLeft.astro'
 import type Default from './index.astro'
+import Lookup from './Lookup.astro'
 import { voterTools } from './voter-tools'
 
 type Props = ComponentProps<typeof Default>
@@ -24,7 +26,8 @@ const { section } = Astro.props
 const vt = voterTools(section)
 const heading = vt.datesHeading ?? vt.heading
 const buttons = [vt.register, vt.polling].filter((link) => link !== null)
-const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0)
+const lookup = !!section.embed
+const shown = !!(vt.heading || buttons.length > 0 || vt.dates.length > 0 || lookup)
 const across = Math.min(vt.dates.length, 4)
 ---
 {shown && (
@@ -49,6 +52,7 @@ const across = Math.min(vt.dates.length, 4)
         ))}
       </ul>
     )}
+    {lookup && <Lookup section={section} />}
     {buttons.length > 0 && (
       <p class="actions vt-actions">
         {buttons.map((link, i) => <a class:list={['button', i > 0 && 'button-quiet']} href={link.href} rel={link.rel}>{link.label}</a>)}

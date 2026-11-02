@@ -1,0 +1,43 @@
+---
+// The polling-place lookup a Voter tools section carries when its Polling
+// place lookup is on: BackGold's widget, mounted in the container the Content
+// API sends as the section's embed (a script mount, the Advocacy module's
+// shape). The visitor types their address and sees the election on the
+// calendar, their election-day polling place, early voting sites, drop-offs
+// and their election office's links, answered by BackGold; the address goes
+// to that one lookup and nowhere else. The widget draws in its own shadow
+// root and takes the band's colours and type through its `--bg-vt-*`
+// properties, set here from the kit's tokens. A section with no embed draws
+// nothing here.
+import type { Section } from '@backgold/content'
+import { Embed } from '@backgold/astro/components'
+
+interface Props {
+  section: Section
+}
+
+const { section } = Astro.props
+---
+{section.embed && (
+  <div class="vt-lookup">
+    <Embed embed={section.embed} title="Find your polling place" />
+  </div>
+)}
+
+<style>
+  .vt-lookup {
+    margin-top: 1.5rem;
+  }
+  .vt-lookup :global(.bg-embed-mount) {
+    --bg-vt-accent: var(--button);
+    --bg-vt-accent-ink: var(--button-ink);
+    --bg-vt-link: var(--link);
+    --bg-vt-text: var(--ink);
+    --bg-vt-muted: var(--muted);
+    --bg-vt-card: var(--surface);
+    --bg-vt-input-bg: var(--surface);
+    --bg-vt-border: var(--line);
+    --bg-vt-radius: var(--radius);
+    --bg-vt-heading-font: var(--font-display);
+  }
+</style>
