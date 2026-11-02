@@ -1,6 +1,8 @@
 ---
 // One listing's page at /store/<slug> (board 06, "Product page"): the path
-// back through the store and the listing's department, the gallery, the
+// back through the store and the listing's department (a department whose
+// storefront page is off, `category_page: false`, named without a link, as
+// is the listing's own department at the end), the gallery, the
 // manufacturer over the title (the page's one <h1>) and its short line, the
 // island, the long copy,
 // the details table from the department's attribute definitions in their
@@ -50,7 +52,7 @@ const buyHref = safeHref(product.buy_url)
     {product.department.map((d, i) => (
       <>
         <span aria-hidden="true"> › </span>
-        {i === product.department.length - 1 ? <span>{d.label}</span> : <a href={departmentPath(d.slug)}>{d.label}</a>}
+        {i === product.department.length - 1 || d.category_page === false ? <span>{d.label}</span> : <a href={departmentPath(d.slug)}>{d.label}</a>}
       </>
     ))}
   </nav>

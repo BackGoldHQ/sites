@@ -338,7 +338,16 @@ published page at `/store` becomes the shop's opening. A listing's price,
 availability, its checkout questions and Add to cart are a small script that
 reads `GET /products/live` on view; the cart is kept on the site under
 `gg-cart:<org>` and handed to BackGold's checkout in the address's fragment,
-where the money is taken. Availability is always a word, never a count.
+where the money is taken. Checking out forgets the cart here: the click on
+Cart or Check out hands the lines over and clears `gg-cart:<org>`, so the
+checkout's cart is the buyer's from then on (a new tab opened from the link
+still carries the lines). A department whose storefront page is off has no
+page and is named without a link in a listing's breadcrumb. Availability is
+always a word, never a count.
+
+The api also filters listings by attribute value (`GET /products?attr=`,
+`products({ attr })` in `@backgold/content`); the kit's shop draws no filter
+controls yet.
 
 ### The legal line
 

@@ -1898,7 +1898,7 @@ const SHIFT_FRAMES = /https:\/\/api\.backgold\.com\/embed\/shift\//g
 // contribution. Photos are uploads the fixture serves.
 function storeFixture() {
   const photo = (id) => [{ url: `https://api.backgold.com/api/media-files/store/${id}.jpg` }]
-  const term = (slug, label) => ({ taxonomy: 'department', slug, label })
+  const term = (slug, label, categoryPage = true) => ({ taxonomy: 'department', slug, label, category_page: categoryPage })
   const summary = (row) => ({
     short_description: null,
     url: `https://pinevalleyliberty.org/store/${row.slug}`,
@@ -1920,7 +1920,7 @@ function storeFixture() {
     summary({ id: 'prd_decal', slug: 'window-decal', name: 'Window decal', short_description: 'Clear vinyl, four inches across.', price_from_cents: 500, availability: 'out', department: [term('signs', 'Signs')], collections: [underTwenty], updated_at: '2026-10-27T12:00:00.000Z' }),
     summary({ id: 'prd_beanie', slug: 'knit-beanie', name: 'Knit beanie', short_description: 'Heavy rib knit, the torch on the cuff.', price_from_cents: 2500, availability: 'low', department: [term('apparel', 'Apparel')], collections: [fallDrop], updated_at: '2026-10-26T12:00:00.000Z' }),
     summary({ id: 'prd_cap', slug: 'chapter-cap', name: 'Chapter cap', short_description: 'Six-panel cotton, adjustable strap.', price_from_cents: 2500, availability: 'in_stock', department: [term('apparel', 'Apparel')], updated_at: '2026-10-25T12:00:00.000Z' }),
-    summary({ id: 'prd_pin', slug: 'torch-pin', name: 'Engraved torch pin', short_description: 'Enamel, with your chapter on the back.', price_from_cents: 1000, availability: 'in_stock', department: [term('accessories', 'Accessories')], collections: [underTwenty], updated_at: '2026-10-24T12:00:00.000Z' }),
+    summary({ id: 'prd_pin', slug: 'torch-pin', name: 'Engraved torch pin', short_description: 'Enamel, with your chapter on the back.', price_from_cents: 1000, availability: 'in_stock', department: [term('gifts', 'Gifts', false), term('accessories', 'Accessories')], collections: [underTwenty], updated_at: '2026-10-24T12:00:00.000Z' }),
     summary({ id: 'prd_book', slug: 'county-handbook', name: 'County chapter handbook', short_description: 'Instant download.', price_from_cents: 1000, availability: 'in_stock', department: [term('digital', 'Digital')], collections: [underTwenty], ships: false, counts_as_contribution: false, updated_at: '2026-10-23T12:00:00.000Z' }),
   ]
   const departments = [
@@ -2814,6 +2814,10 @@ async function checkConfigured(origin, fixture, disclaimer) {
   const sitemap = await res.text()
   check(res.status === 200 && sitemap.includes('<urlset') && wellFormedXml(sitemap), '/sitemap.xml is a well-formed urlset')
   check(sitemap.includes('/endorsements/maple-hollow-neighbors'), 'the sitemap lists the custom-type entry')
+  check(
+    ['/store<', '/store/departments/apparel<', '/store/pine-valley-tee<', '/collections/fall-drop<'].every((path) => sitemap.includes(`${origin}${path}`)),
+    "the sitemap lists the store's kinds the api sends: the shop, a department, a listing, a collection",
+  )
   res = await get(origin, '/robots.txt')
   const robots = await res.text()
   check(res.status === 200 && ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended'].every((b) => robots.includes(`User-agent: ${b}`)), '/robots.txt names the AI crawler groups')
@@ -5009,6 +5013,8 @@ async function checkStore(origin, fixture) {
     const page = storeBody(await (await get(origin, `/store/${slug}`)).text())
     check(page.includes(`<p class="island-ship">${line}</p>`), `${slug}: "${line}"`)
   }
+  const pin = storeBody(await (await get(origin, '/store/torch-pin')).text())
+  check(/<span>Gifts<\/span>/.test(pin) && !/departments\/gifts/.test(pin), 'a department whose storefront page is off is named in the breadcrumb without a link')
   const book = storeBody(await (await get(origin, '/store/county-handbook')).text())
   check(!/island-ship|island-contribution|political contribution/.test(book), 'a download ships nothing and, not a contribution, carries no contribution sentence')
   res = await get(origin, '/store/no-such-listing')
@@ -5028,6 +5034,61 @@ async function checkStore(origin, fixture) {
   check(res.status === 404, `an unknown collection is a 404 (got ${res.status})`)
 
   check(liveReads() === before, 'rendering the store reads no live price on the server')
+}
+
+/**
+ * The cart in a browser (--template party and --template candidate, which
+ * have Chrome): on /store, the Cart link's address carries the site's lines
+ * in its fragment as they change, and following it (a click, or a middle
+ * click for a new tab) forgets them here in the same click. A listener after
+ * the store's own keeps the link from leaving the page.
+ */
+async function checkStoreCart(origin, chrome) {
+  log('\nThe store cart in a browser: the hand-over carries the lines and forgets them here')
+  const checkoutUrl = 'https://secure.backgold.com/s/pine-valley/checkout'
+  const line = { variant_id: 'itm_pin', product_slug: 'torch-pin', product_name: 'Engraved torch pin', variant_name: 'Enamel pin', unit_price_cents: 1000, quantity: 2, photo_url: null, needs_shipping: true }
+  const linesOf = (href) => {
+    const at = href.indexOf('#cart=')
+    return at === -1 ? null : JSON.parse(Buffer.from(href.slice(at + 6), 'base64url').toString('utf8'))
+  }
+  const browser = await headlessChrome(chrome)
+  try {
+    await browser.open(`${origin}/store`, 'light')
+    const seen = await browser.evaluate(`(async () => {
+      const key = 'gg-cart:pine-valley'
+      const link = document.querySelector('[data-bg-cart]')
+      const tick = () => new Promise((done) => setTimeout(done, 50))
+      window.addEventListener('click', (e) => e.preventDefault())
+      window.addEventListener('auxclick', (e) => e.preventDefault())
+      const fill = () => {
+        localStorage.setItem(key, JSON.stringify([${JSON.stringify(line)}]))
+        document.dispatchEvent(new CustomEvent('bg-cart'))
+      }
+      const empty = { href: link.getAttribute('href'), hidden: link.hidden }
+      fill()
+      const filled = { href: link.getAttribute('href'), hidden: link.hidden, count: link.querySelector('[data-bg-cart-count]').textContent }
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
+      const clicked = { href: link.getAttribute('href'), kept: localStorage.getItem(key) }
+      await tick()
+      const after = { href: link.getAttribute('href'), hidden: link.hidden }
+      fill()
+      const middleHref = link.getAttribute('href')
+      link.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }))
+      const middleKept = localStorage.getItem(key)
+      await tick()
+      return { empty, filled, clicked, after, middleHref, middleKept, middleHidden: link.hidden }
+    })()`)
+    check(seen.empty.href === checkoutUrl && seen.empty.hidden, `with nothing in the cart, the link is hidden and goes to the checkout as it stands (${seen.empty.href})`)
+    check(
+      seen.filled.href.startsWith(`${checkoutUrl}#cart=`) && JSON.stringify(linesOf(seen.filled.href)) === JSON.stringify([line]) && !seen.filled.hidden && seen.filled.count === '2',
+      "with a line in the cart, the link shows its count and its address already carries the line, so a new tab gets it",
+    )
+    check(seen.clicked.href === seen.filled.href && seen.clicked.kept === null, 'a click hands the lines over and forgets the cart here in the same click')
+    check(seen.after.href === checkoutUrl && seen.after.hidden, 'then the count is redrawn: the link hides and goes back to the bare checkout')
+    check(JSON.stringify(linesOf(seen.middleHref)) === JSON.stringify([line]) && seen.middleKept === null && seen.middleHidden, 'a middle click (a new tab) hands over and forgets the same way')
+  } finally {
+    await browser.close()
+  }
 }
 
 // ── Watch Live (every template on the kit) ───────────────────────────────────
@@ -6318,6 +6379,7 @@ writeFileSync(join(siteDir, '.dev.vars'), `BACKGOLD_SECRET_KEY=${SECRET_KEY}\nBA
     if (PARTY || NONPROFIT) await checkVolunteer(configured.origin, fixture)
     if (ON_KIT) await checkWatchLive(configured.origin, fixture)
     if (ON_KIT) await checkStore(configured.origin, fixture)
+    if (PARTY || CANDIDATE) await checkStoreCart(configured.origin, chrome)
     if (LIGHTHOUSE) await checkLighthouse(configured.origin, chrome, fixture)
   } finally {
     await killTree(configured.child)
