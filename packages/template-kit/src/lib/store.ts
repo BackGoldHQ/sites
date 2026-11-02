@@ -13,8 +13,13 @@
 //   /store/departments/<slug>    the same, narrowed to a department and
 //                                everything under it (`?department=`); a
 //                                department the api does not list has none.
-//                                The api also filters by attribute value
-//                                (`?attr=`); the shop draws no filters yet.
+//                                Its rail carries the filter panel: a
+//                                group per facet the api sends with
+//                                `?department=`, each value a link that
+//                                toggles `?attr=<key>:<value>` (repeatable,
+//                                keys AND, a key's values OR) in the page's
+//                                own address, which passes to GET /products.
+//                                The shop's root has no facets.
 //   /store/<slug>                one listing (GET /products/<slug>): its
 //                                gallery, copy, attributes, related listings
 //                                by collection, and the Product + Offer
@@ -60,8 +65,9 @@
 //   to the checkout as it stands. A later hand-over of new lines replaces
 //   the checkout's cart, never adds to it.
 
-import type { BackgoldContent, CollectionResponse, ProductDepartment, ProductDetail, ProductResponse, ProductSummary, ProductsResponse } from '@backgold/content'
+import type { BackgoldContent, CollectionResponse, ProductDepartment, ProductDetail, ProductFacet, ProductResponse, ProductSummary, ProductsResponse } from '@backgold/content'
 import { BackgoldApiError } from '@backgold/content'
+import { PRODUCT_ATTR_FILTERS_MAX, PRODUCT_ATTR_KEY_PATTERN, PRODUCT_ATTR_VALUE_MAX } from '#contract/content-api'
 
 /** The api's availability word: `in_stock`, `low`, `out` or `preorder`. */
 export type ProductAvailability = ProductSummary['availability']
@@ -117,18 +123,140 @@ export function storeRouteOf(pathname: string): StoreRoute | null {
 /** A read the api has no answer for: an api older than the catalog (404), or a cursor or slug it refuses (400). */
 const absent = (error: unknown): boolean => error instanceof BackgoldApiError && (error.status === 404 || error.status === 400)
 
-/** One page of the shop (a department's, with one), or null when the api serves no catalog or refuses the page. */
-export async function storefront(client: BackgoldContent, opts: { department: string | null; cursor: string | null }): Promise<ProductsResponse | null> {
-  try {
-    return await client.products({
+/** One page of the shop as the api answered it, and the filters that page is under. */
+export interface Storefront {
+  shop: ProductsResponse
+  filters: StoreFilters
+}
+
+/**
+ * One page of the shop (a department's, with one, under its filters), or
+ * null when the api serves no catalog or refuses the page. Filters the api
+ * refuses (400 `BAD_ATTR`) are dropped: the page is read again without them,
+ * and drawn unfiltered.
+ */
+export async function storefront(
+  client: BackgoldContent,
+  opts: { department: string | null; cursor: string | null; filters: StoreFilters },
+): Promise<Storefront | null> {
+  const read = (filters: StoreFilters) =>
+    client.products({
       limit: STORE_PAGE_SIZE,
       ...(opts.department ? { department: opts.department } : {}),
+      ...(filters.length > 0 ? { attr: attrOption(filters) } : {}),
       ...(opts.cursor ? { cursor: opts.cursor } : {}),
     })
+  try {
+    return { shop: await read(opts.filters), filters: opts.filters }
   } catch (error) {
+    if (opts.filters.length > 0 && error instanceof BackgoldApiError && error.code === 'BAD_ATTR') {
+      try {
+        return { shop: await read([]), filters: [] }
+      } catch (again) {
+        if (absent(again)) return null
+        throw again
+      }
+    }
     if (absent(error)) return null
     throw error
   }
+}
+
+// ── The filter panel ─────────────────────────────────────────────────────────
+
+/** The query name a department page's filters ride in, as GET /products takes them. */
+export const FILTER_PARAM = 'attr'
+
+/** One chosen attribute value. */
+export interface StoreFilter {
+  key: string
+  value: string
+}
+
+/** The filters a page is under, in the order its address names them. */
+export type StoreFilters = readonly StoreFilter[]
+
+/**
+ * The page address's `?attr=<key>:<value>` filters: each split at its first
+ * colon, a key the api would refuse, an empty or overlong value, a repeat and
+ * any past the api's limit left out, so a hand-typed address never fails the
+ * page.
+ */
+export function storeFiltersOf(params: URLSearchParams): StoreFilters {
+  const out: StoreFilter[] = []
+  for (const raw of params.getAll(FILTER_PARAM)) {
+    const colon = raw.indexOf(':')
+    if (colon === -1) continue
+    const key = raw.slice(0, colon)
+    const value = raw.slice(colon + 1)
+    if (!PRODUCT_ATTR_KEY_PATTERN.test(key) || value === '' || value.length > PRODUCT_ATTR_VALUE_MAX) continue
+    if (out.some((f) => f.key === key && f.value === value)) continue
+    out.push({ key, value })
+    if (out.length === PRODUCT_ATTR_FILTERS_MAX) break
+  }
+  return out
+}
+
+/** The filters as `products({ attr })` takes them: a key's values together. */
+function attrOption(filters: StoreFilters): Record<string, string[]> {
+  const attr: Record<string, string[]> = {}
+  for (const { key, value } of filters) (attr[key] ??= []).push(value)
+  return attr
+}
+
+/** A department page's address under these filters, and at a later page with a cursor. */
+export function filteredPath(path: string, filters: StoreFilters, cursor: string | null = null): string {
+  const query = [
+    ...filters.map((f) => `${FILTER_PARAM}=${encodeURIComponent(f.key)}:${encodeURIComponent(f.value)}`),
+    ...(cursor ? [`cursor=${encodeURIComponent(cursor)}`] : []),
+  ]
+  return query.length > 0 ? `${path}?${query.join('&')}` : path
+}
+
+export interface FacetLink {
+  label: string
+  href: string
+  count: number
+  chosen: boolean
+}
+
+export interface FacetGroup {
+  key: string
+  label: string
+  links: FacetLink[]
+}
+
+/** A facet value as the panel names it: the api's text, `true` and `false` as Yes and No. */
+export function facetValueText(facet: Pick<ProductFacet, 'kind'>, value: string): string {
+  if (facet.kind === 'boolean' && (value === 'true' || value === 'false')) return value === 'true' ? 'Yes' : 'No'
+  return value
+}
+
+/**
+ * The filter panel: one group per facet, in the api's order, each value a
+ * link to the page with that value toggled (the other chosen values kept,
+ * the cursor dropped). A chosen value the api did not list (nothing matches
+ * it under the other filters) is kept at the end with a count of 0, so it
+ * can still be turned off.
+ */
+export function facetGroups(facets: readonly ProductFacet[], filters: StoreFilters, path: string): FacetGroup[] {
+  const isChosen = (key: string, value: string) => filters.some((f) => f.key === key && f.value === value)
+  const toggled = (key: string, value: string): StoreFilters =>
+    isChosen(key, value) ? filters.filter((f) => !(f.key === key && f.value === value)) : [...filters, { key, value }]
+  return facets.map((facet) => {
+    const values = [...facet.values]
+    for (const f of filters) if (f.key === facet.key && !values.some((v) => v.value === f.value)) values.push({ value: f.value, count: 0 })
+    return {
+      key: facet.key,
+      label: facet.label,
+      links: values.map((v) => ({
+        label: facetValueText(facet, v.value),
+        href: filteredPath(path, toggled(facet.key, v.value)),
+        count: v.count,
+        chosen: isChosen(facet.key, v.value),
+      })),
+    }
+  })
 }
 
 /** A listing for its page, or null (unknown, unpublished, or an api older than the catalog). */

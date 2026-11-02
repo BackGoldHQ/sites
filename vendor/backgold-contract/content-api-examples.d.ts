@@ -41,7 +41,13 @@ declare const sitemapExample: SitemapResponse;
 declare const eventsExample: EventsResponse;
 declare const eventExample: EventResponse;
 declare const eventsLiveExample: EventsLiveResponse;
-/** The party's store: two listings on the first page, the department tree with counts, one collection. */
+/**
+ * The party's store at `?department=apparel&attr=fit:Unisex`: the tee (a
+ * fitted tee is the department's other listing), the department tree with
+ * counts, one collection, and the two facets Apparel defines — fabric,
+ * counted under the fit filter, and fit with Unisex chosen, whose sibling
+ * keeps its count because a facet is counted without its own key's filter.
+ */
 declare const productsExample: ProductsResponse;
 /** The tee's own page: three sizes as items, the department's attributes, the JSON-LD, the sign as a related listing. */
 declare const productExample: ProductResponse;

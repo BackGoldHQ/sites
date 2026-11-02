@@ -550,7 +550,13 @@ the ones placed on this site.
   to listings with that filterable attribute value: every key named must
   match, and a key named more than once matches any of its values
   (`attr=color:red&attr=color:blue&attr=size:m` is red or blue, and size m);
-  a malformed one is a 400 `BAD_ATTR`. A department whose storefront page the
+  a malformed one is a 400 `BAD_ATTR`. With `?department=`, `facets` lists
+  one per filterable attribute on the department's path, root first, each
+  `{ key, label, kind, values: [{ value, count }] }`: a value's count is taken
+  under every other key's `?attr=` filter and never its own (so a chosen
+  value's siblings keep their counts), values run most first then by text,
+  at most 50, a facet with no values is left out, and every cursor page
+  carries the same facets; without `?department=` it is `[]`. A department whose storefront page the
   organization switched off is not in `departments` (a node under it hangs
   from the nearest listed department above, or is top-level) and
   `?department=<its slug>` answers no listings; in a listing's department

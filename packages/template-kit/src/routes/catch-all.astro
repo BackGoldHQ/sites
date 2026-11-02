@@ -50,7 +50,9 @@
 // The store (src/lib/store.ts, board 06 of the store design) is answered
 // from the Content API's catalog reads when resolveRoute finds nothing at
 // the address: `/store/<slug>` is a listing's page (GET /products/<slug>),
-// `/store/departments/<slug>` a department's shelf and `/collections/<slug>`
+// `/store/departments/<slug>` a department's shelf (its `?attr=` filters
+// passed to GET /products, its stored copy never answering a filtered
+// address, which is never stored) and `/collections/<slug>`
 // a collection's page (GET /collections/<slug>; the api's /types leaves the
 // `collection` type out, so resolveRoute never answers it as an entry).
 // `/store` is the shop (GET /products) whenever the organization has a
@@ -99,7 +101,7 @@ import { DONATE_READS_QUERY, FORM_READS_QUERY, carriesDonateQuery, carriesPickQu
 import { VOLUNTEER_PATH, openShifts, volunteerAreas } from '../lib/shifts'
 import { markReading } from '../lib/reading'
 import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
-import { checkoutFor, collectionPage, departmentOf, productJsonLd, productPage, storeRouteOf, storefront, type Checkout } from '../lib/store'
+import { FILTER_PARAM, checkoutFor, collectionPage, departmentOf, filteredPath, productJsonLd, productPage, storeFiltersOf, storeRouteOf, storefront, type Checkout, type StoreFilters } from '../lib/store'
 import StorePage from '../components/store/StorePage.astro'
 import ProductPage from '../components/store/ProductPage.astro'
 import CollectionPage from '../components/store/CollectionPage.astro'
@@ -143,17 +145,20 @@ if (calendarSlug !== null) {
 let resolved: Resolved = await resolveRoute(client, Astro.url, visitorReads)
 // The store's pages (above): what the address is, and what the api answered for it.
 type StoreView =
-  | { kind: 'store'; shop: ProductsResponse; department: ProductDepartment | null; intro: PageResponse | null; cursor: string | null }
+  | { kind: 'store'; shop: ProductsResponse; department: ProductDepartment | null; intro: PageResponse | null; cursor: string | null; filters: StoreFilters }
   | { kind: 'product'; product: ProductDetail; areas: Areas }
   | { kind: 'collection'; collection: CollectionDetail; areas: Areas }
 const storeRoute = storeRouteOf(pathname)
 let store: StoreView | null = null
 if (storeRoute?.kind === 'store' && (resolved.kind === 'not_found' || (resolved.kind === 'page' && storeRoute.department === null))) {
   const cursor = Astro.url.searchParams.get('cursor') || null
-  const shop = await storefront(client, { department: storeRoute.department, cursor })
+  // Only a department's page is filtered: the shop's root has no facets.
+  const filters = storeRoute.department === null ? [] : storeFiltersOf(Astro.url.searchParams)
+  const read = await storefront(client, { department: storeRoute.department, cursor, filters })
+  const shop = read?.shop ?? null
   const department = shop ? departmentOf(shop.departments, storeRoute.department) : null
   const open = shop !== null && (storeRoute.department === null ? shop.products.length > 0 || cursor !== null : department !== null)
-  if (open) store = { kind: 'store', shop: shop!, department, intro: resolved.kind === 'page' ? resolved.page : null, cursor }
+  if (open) store = { kind: 'store', shop: shop!, department, intro: resolved.kind === 'page' ? resolved.page : null, cursor, filters: read!.filters }
 } else if (storeRoute?.kind === 'product' && resolved.kind === 'not_found') {
   const found = await productPage(client, storeRoute.slug)
   if (found) store = { kind: 'product', product: found.product, areas: found.areas }
@@ -174,8 +179,8 @@ const checkout: Checkout | null =
 const storePager =
   store?.kind === 'store'
     ? {
-        more: store.shop.next_cursor ? `${pathname.replace(/\/+$/, '')}?cursor=${encodeURIComponent(store.shop.next_cursor)}` : null,
-        first: store.cursor ? pathname.replace(/\/+$/, '') : null,
+        more: store.shop.next_cursor ? filteredPath(pathname.replace(/\/+$/, ''), store.filters, store.shop.next_cursor) : null,
+        first: store.cursor ? filteredPath(pathname.replace(/\/+$/, ''), store.filters) : null,
       }
     : { more: null, first: null }
 const storeAreas: Areas | null =
@@ -320,15 +325,21 @@ const areas: Areas | null = store ? storeAreas :
         : event?.areas ?? null
 {
   const pageSections = resolved.kind === 'page' ? resolved.page.sections : []
+  // A department's page reads its filters (`?attr=`), a name the edge
+  // cache's key leaves out: its stored copy is never served to a filtered
+  // address, and a filtered page is never stored.
+  const filtersRead = store?.kind === 'store' && store.department !== null
   const reads = [
     ...(drawsDonateFrame(pageSections, areas) ? [DONATE_READS_QUERY] : []),
     ...(drawsFormFrame(pageSections, areas) ? [FORM_READS_QUERY] : []),
+    ...(filtersRead ? [FILTER_PARAM] : []),
   ]
   if (reads.length > 0) {
     Astro.response.headers.set(READS_QUERY_HEADER, reads.join(','))
     const carries =
       (drawsDonateFrame(pageSections, areas) && carriesDonateQuery(Astro.url.searchParams)) ||
-      (drawsFormFrame(pageSections, areas) && carriesPickQuery(Astro.url.searchParams))
+      (drawsFormFrame(pageSections, areas) && carriesPickQuery(Astro.url.searchParams)) ||
+      (filtersRead && Astro.url.searchParams.has(FILTER_PARAM))
     if (carries) Astro.response.headers.set('Cache-Control', 'no-store')
   }
 }
@@ -381,7 +392,7 @@ const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) 
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
 <Site {...head} template={template} page={menuPage} areas={areas} signInTitle={signInTitle} cart={store ? checkout : null}>
-  {store?.kind === 'store' && <StorePage template={template} siteName={siteName} shop={store.shop} department={store.department} intro={store.intro} pager={storePager} />}
+  {store?.kind === 'store' && <StorePage template={template} siteName={siteName} shop={store.shop} department={store.department} intro={store.intro} pager={storePager} filters={store.filters} />}
   {store?.kind === 'product' && <ProductPage product={store.product} siteName={siteName} />}
   {store?.kind === 'collection' && <CollectionPage collection={store.collection} />}
   {storeMore && <Area name="sidebar" areas={areas} components={sections} class="store-more" />}

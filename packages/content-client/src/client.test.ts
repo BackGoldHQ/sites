@@ -27,7 +27,7 @@ import {
 } from '@backgold/contract/content-api-examples'
 import { createClient } from './client.js'
 import { memoryCache } from './cache.js'
-import type { CacheStore, ClientOptions, Entry } from './contract.js'
+import type { CacheStore, ClientOptions, Entry, ProductFacet } from './contract.js'
 import { BackgoldApiError, SecretKeyInBrowserError } from './errors.js'
 
 const PK = 'bg_site_pk_testPublishable0001'
@@ -1039,6 +1039,14 @@ describe('createClient: the store (products, productsLive, product, collections,
     assert.equal(api.calls.length, before)
     const scope = scopeOf(PK)
     assert.ok(rec.keys.has(`${scope}:v184:/products?attr=color%3Ablue&attr=color%3Ared&attr=size%3Am`))
+  })
+
+  it("carries a department page's facets as the api sent them, each value with its count", async () => {
+    const { client } = setup()
+    const { facets } = await client.products({ department: 'apparel', attr: { fit: 'Unisex' } })
+    const fit: ProductFacet | undefined = facets.find((f) => f.key === 'fit')
+    assert.equal(fit?.kind, 'choice')
+    assert.deepEqual(fit?.values, [{ value: 'Fitted', count: 1 }, { value: 'Unisex', count: 1 }])
   })
 
   it('surfaces 400 BAD_ATTR from products()', async () => {
