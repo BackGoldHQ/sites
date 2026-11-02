@@ -590,7 +590,11 @@ var termCreateSchema = z.strictObject({
 var termUpdateSchema = z.strictObject({
   label: termLabel.optional(),
   slug: slug.optional(),
-  parent_id: id.nullable().optional()
+  parent_id: id.nullable().optional(),
+  /** The `department` taxonomy only: the storefront serves the node's page. */
+  category_page: z.boolean().optional(),
+  /** `null` restores a term from the trash. */
+  archived_at: z.null().optional()
 });
 var bylineShape = {
   display_name: z.string().trim().min(1).max(CONTENT_TYPE_LIMITS.BYLINE_NAME_MAX).optional(),
