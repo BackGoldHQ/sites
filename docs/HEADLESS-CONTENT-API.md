@@ -510,15 +510,23 @@ addresses (section 10).
 
 Every public address of the site, as absolute URLs on the site's domain: the
 published pages, then an index for each routable type with published entries
-(the built-in blog types share `/blog`), then each entry. At most 50,000
-entries are listed.
+(the built-in blog types share `/blog`), then each entry, then, when the
+store has a published listing, the shop (`store`), each department whose
+storefront page is on (`department`), each published listing (`product`) and
+each published collection (`collection`, under `/collections/<slug>`). At
+most 50,000 entries are listed. List every one: a sitemap that filters by
+`kind` drops the store.
 
 ```json
 {
   "urls": [
     { "url": "https://example.org/", "kind": "page", "updated_at": "2026-10-01T09:12:00.000Z" },
     { "url": "https://example.org/blog", "kind": "type_index", "updated_at": "2026-09-29T12:05:00.000Z" },
-    { "url": "https://example.org/blog/levy-explained", "kind": "entry", "updated_at": "2026-09-29T12:05:00.000Z" }
+    { "url": "https://example.org/blog/levy-explained", "kind": "entry", "updated_at": "2026-09-29T12:05:00.000Z" },
+    { "url": "https://example.org/store", "kind": "store", "updated_at": "2026-10-28T15:10:00.000Z" },
+    { "url": "https://example.org/store/departments/apparel", "kind": "department", "updated_at": "2026-10-28T15:10:00.000Z" },
+    { "url": "https://example.org/store/pine-valley-tee", "kind": "product", "updated_at": "2026-10-28T15:10:00.000Z" },
+    { "url": "https://example.org/collections/fall-drop", "kind": "collection", "updated_at": "2026-10-28T15:12:00.000Z" }
   ]
 }
 ```
@@ -530,13 +538,24 @@ store pages (`/store`, `/store/<slug>`, `/collections/<slug>`). Products belong
 to the organization, so every site of it lists the same ones; collections are
 the ones placed on this site.
 
-- `GET /products` (`?department=<slug>`, `?collection=<slug>`, `?cursor=`,
-  `?limit=` 1–50, default 20): the listings newest first, each a summary (its
-  `url` on your site, `buy_url` on BackGold, photos, `price_from_cents` and
-  `price_to_cents`, an `availability` word, the department path, tags, the
-  collections it is in, and `counts_as_contribution`: true when buying it is
-  a political contribution, which a page says before the buyer adds it), with `departments` (the whole tree, each node counted
-  with its descendants) and the site's published `collections`.
+- `GET /products` (`?department=<slug>`, `?collection=<slug>`,
+  `?attr=<key>:<value>`, `?cursor=`, `?limit=` 1–50, default 20): the
+  listings newest first, each a summary (its `url` on your site, `buy_url` on
+  BackGold, photos, `price_from_cents` and `price_to_cents`, an
+  `availability` word, the department path, tags, the collections it is in,
+  and `counts_as_contribution`: true when buying it is a political
+  contribution, which a page says before the buyer adds it), with
+  `departments` (the tree, each node counted with its descendants) and the
+  site's published `collections`. `?attr=` (repeatable, at most 20) narrows
+  to listings with that filterable attribute value: every key named must
+  match, and a key named more than once matches any of its values
+  (`attr=color:red&attr=color:blue&attr=size:m` is red or blue, and size m);
+  a malformed one is a 400 `BAD_ATTR`. A department whose storefront page the
+  organization switched off is not in `departments` (a node under it hangs
+  from the nearest listed department above, or is top-level) and
+  `?department=<its slug>` answers no listings; in a listing's department
+  path each node carries `category_page`, false for such a department, so
+  name it there without a link.
 - `GET /products/{slug}`: one listing for its page: the summary plus
   `description_html` (sanitized), `manufacturer` (`{ name }` or null),
   `ship_to` (`buyer`, `store` for a pickup, `third_party` for a licensed

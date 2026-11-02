@@ -73,7 +73,9 @@ const ROUTES: Record<string, Handler> = {
   '/products': (url) =>
     url.searchParams.get('department') === 'Not A Slug'
       ? { status: 400, body: { error: 'department must be a slug', code: 'BAD_DEPARTMENT' } }
-      : ok(productsExample),
+      : url.searchParams.getAll('attr').some((a) => !/^[a-z][a-z0-9_]*:./.test(a))
+        ? { status: 400, body: { error: 'attr must be key:value', code: 'BAD_ATTR' } }
+        : ok(productsExample),
   '/products/live': (url) =>
     url.searchParams.has('ids') ? ok(productsLiveExample) : { status: 400, body: { error: 'ids must name 1 to 50 listings', code: 'BAD_IDS' } },
   [`/products/${productExample.product.slug}`]: () => ok(productExample),
@@ -1025,6 +1027,23 @@ describe('createClient: the store (products, productsLive, product, collections,
     const before = api.calls.length
     await client.products({ department: 'apparel', limit: 12 })
     assert.equal(api.calls.length, before)
+  })
+
+  it('sends attr as one ?attr=<key>:<value> per value, keyed the same whatever order the caller named them in', async () => {
+    const { api, rec, client } = setup()
+    await client.products({ attr: { size: 'm', color: ['red', 'blue'] } })
+    const sent = api.callsTo('/products')[0]!.url.searchParams.getAll('attr')
+    assert.deepEqual(sent, ['color:blue', 'color:red', 'size:m'])
+    const before = api.calls.length
+    await client.products({ attr: { color: ['blue', 'red'], size: ['m'] } })
+    assert.equal(api.calls.length, before)
+    const scope = scopeOf(PK)
+    assert.ok(rec.keys.has(`${scope}:v184:/products?attr=color%3Ablue&attr=color%3Ared&attr=size%3Am`))
+  })
+
+  it('surfaces 400 BAD_ATTR from products()', async () => {
+    const { client } = setup()
+    await assert.rejects(client.products({ attr: { 'Not A Key': 'red' } }), { name: 'BackgoldApiError', status: 400, code: 'BAD_ATTR' })
   })
 
   it('surfaces 400 BAD_DEPARTMENT from products()', async () => {

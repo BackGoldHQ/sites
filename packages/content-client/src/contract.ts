@@ -95,6 +95,7 @@ export type {
   ProductAttribute,
   ProductCollectionRef,
   ProductDepartment,
+  ProductDepartmentTerm,
   ProductDetail,
   ProductItem,
   ProductLive,
@@ -125,6 +126,7 @@ export type {
   SiteMenuKey,
   SiteResponse,
   SitemapResponse,
+  SitemapUrlKind,
   TermsResponse,
   TypesResponse,
   Visitor,
@@ -292,7 +294,15 @@ export interface ProductsOptions {
   department?: string
   /** Only the members of the published collection with this slug, in its order (`?collection=`). */
   collection?: string
-  /** The `next_cursor` of the previous page (with the same department and collection). */
+  /**
+   * Only listings with these filterable attribute values, by the attribute's
+   * key: each key named must match, and a key given several values matches
+   * any of them (`{ color: ['red', 'blue'], size: 'm' }` is red or blue, and
+   * size m). Sent as one `?attr=<key>:<value>` per value; the api answers
+   * 400 `BAD_ATTR` for a malformed key or value, or more than 20 of them.
+   */
+  attr?: Record<string, string | readonly string[]>
+  /** The `next_cursor` of the previous page (with the same department, collection and attr). */
   cursor?: string
   /** 1–50; the api's default (20) when omitted. */
   limit?: number

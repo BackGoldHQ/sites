@@ -23,7 +23,7 @@ function wellFormed(xml: string): void {
 const parse = (xml: string) => new XMLParser({ ignoreAttributes: false, isArray: (name) => ['url', 'entry', 'author', 'link'].includes(name) }).parse(xml)
 
 describe('sitemapXml', () => {
-  it('lists the site’s own URLs on SITE_URL with lastmod', async () => {
+  it('lists the site’s own URLs on SITE_URL with lastmod, the store’s kinds among them', async () => {
     const xml = await sitemapXml(client().bg, 'https://staging.example.workers.dev')
     wellFormed(xml)
     const { urlset } = parse(xml)
@@ -32,6 +32,10 @@ describe('sitemapXml', () => {
       { loc: 'https://staging.example.workers.dev/', lastmod: '2026-10-01T09:12:00.000Z' },
       { loc: 'https://staging.example.workers.dev/blog', lastmod: '2026-09-29T12:05:00.000Z' },
       { loc: 'https://staging.example.workers.dev/blog/levy-explained', lastmod: '2026-09-29T12:05:00.000Z' },
+      { loc: 'https://staging.example.workers.dev/store', lastmod: '2026-10-28T15:10:00.000Z' },
+      { loc: 'https://staging.example.workers.dev/store/departments/apparel', lastmod: '2026-10-28T15:10:00.000Z' },
+      { loc: 'https://staging.example.workers.dev/store/pine-valley-tee', lastmod: '2026-10-28T15:10:00.000Z' },
+      { loc: 'https://staging.example.workers.dev/collections/fall-drop', lastmod: '2026-10-28T15:12:00.000Z' },
     ])
   })
 

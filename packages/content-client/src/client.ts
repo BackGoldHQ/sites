@@ -53,6 +53,7 @@ import type {
   PreviewResponse,
   ProductResponse,
   ProductsLiveResponse,
+  ProductsOptions,
   ProductsResponse,
   ReadOptions,
   RedirectsResponse,
@@ -119,15 +120,25 @@ function liveIdsQuery(ids: unknown): string {
 /** The api's answer to a preview read with a publishable key (lib/content-api/cache.ts SECRET_KEY_REQUIRED). */
 const secretKeyRequired = () => new BackgoldApiError(403, 'SECRET_KEY_REQUIRED', 'Preview needs a secret site key')
 
-type Query = Record<string, string | undefined>
+/** A route's parameters; a list repeats its parameter once per value. */
+type Query = Record<string, string | readonly string[] | undefined>
 /** What a 404 for the named resource becomes: `null` for a single-resource read, an error for a list or the site. */
 type OnMissing = 'null' | 'throw'
 
-/** The route's parameters sorted by name, undefined and empty values dropped. */
+/** The route's parameters sorted by name then value, a list's values each their own pair, undefined and empty values dropped. */
 function normalizeQuery(query: Query): Array<[string, string]> {
-  return Object.entries(query)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined && entry[1] !== '')
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  const pairs: Array<[string, string]> = []
+  for (const [name, value] of Object.entries(query)) {
+    for (const one of typeof value === 'string' ? [value] : value ?? []) if (one !== '') pairs.push([name, one])
+  }
+  const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+  return pairs.sort(([a, x], [b, y]) => order(a, b) || order(x, y))
+}
+
+/** `?attr=` for `products()`: one `<key>:<value>` per value. */
+function attrQuery(attr: ProductsOptions['attr']): string[] | undefined {
+  if (!attr) return undefined
+  return Object.entries(attr).flatMap(([key, values]) => (typeof values === 'string' ? [values] : values).map((value) => `${key}:${value}`))
 }
 
 /** The version an answer reflects, from X-Content-Version; null when absent or not a whole number. */
@@ -627,6 +638,7 @@ export const createClient: CreateClient = (opts) => {
         {
           department: productsOpts.department,
           collection: productsOpts.collection,
+          attr: attrQuery(productsOpts.attr),
           cursor: productsOpts.cursor,
           limit: productsOpts.limit === undefined ? undefined : String(productsOpts.limit),
         },
