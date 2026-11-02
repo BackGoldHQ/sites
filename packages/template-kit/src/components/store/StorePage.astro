@@ -1,0 +1,107 @@
+---
+// The shop at /store, and a department's at /store/departments/<slug>
+// (board 06, "/store"): its opening, then the departments rail beside the
+// grid (above it on a phone) and, on the shop's first page, a collection
+// band with the page's one call.
+//
+// The opening is the published page at /store when there is one (its
+// sections, a Store section among them left out: the grid below is the
+// store), else the site's name over "Store" as the page's one <h1>; a
+// department's page is headed by the department. Under the opening, when a
+// listing on the page counts as a political contribution, one sentence says
+// so (DS §18.1); never on a page where none does. The rail lists every
+// top-level department with something published in it, counted with what
+// is under it, "All" first with the shop's count; on a department's page
+// the departments under it follow it. The site's collections are listed
+// under the departments. The grid is a page of up to STORE_PAGE_SIZE
+// listings, newest first; "More" asks for the next page (`?cursor=`) and
+// "Back to the first page" returns. The band is the site's first collection
+// with something in it: its cover, its title and intro, and "Shop <title>".
+import type { PageResponse, ProductDepartment, ProductsResponse } from '@backgold/content'
+import { safeSrc } from '@backgold/astro/server'
+import PageSections from '../PageSections.astro'
+import ProductGrid from './ProductGrid.astro'
+import { STORE_PATH, collectionPath, contributionLine, departmentRail, departmentPath, shopCount } from '../../lib/store'
+import '../../styles/store.css'
+import type { TemplateConfig } from '../../template'
+
+interface Props {
+  template: TemplateConfig
+  siteName: string
+  /** The page of listings, with the whole department tree and the site's collections (the api sends both on every page). */
+  shop: ProductsResponse
+  department: ProductDepartment | null
+  intro: PageResponse | null
+  /** The address of the next page, and of the first, when this is not it. */
+  pager: { more: string | null; first: string | null }
+}
+
+const { template, siteName, shop, department, intro, pager } = Astro.props
+const rail = departmentRail(shop.departments, department?.slug ?? null)
+const collections = shop.collections.filter((c) => c.count > 0)
+const band = department === null && pager.first === null ? (collections[0] ?? null) : null
+const bandCover = band?.cover ? safeSrc(band.cover.url) : null
+const opening = intro && department === null ? { ...intro, sections: intro.sections.filter((s) => s.type !== 'Store') } : null
+const drawsOpening = opening !== null && opening.sections.length > 0
+const here = department ? departmentPath(department.slug) : STORE_PATH
+const contributes = shop.products.some((p) => p.counts_as_contribution)
+---
+<div class="store-page store-home">
+  {drawsOpening ? (
+    <PageSections template={template} page={opening!} siteName={siteName} />
+  ) : (
+    <header class="store-head">
+      <p class="kicker">{department ? 'Store' : siteName}</p>
+      <h1>{department ? department.label : 'Store'}</h1>
+    </header>
+  )}
+
+  {contributes && <p class="store-contribution">{contributionLine(siteName)}</p>}
+
+  <div class="store-cols">
+    <nav class="store-rail" aria-label="Store">
+      {rail.length > 0 && (
+        <>
+          <p class="store-rail-head">Departments</p>
+          <ul role="list">
+            <li><a href={STORE_PATH} aria-current={department === null ? 'page' : undefined}>All <span>{shopCount(shop)}</span></a></li>
+            {rail.map((link) => (
+              <li class:list={[link.depth === 1 && 'store-rail-sub']}>
+                <a href={link.href} aria-current={link.href === here ? 'page' : link.current ? 'true' : undefined}>{link.label} <span>{link.count}</span></a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {collections.length > 0 && (
+        <>
+          <p class="store-rail-head">Collections</p>
+          <ul role="list">
+            {collections.map((c) => <li><a href={collectionPath(c.slug)}>{c.title} <span>{c.count}</span></a></li>)}
+          </ul>
+        </>
+      )}
+    </nav>
+
+    <div class="store-main">
+      {shop.products.length > 0 ? <ProductGrid products={shop.products} label={department ? department.label : 'Everything in the store'} /> : <p class="empty">Nothing here yet.</p>}
+      {(pager.more || pager.first) && (
+        <nav class="store-pager" aria-label="More of the store">
+          {pager.first && <a class="text-link" href={pager.first}>Back to the first page</a>}
+          {pager.more && <a class="text-link" href={pager.more}>More</a>}
+        </nav>
+      )}
+      {band && (
+        <section class="store-band">
+          {bandCover && <img class="store-band-cover" src={bandCover} alt="" loading="lazy" decoding="async" />}
+          <div class="store-band-words">
+            <p class="kicker">Collection</p>
+            <h2>{band.title}</h2>
+            {band.intro && <p>{band.intro}</p>}
+            <p class="store-band-call"><a class="button" href={collectionPath(band.slug)}>Shop {band.title}</a></p>
+          </div>
+        </section>
+      )}
+    </div>
+  </div>
+</div>

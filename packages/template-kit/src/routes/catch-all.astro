@@ -47,6 +47,23 @@
 // upcoming event. `/events.ics` is every upcoming event as one calendar file
 // and `/events/<slug>.ics` one event's (src/lib/events.ts).
 //
+// The store (src/lib/store.ts, board 06 of the store design) is answered
+// from the Content API's catalog reads when resolveRoute finds nothing at
+// the address: `/store/<slug>` is a listing's page (GET /products/<slug>),
+// `/store/departments/<slug>` a department's shelf and `/collections/<slug>`
+// a collection's page (GET /collections/<slug>; the api's /types leaves the
+// `collection` type out, so resolveRoute never answers it as an entry).
+// `/store` is the shop (GET /products) whenever the organization has a
+// published listing: a published page at /store becomes the shop's opening
+// (its sections above the grid, a Store section among them left out), and
+// with no listing that page is drawn as it is. A slug the api has no answer
+// for, and every store address on an api older than the catalog, is a 404.
+// Each store page carries the header's Cart link and the store script
+// (components/store/StoreScript.astro); a listing's page also carries its
+// island. Their areas are the page's at /store (else those of a page that
+// holds the store, GET /areas?holds=store), the listing's and the
+// collection's own; a Sidebar item draws under the page, full width.
+//
 // A lesson, `/<courses base>/<course>/<lesson>`, is the video read through
 // its course (resolveRoute's `lesson`): drawn by the template's `course:lesson`
 // entry layout (lessonLayoutFor; the kit's Lesson player when the template
@@ -82,6 +99,12 @@ import { DONATE_READS_QUERY, FORM_READS_QUERY, carriesDonateQuery, carriesPickQu
 import { VOLUNTEER_PATH, openShifts, volunteerAreas } from '../lib/shifts'
 import { markReading } from '../lib/reading'
 import { COURSE_TYPE_KEY, lessonSignInTitle } from '../lib/academy'
+import { checkoutFor, collectionPage, departmentOf, productJsonLd, productPage, storeRouteOf, storefront, type Checkout } from '../lib/store'
+import StorePage from '../components/store/StorePage.astro'
+import ProductPage from '../components/store/ProductPage.astro'
+import CollectionPage from '../components/store/CollectionPage.astro'
+import StoreScript from '../components/store/StoreScript.astro'
+import type { CollectionDetail, PageResponse, ProductDepartment, ProductDetail, ProductsResponse } from '@backgold/content'
 import template from 'virtual:backgold-template'
 
 const { sections } = template
@@ -118,12 +141,58 @@ if (calendarSlug !== null) {
 }
 // The URL, not just the path: a list's `?cursor=` asks for a later page.
 let resolved: Resolved = await resolveRoute(client, Astro.url, visitorReads)
-const typed = resolved.kind === 'not_found' ? await typedEventsPage(client, Astro.request, pathname) : null
+// The store's pages (above): what the address is, and what the api answered for it.
+type StoreView =
+  | { kind: 'store'; shop: ProductsResponse; department: ProductDepartment | null; intro: PageResponse | null; cursor: string | null }
+  | { kind: 'product'; product: ProductDetail; areas: Areas }
+  | { kind: 'collection'; collection: CollectionDetail; areas: Areas }
+const storeRoute = storeRouteOf(pathname)
+let store: StoreView | null = null
+if (storeRoute?.kind === 'store' && (resolved.kind === 'not_found' || (resolved.kind === 'page' && storeRoute.department === null))) {
+  const cursor = Astro.url.searchParams.get('cursor') || null
+  const shop = await storefront(client, { department: storeRoute.department, cursor })
+  const department = shop ? departmentOf(shop.departments, storeRoute.department) : null
+  const open = shop !== null && (storeRoute.department === null ? shop.products.length > 0 || cursor !== null : department !== null)
+  if (open) store = { kind: 'store', shop: shop!, department, intro: resolved.kind === 'page' ? resolved.page : null, cursor }
+} else if (storeRoute?.kind === 'product' && resolved.kind === 'not_found') {
+  const found = await productPage(client, storeRoute.slug)
+  if (found) store = { kind: 'product', product: found.product, areas: found.areas }
+} else if (storeRoute?.kind === 'collection' && resolved.kind === 'not_found') {
+  const found = await collectionPage(client, storeRoute.slug)
+  if (found) store = { kind: 'collection', collection: found.collection, areas: found.areas }
+}
+/** Where the store's cart checks out: read off the listings the page shows. */
+const checkout: Checkout | null =
+  store?.kind === 'store'
+    ? checkoutFor(store.shop.products)
+    : store?.kind === 'product'
+      ? checkoutFor([store.product, ...store.product.related])
+      : store?.kind === 'collection'
+        ? checkoutFor(store.collection.products)
+        : null
+/** A page of the shop past the first, and the next one's address. */
+const storePager =
+  store?.kind === 'store'
+    ? {
+        more: store.shop.next_cursor ? `${pathname.replace(/\/+$/, '')}?cursor=${encodeURIComponent(store.shop.next_cursor)}` : null,
+        first: store.cursor ? pathname.replace(/\/+$/, '') : null,
+      }
+    : { more: null, first: null }
+const storeAreas: Areas | null =
+  store?.kind === 'product'
+    ? store.areas
+    : store?.kind === 'collection'
+      ? store.areas
+      : store?.kind === 'store'
+        ? (store.intro?.areas ?? (await client.areas({ holds: ['store'] }).then((a) => a.areas, () => null)))
+        : null
+
+const typed = resolved.kind === 'not_found' && !store ? await typedEventsPage(client, Astro.request, pathname) : null
 if (typed) {
   resolved = { kind: 'page', page: typed.page }
   drawnInstead(resolved)
 }
-const event = resolved.kind === 'not_found' ? await eventPage(client, pathname) : null
+const event = resolved.kind === 'not_found' && !store ? await eventPage(client, pathname) : null
 // `/volunteer` with no page of the site's own at that address is the kit's
 // open-shifts list (lib/shifts.ts); a published Volunteer page there, the
 // candidate starter's among them, is the page.
@@ -138,7 +207,7 @@ if (resolved.kind === 'feed') {
     headers: { 'Content-Type': 'application/atom+xml; charset=utf-8' },
   })
 }
-if (resolved.kind === 'not_found' && !event && !volunteerList) Astro.response.status = 404
+if (resolved.kind === 'not_found' && !event && !volunteerList && !store) Astro.response.status = 404
 
 let head: { title?: string; description?: string; image?: string; canonicalPath: string; noindex?: boolean; jsonLd?: object[] }
 switch (resolved.kind) {
@@ -205,9 +274,43 @@ switch (resolved.kind) {
         ? { title: `Volunteer · ${siteName}`, description: `Open volunteer shifts with ${siteName}.`, canonicalPath: VOLUNTEER_PATH }
         : { title: `Page not found · ${siteName}`, canonicalPath: pathname, noindex: true }
 }
+if (store?.kind === 'store') {
+  const intro = store.intro
+  const title = store.department ? store.department.label : (intro?.page.meta.title ?? intro?.page.title ?? 'Store')
+  head = {
+    title: `${title} · ${siteName}`,
+    description: intro?.page.meta.description ?? `Everything in the ${siteName} store.`,
+    image: safeSrc(intro?.page.meta.image_url) ?? safeSrc(store.shop.products[0]?.photos[0]?.url) ?? undefined,
+    canonicalPath: pathname.replace(/\/+$/, '') || '/',
+    ...(intro ? { jsonLd: jsonLdFor({ site, siteUrl, kind: 'page', page: intro.page }) } : {}),
+  }
+} else if (store?.kind === 'product') {
+  const { product } = store
+  head = {
+    title: `${product.seo.title} · ${siteName}`,
+    description: product.seo.description ?? undefined,
+    image: safeSrc(product.seo.image_url) ?? undefined,
+    canonicalPath: pathname,
+    jsonLd: [productJsonLd(product, siteUrl)],
+  }
+} else if (store?.kind === 'collection') {
+  const { collection } = store
+  head = {
+    title: `${collection.title} · ${siteName}`,
+    description: collection.intro ?? undefined,
+    image: safeSrc(collection.cover?.url) ?? undefined,
+    canonicalPath: pathname,
+  }
+}
 const menuPage: MenuPage | null =
-  resolved.kind === 'page' ? { id: resolved.page.page.id, takes_donations: resolved.page.page.takes_donations } : null
-const areas: Areas | null =
+  store?.kind === 'store' && store.intro
+    ? { id: store.intro.page.id, takes_donations: store.intro.page.takes_donations }
+    : store
+      ? null
+      : resolved.kind === 'page'
+        ? { id: resolved.page.page.id, takes_donations: resolved.page.page.takes_donations }
+        : null
+const areas: Areas | null = store ? storeAreas : 
   resolved.kind === 'page'
     ? resolved.page.areas
     : resolved.kind === 'entry' || resolved.kind === 'index' || resolved.kind === 'term' || resolved.kind === 'lesson'
@@ -232,7 +335,8 @@ const areas: Areas | null =
 // The sections in an entry's areas leave out the entry being read (lib/reading.ts).
 if (resolved.kind === 'entry') markReading(Astro.locals, resolved.entry.id)
 if (resolved.kind === 'lesson') markReading(Astro.locals, resolved.lesson.lesson.id)
-const sidebar = resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
+const sidebar = !store && resolved.kind !== 'author' && resolved.kind !== 'not_found' && areaEntriesOf(areas, 'sidebar').length > 0
+const storeMore = store !== null && areaEntriesOf(areas, 'sidebar').length > 0
 const heroOverSplit = sidebar && resolved.kind === 'page' && leadsWithHero(resolved.page.sections)
 const eventMore = event !== null && areaEntriesOf(event.areas, 'sidebar').length > 0
 
@@ -276,8 +380,13 @@ const signInTitle =
 const avatar = resolved.kind === 'author' ? safeSrc(resolved.author.avatar_url) : null
 const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_url) : null
 ---
-<Site {...head} template={template} page={menuPage} areas={areas} signInTitle={signInTitle}>
-  {resolved.kind === 'author' && (
+<Site {...head} template={template} page={menuPage} areas={areas} signInTitle={signInTitle} cart={store ? checkout : null}>
+  {store?.kind === 'store' && <StorePage template={template} siteName={siteName} shop={store.shop} department={store.department} intro={store.intro} pager={storePager} />}
+  {store?.kind === 'product' && <ProductPage product={store.product} siteName={siteName} />}
+  {store?.kind === 'collection' && <CollectionPage collection={store.collection} />}
+  {storeMore && <Area name="sidebar" areas={areas} components={sections} class="store-more" />}
+  {store && <StoreScript />}
+  {!store && resolved.kind === 'author' && (
     <div class="listing">
       <header class="page-header author">
         {avatar && <img class="author-avatar" src={avatar} alt="" />}
@@ -291,7 +400,7 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
     </div>
   )}
 
-  {resolved.kind === 'not_found' && !volunteerList && (event ? <EventLayout event={event.event} /> : <NotFoundLayout />)}
+  {!store && resolved.kind === 'not_found' && !volunteerList && (event ? <EventLayout event={event.event} /> : <NotFoundLayout />)}
   {VolunteerListLayout && (
     <div class:list={['layout', sidebar && 'layout-split']}>
       <div class="layout-main"><VolunteerListLayout shifts={shifts ?? []} siteName={siteName} /></div>
@@ -300,8 +409,8 @@ const authorLink = resolved.kind === 'author' ? safeHref(resolved.author.link_ur
   )}
   {eventMore && event && <Area name="sidebar" areas={event.areas} components={sections} class="event-more" />}
 
-  {heroOverSplit && resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only="lead" />}
-  {resolved.kind !== 'author' && resolved.kind !== 'not_found' && (
+  {!store && heroOverSplit && resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only="lead" />}
+  {!store && resolved.kind !== 'author' && resolved.kind !== 'not_found' && (
     <div class:list={['layout', sidebar && 'layout-split']}>
       <div class="layout-main">
         {resolved.kind === 'page' && <PageSections template={template} page={resolved.page} siteName={siteName} only={heroOverSplit ? 'rest' : undefined} />}

@@ -30,6 +30,11 @@
 //                    the page's lesson or course to the portal's door
 //                    (`signInTitle`); only on a first-party site, where the
 //                    sign-in routes answer.
+//                    On a store page (`cart`, src/lib/store.ts) the Cart
+//                    link sits before the switch, its count of what this
+//                    site's cart holds drawn by the store's script and the
+//                    link hidden while it holds nothing (and with scripts
+//                    off); it goes to the hosted checkout.
 //                    After a sign-in, the notice "You are signed in as …"
 //                    under the header (SignedInNotice, board D4).
 //                    While the organization's YouTube stream is live (GET
@@ -110,6 +115,7 @@ import { footerColumnsOf } from '../lib/footer'
 import { tidyHeaderMenu } from '../lib/menu'
 import { liveStream, withWatchLive } from '../lib/stream'
 import type { TemplateConfig } from '../template'
+import type { Checkout } from '../lib/store'
 import '../styles/site.css'
 
 interface Props {
@@ -124,6 +130,8 @@ interface Props {
   areas?: Areas | null
   /** What the portal's sign-in door names for this page (a lesson's "Lesson 3: Read a budget, in Foundations", a course's title); none elsewhere. */
   signInTitle?: string | null
+  /** A store page's cart: the header's Cart link to this checkout; none elsewhere. */
+  cart?: Checkout | null
 }
 
 /** The areas this layout (and the routes, for the Sidebar) place by name. */
@@ -133,7 +141,7 @@ const bg = Astro.locals.backgold
 if (bg.setup !== null) throw new Error('The site key is not configured; the setup page renders instead of this layout.')
 
 const { site, legal, client } = bg
-const { template, page, areas = null, signInTitle = null, ...head } = Astro.props
+const { template, page, areas = null, signInTitle = null, cart = null, ...head } = Astro.props
 const { sections } = template
 const [primary, footer, utility, stream] = await Promise.all([client.menu('primary'), client.menu('footer'), client.menu('utility'), liveStream(bg)])
 const pathname = Astro.url.pathname
@@ -300,6 +308,13 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
           </>
         )}
         {account && <VisitorAccount visitor={visitor} mode="bar" signInTitle={signInTitle} />}
+        {cart && (
+          <a class="cart-link" href={cart.url} data-bg-cart={cart.org} data-bg-checkout={cart.url} hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.5 11h11L21 8H6.5" /><circle cx="9" cy="19" r="1.5" /><circle cx="17" cy="19" r="1.5" /></svg>
+            <span>Cart</span>
+            <span class="cart-count" data-bg-cart-count>0</span>
+          </a>
+        )}
         {appearance === 'auto' && <ModeToggle />}
         <MenuButton items={headerItems} page={page} class="button button-small header-button" />
       </div>

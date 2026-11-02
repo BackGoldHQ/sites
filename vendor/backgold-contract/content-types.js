@@ -1,4 +1,4 @@
-import { OPERATOR_TAG_CATEGORIES, TAG_CATEGORIES, CONTENT_ACCESS_LEVELS, BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-J4FAYFD2.js';
+import { OPERATOR_TAG_CATEGORIES, TAG_CATEGORIES, CONTENT_ACCESS_LEVELS, BYLINE_ROLE_LABELS, PARTY_CONTENT_TYPE_KEYS, NEWSLETTER_CONTENT_TYPE_KEY, CONTENT_TYPE_ICONS, CONTENT_FIELD_KINDS, BLOG_CONTENT_TYPE_KEYS, CONTENT_REFERENCE_TARGETS, CONTENT_ENTRY_REFERENCE_PREFIX, TEAM_MEMBER_GROUPS } from './chunk-PXMISJLZ.js';
 import { z } from 'zod';
 import MarkdownIt from 'markdown-it';
 
@@ -330,7 +330,8 @@ var BUILT_IN_CONTENT_TYPES = [
   { key: "team_member", singular_label: "Team member", plural_label: "Team", icon: "users", routable: false, url_base: null, ordered: true, position: 4, kind: "article" },
   { key: "open_role", singular_label: "Open role", plural_label: "Open roles", icon: "star", routable: false, url_base: null, ordered: true, position: 5, kind: "article" },
   { key: "newsletter", singular_label: "Newsletter", plural_label: "Newsletters", icon: "mega", routable: true, url_base: "newsletters", ordered: false, position: 6, kind: "article" },
-  { key: "course", singular_label: "Course", plural_label: "Courses", icon: "star", routable: true, url_base: "courses", ordered: false, position: 7, kind: "article" }
+  { key: "course", singular_label: "Course", plural_label: "Courses", icon: "star", routable: true, url_base: "courses", ordered: false, position: 7, kind: "article" },
+  { key: "collection", singular_label: "Collection", plural_label: "Collections", icon: "tag", routable: true, url_base: "collections", ordered: false, position: 8, kind: "article" }
 ];
 function isBlogContentType(type) {
   return !!type.built_in && BLOG_CONTENT_TYPE_KEYS.includes(type.key);
@@ -386,7 +387,8 @@ var BUILT_IN_TYPE_FIELDS = {
 };
 var BUILT_IN_TAXONOMIES = [
   { key: "category", label: "Categories", hierarchical: true },
-  { key: "tag", label: "Tags", hierarchical: false }
+  { key: "tag", label: "Tags", hierarchical: false },
+  { key: "department", label: "Departments", hierarchical: true }
 ];
 function builtInTypeKeyForKind(kind) {
   return BLOG_CONTENT_TYPES.find((t) => t.kind === kind).key;

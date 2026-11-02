@@ -62,11 +62,13 @@ var CONTENT_TYPE_ICONS = ["doc", "star", "mega", "flag", "users", "cal", "mic", 
 var BLOG_CONTENT_TYPE_KEYS = ["post", "podcast", "video"];
 var PARTY_CONTENT_TYPE_KEYS = ["plank", "team_member", "open_role"];
 var NEWSLETTER_CONTENT_TYPE_KEY = "newsletter";
+var COLLECTION_CONTENT_TYPE_KEY = "collection";
 var BUILT_IN_CONTENT_TYPE_KEYS = [
   ...BLOG_CONTENT_TYPE_KEYS,
   ...PARTY_CONTENT_TYPE_KEYS,
   NEWSLETTER_CONTENT_TYPE_KEY,
-  COURSE_CONTENT_TYPE_KEY
+  COURSE_CONTENT_TYPE_KEY,
+  COLLECTION_CONTENT_TYPE_KEY
 ];
 var TEAM_MEMBER_GROUPS = ["Leadership", "Staff"];
 var TEMPLATE_KEY_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;

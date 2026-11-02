@@ -1,0 +1,16 @@
+---
+// A grid of listing cards (ProductCard), as a list.
+import type { ProductSummary } from '@backgold/content'
+import ProductCard from './ProductCard.astro'
+
+interface Props {
+  products: ProductSummary[]
+  level?: 2 | 3
+  label?: string
+}
+
+const { products, level = 2, label } = Astro.props
+---
+<ul class="product-grid" role="list" aria-label={label}>
+  {products.map((product) => <li><ProductCard product={product} level={level} /></li>)}
+</ul>

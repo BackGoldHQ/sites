@@ -19,6 +19,8 @@
 //     hands a renewed token (X-BackGold-Visitor-Renew) to onVisitorRenew.
 //   - `live()` (GET /live, the organization's YouTube stream) is outside the
 //     content version: never stored, its answer held in memory for 60 s.
+//     `productsLive()` (GET /products/live) is outside it too: never stored
+//     and never held, every call one request.
 //   - Reads carry only Authorization, Accept and If-None-Match (the api's
 //     CORS allows no other request header) and go only to apiOrigin. A
 //     first-party client (a site Worker in BackGold's namespace, reaching the
@@ -34,6 +36,8 @@ import type {
   AuthorsResponse,
   BackgoldContent,
   CachedRead,
+  CollectionResponse,
+  CollectionsResponse,
   CourseResponse,
   CoursesResponse,
   CreateClient,
@@ -47,6 +51,9 @@ import type {
   PageResponse,
   PagesResponse,
   PreviewResponse,
+  ProductResponse,
+  ProductsLiveResponse,
+  ProductsResponse,
   ReadOptions,
   RedirectsResponse,
   SectionsResponse,
@@ -93,6 +100,20 @@ function checkVisitorToken(token: unknown): string {
     throw new TypeError('A visitor token is the string the api minted at sign-in: 1–4096 printable characters, no spaces')
   }
   return token
+}
+
+/** The most listing ids one `GET /products/live` names (the api's BAD_IDS bound). */
+const MOST_LIVE_IDS = 50
+
+/** `?ids=` for `productsLive`, else a TypeError before any request. */
+function liveIdsQuery(ids: unknown): string {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > MOST_LIVE_IDS) {
+    throw new TypeError(`productsLive takes 1 to ${MOST_LIVE_IDS} listing ids`)
+  }
+  for (const id of ids) {
+    if (typeof id !== 'string' || id.trim() === '' || id.includes(',')) throw new TypeError('A listing id is a non-empty string with no comma')
+  }
+  return (ids as string[]).map((id) => id.trim()).join(',')
 }
 
 /** The api's answer to a preview read with a publishable key (lib/content-api/cache.ts SECRET_KEY_REQUIRED). */
@@ -600,6 +621,29 @@ export const createClient: CreateClient = (opts) => {
         undefined,
         'throw',
       ))!,
+    products: async (productsOpts = {}) =>
+      (await read<ProductsResponse>(
+        '/products',
+        {
+          department: productsOpts.department,
+          collection: productsOpts.collection,
+          cursor: productsOpts.cursor,
+          limit: productsOpts.limit === undefined ? undefined : String(productsOpts.limit),
+        },
+        undefined,
+        'throw',
+      ))!,
+    async productsLive(liveOpts) {
+      const ids = liveIdsQuery(liveOpts?.ids)
+      const res = await send('/products/live', new URLSearchParams({ ids }).toString())
+      const answered = answeredVersion(res)
+      if (answered !== null) await learn(answered, false)
+      if (!res.ok) throw await apiError(res)
+      return JSON.parse(await res.text()) as ProductsLiveResponse
+    },
+    product: (slug) => read<ProductResponse>(`/products/${seg(slug)}`, {}, undefined, 'null'),
+    collections: () => must<CollectionsResponse>('/collections'),
+    collection: (slug) => read<CollectionResponse>(`/collections/${seg(slug)}`, {}, undefined, 'null'),
     terms: (taxonomy) => read<TermsResponse>(`/terms/${seg(taxonomy)}`, {}, undefined, 'null'),
     authors: () => must<AuthorsResponse>('/authors'),
     author: (slug) => read<AuthorResponse>(`/authors/${seg(slug)}`, {}, undefined, 'null'),

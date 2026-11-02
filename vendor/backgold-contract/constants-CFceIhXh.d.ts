@@ -26,6 +26,14 @@ declare const SITE_SECTION_ROLES: readonly ["header", "footer"];
 type SiteSectionRole = (typeof SITE_SECTION_ROLES)[number];
 declare const SITE_PAGE_MODULE_KINDS: readonly ["donation_form", "form", "signup", "petition", "poll", "event", "store", "advocacy"];
 type SitePageModuleKind = (typeof SITE_PAGE_MODULE_KINDS)[number];
+declare const PRODUCT_SHIP_TO: readonly ["buyer", "store", "third_party"];
+type ProductShipTo = (typeof PRODUCT_SHIP_TO)[number];
+declare const STORE_ATTRIBUTE_KINDS: readonly ["short_text", "long_text", "number", "boolean", "choice", "choices", "link", "date"];
+type StoreAttributeKind = (typeof STORE_ATTRIBUTE_KINDS)[number];
+declare const PRODUCT_AVAILABILITY: readonly ["in_stock", "low", "out", "preorder"];
+type ProductAvailability = (typeof PRODUCT_AVAILABILITY)[number];
+declare const ITEM_QUESTION_SCOPES: readonly ["order", "unit"];
+type ItemQuestionScope = (typeof ITEM_QUESTION_SCOPES)[number];
 declare const CONTENT_FIELD_KINDS: readonly ["short_text", "long_text", "rich_text", "image", "pdf", "link", "date", "datetime", "boolean", "choice", "choices", "list", "reference"];
 type ContentFieldKind = (typeof CONTENT_FIELD_KINDS)[number];
 declare const CONTENT_REFERENCE_TARGETS: readonly ["event", "campaign", "candidate", "petition", "form", "fund", "seat"];
@@ -36,9 +44,9 @@ declare const BYLINE_ROLE_LABELS: readonly ["Written by", "Edited by", "Photos b
 type BylineRoleLabel = (typeof BYLINE_ROLE_LABELS)[number];
 declare const CONTENT_TYPE_ICONS: readonly ["doc", "star", "mega", "flag", "users", "cal", "mic", "video", "shield", "tag"];
 type ContentTypeIcon = (typeof CONTENT_TYPE_ICONS)[number];
-declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", "plank", "team_member", "open_role", "newsletter", "course"];
+declare const BUILT_IN_CONTENT_TYPE_KEYS: readonly ["post", "podcast", "video", "plank", "team_member", "open_role", "newsletter", "course", "collection"];
 type BuiltInContentTypeKey = (typeof BUILT_IN_CONTENT_TYPE_KEYS)[number];
-declare const BUILT_IN_TAXONOMY_KEYS: readonly ["category", "tag"];
+declare const BUILT_IN_TAXONOMY_KEYS: readonly ["category", "tag", "department"];
 type BuiltInTaxonomyKey = (typeof BUILT_IN_TAXONOMY_KEYS)[number];
 declare const SITE_MODES: readonly ["hosted", "headless", "template", "custom"];
 type SiteMode = (typeof SITE_MODES)[number];
@@ -48,9 +56,9 @@ declare const SITE_KEY_PREFIXES: {
     readonly publishable: "bg_site_pk_";
     readonly secret: "bg_site_sk_";
 };
-declare const CONTENT_WEBHOOK_EVENTS: readonly ["site.published", "content.published", "content.unpublished", "menu.updated", "redirects.updated"];
+declare const CONTENT_WEBHOOK_EVENTS: readonly ["site.published", "content.published", "content.unpublished", "menu.updated", "redirects.updated", "site.content.product.updated", "site.content.collection.updated"];
 type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
 declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "run", "privacy", "sms-terms"];
 type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
 
-export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type LiveStreamStatus as L, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type SiteSectionKind as e, type SiteSectionRole as f, type ShiftPublicState as g, type ShiftPublicSubjectKind as h, type SiteMode as i, type SiteApiKeyKind as j, type ContentWebhookEvent as k, SITE_KEY_PREFIXES as l, type SitePageModuleKind as m, type BuiltInContentTypeKey as n, type ContentTypeIcon as o, type BuiltInTaxonomyKey as p, type ContentReferenceTarget as q };
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type ItemQuestionScope as I, type LiveStreamStatus as L, type ProductAvailability as P, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type StoreAttributeKind as e, type ProductShipTo as f, type SiteSectionKind as g, type SiteSectionRole as h, type ShiftPublicState as i, type ShiftPublicSubjectKind as j, type SiteMode as k, type SiteApiKeyKind as l, type ContentWebhookEvent as m, SITE_KEY_PREFIXES as n, type SitePageModuleKind as o, type BuiltInContentTypeKey as p, type ContentTypeIcon as q, type BuiltInTaxonomyKey as r, type ContentReferenceTarget as s };

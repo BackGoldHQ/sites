@@ -1,5 +1,5 @@
-import { Areas, AreasResponse, AuthorResponse, AuthorsResponse, CourseResponse, CoursesResponse, EntriesResponse, EntryResponse, EventResponse, EventsResponse, EventsLiveResponse, LessonResponse, LessonProgressResponse, LiveResponse, MenuResponse, PageResponse, PagesResponse, RedirectsResponse, SectionsResponse, ShiftsResponse, ShiftsLiveResponse, SiteResponse, SitemapResponse, TermsResponse, TypesResponse, VisitorResponse, VisitorExchangeResponse } from './content-api.js';
-import './constants-DvTNj4JI.js';
+import { Areas, AreasResponse, AuthorResponse, AuthorsResponse, CollectionResponse, CollectionsResponse, CourseResponse, CoursesResponse, EntriesResponse, EntryResponse, EventResponse, EventsResponse, EventsLiveResponse, LessonResponse, LessonProgressResponse, LiveResponse, MenuResponse, PageResponse, PagesResponse, ProductResponse, ProductsResponse, ProductsLiveResponse, RedirectsResponse, SectionsResponse, ShiftsResponse, ShiftsLiveResponse, SiteResponse, SitemapResponse, TermsResponse, TypesResponse, VisitorResponse, VisitorExchangeResponse } from './content-api.js';
+import './constants-CFceIhXh.js';
 
 /**
  * One example of every headless Content API response, in the contract's own
@@ -41,6 +41,14 @@ declare const sitemapExample: SitemapResponse;
 declare const eventsExample: EventsResponse;
 declare const eventExample: EventResponse;
 declare const eventsLiveExample: EventsLiveResponse;
+/** The party's store: two listings on the first page, the department tree with counts, one collection. */
+declare const productsExample: ProductsResponse;
+/** The tee's own page: three sizes as items, the department's attributes, the JSON-LD, the sign as a related listing. */
+declare const productExample: ProductResponse;
+/** The island's read for the tee: the large just sold out, and the per-unit question the line asks. */
+declare const productsLiveExample: ProductsLiveResponse;
+declare const collectionsExample: CollectionsResponse;
+declare const collectionExample: CollectionResponse;
 /** Two open public shifts: one of the town hall's with room, one standalone that is full. */
 declare const shiftsExample: ShiftsResponse;
 declare const shiftsLiveExample: ShiftsLiveResponse;
@@ -55,4 +63,4 @@ declare const visitorExchangeExample: VisitorExchangeResponse;
 /** Each response's example, by its OpenAPI schema name (the api's openapi-content.test.ts holds each against its schema). */
 declare const CONTENT_API_EXAMPLES: Record<string, unknown>;
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, liveExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, collectionExample, collectionsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, liveExample, menuExample, pageExample, pagesExample, productExample, productsExample, productsLiveExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };

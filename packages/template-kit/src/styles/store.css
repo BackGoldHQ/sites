@@ -1,0 +1,616 @@
+/*
+  The storefront (board 06 of the store design; src/lib/store.ts): the shop,
+  a department's shelf, a listing's page with its island, a collection's
+  page, and the header's Cart link. Colours are the band's short names
+  (site.css), so a template's tokens and the site's brand carry through;
+  nothing scrolls sideways, and every control is at least 44px tall.
+*/
+
+.store-page [hidden],
+.cart-link[hidden] {
+  display: none !important;
+}
+
+/* ── The header's Cart link ── */
+
+.cart-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pill);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cart-link:hover {
+  text-decoration: underline;
+}
+.cart-link svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cart-count::before {
+  content: '·';
+  margin-right: 0.375rem;
+  color: var(--muted);
+}
+
+/* ── The page ── */
+
+.store-page {
+  max-width: calc(var(--content) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: clamp(1.25rem, 1rem + 1.5vw, 2.25rem) var(--gutter) var(--space);
+}
+.store-page .crumbs {
+  margin-bottom: 1.125rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.store-page .crumbs a {
+  color: var(--link);
+}
+.store-head {
+  margin-bottom: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+}
+.store-head h1 {
+  margin: 0;
+  max-width: 24ch;
+}
+.store-head .lede {
+  margin: 0.75rem 0 0;
+}
+/* A page at /store as the shop's opening keeps its own bands, and the grid starts under them. */
+.store-home > .bg-section:last-of-type {
+  margin-bottom: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+}
+
+.store-contribution {
+  margin: calc(-1 * clamp(0.75rem, 0.5rem + 0.75vw, 1.125rem)) 0 clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.store-cols {
+  display: grid;
+  gap: 1.5rem;
+}
+@media (min-width: 56rem) {
+  .store-cols {
+    grid-template-columns: 13.5rem minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+}
+
+/* The rail: two short lists; on a phone they wrap as pills above the grid. */
+.store-rail-head {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.store-rail ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+.store-rail a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.store-rail a span {
+  color: var(--muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.store-rail a[aria-current] {
+  border-color: var(--ink);
+  font-weight: 800;
+}
+.store-rail a:hover {
+  text-decoration: underline;
+}
+@media (min-width: 56rem) {
+  .store-rail ul {
+    display: block;
+  }
+  .store-rail a {
+    min-height: 2.75rem;
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius);
+  }
+  .store-rail a[aria-current] {
+    background: var(--band-tint);
+    color: var(--band-tint-ink);
+  }
+  .store-rail-sub a {
+    padding-left: 1.5rem;
+  }
+}
+
+/* ── The grid and its cards ── */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: clamp(0.875rem, 2vw, 1.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 40rem) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  }
+}
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.product-card:hover .product-card-name {
+  text-decoration: underline;
+}
+.product-card:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.product-card-photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  background: var(--band-tint);
+}
+.product-card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.product-card-blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--band-tint);
+}
+.product-card-flag {
+  position: absolute;
+  top: 0.625rem;
+  left: 0.625rem;
+  padding: 0.1875rem 0.625rem;
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.product-card[data-availability='low'] .product-card-flag {
+  color: var(--accent);
+}
+.product-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem 1rem;
+}
+.product-card-name {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--text);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.product-card-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.product-card-word {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.store-pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.5rem;
+}
+.store-pager a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+/* ── The collection band: the shop's one call ── */
+
+.store-band {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: clamp(1.75rem, 1rem + 2vw, 2.75rem);
+  padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+  border-radius: var(--radius-card);
+  background: var(--band-tint);
+  color: var(--band-tint-ink);
+  --ink: var(--band-tint-ink);
+  --muted: var(--band-tint-muted);
+  --accent: var(--band-tint-accent);
+  --link: var(--band-tint-link);
+  --button: var(--band-tint-button);
+  --button-ink: var(--band-tint-button-ink);
+}
+@media (min-width: 40rem) {
+  .store-band:has(.store-band-cover) {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+  }
+}
+.store-band-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+.store-band-words h2 {
+  margin: 0 0 0.5rem;
+}
+.store-band-words p {
+  margin: 0;
+}
+.store-band-words .prose {
+  margin-bottom: 1rem;
+}
+.store-band-call {
+  margin-top: 1rem !important;
+}
+
+/* ── A listing's page ── */
+
+.product-top {
+  display: grid;
+  gap: 1.5rem;
+}
+@media (min-width: 56rem) {
+  .product-top {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+  }
+}
+.product-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+  background: var(--band-tint);
+}
+.product-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.product-thumbs a {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.product-thumbs a[aria-current] {
+  border-color: var(--ink);
+}
+.product-thumbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.product-words h1 {
+  margin: 0;
+  font-size: clamp(2rem, 1.5rem + 1.8vw, 2.875rem);
+  line-height: 1.05;
+}
+.product-words .lede {
+  margin: 0.625rem 0 0;
+}
+
+/* The island: the live price, the word, the choice, the questions, Add to cart. */
+.island {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.island > *,
+.island-form > * {
+  margin: 0;
+}
+.island-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+.island-now {
+  font-family: var(--font-display);
+  font-size: var(--h3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.island-was {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.island-ship {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.island-contribution {
+  font-size: var(--text-sm);
+}
+.island-note-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.product-maker {
+  margin-bottom: 0.5rem;
+}
+.island-line,
+.island-help,
+.island-note {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.island-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  border: 0;
+}
+.island-items legend {
+  margin-bottom: 0.5rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.island-item {
+  position: relative;
+}
+.island-item input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+}
+.island-item span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pill);
+  font-weight: 700;
+}
+.island-item input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+.island-item input:focus-visible + span {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+.island-item input:disabled + span {
+  opacity: 0.7;
+}
+.island-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.island-qty-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.island-qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pill);
+}
+.island-step {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.island-qty input {
+  width: 3rem;
+  height: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.island-qty input::-webkit-inner-spin-button,
+.island-qty input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.island-questions {
+  display: grid;
+  gap: 0.75rem;
+}
+.island-questions:empty {
+  display: none;
+}
+.island-field {
+  display: grid;
+  gap: 0.3125rem;
+}
+.island-field label,
+.island-field legend {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.island-field input:not([type='checkbox']),
+.island-field select,
+.island-field textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.island-field fieldset {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.island-agree {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-weight: 500 !important;
+}
+.island-agree input {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.island-add,
+.island-retry,
+.island-fallback {
+  width: 100%;
+}
+.island-add:disabled {
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.island-status:empty {
+  display: none;
+}
+
+.product-more {
+  display: grid;
+  gap: 1.75rem;
+  margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+}
+@media (min-width: 56rem) {
+  .product-more {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 3rem;
+  }
+}
+.product-more h2,
+.product-related h2 {
+  margin: 0 0 0.75rem;
+  font-size: var(--h3);
+}
+.product-related h2 a {
+  color: var(--link);
+}
+.product-attributes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.product-attributes th,
+.product-attributes td {
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.product-attributes th {
+  width: 45%;
+  padding-right: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.product-related {
+  margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+}
+
+/* ── A collection's page ── */
+
+.collection-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 39.99rem) {
+  .collection-cover {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+.store-more {
+  max-width: calc(var(--content) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 0 var(--gutter) var(--space);
+}

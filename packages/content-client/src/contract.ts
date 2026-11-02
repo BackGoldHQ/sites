@@ -16,6 +16,8 @@ import type {
   AreasResponse,
   AuthorResponse,
   AuthorsResponse,
+  CollectionResponse,
+  CollectionsResponse,
   ContentTypeSummary,
   CourseResponse,
   CoursesResponse,
@@ -30,6 +32,9 @@ import type {
   MenuResponse,
   PageResponse,
   PagesResponse,
+  ProductResponse,
+  ProductsLiveResponse,
+  ProductsResponse,
   RedirectsResponse,
   SectionsResponse,
   ShiftsResponse,
@@ -49,6 +54,10 @@ export type {
   Author,
   AuthorResponse,
   AuthorsResponse,
+  CollectionDetail,
+  CollectionResponse,
+  CollectionsResponse,
+  CollectionSummary,
   ContentAccessLevel,
   ContentApiError,
   ContentApiLegal,
@@ -83,6 +92,20 @@ export type {
   PageResponse,
   PageSummary,
   PagesResponse,
+  ProductAttribute,
+  ProductCollectionRef,
+  ProductDepartment,
+  ProductDetail,
+  ProductItem,
+  ProductLive,
+  ProductPhoto,
+  ProductQuestion,
+  ProductResponse,
+  ProductSeo,
+  ProductSummary,
+  ProductTerm,
+  ProductsLiveResponse,
+  ProductsResponse,
   RedirectsResponse,
   Section,
   SectionBand,
@@ -263,6 +286,24 @@ export interface ShiftsOptions {
   limit?: number
 }
 
+/** What `products()` takes. */
+export interface ProductsOptions {
+  /** Only listings in the department with this slug or one under it (`?department=`). */
+  department?: string
+  /** Only the members of the published collection with this slug, in its order (`?collection=`). */
+  collection?: string
+  /** The `next_cursor` of the previous page (with the same department and collection). */
+  cursor?: string
+  /** 1–50; the api's default (20) when omitted. */
+  limit?: number
+}
+
+/** What `productsLive()` takes. */
+export interface ProductsLiveOptions {
+  /** 1 to 50 listing ids (each listing's `id`), sent as `?ids=` joined by commas. */
+  ids: string[]
+}
+
 export interface ReadOptions extends VisitorOptions {
   /** Read the draft (`?preview=1`; needs a secret key; never cached). */
   preview?: boolean
@@ -359,6 +400,29 @@ export interface BackgoldContent {
    * version, so not through `raw`), as for events.
    */
   shifts(opts?: ShiftsOptions): Promise<ShiftsResponse>
+  /**
+   * `GET /products`: the store's published listings, newest first, one page
+   * at a time, with the organization's department tree (each node counted
+   * with its descendants) and the published collections on this site.
+   * Cached and versioned like every published read: a change to a published
+   * listing's copy, photos, price or publish state moves the version. A sale
+   * does not; for price and availability as they stand, `productsLive`.
+   */
+  products(opts?: ProductsOptions): Promise<ProductsResponse>
+  /**
+   * `GET /products/live?ids=`: each named listing's items' price and
+   * availability word now, and the checkout questions its line asks; an id
+   * the site cannot read is left out. Never keyed on the content version and
+   * never written to the store (the api caches it 30 seconds). Throws a
+   * TypeError, before any request, for no ids, more than 50, or an empty id.
+   */
+  productsLive(opts: ProductsLiveOptions): Promise<ProductsLiveResponse>
+  /** `GET /products/:slug`: one published listing for its own page (items, attributes, SEO, JSON-LD, related, areas); null when unpublished or unknown. */
+  product(slug: string): Promise<ProductResponse | null>
+  /** `GET /collections`: the published collections placed on this site, every one on one page. */
+  collections(): Promise<CollectionsResponse>
+  /** `GET /collections/:slug`: one collection with its published listings in its order, and its areas; null when unpublished or unknown. */
+  collection(slug: string): Promise<CollectionResponse | null>
   /** `GET /terms/:taxonomy`; null for an unknown taxonomy. */
   terms(taxonomy: string): Promise<TermsResponse | null>
   /** `GET /authors`. */
@@ -486,13 +550,21 @@ export interface BackgoldApiErrorShape {
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
 
-/** The five content events (`CONTENT_WEBHOOK_EVENTS` in the api). */
+/**
+ * The seven content events (`CONTENT_WEBHOOK_EVENTS` in the api). A
+ * listing's copy, photos, price, department or publish state moving sends
+ * `site.content.product.updated` with its `product_id`; a collection's entry
+ * or members moving sends `site.content.collection.updated` with its
+ * `collection_id`. Both carry the new version, like every other event.
+ */
 export type ContentEventType =
   | 'site.published'
   | 'content.published'
   | 'content.unpublished'
   | 'menu.updated'
   | 'redirects.updated'
+  | 'site.content.product.updated'
+  | 'site.content.collection.updated'
 
 /** A content event's envelope as BackGold POSTs it (docs/HEADLESS-CONTENT-API.md §8): ids and the version, never a title, body or person. */
 export interface ContentEvent {
@@ -505,6 +577,10 @@ export interface ContentEvent {
     page_id?: string
     content_item_id?: string
     menu_key?: string
+    /** The listing a `site.content.product.updated` names. */
+    product_id?: string
+    /** The collection (its entry's id) a `site.content.collection.updated` names. */
+    collection_id?: string
   }
 }
 
@@ -524,7 +600,7 @@ export interface VerifyWebhookInput {
 /** HMAC-SHA256 over `<t>.<rawBody>`, constant-time compared, with `t` within the tolerance either side of now; false on any malformed input. Never throws. */
 export type VerifyBackgoldWebhook = (input: VerifyWebhookInput) => Promise<boolean>
 
-/** The event when `rawBody` is one of the five content events in the house envelope; null otherwise. Never throws. */
+/** The event when `rawBody` is one of the seven content events in the house envelope; null otherwise. Never throws. */
 export type ParseContentEvent = (rawBody: string) => ContentEvent | null
 
 // ── Preview ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,549 @@
+---
+// The storefront's live parts, one script per store page, no framework:
+//
+// - The header's Cart link (`[data-bg-cart]`, Site.astro's `cart`): the lines
+//   this site keeps under `gg-cart:<org>` in localStorage, counted; hidden
+//   while there are none. Followed, it carries them to the hosted checkout
+//   in its fragment (`#cart=<base64url JSON>`, never the query, so the
+//   answers reach no server log) and forgets them here: the checkout's cart
+//   holds them from then on.
+// - The product page's island (`[data-bg-island]`, ProductPage.astro): on
+//   view it reads GET /products/live?ids=<the listing> (lib/live.ts: the
+//   same-origin path first-party, else the api's address with the
+//   publishable key; with neither, the island stays as built) and draws one
+//   of five states: in stock, few left, sold out (Add to cart says so and
+//   does nothing), the price moved since the build (the built price struck,
+//   the live one charged, and a sentence that says so), or the read failed
+//   (the built price "as of the last build", Add to cart says it cannot, and
+//   Try again reads again). It draws the questions the line asks: the
+//   once-per-order ones once, each per-unit one once per unit, so a quantity
+//   of 2 asks it twice. Add to cart puts the line in the cart in the hosted
+//   checkout's line shape (variant_id, product_slug, product_name,
+//   variant_name, unit_price_cents at the live price, quantity, photo_url,
+//   needs_shipping, and `answers` as { order, units } keyed by label, the
+//   way the checkout's own add does it: a second add of the same item adds
+//   its quantity and its units' answers to the line).
+// - The gallery's thumbnails swap the large photo.
+import { liveSource } from '../../lib/live'
+import { AVAILABILITY_CHIPS, AVAILABILITY_WORDS } from '../../lib/store'
+
+const bg = Astro.locals.backgold
+const source = await liveSource(bg.setup === null && bg.firstParty, 'products')
+const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CHIPS })
+---
+<script is:inline data-bg-store-api={source?.url ?? ''} data-bg-store-key={source?.key ?? undefined} data-bg-store-words={words}>
+  ;(function (script) {
+    var api = script.getAttribute('data-bg-store-api')
+    var key = script.getAttribute('data-bg-store-key')
+    var vocab = JSON.parse(script.getAttribute('data-bg-store-words') || '{}')
+    var PREFIX = 'gg-cart:'
+    /** The checkout's bounds for a hand-over: lines, a line's quantity, the JSON's size, a name's length. */
+    var MOST_LINES = 50
+    var MOST_QUANTITY = 99
+    var MOST_BYTES = 64 * 1024
+    var MOST_TEXT = 255
+
+    // ── The cart ──
+    function readCart(org) {
+      try {
+        var raw = window.localStorage.getItem(PREFIX + org)
+        var lines = raw ? JSON.parse(raw) : []
+        return Array.isArray(lines) ? lines : []
+      } catch (e) {
+        return []
+      }
+    }
+    function writeCart(org, lines) {
+      try {
+        if (lines.length === 0) window.localStorage.removeItem(PREFIX + org)
+        else window.localStorage.setItem(PREFIX + org, JSON.stringify(lines))
+      } catch (e) {}
+      document.dispatchEvent(new CustomEvent('bg-cart'))
+    }
+    function mergeAnswers(had, added) {
+      if (!had && !added) return undefined
+      var order = (added && added.order) || (had && had.order)
+      var units = ((had && had.units) || []).concat((added && added.units) || [])
+      var out = {}
+      if (order) out.order = order
+      if (units.length > 0) out.units = units
+      return out
+    }
+    /**
+     * Adds the line, merged into the item's own line when it has one (the
+     * checkout keeps one line per item). False, and nothing written, when
+     * the cart would break the checkout's bounds for a hand-over: at most
+     * MOST_LINES lines, a quantity of at most MOST_QUANTITY per line, and
+     * at most MOST_BYTES of JSON.
+     */
+    function addLine(org, line) {
+      var lines = readCart(org).slice()
+      var at = -1
+      for (var i = 0; i < lines.length; i++) if (lines[i] && lines[i].variant_id === line.variant_id) at = i
+      if (at >= 0) {
+        var merged = Object.assign({}, lines[at], { quantity: lines[at].quantity + line.quantity })
+        if (lines[at].answers || line.answers) merged.answers = mergeAnswers(lines[at].answers, line.answers)
+        if (merged.quantity > MOST_QUANTITY) return false
+        lines[at] = merged
+      } else {
+        if (lines.length >= MOST_LINES) return false
+        lines.push(line)
+      }
+      if (new TextEncoder().encode(JSON.stringify(lines)).length > MOST_BYTES) return false
+      writeCart(org, lines)
+      return true
+    }
+    function base64url(text) {
+      var bytes = new TextEncoder().encode(text)
+      var binary = ''
+      for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    }
+    function count(org) {
+      return readCart(org).reduce(function (n, line) {
+        return n + (line && typeof line.quantity === 'number' ? line.quantity : 0)
+      }, 0)
+    }
+    /** The checkout's address with this site's lines in its fragment. */
+    function checkoutHref(link) {
+      var org = link.getAttribute('data-bg-cart')
+      var base = link.getAttribute('data-bg-checkout')
+      var lines = readCart(org)
+      return lines.length > 0 ? base + '#cart=' + base64url(JSON.stringify(lines)) : base
+    }
+    function drawCart() {
+      var links = document.querySelectorAll('[data-bg-cart]')
+      for (var i = 0; i < links.length; i++) {
+        var n = count(links[i].getAttribute('data-bg-cart'))
+        var shown = links[i].querySelector('[data-bg-cart-count]')
+        if (shown) shown.textContent = String(n)
+        links[i].setAttribute('aria-label', 'Cart, ' + n + (n === 1 ? ' item' : ' items'))
+        links[i].hidden = n === 0
+      }
+    }
+    // The Cart link, or the island's Check out, carries the lines over as it is followed.
+    document.addEventListener('click', function (event) {
+      var link = event.target instanceof Element ? event.target.closest('[data-bg-cart], [data-bg-checkout-now]') : null
+      var cart = document.querySelector('[data-bg-cart]')
+      if (!link || !cart) return
+      link.setAttribute('href', checkoutHref(cart))
+    })
+    document.addEventListener('bg-cart', drawCart)
+    window.addEventListener('storage', drawCart)
+    window.addEventListener('pageshow', drawCart)
+    drawCart()
+
+    // ── The gallery ──
+    var main = document.querySelector('[data-bg-gallery-main]')
+    var thumbs = document.querySelectorAll('[data-bg-gallery-thumb]')
+    for (var t = 0; t < thumbs.length; t++) {
+      thumbs[t].addEventListener('click', function (event) {
+        if (!main) return
+        event.preventDefault()
+        main.setAttribute('src', this.getAttribute('href'))
+        for (var u = 0; u < thumbs.length; u++) thumbs[u].removeAttribute('aria-current')
+        this.setAttribute('aria-current', 'true')
+      })
+    }
+
+    // ── The island ──
+    var island = document.querySelector('[data-bg-island]')
+    var data = document.querySelector('[data-bg-island-product]')
+    var cartLink = document.querySelector('[data-bg-cart]')
+    if (!island || !data || !api || !cartLink) return
+    var product = JSON.parse(data.textContent || '{}')
+    var org = cartLink.getAttribute('data-bg-cart')
+    var form = island.querySelector('[data-bg-form]')
+    var priceEl = island.querySelector('[data-bg-price]')
+    var wasEl = island.querySelector('[data-bg-was]')
+    var lineEl = island.querySelector('[data-bg-line]')
+    var wordEl = island.querySelector('[data-bg-word]')
+    var qtyEl = island.querySelector('[data-bg-qty]')
+    var addEl = island.querySelector('[data-bg-add]')
+    var retryEl = island.querySelector('[data-bg-retry]')
+    var statusEl = island.querySelector('[data-bg-status]')
+    var questionsEl = island.querySelector('[data-bg-questions]')
+    var unitNote = island.querySelector('[data-bg-unit-note]')
+    var fallback = island.querySelector('[data-bg-fallback]')
+    var radios = island.querySelectorAll('[data-bg-item]')
+    var built = product.built_at ? new Date(product.built_at) : null
+    var builtDay = built && !isNaN(built.getTime()) ? built.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null
+    var live = null
+    var failed = false
+
+    if (fallback) fallback.hidden = true
+    form.hidden = false
+    var contribution = island.querySelector('[data-bg-contribution]')
+    if (contribution) addEl.parentNode.insertBefore(contribution, addEl)
+    for (var r = 0; r < radios.length; r++) radios[r].disabled = false
+
+    function money(cents) {
+      var whole = cents % 100 === 0
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 }).format(cents / 100)
+    }
+    function quantity() {
+      var n = Math.floor(Number(qtyEl.value))
+      return isFinite(n) && n >= 1 ? Math.min(n, 99) : 1
+    }
+    function selected() {
+      var id = null
+      for (var i = 0; i < radios.length; i++) if (radios[i].checked) id = radios[i].value
+      var items = product.items || []
+      for (var j = 0; j < items.length; j++) if (items[j].id === id) return items[j]
+      return items[0] || null
+    }
+    function liveItem(item) {
+      if (!live || !item) return null
+      for (var i = 0; i < live.items.length; i++) if (live.items[i].id === item.id) return live.items[i]
+      return null
+    }
+    function setWord(availability) {
+      if (!wordEl) return
+      wordEl.hidden = !availability
+      if (!availability) return
+      wordEl.textContent = vocab.words[availability] || ''
+      wordEl.className = 'chip' + (vocab.chips[availability] ? ' ' + vocab.chips[availability] : '')
+    }
+
+    // The answers' keys, as the checkout keys them: each question's label, a
+    // repeated label numbered " (2)", " (3)" within its scope.
+    function keysOf(questions) {
+      var used = []
+      return questions.map(function (q, i) {
+        var raw = q.label || 'Question ' + (i + 1)
+        var k = raw
+        for (var n = 2; used.indexOf(k) >= 0; n++) k = raw + ' (' + n + ')'
+        used.push(k)
+        return k
+      })
+    }
+    function scoped(scope) {
+      return ((live && live.questions) || []).filter(function (q) {
+        return q.scope === scope
+      })
+    }
+    /** True when a list holds a question that takes an answer (a note takes none). */
+    function asks(questions) {
+      return questions.some(function (q) {
+        return q.type !== 'note'
+      })
+    }
+    /** The value a choice's "Other" carries until the typed text replaces it. */
+    var OTHER = '__other__'
+    function otherBox(name, keep) {
+      var other = document.createElement('input')
+      other.type = 'text'
+      other.name = name + '#other'
+      other.className = 'island-other'
+      other.setAttribute('aria-label', 'Other')
+      other.placeholder = 'Other'
+      if (typeof keep[name + '#other'] === 'string') other.value = keep[name + '#other']
+      return other
+    }
+    /** Shows a choice's "Other" text field while Other is chosen, and asks for it then. */
+    function syncOther(wrap) {
+      var other = wrap.querySelector('.island-other')
+      if (!other) return
+      var select = wrap.querySelector('select')
+      var tick = wrap.querySelector('input[type="checkbox"][value="' + OTHER + '"]')
+      var on = select ? select.value === OTHER : !!(tick && tick.checked)
+      other.hidden = !on
+      other.required = on
+    }
+    var AGREE = ['checkbox', 'sms_consent', 'email_consent']
+    var INPUTS = { text: 'text', email: 'email', phone: 'tel', date: 'date' }
+    function field(q, name, label, keep) {
+      var wrap = document.createElement('div')
+      wrap.className = 'island-field'
+      if (q.type === 'note') {
+        String(q.body || '')
+          .split(/\n{2,}/)
+          .map(function (para) {
+            return para.trim()
+          })
+          .filter(Boolean)
+          .forEach(function (para) {
+            var p = document.createElement('p')
+            p.className = 'island-note-text'
+            p.textContent = para
+            wrap.appendChild(p)
+          })
+        return wrap
+      }
+      var id = 'bg-q-' + name.replace(/[^a-z0-9]+/gi, '-')
+      if (AGREE.indexOf(q.type) >= 0) {
+        var box = document.createElement('label')
+        box.className = 'island-agree'
+        var input = document.createElement('input')
+        input.type = 'checkbox'
+        input.name = name
+        input.checked = keep[name] === 'Yes'
+        box.appendChild(input)
+        box.appendChild(document.createTextNode(' ' + label))
+        wrap.appendChild(box)
+      } else if (q.type === 'checkboxes') {
+        var set = document.createElement('fieldset')
+        var legend = document.createElement('legend')
+        legend.textContent = label + (q.required ? ' *' : '')
+        set.appendChild(legend)
+        ;(q.options || []).forEach(function (option) {
+          var row = document.createElement('label')
+          row.className = 'island-agree'
+          var tick = document.createElement('input')
+          tick.type = 'checkbox'
+          tick.setAttribute('data-multi', '')
+          tick.name = name
+          tick.value = option
+          tick.checked = Array.isArray(keep[name]) && keep[name].indexOf(option) >= 0
+          row.appendChild(tick)
+          row.appendChild(document.createTextNode(' ' + option))
+          set.appendChild(row)
+        })
+        if (q.allow_other) {
+          var otherRow = document.createElement('label')
+          otherRow.className = 'island-agree'
+          var otherTick = document.createElement('input')
+          otherTick.type = 'checkbox'
+          otherTick.setAttribute('data-multi', '')
+          otherTick.name = name
+          otherTick.value = OTHER
+          otherTick.checked = Array.isArray(keep[name]) && keep[name].indexOf(OTHER) >= 0
+          otherRow.appendChild(otherTick)
+          otherRow.appendChild(document.createTextNode(' Other'))
+          set.appendChild(otherRow)
+          set.appendChild(otherBox(name, keep))
+        }
+        wrap.appendChild(set)
+      } else {
+        var lab = document.createElement('label')
+        lab.setAttribute('for', id)
+        lab.textContent = label + (q.required ? ' *' : '')
+        wrap.appendChild(lab)
+        var control
+        if (q.type === 'textarea') {
+          control = document.createElement('textarea')
+          control.rows = 3
+        } else if (q.type === 'select' || q.type === 'radio') {
+          control = document.createElement('select')
+          var blank = document.createElement('option')
+          blank.value = ''
+          blank.textContent = 'Choose one'
+          control.appendChild(blank)
+          ;(q.options || []).forEach(function (option) {
+            var o = document.createElement('option')
+            o.value = option
+            o.textContent = option
+            control.appendChild(o)
+          })
+          if (q.allow_other) {
+            var o2 = document.createElement('option')
+            o2.value = OTHER
+            o2.textContent = 'Other'
+            control.appendChild(o2)
+          }
+        } else {
+          control = document.createElement('input')
+          control.type = INPUTS[q.type] || 'text'
+        }
+        control.id = id
+        control.name = name
+        if (q.required) control.required = true
+        if (q.placeholder && control.tagName !== 'SELECT') control.placeholder = q.placeholder
+        if (typeof keep[name] === 'string') control.value = keep[name]
+        wrap.appendChild(control)
+        if (q.allow_other && control.tagName === 'SELECT') wrap.appendChild(otherBox(name, keep))
+      }
+      if (q.help) {
+        var help = document.createElement('p')
+        help.className = 'island-help'
+        help.textContent = q.help
+        wrap.appendChild(help)
+      }
+      syncOther(wrap)
+      return wrap
+    }
+    /** What every drawn field holds now, by name, so a redraw keeps it. */
+    function held() {
+      var out = {}
+      var controls = questionsEl.querySelectorAll('input, select, textarea')
+      for (var i = 0; i < controls.length; i++) {
+        var c = controls[i]
+        if (c.type === 'checkbox' && c.hasAttribute('data-multi')) {
+          out[c.name] = out[c.name] || []
+          if (c.checked) out[c.name].push(c.value)
+        } else if (c.type === 'checkbox') {
+          out[c.name] = c.checked ? 'Yes' : 'No'
+        } else {
+          out[c.name] = c.value
+        }
+      }
+      return out
+    }
+    function drawQuestions() {
+      var keep = held()
+      questionsEl.textContent = ''
+      var order = scoped('order')
+      var unit = scoped('unit')
+      var n = quantity()
+      order.forEach(function (q, i) {
+        questionsEl.appendChild(field(q, 'o:' + i, q.label, keep))
+      })
+      for (var u = 0; u < (asks(unit) ? n : 0); u++) {
+        unit.forEach(function (q, i) {
+          questionsEl.appendChild(field(q, 'u:' + u + ':' + i, n > 1 ? q.label + ' · unit ' + (u + 1) : q.label, keep))
+        })
+      }
+      unitNote.hidden = !(asks(unit) && n > 1)
+    }
+    questionsEl.addEventListener('change', function (event) {
+      var wrap = event.target instanceof Element ? event.target.closest('.island-field') : null
+      if (wrap) syncOther(wrap)
+    })
+    function answersOf(prefix, questions) {
+      var keys = keysOf(questions)
+      var out = {}
+      var now = held()
+      questions.forEach(function (q, i) {
+        if (q.type === 'note') return
+        var value = now[prefix + i]
+        if (value === undefined) return
+        // "Other" is answered by the text typed beside it.
+        var typed = String(now[prefix + i + '#other'] || '').trim()
+        if (value === OTHER) value = typed
+        if (Array.isArray(value)) {
+          value = value
+            .map(function (v) {
+              return v === OTHER ? typed : v
+            })
+            .filter(Boolean)
+          if (value.length > 0) out[keys[i]] = value
+        } else if (value !== '') out[keys[i]] = value
+      })
+      return out
+    }
+
+    function draw() {
+      var item = selected()
+      if (!item) return
+      var n = quantity()
+      var now = liveItem(item)
+      statusEl.textContent = ''
+      retryEl.hidden = !failed
+      if (failed || !now) {
+        priceEl.textContent = money(item.price_cents * n)
+        wasEl.hidden = true
+        lineEl.textContent = (builtDay ? 'As of the last build, ' + builtDay + '. ' : 'As of the last build. ') + (failed ? 'We could not reach the shop for the live price.' : 'This item is not on sale right now.')
+        setWord(null)
+        addEl.disabled = true
+        addEl.textContent = failed ? 'Can’t add to cart right now' : 'Not available'
+        return
+      }
+      priceEl.textContent = money(now.price_cents * n)
+      var moved = now.price_cents !== item.price_cents
+      // The live compare-at price when the read carries one, else the build's.
+      var compareAt = typeof now.compare_at_cents === 'number' || now.compare_at_cents === null ? now.compare_at_cents : item.compare_at_cents
+      var compare = !moved && compareAt !== null && compareAt > now.price_cents ? compareAt : null
+      wasEl.hidden = !(moved || compare !== null)
+      wasEl.textContent = moved ? money(item.price_cents * n) : compare !== null ? money(compare * n) : ''
+      var each = n > 1 ? n + ' × ' + money(now.price_cents) + ' · ' : ''
+      lineEl.textContent = moved
+        ? each + 'Price changed since this page was built. The live price is the one you pay.'
+        : n > 1
+          ? each + 'updated just now.'
+          : 'Price updated just now.'
+      setWord(now.availability)
+      var out = now.availability === 'out'
+      addEl.disabled = out
+      addEl.textContent = out ? 'Sold out' : n > 1 ? 'Add ' + n + ' to cart' : 'Add to cart'
+      if (out) lineEl.textContent += ' Nothing to add right now.'
+    }
+
+    function read() {
+      failed = false
+      addEl.disabled = true
+      addEl.textContent = 'Checking the price…'
+      retryEl.hidden = true
+      var headers = { Accept: 'application/json' }
+      if (key) headers.Authorization = 'Bearer ' + key
+      var controller = typeof AbortController === 'function' ? new AbortController() : null
+      var timer = controller ? setTimeout(function () { controller.abort() }, 8000) : null
+      fetch(api + '?ids=' + encodeURIComponent(product.id), { headers: headers, signal: controller ? controller.signal : undefined })
+        .then(function (res) {
+          return res.ok ? res.json() : null
+        })
+        .then(function (body) {
+          var found = body && Array.isArray(body.products) ? body.products.filter(function (p) { return p && p.id === product.id })[0] : null
+          if (found && Array.isArray(found.items)) live = { items: found.items, questions: Array.isArray(found.questions) ? found.questions : [] }
+          else if (body && Array.isArray(body.products)) live = { items: [], questions: [] }
+          else failed = true
+        })
+        .catch(function () {
+          failed = true
+        })
+        .then(function () {
+          if (timer) clearTimeout(timer)
+          drawQuestions()
+          draw()
+        })
+    }
+
+    qtyEl.addEventListener('input', function () {
+      drawQuestions()
+      draw()
+    })
+    island.addEventListener('click', function (event) {
+      var step = event.target instanceof Element ? event.target.closest('[data-bg-step]') : null
+      if (!step) return
+      qtyEl.value = String(Math.max(1, Math.min(99, quantity() + Number(step.getAttribute('data-bg-step')))))
+      drawQuestions()
+      draw()
+    })
+    for (var k = 0; k < radios.length; k++) radios[k].addEventListener('change', draw)
+    retryEl.addEventListener('click', read)
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var item = selected()
+      var now = liveItem(item)
+      if (!item || !now || now.availability === 'out') return
+      if (!form.reportValidity()) return
+      var n = quantity()
+      var order = scoped('order')
+      var unit = scoped('unit')
+      var line = {
+        variant_id: item.id,
+        product_slug: product.slug,
+        product_name: String(product.name).slice(0, MOST_TEXT),
+        variant_name: String(item.name || product.name).slice(0, MOST_TEXT),
+        unit_price_cents: now.price_cents,
+        quantity: n,
+        photo_url: product.photo_url,
+        needs_shipping: product.ships && product.ship_to !== 'store',
+      }
+      if (asks(order) || asks(unit)) {
+        var answers = {}
+        if (asks(order)) answers.order = answersOf('o:', order)
+        if (asks(unit)) {
+          answers.units = []
+          for (var u = 0; u < n; u++) answers.units.push(answersOf('u:' + u + ':', unit))
+        }
+        line.answers = answers
+      }
+      if (!addLine(org, line)) {
+        statusEl.textContent = 'That is more than one cart can hold. Check out what is in it, then come back for more.'
+        return
+      }
+      questionsEl.textContent = ''
+      qtyEl.value = '1'
+      drawQuestions()
+      draw()
+      statusEl.textContent = n > 1 ? n + ' added to your cart. ' : 'Added to your cart. '
+      var go = document.createElement('a')
+      go.className = 'text-link'
+      go.setAttribute('data-bg-checkout-now', '')
+      go.href = cartLink.getAttribute('data-bg-checkout')
+      go.textContent = 'Check out'
+      statusEl.appendChild(go)
+    })
+    read()
+  })(document.currentScript)
+</script>

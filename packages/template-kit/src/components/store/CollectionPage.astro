@@ -1,0 +1,40 @@
+---
+// One collection at /collections/<slug> (board 06, "/collections/:slug"):
+// its cover, "Collection · N items" over its title as the page's one <h1>,
+// its intro, the grid in the collection's own order (a member that is not
+// published is not in the answer, so it is simply absent), then a closing
+// band with the collection's body and the page's one call, back to the
+// whole store.
+import type { CollectionDetail } from '@backgold/content'
+import { renderMarkdown, safeSrc } from '@backgold/astro/server'
+import ProductGrid from './ProductGrid.astro'
+import { STORE_PATH } from '../../lib/store'
+import '../../styles/store.css'
+
+interface Props {
+  collection: CollectionDetail
+}
+
+const { collection } = Astro.props
+const cover = collection.cover ? safeSrc(collection.cover.url) : null
+const count = collection.products.length
+const body = collection.body.markdown.trim() ? renderMarkdown(collection.body.markdown) : ''
+---
+<div class="store-page collection-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href={STORE_PATH}>Store</a><span aria-hidden="true"> › </span><span>{collection.title}</span>
+  </nav>
+  {cover && <img class="collection-cover" src={cover} alt="" decoding="async" />}
+  <header class="store-head">
+    <p class="kicker">Collection · {count} {count === 1 ? 'item' : 'items'}</p>
+    <h1>{collection.title}</h1>
+    {collection.intro && <p class="lede">{collection.intro}</p>}
+  </header>
+  {count > 0 ? <ProductGrid products={collection.products} label={collection.title} /> : <p class="empty">Nothing in this collection yet.</p>}
+  <section class="store-band store-band-closing">
+    <div class="store-band-words">
+      {body && <div class="prose" set:html={body} />}
+      <p class="store-band-call"><a class="button" href={STORE_PATH}>See everything in the store</a></p>
+    </div>
+  </section>
+</div>

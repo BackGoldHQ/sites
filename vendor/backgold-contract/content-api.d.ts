@@ -1,5 +1,5 @@
-import { B as BackgoldSurfacePath, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, L as LiveStreamStatus, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as SiteSectionKind, f as SiteSectionRole, g as ShiftPublicState, h as ShiftPublicSubjectKind, i as SiteMode, j as SiteApiKeyKind } from './constants-DvTNj4JI.js';
-export { k as ContentWebhookEvent, l as SITE_KEY_PREFIXES, m as SitePageModuleKind } from './constants-DvTNj4JI.js';
+import { B as BackgoldSurfacePath, P as ProductAvailability, C as ContentFieldKind, a as ContentAccessLevel, b as BylineRoleLabel, L as LiveStreamStatus, S as SiteNavItemType, c as SiteNavShowsOn, d as SiteMenuKey, e as StoreAttributeKind, f as ProductShipTo, I as ItemQuestionScope, g as SiteSectionKind, h as SiteSectionRole, i as ShiftPublicState, j as ShiftPublicSubjectKind, k as SiteMode, l as SiteApiKeyKind } from './constants-CFceIhXh.js';
+export { m as ContentWebhookEvent, n as SITE_KEY_PREFIXES, o as SitePageModuleKind } from './constants-CFceIhXh.js';
 
 /**
  * Whether an authored href may be handed to a partner as a link: a same-page
@@ -827,6 +827,198 @@ interface EventLiveCounts {
 /** GET /events/live?ids= — live counts for the named events; an id the site cannot read is omitted. Never versioned. */
 interface EventsLiveResponse {
     events: EventLiveCounts[];
+}
+/** One of a listing's photos, as the public photo route serves it. */
+interface ProductPhoto {
+    url: string;
+}
+/** A node of the department path (root first), or a tag: the term's taxonomy, slug and label. */
+type ProductTerm = EntryTerm;
+/** A collection a listing is in, as its page is addressed. */
+interface ProductCollectionRef {
+    slug: string;
+    title: string;
+}
+/**
+ * One sellable unit of a listing (ruling 2: every unit is an item with its
+ * own SKU, UPC and stock). `availability` is the word, never a count. The
+ * price is the one built; the island's live read wins when it differs.
+ */
+interface ProductItem {
+    id: string;
+    name: string;
+    sku: string | null;
+    /** The GTIN the structured data carries. */
+    upc: string | null;
+    price_cents: number;
+    compare_at_cents: number | null;
+    availability: ProductAvailability;
+}
+/**
+ * One listing as GET /products lists it and as a collection's grid carries
+ * it. `url` is the listing's page on the site (`/store/<slug>`), the one the
+ * site builds; `buy_url` is the page on BackGold where the cart and checkout
+ * live, for a site that builds no island.
+ */
+interface ProductSummary {
+    id: string;
+    slug: string;
+    name: string;
+    /** The grid copy, plain text; null when the listing has none. */
+    short_description: string | null;
+    url: string;
+    buy_url: string;
+    photos: ProductPhoto[];
+    /** The least and greatest item prices; equal for a single-item listing. */
+    price_from_cents: number;
+    price_to_cents: number;
+    /** The best word across the listing's items: in_stock if any item is, else low, preorder, out. */
+    availability: ProductAvailability;
+    /** The department path, root first; empty for an unclassified listing. */
+    department: ProductTerm[];
+    tags: ProductTerm[];
+    collections: ProductCollectionRef[];
+    /** `service` for an offering with nothing to ship; null otherwise. */
+    offering_kind: string | null;
+    /** True when buying the listing ships something (a physical item that is not a service). */
+    ships: boolean;
+    /**
+     * True when buying the listing is a political contribution: its compliance
+     * treatment is full_price (the whole price) or above_cost (the markup over
+     * cost). False for commercial and for a listing with no treatment chosen.
+     * A site says so before the buyer adds it to the cart, and the shop page
+     * when any listing on it does.
+     */
+    counts_as_contribution: boolean;
+    updated_at: string;
+}
+/** One attribute the listing's department asks for, with the listing's value. */
+interface ProductAttribute {
+    key: string;
+    label: string;
+    kind: StoreAttributeKind;
+    value: string | string[] | boolean | null;
+}
+/** The listing's SEO fields; each falls back to the listing's own name, short copy and first photo. */
+interface ProductSeo {
+    title: string;
+    description: string | null;
+    image_url: string | null;
+}
+/** GET /products/:slug — the listing for its own page. */
+interface ProductDetail extends ProductSummary {
+    /** The long copy as sanitized HTML; empty when the listing has none. */
+    description_html: string;
+    /** The listing's manufacturer (an archived one still names it); null when it has none. */
+    manufacturer: {
+        name: string;
+    } | null;
+    /**
+     * Where the order goes: `buyer` (ships to the buyer, or nothing to ship),
+     * `store` (picked up at the store), `third_party` (ships to a licensed
+     * dealer the buyer names at checkout). One value, never a choice.
+     */
+    ship_to: ProductShipTo;
+    items: ProductItem[];
+    attributes: ProductAttribute[];
+    seo: ProductSeo;
+    /** A schema.org Product (with its offers), ready to serialize into the page. */
+    structured_data: Record<string, unknown>;
+    /** Other listings from the same collections, at most eight. */
+    related: ProductSummary[];
+}
+/** A department node with its published-listing count, for the storefront's rail. */
+interface ProductDepartment {
+    id: string;
+    slug: string;
+    label: string;
+    parent_id: string | null;
+    position: number;
+    /** Published listings in this node and its descendants. */
+    count: number;
+}
+/**
+ * GET /products — the published listings, newest first, one page at a time,
+ * with the department tree and the published collections the storefront's
+ * rail and bands draw from. `?department=<slug>` narrows to a node and its
+ * descendants; `?collection=<slug>` to a collection's members in its order.
+ */
+interface ProductsResponse {
+    products: ProductSummary[];
+    departments: ProductDepartment[];
+    collections: CollectionSummary[];
+    next_cursor: string | null;
+}
+interface ProductResponse {
+    product: ProductDetail;
+    areas: Areas;
+}
+/**
+ * One checkout question an item asks (products.questions_json), in the form
+ * vocabulary the island renders with: the field's label, type and choices,
+ * and whether it is asked once per order or once per unit in the line.
+ */
+interface ProductQuestion {
+    label: string;
+    type: string;
+    required: boolean;
+    options: string[] | null;
+    placeholder: string | null;
+    help: string | null;
+    /** A `note` question's text, plain (the island escapes it and splits it into paragraphs); null for every other type. */
+    body: string | null;
+    /** True when a choice question (select, radio, checkboxes) takes a write-in; false otherwise. */
+    allow_other: boolean;
+    scope: ItemQuestionScope;
+}
+/**
+ * One listing's live read: each item's price, compare-at price and
+ * availability now, and the questions its line asks.
+ */
+interface ProductLive {
+    id: string;
+    items: Array<{
+        id: string;
+        price_cents: number;
+        compare_at_cents: number | null;
+        availability: ProductAvailability;
+    }>;
+    questions: ProductQuestion[];
+}
+/** GET /products/live?ids= — live price, availability and questions for the named listings; an id the site cannot read is omitted. Never versioned. */
+interface ProductsLiveResponse {
+    products: ProductLive[];
+}
+/** One collection as GET /collections lists it and as a product's band carries it. */
+interface CollectionSummary {
+    id: string;
+    slug: string;
+    title: string;
+    /** The intro line, plain text; null when the entry has none. */
+    intro: string | null;
+    /** The collection's page on the site (`/collections/<slug>`). */
+    url: string;
+    cover: {
+        url: string;
+    } | null;
+    /** Published listings in the collection. */
+    count: number;
+    updated_at: string;
+}
+/** GET /collections/:slug — the collection for its own page: the entry's body and the ordered grid. */
+interface CollectionDetail extends CollectionSummary {
+    body: {
+        markdown: string;
+    };
+    products: ProductSummary[];
+}
+interface CollectionsResponse {
+    collections: CollectionSummary[];
+    next_cursor: string | null;
+}
+interface CollectionResponse {
+    collection: CollectionDetail;
+    areas: Areas;
 }
 /** What a public shift belongs to: a public event (its slug, as GET /events/:slug reads it), else `standalone` with no slug. */
 interface ShiftSubject {
@@ -2243,6 +2435,8 @@ declare const CONTENT_API_BLOCKS: {
                         readonly prop: "duration_minutes";
                         readonly as: "number";
                     };
+                    readonly durations: "durations";
+                    readonly host_first_name: "host_first_name";
                     readonly location_kind: "location_kind";
                     readonly price_cents: {
                         readonly prop: "price_cents";
@@ -2443,4 +2637,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, LIVE_STREAM_CACHE_CONTROL, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type LiveResponse, type LiveStream, LiveStreamStatus, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionPetition, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, type CollectionDetail, type CollectionResponse, type CollectionSummary, type CollectionsResponse, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, LIVE_STREAM_CACHE_CONTROL, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type LiveResponse, type LiveStream, LiveStreamStatus, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, type PageResponse, type PageSummary, type PagesResponse, type ProductAttribute, type ProductCollectionRef, type ProductDepartment, type ProductDetail, type ProductItem, type ProductLive, type ProductPhoto, type ProductQuestion, type ProductResponse, type ProductSeo, type ProductSummary, type ProductTerm, type ProductsLiveResponse, type ProductsResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionPetition, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };

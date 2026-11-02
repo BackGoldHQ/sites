@@ -586,6 +586,128 @@ var eventsLiveExample = {
     { id: "evt_4m1", going: 88, seats_left: 12 }
   ]
 };
+var teeSummary = {
+  id: "prd_7h2",
+  slug: "pine-valley-tee",
+  name: "Pine Valley tee",
+  short_description: "Heavyweight cotton, printed in the county.",
+  url: "https://pinevalleyliberty.org/store/pine-valley-tee",
+  buy_url: "https://secure.backgold.com/s/pine-valley/pine-valley-tee",
+  photos: [{ url: "https://api.backgold.com/api/store-pages/pine-valley/photos/prd_7h2/pho_1" }],
+  price_from_cents: 2500,
+  price_to_cents: 2500,
+  availability: "in_stock",
+  department: [
+    { taxonomy: "department", slug: "apparel", label: "Apparel" },
+    { taxonomy: "department", slug: "tees", label: "Tees" }
+  ],
+  tags: [{ taxonomy: "tag", slug: "new", label: "New" }],
+  collections: [{ slug: "fall-drop", title: "Fall drop" }],
+  offering_kind: null,
+  ships: true,
+  counts_as_contribution: true,
+  updated_at: "2026-10-28T15:10:00.000Z"
+};
+var yardSignSummary = {
+  id: "prd_9c4",
+  slug: "yard-sign",
+  name: "Yard sign",
+  short_description: "Two-sided, with the stake.",
+  url: "https://pinevalleyliberty.org/store/yard-sign",
+  buy_url: "https://secure.backgold.com/s/pine-valley/yard-sign",
+  photos: [{ url: "https://api.backgold.com/api/store-pages/pine-valley/photos/prd_9c4/pho_1" }],
+  price_from_cents: 1e3,
+  price_to_cents: 1e3,
+  availability: "low",
+  department: [{ taxonomy: "department", slug: "signs", label: "Signs" }],
+  tags: [],
+  collections: [{ slug: "fall-drop", title: "Fall drop" }],
+  offering_kind: null,
+  ships: true,
+  counts_as_contribution: false,
+  updated_at: "2026-10-20T09:00:00.000Z"
+};
+var fallDrop = {
+  id: "col_3f1",
+  slug: "fall-drop",
+  title: "Fall drop",
+  intro: "What the county chapters are wearing this fall.",
+  url: "https://pinevalleyliberty.org/collections/fall-drop",
+  cover: { url: "https://api.backgold.com/lp-assets/org_pv/fall-drop.jpg" },
+  count: 2,
+  updated_at: "2026-10-28T15:12:00.000Z"
+};
+var productsExample = {
+  products: [teeSummary, yardSignSummary],
+  departments: [
+    { id: "trm_a1", slug: "apparel", label: "Apparel", parent_id: null, position: 0, count: 1 },
+    { id: "trm_a2", slug: "tees", label: "Tees", parent_id: "trm_a1", position: 0, count: 1 },
+    { id: "trm_s1", slug: "signs", label: "Signs", parent_id: null, position: 1, count: 1 }
+  ],
+  collections: [fallDrop],
+  next_cursor: null
+};
+var productExample = {
+  product: {
+    ...teeSummary,
+    description_html: "<p>Printed by a union shop in Pine Valley. Wear it to the county fair.</p>",
+    manufacturer: { name: "Valley Union Print Co." },
+    ship_to: "buyer",
+    items: [
+      { id: "itm_1", name: "S", sku: "PV-TEE-S", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+      { id: "itm_2", name: "M", sku: "PV-TEE-M", upc: null, price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+      { id: "itm_3", name: "L", sku: "PV-TEE-L", upc: null, price_cents: 2500, compare_at_cents: null, availability: "low" }
+    ],
+    attributes: [
+      { key: "fabric", label: "Fabric", kind: "short_text", value: "100% cotton" },
+      { key: "fit", label: "Fit", kind: "choice", value: "Unisex" }
+    ],
+    seo: {
+      title: "Pine Valley tee",
+      description: "Heavyweight cotton, printed in the county.",
+      image_url: "https://api.backgold.com/api/store-pages/pine-valley/photos/prd_7h2/pho_1"
+    },
+    structured_data: {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "Pine Valley tee",
+      description: "Heavyweight cotton, printed in the county.",
+      image: ["https://api.backgold.com/api/store-pages/pine-valley/photos/prd_7h2/pho_1"],
+      sku: "PV-TEE-S",
+      offers: [
+        { "@type": "Offer", sku: "PV-TEE-S", price: "25.00", priceCurrency: "USD", availability: "https://schema.org/InStock", url: "https://pinevalleyliberty.org/store/pine-valley-tee" },
+        { "@type": "Offer", sku: "PV-TEE-M", price: "25.00", priceCurrency: "USD", availability: "https://schema.org/InStock", url: "https://pinevalleyliberty.org/store/pine-valley-tee" },
+        { "@type": "Offer", sku: "PV-TEE-L", price: "25.00", priceCurrency: "USD", availability: "https://schema.org/LimitedAvailability", url: "https://pinevalleyliberty.org/store/pine-valley-tee" }
+      ]
+    },
+    related: [yardSignSummary]
+  },
+  areas: areasExample
+};
+var productsLiveExample = {
+  products: [
+    {
+      id: "prd_7h2",
+      items: [
+        { id: "itm_1", price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+        { id: "itm_2", price_cents: 2500, compare_at_cents: null, availability: "in_stock" },
+        { id: "itm_3", price_cents: 2500, compare_at_cents: null, availability: "out" }
+      ],
+      questions: [
+        { label: "Chapter name to stitch", type: "text", required: false, options: null, placeholder: "Pine Valley", help: null, body: null, allow_other: false, scope: "unit" }
+      ]
+    }
+  ]
+};
+var collectionsExample = { collections: [fallDrop], next_cursor: null };
+var collectionExample = {
+  collection: {
+    ...fallDrop,
+    body: { markdown: "Two things every chapter asked for, in time for the fair season." },
+    products: [teeSummary, yardSignSummary]
+  },
+  areas: areasExample
+};
 var shiftsExample = {
   shifts: [
     {
@@ -777,7 +899,12 @@ var CONTENT_API_EXAMPLES = {
   LessonResponse: lessonExample,
   LessonProgressResponse: lessonProgressExample,
   VisitorResponse: visitorExample,
-  VisitorExchangeResponse: visitorExchangeExample
+  VisitorExchangeResponse: visitorExchangeExample,
+  ProductsResponse: productsExample,
+  ProductResponse: productExample,
+  ProductsLiveResponse: productsLiveExample,
+  CollectionsResponse: collectionsExample,
+  CollectionResponse: collectionExample
 };
 
-export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, liveExample, menuExample, pageExample, pagesExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
+export { CONTENT_API_EXAMPLES, areasExample, areasResponseExample, authorExample, authorsExample, collectionExample, collectionsExample, courseExample, coursesExample, entriesExample, entryExample, eventExample, eventsExample, eventsLiveExample, legalExample, lessonExample, lessonProgressExample, liveExample, menuExample, pageExample, pagesExample, productExample, productsExample, productsLiveExample, redirectsExample, sectionsExample, shiftsExample, shiftsLiveExample, siteExample, sitemapExample, termsExample, typesExample, visitorExample, visitorExchangeExample };
