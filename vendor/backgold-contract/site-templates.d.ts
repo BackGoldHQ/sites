@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S as SiteNavItemType } from './constants-CFceIhXh.js';
+import { S as SiteNavItemType } from './constants-BAIo_Q5U.js';
 
 /**
  * A site template's manifest: the `template.json` at the root of each
@@ -90,6 +90,7 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
     }, z.core.$catchall<z.ZodString>>;
     entryLayouts: z.ZodRecord<z.ZodEnum<{
         post: "post";
+        collection: "collection";
         video: "video";
         course: "course";
         podcast: "podcast";
@@ -97,7 +98,6 @@ declare const siteTemplateManifestSchema: z.ZodObject<{
         team_member: "team_member";
         open_role: "open_role";
         newsletter: "newsletter";
-        collection: "collection";
     }> & z.core.$partial, z.ZodObject<{
         entry: z.ZodString;
         list: z.ZodString;
@@ -507,6 +507,7 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
     }, z.core.$catchall<z.ZodString>>;
     entryLayouts: z.ZodRecord<z.ZodEnum<{
         post: "post";
+        collection: "collection";
         video: "video";
         course: "course";
         podcast: "podcast";
@@ -514,7 +515,6 @@ declare const deployTemplateManifestSchema: z.ZodObject<{
         team_member: "team_member";
         open_role: "open_role";
         newsletter: "newsletter";
-        collection: "collection";
     }> & z.core.$partial, z.ZodObject<{
         entry: z.ZodString;
         list: z.ZodString;

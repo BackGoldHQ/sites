@@ -523,7 +523,11 @@ var sitemapExample = {
   urls: [
     { url: "https://pinevalleyliberty.org/", kind: "page", updated_at: "2026-10-01T09:12:00.000Z" },
     { url: "https://pinevalleyliberty.org/blog", kind: "type_index", updated_at: "2026-09-29T12:05:00.000Z" },
-    { url: "https://pinevalleyliberty.org/blog/levy-explained", kind: "entry", updated_at: "2026-09-29T12:05:00.000Z" }
+    { url: "https://pinevalleyliberty.org/blog/levy-explained", kind: "entry", updated_at: "2026-09-29T12:05:00.000Z" },
+    { url: "https://pinevalleyliberty.org/store", kind: "store", updated_at: "2026-10-28T15:10:00.000Z" },
+    { url: "https://pinevalleyliberty.org/store/departments/apparel", kind: "department", updated_at: "2026-10-28T15:10:00.000Z" },
+    { url: "https://pinevalleyliberty.org/store/pine-valley-tee", kind: "product", updated_at: "2026-10-28T15:10:00.000Z" },
+    { url: "https://pinevalleyliberty.org/collections/fall-drop", kind: "collection", updated_at: "2026-10-28T15:12:00.000Z" }
   ]
 };
 var eventsExample = {
@@ -598,8 +602,8 @@ var teeSummary = {
   price_to_cents: 2500,
   availability: "in_stock",
   department: [
-    { taxonomy: "department", slug: "apparel", label: "Apparel" },
-    { taxonomy: "department", slug: "tees", label: "Tees" }
+    { taxonomy: "department", slug: "apparel", label: "Apparel", category_page: true },
+    { taxonomy: "department", slug: "tees", label: "Tees", category_page: true }
   ],
   tags: [{ taxonomy: "tag", slug: "new", label: "New" }],
   collections: [{ slug: "fall-drop", title: "Fall drop" }],
@@ -619,7 +623,7 @@ var yardSignSummary = {
   price_from_cents: 1e3,
   price_to_cents: 1e3,
   availability: "low",
-  department: [{ taxonomy: "department", slug: "signs", label: "Signs" }],
+  department: [{ taxonomy: "department", slug: "signs", label: "Signs", category_page: true }],
   tags: [],
   collections: [{ slug: "fall-drop", title: "Fall drop" }],
   offering_kind: null,

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { p as BuiltInContentTypeKey, q as ContentTypeIcon, r as BuiltInTaxonomyKey, C as ContentFieldKind, s as ContentReferenceTarget } from './constants-CFceIhXh.js';
+import { q as BuiltInContentTypeKey, r as ContentTypeIcon, s as BuiltInTaxonomyKey, C as ContentFieldKind, t as ContentReferenceTarget } from './constants-BAIo_Q5U.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
@@ -72,7 +72,7 @@ interface BuiltInContentType {
 /**
  * The built-in types a new org is given (lib/content-types.ts
  * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party), 0453
- * (newsletter), 0552 (course) and 0704 (collection) seeded the same rows for the orgs that existed then, with one
+ * (newsletter), 0552 (course) and 0705 (collection) seeded the same rows for the orgs that existed then, with one
  * difference: the post row's url_base — the org's blog base — was `blog`
  * (BLOG_URL_BASE_LEGACY) there and is `news` for a new org.
  */
@@ -239,7 +239,7 @@ interface BuiltInTaxonomy {
     label: string;
     hierarchical: boolean;
 }
-/** The built-in taxonomies, exactly as migrations 0372 (category, tag) and 0704 (department) seed them. */
+/** The built-in taxonomies, exactly as migrations 0372 (category, tag) and 0705 (department) seed them. */
 declare const BUILT_IN_TAXONOMIES: readonly BuiltInTaxonomy[];
 /** The blog type key whose entries are stored with `kind`. */
 declare function builtInTypeKeyForKind(kind: ContentKind): BuiltInContentTypeKey;
