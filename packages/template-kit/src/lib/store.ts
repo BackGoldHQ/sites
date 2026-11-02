@@ -4,12 +4,17 @@
 //
 //   /store                       the shop: the departments rail (each with
 //                                its published count, only departments with
-//                                something in them), the site's collections
+//                                something in them; the api lists only those
+//                                whose storefront page is on, each under its
+//                                nearest listed ancestor), the site's collections
 //                                under it, the grid of listings (each card
 //                                the link, no buttons) and a collection band
 //                                carrying the page's one call (GET /products).
 //   /store/departments/<slug>    the same, narrowed to a department and
-//                                everything under it (`?department=`).
+//                                everything under it (`?department=`); a
+//                                department the api does not list has none.
+//                                The api also filters by attribute value
+//                                (`?attr=`); the shop draws no filters yet.
 //   /store/<slug>                one listing (GET /products/<slug>): its
 //                                gallery, copy, attributes, related listings
 //                                by collection, and the Product + Offer
@@ -49,8 +54,11 @@
 //   strings or lists of strings (a line that breaks one is dropped), and
 //   clears the fragment; it quotes prices
 //   again itself, so a line's `unit_price_cents` is for display only. The
-//   site keeps its cart after the hand-over: a later hand-over replaces the
-//   checkout's cart again, never adds to it.
+//   site forgets its cart in the click that hands it over (the link's
+//   address already carries the lines, so a new tab gets them too): the
+//   checkout owns the cart from then on, and an empty site cart's link goes
+//   to the checkout as it stands. A later hand-over of new lines replaces
+//   the checkout's cart, never adds to it.
 
 import type { BackgoldContent, CollectionResponse, ProductDepartment, ProductDetail, ProductResponse, ProductSummary, ProductsResponse } from '@backgold/content'
 import { BackgoldApiError } from '@backgold/content'
@@ -215,7 +223,14 @@ export function departmentOf(departments: readonly ProductDepartment[], slug: st
   return slug ? departments.find((d) => d.slug === slug && d.count > 0) ?? null : null
 }
 
-/** How many published listings the shop has: the top-level departments' counts, or the page's own count when nothing is classified. */
+/**
+ * How many published listings the shop has: the top-level departments'
+ * counts, or the page's own count when nothing is classified. GET /products
+ * carries no total, so when a top-level department's storefront page is off
+ * the api does not list it: its children come up as top-level departments
+ * and still count, but the listings filed on it directly are left out of the
+ * sum.
+ */
 export function shopCount(response: ProductsResponse): number {
   const roots = response.departments.filter((d) => d.parent_id === null).reduce((n, d) => n + d.count, 0)
   return Math.max(roots, response.products.length)

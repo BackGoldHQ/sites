@@ -32,6 +32,8 @@ declare const STORE_ATTRIBUTE_KINDS: readonly ["short_text", "long_text", "numbe
 type StoreAttributeKind = (typeof STORE_ATTRIBUTE_KINDS)[number];
 declare const PRODUCT_AVAILABILITY: readonly ["in_stock", "low", "out", "preorder"];
 type ProductAvailability = (typeof PRODUCT_AVAILABILITY)[number];
+declare const SITEMAP_URL_KINDS: readonly ["page", "type_index", "entry", "store", "department", "product", "collection"];
+type SitemapUrlKind = (typeof SITEMAP_URL_KINDS)[number];
 declare const ITEM_QUESTION_SCOPES: readonly ["order", "unit"];
 type ItemQuestionScope = (typeof ITEM_QUESTION_SCOPES)[number];
 declare const CONTENT_FIELD_KINDS: readonly ["short_text", "long_text", "rich_text", "image", "pdf", "link", "date", "datetime", "boolean", "choice", "choices", "list", "reference"];
@@ -61,4 +63,4 @@ type ContentWebhookEvent = (typeof CONTENT_WEBHOOK_EVENTS)[number];
 declare const BACKGOLD_SURFACE_PATHS: readonly ["donate", "join", "store", "events", "blog", "petition", "form", "poll", "frame", "run", "privacy", "sms-terms"];
 type BackgoldSurfacePath = (typeof BACKGOLD_SURFACE_PATHS)[number];
 
-export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type ItemQuestionScope as I, type LiveStreamStatus as L, type ProductAvailability as P, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type StoreAttributeKind as e, type ProductShipTo as f, type SiteSectionKind as g, type SiteSectionRole as h, type ShiftPublicState as i, type ShiftPublicSubjectKind as j, type SiteMode as k, type SiteApiKeyKind as l, type ContentWebhookEvent as m, SITE_KEY_PREFIXES as n, type SitePageModuleKind as o, type BuiltInContentTypeKey as p, type ContentTypeIcon as q, type BuiltInTaxonomyKey as r, type ContentReferenceTarget as s };
+export { type BackgoldSurfacePath as B, type ContentFieldKind as C, type ItemQuestionScope as I, type LiveStreamStatus as L, type ProductAvailability as P, type SiteNavItemType as S, type ContentAccessLevel as a, type BylineRoleLabel as b, type SiteNavShowsOn as c, type SiteMenuKey as d, type StoreAttributeKind as e, type ProductShipTo as f, type SiteSectionKind as g, type SiteSectionRole as h, type ShiftPublicState as i, type ShiftPublicSubjectKind as j, type SiteMode as k, type SitemapUrlKind as l, type SiteApiKeyKind as m, type ContentWebhookEvent as n, SITE_KEY_PREFIXES as o, type SitePageModuleKind as p, type BuiltInContentTypeKey as q, type ContentTypeIcon as r, type BuiltInTaxonomyKey as s, type ContentReferenceTarget as t };

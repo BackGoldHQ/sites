@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { p as BuiltInContentTypeKey, q as ContentTypeIcon, r as BuiltInTaxonomyKey, C as ContentFieldKind, s as ContentReferenceTarget } from './constants-CFceIhXh.js';
+import { q as BuiltInContentTypeKey, r as ContentTypeIcon, s as BuiltInTaxonomyKey, C as ContentFieldKind, t as ContentReferenceTarget } from './constants-BAIo_Q5U.js';
 
 /**
  * Content objects (W31) — the shared primitives every content surface
@@ -72,7 +72,7 @@ interface BuiltInContentType {
 /**
  * The built-in types a new org is given (lib/content-types.ts
  * seedBuiltInContentTypes). Migrations 0372 (blog), 0375 (party), 0453
- * (newsletter), 0552 (course) and 0704 (collection) seeded the same rows for the orgs that existed then, with one
+ * (newsletter), 0552 (course) and 0705 (collection) seeded the same rows for the orgs that existed then, with one
  * difference: the post row's url_base — the org's blog base — was `blog`
  * (BLOG_URL_BASE_LEGACY) there and is `news` for a new org.
  */
@@ -239,7 +239,7 @@ interface BuiltInTaxonomy {
     label: string;
     hierarchical: boolean;
 }
-/** The built-in taxonomies, exactly as migrations 0372 (category, tag) and 0704 (department) seed them. */
+/** The built-in taxonomies, exactly as migrations 0372 (category, tag) and 0705 (department) seed them. */
 declare const BUILT_IN_TAXONOMIES: readonly BuiltInTaxonomy[];
 /** The blog type key whose entries are stored with `kind`. */
 declare function builtInTypeKeyForKind(kind: ContentKind): BuiltInContentTypeKey;
@@ -270,8 +270,8 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
-        tag: "tag";
         video: "video";
+        tag: "tag";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -294,8 +294,8 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
-        tag: "tag";
         video: "video";
+        tag: "tag";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -308,10 +308,10 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     default_access: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
-        tag: "tag";
         public: "public";
         signed_in: "signed_in";
         members: "members";
+        tag: "tag";
     }>>>;
 }, z.core.$strict>;
 type ContentTypeUpdateInput = z.infer<typeof contentTypeUpdateSchema>;
@@ -321,17 +321,17 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        long_text: "long_text";
-        short_text: "short_text";
-        rich_text: "rich_text";
-        image: "image";
-        pdf: "pdf";
-        link: "link";
         date: "date";
+        link: "link";
+        list: "list";
         datetime: "datetime";
+        short_text: "short_text";
+        long_text: "long_text";
         choice: "choice";
         choices: "choices";
-        list: "list";
+        pdf: "pdf";
+        image: "image";
+        rich_text: "rich_text";
         reference: "reference";
     }>;
     required: z.ZodDefault<z.ZodBoolean>;
@@ -403,6 +403,8 @@ declare const termUpdateSchema: z.ZodObject<{
     label: z.ZodOptional<z.ZodString>;
     slug: z.ZodOptional<z.ZodString>;
     parent_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    category_page: z.ZodOptional<z.ZodBoolean>;
+    archived_at: z.ZodOptional<z.ZodNull>;
 }, z.core.$strict>;
 /** A byline names someone: typed, or taken from the linked teammate or contact. */
 declare const bylineCreateSchema: z.ZodObject<{

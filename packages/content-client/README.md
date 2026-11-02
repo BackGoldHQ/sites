@@ -195,12 +195,18 @@ seconds, never by version).
 const { shifts } = await bg.shifts({ limit: 10 })
 ```
 
-**`products({ department?, collection?, cursor?, limit? })`**: the store's
+**`products({ department?, collection?, attr?, cursor?, limit? })`**: the store's
 published listings, newest first, one page at a time (1 to 50, default 20),
 with `next_cursor`, the department tree (`departments`, each node counted with
-its descendants) and the site's published `collections`. `department` narrows
-to a node and everything under it; `collection` to a collection's members in
-its order. Each listing carries its `url` on your site (`/store/<slug>`),
+its descendants; only departments whose storefront page is on, each hanging
+from its nearest listed ancestor) and the site's published `collections`.
+`department` narrows to a node and everything under it; `collection` to a
+collection's members in its order; `attr` to listings with those filterable
+attribute values, by key (`{ color: ['red', 'blue'], size: 'm' }` is red or
+blue, and size m; sent as one `?attr=<key>:<value>` per value, and a malformed
+one is a 400 `BAD_ATTR`). A listing's `department` path names every
+department above it, each with `category_page`: false when that department's
+page is off, so name it without a link. Each listing carries its `url` on your site (`/store/<slug>`),
 `buy_url` (its page on BackGold), photos, `price_from_cents` and
 `price_to_cents`, `availability`, a word (`in_stock`, `low`, `out`,
 `preorder`), never a count, and `counts_as_contribution` (say so before the
@@ -265,7 +271,9 @@ const { redirects } = await bg.redirects()
 const rule = redirects.find((r) => r.source === pathname)
 ```
 
-**`sitemap()`**: every public address of the site.
+**`sitemap()`**: every public address of the site, each with its `kind`:
+`page`, `type_index`, `entry`, and, when the store has a published listing,
+`store`, `department`, `product` and `collection`.
 
 ```ts
 const { urls } = await bg.sitemap()

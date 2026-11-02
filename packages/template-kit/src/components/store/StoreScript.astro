@@ -3,10 +3,13 @@
 //
 // - The header's Cart link (`[data-bg-cart]`, Site.astro's `cart`): the lines
 //   this site keeps under `gg-cart:<org>` in localStorage, counted; hidden
-//   while there are none. Followed, it carries them to the hosted checkout
-//   in its fragment (`#cart=<base64url JSON>`, never the query, so the
-//   answers reach no server log) and forgets them here: the checkout's cart
-//   holds them from then on.
+//   while there are none. Its address, and the island's Check out's, carry
+//   them to the hosted checkout in the fragment (`#cart=<base64url JSON>`,
+//   never the query, so the answers reach no server log), kept current as
+//   the cart changes so a new tab gets them too; with no lines it is the
+//   checkout's own address (the checkout keeps its own cart). Followed (a
+//   click, a modified click or a middle click), the link forgets them here
+//   in the same click: the checkout's cart holds them from then on.
 // - The product page's island (`[data-bg-island]`, ProductPage.astro): on
 //   view it reads GET /products/live?ids=<the listing> (lib/live.ts: the
 //   same-origin path first-party, else the api's address with the
@@ -118,15 +121,35 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
         var shown = links[i].querySelector('[data-bg-cart-count]')
         if (shown) shown.textContent = String(n)
         links[i].setAttribute('aria-label', 'Cart, ' + n + (n === 1 ? ' item' : ' items'))
+        links[i].setAttribute('href', checkoutHref(links[i]))
         links[i].hidden = n === 0
       }
+      var cart = links[0]
+      var now = document.querySelectorAll('[data-bg-checkout-now]')
+      for (var j = 0; cart && j < now.length; j++) now[j].setAttribute('href', checkoutHref(cart))
     }
-    // The Cart link, or the island's Check out, carries the lines over as it is followed.
-    document.addEventListener('click', function (event) {
+    /**
+     * The hand-over: the followed link's address is set with the lines
+     * first, then the cart is forgotten here. The count is redrawn after the
+     * click, once the browser has taken the address.
+     */
+    function handOver(event) {
       var link = event.target instanceof Element ? event.target.closest('[data-bg-cart], [data-bg-checkout-now]') : null
       var cart = document.querySelector('[data-bg-cart]')
       if (!link || !cart) return
       link.setAttribute('href', checkoutHref(cart))
+      try {
+        window.localStorage.removeItem(PREFIX + cart.getAttribute('data-bg-cart'))
+      } catch (e) {}
+      setTimeout(function () {
+        document.dispatchEvent(new CustomEvent('bg-cart'))
+      }, 0)
+    }
+    document.addEventListener('click', function (event) {
+      if (event.button === 0) handOver(event)
+    })
+    document.addEventListener('auxclick', function (event) {
+      if (event.button === 1) handOver(event)
     })
     document.addEventListener('bg-cart', drawCart)
     window.addEventListener('storage', drawCart)
@@ -540,7 +563,7 @@ const words = JSON.stringify({ words: AVAILABILITY_WORDS, chips: AVAILABILITY_CH
       var go = document.createElement('a')
       go.className = 'text-link'
       go.setAttribute('data-bg-checkout-now', '')
-      go.href = cartLink.getAttribute('data-bg-checkout')
+      go.href = checkoutHref(cartLink)
       go.textContent = 'Check out'
       statusEl.appendChild(go)
     })

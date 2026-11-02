@@ -212,7 +212,7 @@ like a page. Each route is one option to turn off.
 
 | Route | What it serves | Off with |
 | --- | --- | --- |
-| `GET /sitemap.xml` | Every address `/sitemap` lists (pages, type indexes, entries) on `SITE_URL`, with `<lastmod>` from the last update. An address on another host is left out. | `sitemap: false` |
+| `GET /sitemap.xml` | Every address `/sitemap` lists (pages, type indexes, entries, and the store's shop, departments, listings and collections when it has a published listing) on `SITE_URL`, with `<lastmod>` from the last update. An address on another host is left out. | `sitemap: false` |
 | `GET /robots.txt` | `User-agent: *` / `Allow: /` with `/preview` and `/api/` disallowed, then an `Allow: /` group for each name in `aiCrawlers`, then `Sitemap:` while the sitemap is on. | `robots: false` |
 | `GET /llms.txt` | The [llms.txt](https://llmstxt.org) file: the site's name, its description, the primary menu as links, then a section per routable type with its 20 newest entries as `- [title](url): summary`. | `llms: false` |
 | `GET /llms-full.txt` | The site's name and description, then every published page and entry as its own document: a `---` line, a header (`### <title>`, then `Type:`, `URL:` and, for an entry, `Published:`, `By:` and `Summary:` lines) ending at the first blank line, then the body: a page's section copy as text, an entry's markdown. See the format below. | `llms: false` |
