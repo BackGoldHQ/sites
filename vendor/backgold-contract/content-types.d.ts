@@ -242,19 +242,25 @@ declare const COLLECTION_RULE_TAGS_MAX = 10;
  * `rule` (no field definition: the Store's collection routes write it). Each
  * clause is optional and the clauses AND: a listing filed in the department
  * or a node under it, carrying every tag named, whose lowest item price is at
- * most max_price_cents. A rule with no clause is no rule.
+ * most max_price_cents. A rule with no clause is no rule. `enabled` is the
+ * rule's switch: a rule switched off keeps its clauses and matches nothing
+ * (the collection is its pinned listings), so switching it back on restores
+ * it as it was.
  */
 declare const collectionRuleSchema: z.ZodObject<{
     department_term_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     tag_term_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
     max_price_cents: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    enabled: z.ZodDefault<z.ZodBoolean>;
 }, z.core.$strict>;
 interface CollectionRule {
     department_term_id: string | null;
     tag_term_ids: string[];
     max_price_cents: number | null;
+    /** The rule's switch; off matches nothing and keeps the clauses. */
+    enabled: boolean;
 }
-/** True when the rule has at least one clause. */
+/** True when the rule has at least one clause (switched on or not). */
 declare function collectionRuleHasClause(rule: CollectionRule | null | undefined): rule is CollectionRule;
 /** The rule a stored value holds (an entry's `data.rule`), or null for none, no clause or a malformed value. */
 declare function parseCollectionRule(value: unknown): CollectionRule | null;
@@ -294,6 +300,7 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
+        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -303,7 +310,6 @@ declare const contentTypeCreateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodDefault<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -318,6 +324,7 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
+        tag: "tag";
         video: "video";
         doc: "doc";
         star: "star";
@@ -327,7 +334,6 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
         cal: "cal";
         mic: "mic";
         shield: "shield";
-        tag: "tag";
     }>>;
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -345,8 +351,8 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        short_text: "short_text";
         long_text: "long_text";
+        short_text: "short_text";
         rich_text: "rich_text";
         image: "image";
         pdf: "pdf";

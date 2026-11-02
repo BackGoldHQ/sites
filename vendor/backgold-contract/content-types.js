@@ -389,7 +389,8 @@ var COLLECTION_RULE_TAGS_MAX = 10;
 var collectionRuleSchema = z.strictObject({
   department_term_id: z.string().min(1).max(64).nullable().default(null),
   tag_term_ids: z.array(z.string().min(1).max(64)).max(COLLECTION_RULE_TAGS_MAX).refine((list) => new Set(list).size === list.length, { message: "A tag is named twice" }).default([]),
-  max_price_cents: z.number().int().min(0).max(1e8).nullable().default(null)
+  max_price_cents: z.number().int().min(0).max(1e8).nullable().default(null),
+  enabled: z.boolean().default(true)
 });
 function collectionRuleHasClause(rule) {
   return !!rule && (rule.department_term_id !== null || rule.tag_term_ids.length > 0 || rule.max_price_cents !== null);
