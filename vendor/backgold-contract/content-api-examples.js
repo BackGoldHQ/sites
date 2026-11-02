@@ -642,13 +642,25 @@ var fallDrop = {
   updated_at: "2026-10-28T15:12:00.000Z"
 };
 var productsExample = {
-  products: [teeSummary, yardSignSummary],
+  products: [teeSummary],
   departments: [
-    { id: "trm_a1", slug: "apparel", label: "Apparel", parent_id: null, position: 0, count: 1 },
-    { id: "trm_a2", slug: "tees", label: "Tees", parent_id: "trm_a1", position: 0, count: 1 },
+    { id: "trm_a1", slug: "apparel", label: "Apparel", parent_id: null, position: 0, count: 2 },
+    { id: "trm_a2", slug: "tees", label: "Tees", parent_id: "trm_a1", position: 0, count: 2 },
     { id: "trm_s1", slug: "signs", label: "Signs", parent_id: null, position: 1, count: 1 }
   ],
   collections: [fallDrop],
+  facets: [
+    { key: "fabric", label: "Fabric", kind: "short_text", values: [{ value: "100% cotton", count: 1 }] },
+    {
+      key: "fit",
+      label: "Fit",
+      kind: "choice",
+      values: [
+        { value: "Fitted", count: 1 },
+        { value: "Unisex", count: 1 }
+      ]
+    }
+  ],
   next_cursor: null
 };
 var productExample = {

@@ -234,6 +234,36 @@ declare const BUILT_IN_TYPE_FIELDS: {
         readonly ref_target: null;
     }];
 };
+/** The most tags one collection rule names. */
+declare const COLLECTION_RULE_TAGS_MAX = 10;
+/**
+ * A collection's rule (store catalog board 05): the listings it brings in
+ * under the pinned ones. It lives in the collection entry's data_json under
+ * `rule` (no field definition: the Store's collection routes write it). Each
+ * clause is optional and the clauses AND: a listing filed in the department
+ * or a node under it, carrying every tag named, whose lowest item price is at
+ * most max_price_cents. A rule with no clause is no rule. `enabled` is the
+ * rule's switch: a rule switched off keeps its clauses and matches nothing
+ * (the collection is its pinned listings), so switching it back on restores
+ * it as it was.
+ */
+declare const collectionRuleSchema: z.ZodObject<{
+    department_term_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    tag_term_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    max_price_cents: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    enabled: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strict>;
+interface CollectionRule {
+    department_term_id: string | null;
+    tag_term_ids: string[];
+    max_price_cents: number | null;
+    /** The rule's switch; off matches nothing and keeps the clauses. */
+    enabled: boolean;
+}
+/** True when the rule has at least one clause (switched on or not). */
+declare function collectionRuleHasClause(rule: CollectionRule | null | undefined): rule is CollectionRule;
+/** The rule a stored value holds (an entry's `data.rule`), or null for none, no clause or a malformed value. */
+declare function parseCollectionRule(value: unknown): CollectionRule | null;
 interface BuiltInTaxonomy {
     key: BuiltInTaxonomyKey;
     label: string;
@@ -270,8 +300,8 @@ declare const contentTypeCreateSchema: z.ZodObject<{
     singular_label: z.ZodString;
     plural_label: z.ZodString;
     icon: z.ZodDefault<z.ZodEnum<{
-        video: "video";
         tag: "tag";
+        video: "video";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -294,8 +324,8 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     singular_label: z.ZodOptional<z.ZodString>;
     plural_label: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodEnum<{
-        video: "video";
         tag: "tag";
+        video: "video";
         doc: "doc";
         star: "star";
         mega: "mega";
@@ -308,10 +338,10 @@ declare const contentTypeUpdateSchema: z.ZodObject<{
     routable: z.ZodOptional<z.ZodBoolean>;
     url_base: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     default_access: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
+        tag: "tag";
         public: "public";
         signed_in: "signed_in";
         members: "members";
-        tag: "tag";
     }>>>;
 }, z.core.$strict>;
 type ContentTypeUpdateInput = z.infer<typeof contentTypeUpdateSchema>;
@@ -321,17 +351,17 @@ declare const contentFieldCreateSchema: z.ZodObject<{
     label: z.ZodString;
     kind: z.ZodEnum<{
         boolean: "boolean";
-        date: "date";
-        link: "link";
-        list: "list";
-        datetime: "datetime";
-        short_text: "short_text";
         long_text: "long_text";
+        short_text: "short_text";
+        rich_text: "rich_text";
+        image: "image";
+        pdf: "pdf";
+        link: "link";
+        date: "date";
+        datetime: "datetime";
         choice: "choice";
         choices: "choices";
-        pdf: "pdf";
-        image: "image";
-        rich_text: "rich_text";
+        list: "list";
         reference: "reference";
     }>;
     required: z.ZodDefault<z.ZodBoolean>;
@@ -426,4 +456,4 @@ declare const bylineUpdateSchema: z.ZodObject<{
     contact_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
-export { BLOG_CONTENT_TYPES, BUILT_IN_CONTENT_TYPES, BUILT_IN_TAXONOMIES, BUILT_IN_TYPE_FIELDS, type BuiltInContentType, type BuiltInFieldDef, type BuiltInTaxonomy, CONTENT_TYPE_LIMITS, CONTENT_TYPE_RESERVED_URL_BASES, type ContentEntryKind, type ContentEntryReorderInput, type ContentFieldCreateInput, type ContentFieldDef, type ContentFieldUpdateInput, type ContentReferenceValue, type ContentTypeCreateInput, type ContentTypeUpdateInput, FIELDED_BUILT_IN_CONTENT_TYPE_KEYS, type FieldedBuiltInContentTypeKey, SEEDED_BLOG_BASE, blogUrlBase, buildEntryDataSchema, builtInTypeKeyForKind, builtInUrlBase, bylineCreateSchema, bylineUpdateSchema, contentEntryReorderSchema, contentFieldCreateSchema, contentFieldUpdateSchema, contentKeyFromLabel, contentReorderSchema, contentSlugFromLabel, contentTypeCreateSchema, contentTypeUpdateSchema, entryKindForType, isBlogContentType, isContentReferenceTarget, isNewsletterContentType, isPartyContentType, referenceKindForTarget, taxonomyCreateSchema, taxonomyUpdateSchema, termCreateSchema, termUpdateSchema };
+export { BLOG_CONTENT_TYPES, BUILT_IN_CONTENT_TYPES, BUILT_IN_TAXONOMIES, BUILT_IN_TYPE_FIELDS, type BuiltInContentType, type BuiltInFieldDef, type BuiltInTaxonomy, COLLECTION_RULE_TAGS_MAX, CONTENT_TYPE_LIMITS, CONTENT_TYPE_RESERVED_URL_BASES, type CollectionRule, type ContentEntryKind, type ContentEntryReorderInput, type ContentFieldCreateInput, type ContentFieldDef, type ContentFieldUpdateInput, type ContentReferenceValue, type ContentTypeCreateInput, type ContentTypeUpdateInput, FIELDED_BUILT_IN_CONTENT_TYPE_KEYS, type FieldedBuiltInContentTypeKey, SEEDED_BLOG_BASE, blogUrlBase, buildEntryDataSchema, builtInTypeKeyForKind, builtInUrlBase, bylineCreateSchema, bylineUpdateSchema, collectionRuleHasClause, collectionRuleSchema, contentEntryReorderSchema, contentFieldCreateSchema, contentFieldUpdateSchema, contentKeyFromLabel, contentReorderSchema, contentSlugFromLabel, contentTypeCreateSchema, contentTypeUpdateSchema, entryKindForType, isBlogContentType, isContentReferenceTarget, isNewsletterContentType, isPartyContentType, parseCollectionRule, referenceKindForTarget, taxonomyCreateSchema, taxonomyUpdateSchema, termCreateSchema, termUpdateSchema };

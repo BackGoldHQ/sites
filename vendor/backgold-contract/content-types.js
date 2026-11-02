@@ -385,6 +385,20 @@ var BUILT_IN_TYPE_FIELDS = {
     { key: "issue", label: "Issue", kind: "short_text", required: false, help: "The line above the title, like \u201COctober 2026\u201D", choices: null, ref_target: null }
   ]
 };
+var COLLECTION_RULE_TAGS_MAX = 10;
+var collectionRuleSchema = z.strictObject({
+  department_term_id: z.string().min(1).max(64).nullable().default(null),
+  tag_term_ids: z.array(z.string().min(1).max(64)).max(COLLECTION_RULE_TAGS_MAX).refine((list) => new Set(list).size === list.length, { message: "A tag is named twice" }).default([]),
+  max_price_cents: z.number().int().min(0).max(1e8).nullable().default(null),
+  enabled: z.boolean().default(true)
+});
+function collectionRuleHasClause(rule) {
+  return !!rule && (rule.department_term_id !== null || rule.tag_term_ids.length > 0 || rule.max_price_cents !== null);
+}
+function parseCollectionRule(value) {
+  const parsed = collectionRuleSchema.safeParse(value);
+  return parsed.success && collectionRuleHasClause(parsed.data) ? parsed.data : null;
+}
 var BUILT_IN_TAXONOMIES = [
   { key: "category", label: "Categories", hierarchical: true },
   { key: "tag", label: "Tags", hierarchical: false },
@@ -619,4 +633,4 @@ var bylineUpdateSchema = z.strictObject(bylineShape).superRefine((d, ctx) => {
   }
 });
 
-export { BLOG_CONTENT_TYPES, BUILT_IN_CONTENT_TYPES, BUILT_IN_TAXONOMIES, BUILT_IN_TYPE_FIELDS, CONTENT_TYPE_LIMITS, CONTENT_TYPE_RESERVED_URL_BASES, FIELDED_BUILT_IN_CONTENT_TYPE_KEYS, SEEDED_BLOG_BASE, blogUrlBase, buildEntryDataSchema, builtInTypeKeyForKind, builtInUrlBase, bylineCreateSchema, bylineUpdateSchema, contentEntryReorderSchema, contentFieldCreateSchema, contentFieldUpdateSchema, contentKeyFromLabel, contentReorderSchema, contentSlugFromLabel, contentTypeCreateSchema, contentTypeUpdateSchema, entryKindForType, isBlogContentType, isContentReferenceTarget, isNewsletterContentType, isPartyContentType, referenceKindForTarget, taxonomyCreateSchema, taxonomyUpdateSchema, termCreateSchema, termUpdateSchema };
+export { BLOG_CONTENT_TYPES, BUILT_IN_CONTENT_TYPES, BUILT_IN_TAXONOMIES, BUILT_IN_TYPE_FIELDS, COLLECTION_RULE_TAGS_MAX, CONTENT_TYPE_LIMITS, CONTENT_TYPE_RESERVED_URL_BASES, FIELDED_BUILT_IN_CONTENT_TYPE_KEYS, SEEDED_BLOG_BASE, blogUrlBase, buildEntryDataSchema, builtInTypeKeyForKind, builtInUrlBase, bylineCreateSchema, bylineUpdateSchema, collectionRuleHasClause, collectionRuleSchema, contentEntryReorderSchema, contentFieldCreateSchema, contentFieldUpdateSchema, contentKeyFromLabel, contentReorderSchema, contentSlugFromLabel, contentTypeCreateSchema, contentTypeUpdateSchema, entryKindForType, isBlogContentType, isContentReferenceTarget, isNewsletterContentType, isPartyContentType, parseCollectionRule, referenceKindForTarget, taxonomyCreateSchema, taxonomyUpdateSchema, termCreateSchema, termUpdateSchema };

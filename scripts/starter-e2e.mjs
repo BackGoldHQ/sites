@@ -1895,7 +1895,9 @@ const SHIFT_FRAMES = /https:\/\/api\.backgold\.com\/embed\/shift\//g
 // names its maker and its live compare-at price ($30) is not the build's;
 // the yard sign is picked up at the store, the beanie ships to a licensed
 // dealer, the handbook ships nothing and is the one listing that is not a
-// contribution. Photos are uploads the fixture serves.
+// contribution. Photos are uploads the fixture serves. Apparel defines two
+// filterable attributes, fit (a choice) and union printed (a boolean): the
+// tee and the cap are unisex and union printed, the beanie fitted and not.
 function storeFixture() {
   const photo = (id) => [{ url: `https://api.backgold.com/api/media-files/store/${id}.jpg` }]
   const term = (slug, label, categoryPage = true) => ({ taxonomy: 'department', slug, label, category_page: categoryPage })
@@ -2004,10 +2006,23 @@ function storeFixture() {
           },
     ]),
   )
+  const attrs = {
+    prd_tee: { fit: 'Unisex', union: 'true' },
+    prd_beanie: { fit: 'Fitted', union: 'false' },
+    prd_cap: { fit: 'Unisex', union: 'true' },
+  }
+  const facetDefs = {
+    trm_app: [
+      { key: 'fit', label: 'Fit', kind: 'choice' },
+      { key: 'union', label: 'Union printed', kind: 'boolean' },
+    ],
+  }
   return {
     products,
     departments,
     collections,
+    attrs,
+    facetDefs,
     detail: Object.fromEntries(products.map((p) => [p.slug, detail(p)])),
     collection: { 'fall-drop': fall, 'under-20': under },
     members: { 'fall-drop': fallMembers, 'under-20': underMembers },
@@ -2468,9 +2483,12 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         break
       }
       case 'products': {
-        // GET /products/:slug, and GET /products?department=&collection=&cursor=&limit=:
+        // GET /products/:slug, and GET /products?department=&collection=&attr=&cursor=&limit=:
         // newest first, a department with everything under it, a collection
-        // in its order; the cursor is base64url of the next row's offset.
+        // in its order, `attr` filters (keys AND, a key's values OR); the
+        // cursor is base64url of the next row's offset. With a department,
+        // `facets`: one per filterable definition on its path, root first,
+        // each value counted under every other key's filter, most first.
         if (!data.store) break
         if (parts.length === 2) {
           const found = data.store.detail[parts[1]]
@@ -2482,6 +2500,15 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
         if (!Number.isInteger(limit) || limit < 1 || limit > 50) return send(400, { error: 'limit must be a whole number from 1 to 50', code: 'BAD_LIMIT' })
         const department = url.searchParams.get('department')
         const collectionSlug = url.searchParams.get('collection')
+        const attrFilters = new Map()
+        for (const raw of url.searchParams.getAll('attr').filter(Boolean)) {
+          const colon = raw.indexOf(':')
+          const key = colon < 0 ? '' : raw.slice(0, colon)
+          const value = raw.slice(colon + 1)
+          if (!/^[a-z][a-z0-9_]{0,39}$/.test(key) || value === '' || value.length > 200) return send(400, { error: 'attr must be <key>:<value>', code: 'BAD_ATTR' })
+          attrFilters.set(key, new Set([...(attrFilters.get(key) ?? []), value]))
+        }
+        const matches = (p, except = null) => [...attrFilters].every(([key, values]) => key === except || values.has(data.store.attrs[p.id]?.[key]))
         const under = (slug) => {
           const node = data.store.departments.find((d) => d.slug === slug)
           if (!node) return new Set()
@@ -2504,11 +2531,26 @@ function startFixture(examples, kitchenSections, blogBase = 'blog', { academy = 
           rows = rows.filter((p) => p.department.some((d) => slugs.has(d.slug)))
         }
         if (collectionSlug) rows = data.store.members[collectionSlug] ?? []
+        const scope = rows
+        rows = rows.filter((p) => matches(p))
+        const facets = []
+        const node = department ? data.store.departments.find((d) => d.slug === department) : null
+        const path = []
+        for (let at = node; at; at = data.store.departments.find((d) => d.id === at.parent_id)) path.unshift(at)
+        for (const def of path.flatMap((d) => data.store.facetDefs[d.id] ?? [])) {
+          const counts = new Map()
+          for (const p of scope.filter((p) => matches(p, def.key))) {
+            const value = data.store.attrs[p.id]?.[def.key]
+            if (value !== undefined) counts.set(value, (counts.get(value) ?? 0) + 1)
+          }
+          const values = [...counts].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)).slice(0, 50)
+          if (values.length > 0) facets.push({ ...def, values })
+        }
         const offset = Number(Buffer.from(url.searchParams.get('cursor') ?? '', 'base64url').toString('utf8').split('|')[1] ?? 0) || 0
         const shown = rows.slice(offset, offset + limit)
         // The cursor is shaped as the api's are (base64url of `<instant>|<id>`), the id standing in for the offset.
         const next = offset + limit < rows.length ? Buffer.from(`2026-10-01T00:00:00.000Z|${offset + limit}`).toString('base64url') : null
-        body = { products: shown, departments: data.store.departments, collections: data.store.collections, next_cursor: next }
+        body = { products: shown, departments: data.store.departments, collections: data.store.collections, facets, next_cursor: next }
         break
       }
       case 'collections':
@@ -4978,6 +5020,67 @@ async function checkStore(origin, fixture) {
     `a department's shelf is that department and everything under it (${res.status}, ${apparel.join(', ')})`,
   )
   check(/href="\/store\/departments\/tees"/.test(body) && !/class="button\b/.test(body), 'it opens the departments under it in the rail, and has no band')
+
+  // The filter panel: Apparel's facets under the rail, each value a link that
+  // toggles it in the page's ?attr= filters.
+  check(!/store-filters/.test(storeBody(await (await get(origin, '/store')).text())), "the shop's root draws no filter panel")
+  const panel = (page) => {
+    const at = page.indexOf('class="store-filters"')
+    return at === -1 ? '' : page.slice(at, page.indexOf('</nav>', at))
+  }
+  const cardsOf = (page) => [...page.matchAll(/<a class="product-card" href="([^"]+)"/g)].map((m) => m[1])
+  const A = '/store/departments/apparel'
+  let filters = panel(body)
+  check(
+    /<p class="store-rail-head" id="store-filter-fit">Fit<\/p>/.test(filters) &&
+      /<p class="store-rail-head" id="store-filter-union">Union printed<\/p>/.test(filters) &&
+      filters.indexOf('>Fit<') < filters.indexOf('>Union printed<') &&
+      body.indexOf('>Collections<') < body.indexOf('class="store-filters"'),
+    "a department's page draws a group per facet, headed like the rail's lists, under Departments and Collections",
+  )
+  check(
+    filters.includes(`<a href="${A}?attr=fit:Unisex" rel="nofollow">Unisex <span>2</span></a>`) &&
+      filters.includes(`<a href="${A}?attr=fit:Fitted" rel="nofollow">Fitted <span>1</span></a>`) &&
+      filters.includes(`<a href="${A}?attr=union:true" rel="nofollow">Yes <span>2</span></a>`) &&
+      filters.includes(`<a href="${A}?attr=union:false" rel="nofollow">No <span>1</span></a>`) &&
+      !/aria-current/.test(filters) &&
+      !/Clear filters/.test(filters),
+    `each value links to the page with it chosen, its count beside it, a boolean read Yes and No, nothing chosen and no Clear filters (${filters.replace(/\s+/g, ' ').slice(0, 400)})`,
+  )
+  check((res.headers.get('x-backgold-reads-query') ?? '').split(',').includes('attr') && !/no-store/.test(res.headers.get('cache-control') ?? ''), "the bare department page names attr as a query it reads, and may be stored")
+  res = await get(origin, `${A}?attr=fit:Unisex&attr=union:true`)
+  html = await res.text()
+  body = storeBody(html)
+  filters = panel(body)
+  check(res.status === 200 && cardsOf(body).join() === '/store/pine-valley-tee,/store/chapter-cap', `the filters reach GET /products: unisex and union printed is the tee and the cap (${res.status}, ${cardsOf(body).join(', ')})`)
+  check(
+    filters.includes(`<a href="${A}?attr=union:true" rel="nofollow" aria-current="true">Unisex <span>2</span></a>`) &&
+      filters.includes(`<a href="${A}?attr=fit:Unisex" rel="nofollow" aria-current="true">Yes <span>2</span></a>`) &&
+      !/>Fitted </.test(filters),
+    `a chosen value is current and its link drops it, keeping the other; a value nothing matches under the other filter is left out (${filters.replace(/\s+/g, ' ').slice(0, 400)})`,
+  )
+  check(/^class="store-filters">\s*<p class="store-filters-clear"><a class="text-link" href="\/store\/departments\/apparel">Clear filters<\/a><\/p>/.test(filters), 'Clear filters heads the panel, back to the bare department')
+  check(/no-store/.test(res.headers.get('cache-control') ?? '') && res.headers.get('x-backgold-cache') !== 'HIT', 'a filtered page is never served from or into the edge cache')
+  res = await get(origin, `${A}?attr=fit:Fitted&attr=union:true`)
+  html = await res.text()
+  body = storeBody(html)
+  filters = panel(body)
+  check(
+    res.status === 200 &&
+      cardsOf(body).length === 0 &&
+      /<p class="empty">Nothing in Apparel matches the filters\. <a class="text-link store-empty-clear" href="\/store\/departments\/apparel">Clear filters<\/a><\/p>/.test(body),
+    `a filtered page with nothing in it names the filters and offers Clear filters (${res.status})`,
+  )
+  check(filters.includes(`<a href="${A}?attr=union:true" rel="nofollow" aria-current="true">Fitted <span>0</span></a>`), 'a chosen value the api no longer lists stays in its group at 0, so it can be turned off')
+  const seenBefore = fixture.state.seen.length
+  res = await get(origin, `${A}?attr=Not%20A%20Key:x&attr=fit:Unisex&attr=nocolon`)
+  html = await res.text()
+  body = storeBody(html)
+  const asked = fixture.state.seen.slice(seenBefore).filter((r) => r.path === '/products').map((r) => new URLSearchParams(r.search).getAll('attr').join('&'))
+  check(res.status === 200 && cardsOf(body).join() === '/store/pine-valley-tee,/store/chapter-cap' && asked.every((a) => a === 'fit:Unisex'), `a malformed ?attr= is dropped and the rest still filter (${res.status}, asked ${asked.join(' | ')})`)
+  const cursor = Buffer.from('2026-10-01T00:00:00.000Z|1').toString('base64url')
+  body = storeBody(await (await get(origin, `${A}?attr=fit:Unisex&cursor=${cursor}`)).text())
+  check(cardsOf(body).join() === '/store/chapter-cap' && body.includes(`<a class="text-link" href="${A}?attr=fit:Unisex">Back to the first page</a>`), 'a later page keeps the filters, and its first-page link carries them')
   res = await get(origin, '/store/departments/posters')
   await res.text()
   check(res.status === 404, `a department with nothing on the site is a 404 (got ${res.status})`)

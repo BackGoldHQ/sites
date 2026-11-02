@@ -3,7 +3,7 @@
 // dist/contract/content-api.js by `pnpm build`, so the published kit carries
 // them. The kit imports them as `#contract/content-api`; a template as
 // `@backgold/template-kit/contract/content-api`.
-export { VISITOR_PROGRESS_PATH, VISITOR_SIGN_IN_PATH } from '@backgold/contract/content-api'
+export { PRODUCT_ATTR_FILTERS_MAX, PRODUCT_ATTR_KEY_PATTERN, PRODUCT_ATTR_VALUE_MAX, VISITOR_PROGRESS_PATH, VISITOR_SIGN_IN_PATH } from '@backgold/contract/content-api'
 export type {
   Areas,
   ContentAccessLevel,

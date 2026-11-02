@@ -345,9 +345,13 @@ still carries the lines). A department whose storefront page is off has no
 page and is named without a link in a listing's breadcrumb. Availability is
 always a word, never a count.
 
-The api also filters listings by attribute value (`GET /products?attr=`,
-`products({ attr })` in `@backgold/content`); the kit's shop draws no filter
-controls yet.
+A department's page carries a filter panel under the rail: a group per
+facet `GET /products?department=` sends (the department's filterable
+attributes, each value with its count), each value a plain link that toggles
+`?attr=<key>:<value>` in the page's address, which the page passes to
+`GET /products` (`products({ attr })` in `@backgold/content`). It is links
+only, so it works with scripts off; a filtered page is never stored at the
+edge.
 
 ### The legal line
 

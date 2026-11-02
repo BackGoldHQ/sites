@@ -204,7 +204,11 @@ from its nearest listed ancestor) and the site's published `collections`.
 collection's members in its order; `attr` to listings with those filterable
 attribute values, by key (`{ color: ['red', 'blue'], size: 'm' }` is red or
 blue, and size m; sent as one `?attr=<key>:<value>` per value, and a malformed
-one is a 400 `BAD_ATTR`). A listing's `department` path names every
+one is a 400 `BAD_ATTR`). With `department`, `facets` lists that
+department's filterable attributes for a filter panel, each
+`{ key, label, kind, values: [{ value, count }] }`, a value's count taken
+under every other key's `attr` (so a chosen value's siblings keep theirs),
+most first, at most 50; it is `[]` without `department`. A listing's `department` path names every
 department above it, each with `category_page`: false when that department's
 page is off, so name it without a link. Each listing carries its `url` on your site (`/store/<slug>`),
 `buy_url` (its page on BackGold), photos, `price_from_cents` and

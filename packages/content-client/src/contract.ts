@@ -97,6 +97,8 @@ export type {
   ProductDepartment,
   ProductDepartmentTerm,
   ProductDetail,
+  ProductFacet,
+  ProductFacetValue,
   ProductItem,
   ProductLive,
   ProductPhoto,

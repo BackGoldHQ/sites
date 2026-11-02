@@ -154,6 +154,24 @@
   }
 }
 
+/* The filter panel under the rail's lists: the same heads and links, so a
+   chosen value is current as a department is; it stacks, never scrolls. */
+.store-filters-clear {
+  margin: 0 0 0.5rem;
+}
+.store-rail .store-filters-clear a,
+.store-empty-clear {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--link);
+  font-weight: 700;
+}
+
 /* ── The grid and its cards ── */
 
 .product-grid {

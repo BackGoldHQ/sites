@@ -951,6 +951,26 @@ interface ProductDepartment {
     /** Published listings in this node and its descendants. */
     count: number;
 }
+/** One value a facet offers, with the listings in scope that have it. */
+interface ProductFacetValue {
+    /** The value as `?attr=<key>:<value>` names it: a choice's text, a number's decimal form, `true` or `false`. */
+    value: string;
+    /** Published listings in the page's scope with this value that match every other key's `?attr=` filter. */
+    count: number;
+}
+/**
+ * One filterable attribute on the department's path, for the storefront's
+ * filter panel. Its values are counted under every OTHER key's `?attr=`
+ * filter and never its own, so a chosen value's siblings keep their counts.
+ * Values run by count, most first, then by text; at most
+ * PRODUCT_FACET_VALUES_MAX of them.
+ */
+interface ProductFacet {
+    key: string;
+    label: string;
+    kind: StoreAttributeKind;
+    values: ProductFacetValue[];
+}
 /**
  * GET /products — the published listings, newest first, one page at a time,
  * with the department tree and the published collections the storefront's
@@ -960,11 +980,22 @@ interface ProductDepartment {
  * attribute value — every key named must match, and a key named more than
  * once matches any of its values (`attr=color:red&attr=color:blue&attr=size:m`
  * is red or blue, and size m).
+ *
+ * `facets` answers a department page: with `?department=` naming a
+ * department whose storefront page is on, one facet per filterable attribute
+ * definition on its path, root first and each node's by position (a node
+ * below redefining a key wins, and may turn its filtering off). A facet's
+ * counts cover the department and every node under it, the collection when
+ * `?collection=` names one, and every other key's `?attr=` filter; a facet
+ * with no values is left out. Every page of a cursor carries the same
+ * facets: they are the scope's, not the page's. Empty without
+ * `?department=`.
  */
 interface ProductsResponse {
     products: ProductSummary[];
     departments: ProductDepartment[];
     collections: CollectionSummary[];
+    facets: ProductFacet[];
     next_cursor: string | null;
 }
 /** An attribute key as `?attr=` names it: a department attribute definition's key. */
@@ -973,6 +1004,8 @@ declare const PRODUCT_ATTR_KEY_PATTERN: RegExp;
 declare const PRODUCT_ATTR_VALUE_MAX = 200;
 /** The most `?attr=` parameters one GET /products takes. */
 declare const PRODUCT_ATTR_FILTERS_MAX = 20;
+/** The most values one facet of GET /products lists: the most common first, the rest left off. */
+declare const PRODUCT_FACET_VALUES_MAX = 50;
 interface ProductResponse {
     product: ProductDetail;
     areas: Areas;
@@ -2661,4 +2694,4 @@ declare function projectedBlockProps(block: {
     props: Props;
 }, ctx: ProjectDocumentContext): Props | null;
 
-export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, type CollectionDetail, type CollectionResponse, type CollectionSummary, type CollectionsResponse, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, LIVE_STREAM_CACHE_CONTROL, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type LiveResponse, type LiveStream, LiveStreamStatus, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, PRODUCT_ATTR_FILTERS_MAX, PRODUCT_ATTR_KEY_PATTERN, PRODUCT_ATTR_VALUE_MAX, type PageResponse, type PageSummary, type PagesResponse, type ProductAttribute, type ProductCollectionRef, type ProductDepartment, type ProductDepartmentTerm, type ProductDetail, type ProductItem, type ProductLive, type ProductPhoto, type ProductQuestion, type ProductResponse, type ProductSeo, type ProductSummary, type ProductTerm, type ProductsLiveResponse, type ProductsResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionPetition, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, SitemapUrlKind, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
+export { type AreaItem, type Areas, type AreasResponse, type Author, type AuthorResponse, type AuthorsResponse, BLOCK_BAND_INTRINSICS, CONTENT_API_AREA_BLOCKS, CONTENT_API_BLOCKS, CONTENT_API_PREFIX, type CollectionDetail, type CollectionResponse, type CollectionSummary, type CollectionsResponse, ContentAccessLevel, type ContentApiBlockRole, type ContentApiBlockSpec, type ContentApiBlockType, type ContentApiDataSpec, type ContentApiEmbedUrls, type ContentApiError, type ContentApiLegal, type ContentApiLinkSpec, type ContentApiRowField, type ContentApiRowFields, type ContentApiRowList, ContentFieldKind, type ContentTypeField, type ContentTypeSummary, type CourseDetail, type CourseLesson, type CourseProgress, type CourseResponse, type CourseSummary, type CoursesResponse, EVENTS_WINDOW_MAX_DAYS, type EntriesResponse, type Entry, type EntryAuthor, type EntryCursor, type EntryDetail, type EntryLock, type EntryRenditions, type EntryResponse, type EntryTerm, type EventDetail, type EventLiveCounts, type EventResponse, type EventTypeSummary, type EventsListRow, type EventsLiveResponse, type EventsResponse, LIVE_STREAM_CACHE_CONTROL, type LessonProgressRequest, type LessonProgressResponse, type LessonResponse, type LiveResponse, type LiveStream, LiveStreamStatus, type MenuItem, type MenuResponse, type MenuShowsOn, type MenuShowsOnPage, type MenuTarget, PRODUCT_ATTR_FILTERS_MAX, PRODUCT_ATTR_KEY_PATTERN, PRODUCT_ATTR_VALUE_MAX, PRODUCT_FACET_VALUES_MAX, type PageResponse, type PageSummary, type PagesResponse, type ProductAttribute, type ProductCollectionRef, type ProductDepartment, type ProductDepartmentTerm, type ProductDetail, type ProductFacet, type ProductFacetValue, type ProductItem, type ProductLive, type ProductPhoto, type ProductQuestion, type ProductResponse, type ProductSeo, type ProductSummary, type ProductTerm, type ProductsLiveResponse, type ProductsResponse, type ProjectDocumentContext, type RedirectsResponse, SECTION_BANDS, SECTION_BLEEDS, SECTION_LAYOUTS, SITE_CHROME_LAYOUTS, type Section, type SectionBand, type SectionBleed, type SectionData, type SectionEmbed, type SectionLayout, type SectionLayoutType, type SectionLink, type SectionLinkTarget, type SectionMedia, type SectionOption, type SectionPetition, type SectionsResponse, type ShiftLiveCounts, type ShiftSubject, type ShiftsListRow, type ShiftsLiveResponse, type ShiftsResponse, type SiteArea, type SiteChromeClosing, type SiteChromeLink, type SiteChromeResponse, type SiteFooterLayout, type SiteHeaderLayout, SiteMenuKey, type SiteResponse, type SiteTheme, type SiteThemeColors, type SiteThemeFont, type SiteThemeTokens, type SitemapResponse, SitemapUrlKind, TEMPLATE_SECTION_TYPES, type TemplateSectionType, type TermsResponse, type TypesResponse, VISITOR_COOKIE, VISITOR_HEADER, VISITOR_PROGRESS_PATH, VISITOR_RENEW_HEADER, VISITOR_RENEW_WINDOW_SECONDS, VISITOR_RETURN_PATH, VISITOR_SIGN_IN_PATH, VISITOR_SIGN_OUT_PATH, VISITOR_TOKEN_TTL_SECONDS, type Visitor, type VisitorExchangeRequest, type VisitorExchangeResponse, type VisitorResponse, contentApiEmbedUrls, dataProps, decodeEntryCursor, encodeEntryCursor, isSafeContentHref, maskSiteKey, projectDocument, projectedBlockProps, sectionProps, siteKeyKind };
