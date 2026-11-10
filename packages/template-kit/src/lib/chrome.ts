@@ -1,5 +1,6 @@
 // The site's header and footer as BackGold's operator set them up: GET /site's
-// `chrome` (each part's layout and the footer's own words), against what the
+// `chrome` (each part's layout, the header's name beside the logo and the
+// footer's own words), against what the
 // template's template.json `chrome` (its config's manifest) says it draws. A
 // layout the site names that the template does not list is drawn as the
 // template's first, exactly as a section's variant falls back; a `/site`
@@ -28,7 +29,8 @@ export interface ClosingCall {
 }
 
 export interface SiteChrome {
-  header: { layout: HeaderLayout }
+  /** `showName`: the name in type beside the organization's logo (off unless the operator turned it on). */
+  header: { layout: HeaderLayout; showName: boolean }
   footer: {
     layout: FooterLayout
     blurb: string | null
@@ -43,7 +45,7 @@ export interface SiteChrome {
 /** What `/site` carries, read structurally so an older answer still parses. */
 interface Raw {
   chrome?: {
-    header?: { layout?: unknown }
+    header?: { layout?: unknown; show_name?: unknown }
     footer?: {
       layout?: unknown
       blurb?: unknown
@@ -100,7 +102,7 @@ export function chromeOf(site: unknown, manifest: SiteTemplateManifest): SiteChr
         }
       : null
   return {
-    header: { layout: drawn(manifest.chrome.header, raw.header?.layout) },
+    header: { layout: drawn(manifest.chrome.header, raw.header?.layout), showName: raw.header?.show_name === true },
     footer: {
       layout,
       blurb: str(footer.blurb),
