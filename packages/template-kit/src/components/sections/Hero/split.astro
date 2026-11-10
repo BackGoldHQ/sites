@@ -5,12 +5,14 @@
 // its caption (`copy.caption`) a chip at its lower left. Without a photo the
 // words take the full width, with no caption. The page-opening Hero's headline is the page's <h1>
 // (`level={1}`); any other Hero's is an <h2>. A Hero with its signup form on
-// carries an `embed`: BackGold's own form, framed under the buttons.
+// carries an `embed`: BackGold's own form, framed under the buttons. The
+// photo crops to fill its frame; with the photo treatment 'badge' or 'plain'
+// (a logo, an illustration) it shows whole in it (lib/section.ts photoStyleOf).
 import type { ComponentProps } from 'astro/types'
 import ModuleFrame from '../modules/ModuleFrame.astro'
 import Band from '../Band.astro'
 import type Default from './index.astro'
-import { heroPhoto, links } from '../../../lib/section'
+import { heroPhoto, links, photoStyleOf } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -21,6 +23,7 @@ const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
 const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const style = photoStyleOf(section)
 const buttons = links(section)
 ---
 <Band section={section} class="hero-split-layout">
@@ -38,7 +41,7 @@ const buttons = links(section)
     {picture && (
       <div class="split-photo">
         <img
-          class="split-image"
+          class:list={['split-image', style !== 'photo' && `photo-${style}`]}
           src={picture.url}
           alt={picture.alt}
           loading={level === 1 ? 'eager' : 'lazy'}

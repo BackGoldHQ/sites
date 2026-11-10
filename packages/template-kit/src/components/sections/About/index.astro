@@ -2,11 +2,13 @@
 // About, 'right' layout, the default (Photo right; board A10-petition,
 // section 2): the heading and the story on the left, the photo on the right;
 // on a phone the photo follows the words. Without a photo the words take
-// the column alone. 'left' and 'letter' are their own files beside this one.
+// the column alone. A photo crops to fill its frame; with the photo
+// treatment 'badge' or 'plain' (a logo) it shows whole in it (lib/section.ts
+// photoStyleOf, styles/site.css). 'left' and 'letter' are their own files beside this one.
 import type { Section } from '@backgold/content'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
-import { media } from '../../../lib/section'
+import { media, photoStyleOf } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
 const { section } = Astro.props
 const heading = text(section.copy.heading)
 const photo = media(section, 'photoUrl')
+const style = photoStyleOf(section)
 ---
 <Band section={section} class="about">
   <div class:list={['about-right', photo && 'about-right-photo']}>
@@ -24,7 +27,7 @@ const photo = media(section, 'photoUrl')
       {heading && <h2>{heading}</h2>}
       <Prose value={section.copy.body} />
     </div>
-    {photo && <img class="about-right-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+    {photo && <img class:list={['about-right-image', style !== 'photo' && `photo-${style}`]} src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
   </div>
 </Band>
 

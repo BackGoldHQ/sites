@@ -113,7 +113,7 @@ export interface TemplateConfig {
   closingCall?: AstroComponent
   /**
    * The component that draws the brand at the header's left, given
-   * `{ name, logoUrl }` as the kit's Brand is (components/chrome/Brand.astro):
+   * `{ name, logoUrl, showName }` as the kit's Brand is (components/chrome/Brand.astro):
    * a template that sets the name in type beside the organization's mark
    * where a wide logo would read too small. The footer keeps the kit's Brand.
    * Left out, the kit's.

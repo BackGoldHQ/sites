@@ -7,7 +7,8 @@
 //                    a TakeoverBanner fills the first screen.
 //   the header       the layout the site chose in BackGold (`/site`
 //                    chrome.header, one of template.json's `chrome.header`;
-//                    src/lib/chrome.ts). `bar`: the brand (the logo, else the
+//                    src/lib/chrome.ts). `bar`: the brand (the logo, with the
+//                    name beside it when the site asks (`showName`), else the
 //                    template's mark and the name as a two-line wordmark) at
 //                    the left; the header menu, each group a dropdown, its
 //                    repeats drawn once (src/lib/menu.ts); the
@@ -283,7 +284,7 @@ const fonts = siteFonts(site.theme, bg.firstParty, template.fonts)
     <Area name="top_banner" areas={areas} components={sections} />
     <header class="site-header" data-layout={chrome.header.layout}>
       <div class="site-header-inner">
-        <HeaderBrand name={name} logoUrl={site.brand.logo_url} />
+        <HeaderBrand name={name} logoUrl={site.brand.logo_url} showName={chrome.header.showName} />
         {headerNodes.length > 0 && (
           <>
             <nav class="header-bar-menu" aria-label="Header menu">
