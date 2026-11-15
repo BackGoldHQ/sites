@@ -34,6 +34,17 @@ export function media(section: Section, ...keys: string[]): Media | null {
 }
 
 /**
+ * A Hero's or an About's photo treatment (`options.photoStyle`), as
+ * BackGold's own blocks read it: 'photo' (the default) crops the picture to
+ * fill its frame; 'badge' and 'plain' show the whole picture (a logo, an
+ * illustration), on the frame's surface or on nothing.
+ */
+export function photoStyleOf(section: Section): 'photo' | 'badge' | 'plain' {
+  const style = section.options?.photoStyle
+  return style === 'badge' || style === 'plain' ? style : 'photo'
+}
+
+/**
  * A Hero's photo: the first of `keys` the section has media for, its alt text
  * the section's `copy.imageAlt` (empty when the section has none).
  */

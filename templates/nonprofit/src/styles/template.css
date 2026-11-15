@@ -855,6 +855,26 @@ body::before {
   .spotlight-photo {
     border-radius: var(--blob-sm);
   }
+  /*
+    A picture shown whole (the photo treatment 'badge' or 'plain'): 'badge'
+    keeps the paper mount as its card, the picture on its surface; 'plain'
+    has no mount, no tape and no tilt.
+  */
+  .split-photo .photo-badge,
+  .bg-section :is(.about-left-image, .letter-image).photo-badge {
+    padding: 0;
+    border: 0;
+  }
+  .split-photo-plain,
+  .bg-section :is(.about-left-image, .letter-image).photo-plain {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    transform: none;
+  }
+  .split-photo-plain::after {
+    content: none;
+  }
   .photo-caption,
   .overlap-frame .overlap-caption,
   .cta-photo-caption {
@@ -2887,6 +2907,22 @@ body::before {
   }
   .brand-name::after {
     content: ' ';
+  }
+  /*
+    Beside a logo (`showName`) the line is set a size down at the bar's
+    widths, the logo carrying the brand, and is cut with an ellipsis when the
+    bar is still short of room.
+  */
+  .brand-named .brand-words {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (min-width: 56rem) {
+    .site-header .brand-named :is(.brand-name, .brand-rest) {
+      font-size: 1.25rem;
+    }
   }
   .brand-rest {
     margin: 0;

@@ -78,13 +78,3 @@ export function quoteOf(section: Section): { quote: string; source: string | nul
 export function buttonOf(section: Section): Link | null {
   return links(section)[0] ?? null
 }
-
-/**
- * The photo's treatment (`options.photoStyle`), as BackGold's own About
- * block reads it: 'photo' (the default) crops to fill; 'badge' and 'plain'
- * show the whole picture (a logo), on the band's surface or on nothing.
- */
-export function photoStyleOf(section: Section): 'photo' | 'badge' | 'plain' {
-  const style = section.options?.photoStyle
-  return style === 'badge' || style === 'plain' ? style : 'photo'
-}

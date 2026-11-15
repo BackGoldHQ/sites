@@ -9,11 +9,14 @@
 // words take the full width, with no caption. The page-opening Hero's headline is the page's <h1>
 // (`level={1}`); any other Hero's is an <h2>. A Hero with its signup form on
 // carries an `embed`: BackGold's own form, framed under the buttons.
+// This template mounts the photo on paper, taped at a corner
+// (src/styles/template.css); with the photo treatment 'badge' the whole
+// picture sits on the mount, and with 'plain' it stands alone, unmounted.
 import type { ComponentProps } from 'astro/types'
 import ModuleFrame from '@backgold/template-kit/components/sections/modules/ModuleFrame.astro'
 import Band from '@backgold/template-kit/components/sections/Band.astro'
 import type Default from '@backgold/template-kit/components/sections/Hero/index.astro'
-import { heroPhoto, links } from '@backgold/template-kit/lib/section'
+import { heroPhoto, links, photoStyleOf } from '@backgold/template-kit/lib/section'
 import { text } from '@backgold/template-kit/lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -25,6 +28,7 @@ const headline = text(section.copy.headline)
 const subheadline = text(section.copy.subheadline)
 const caption = text(section.copy.caption)
 const picture = heroPhoto(section, 'imageUrl', 'photoUrl', 'videoPosterUrl')
+const style = photoStyleOf(section)
 const buttons = links(section)
 ---
 <Band section={section} class="hero-split-layout">
@@ -41,9 +45,9 @@ const buttons = links(section)
       {section.embed && <ModuleFrame embed={section.embed} band={section.band} type="SignupCapture" layout="card" title="Sign up" height="24rem" class="hero-signup" />}
     </div>
     {picture && (
-      <div class="split-photo">
+      <div class:list={['split-photo', `split-photo-${style}`]}>
         <img
-          class="split-image"
+          class:list={['split-image', style !== 'photo' && `photo-${style}`]}
           src={picture.url}
           alt={picture.alt}
           loading={level === 1 ? 'eager' : 'lazy'}

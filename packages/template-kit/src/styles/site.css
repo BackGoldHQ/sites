@@ -323,6 +323,23 @@ main:focus {
   max-width: 100%;
   width: auto;
 }
+/*
+  The logo with the name beside it (`showName`): the logo keeps its size, up
+  to half the screen's width for a wide one, and the wordmark beside it is
+  what gives way when the bar is short of room.
+*/
+.brand-named .brand-logo {
+  flex: 0 0 auto;
+  max-width: min(14rem, 50vw);
+}
+.brand-named .brand-words {
+  overflow: hidden;
+}
+/* The menu's labels stay one line each beside it, so the wordmark is what shortens. */
+.site-header:has(.brand-named) .header-bar-menu > ul > li > :is(a, span),
+.site-header:has(.brand-named) .header-bar-menu summary {
+  white-space: nowrap;
+}
 .brand-words {
   display: grid;
   min-width: 0;
@@ -1117,6 +1134,26 @@ main:focus {
   .hero-split .hero-image {
     aspect-ratio: 4 / 3;
   }
+}
+
+/*
+  A picture shown whole: a Hero's or an About's photo treatment 'badge' or
+  'plain' (lib/section.ts photoStyleOf), on the picture a layout draws in a
+  frame of fixed shape. The frame keeps its shape and the picture sits inside
+  it, centred, uncropped: on the frame's surface with a line around it
+  ('badge'), or on nothing ('plain'). The section prefix outranks a layout's
+  own scoped `object-fit: cover`.
+*/
+.bg-section img.photo-badge,
+.bg-section img.photo-plain {
+  object-fit: contain;
+  object-position: center;
+}
+.bg-section img.photo-badge {
+  box-sizing: border-box;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 /* About */

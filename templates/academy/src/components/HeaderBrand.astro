@@ -5,7 +5,8 @@
 // small, tracked and in the accent ("Libertarian Leadership" / "ACADEMY"):
 // a wide logo's words read too small at header height. A name that does not
 // end in "Academy" is one line. A site with no icon has the kit's brand (its
-// logo, else the kit's mark and wordmark). The footer keeps the kit's brand.
+// logo, with the name beside it when the site asks, else the kit's mark and
+// wordmark). The footer keeps the kit's brand.
 import { safeSrc } from '@backgold/astro/server'
 import Brand from '@backgold/template-kit/components/chrome/Brand.astro'
 import Mark from './Mark.astro'
@@ -13,10 +14,11 @@ import Mark from './Mark.astro'
 interface Props {
   name: string
   logoUrl: string | null
+  showName?: boolean
   class?: string
 }
 
-const { name, logoUrl, class: className } = Astro.props
+const { name, logoUrl, showName, class: className } = Astro.props
 const icon = safeSrc(Astro.locals.backgold.site?.favicon_url)
 const set = /^(.*\S)\s+(academy)$/iu.exec(name.trim())
 const [lead, tail] = set ? [set[1]!, set[2]!] : [name.trim(), null]
@@ -30,5 +32,5 @@ const [lead, tail] = set ? [set[1]!, set[2]!] : [name.trim(), null]
     </span>
   </a>
 ) : (
-  <Brand name={name} logoUrl={logoUrl} class={className} />
+  <Brand name={name} logoUrl={logoUrl} showName={showName} class={className} />
 )}

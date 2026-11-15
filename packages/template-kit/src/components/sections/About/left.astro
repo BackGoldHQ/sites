@@ -1,12 +1,14 @@
 ---
 // About, 'left' layout (Photo left; board A11-contact, section 3): a square
 // photo on the left, the heading and the story on the right; on a phone the
-// photo comes first. Without a photo the words take the column alone.
+// photo comes first. Without a photo the words take the column alone. The
+// photo treatment 'badge' or 'plain' shows the whole picture in the square
+// (lib/section.ts photoStyleOf).
 import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
 import type Default from './index.astro'
-import { media } from '../../../lib/section'
+import { media, photoStyleOf } from '../../../lib/section'
 import { text } from '../../../lib/format'
 
 type Props = ComponentProps<typeof Default>
@@ -14,10 +16,11 @@ type Props = ComponentProps<typeof Default>
 const { section } = Astro.props
 const heading = text(section.copy.heading)
 const photo = media(section, 'photoUrl')
+const style = photoStyleOf(section)
 ---
 <Band section={section} class="about">
   <div class:list={['about-left', photo && 'about-left-photo']}>
-    {photo && <img class="about-left-image" src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
+    {photo && <img class:list={['about-left-image', style !== 'photo' && `photo-${style}`]} src={photo.url} alt={photo.alt} loading="lazy" decoding="async" />}
     <div class="about-left-words">
       {heading && <h2>{heading}</h2>}
       <Prose value={section.copy.body} />
