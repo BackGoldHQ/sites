@@ -1,9 +1,9 @@
 ---
-// VoterTools, 'polling' layout (mock 02, B, without its address search and
-// map: BackGold has no polling-place lookup of its own, so the finder is the
-// official one the organization links to). The polling-place card leads,
+// VoterTools, 'polling' layout (mock 02, B). The polling-place card leads,
 // raised on the band's card colour: the kicker, the heading and the body,
-// the polling-place link as the main call, then under a rule the early
+// BackGold's polling-place lookup when the section carries it (Lookup.astro:
+// the address search the mock drew, answered by BackGold), the official
+// polling-place link as the main call, then under a rule the early
 // voting line and the ID note as a chip. Beside it (under it on a phone) the
 // election-day card: the election-day line large in the display face, with
 // an accent rule over it, and the registration link as an outline (the main
@@ -15,6 +15,7 @@ import type { ComponentProps } from 'astro/types'
 import Band from '../Band.astro'
 import Prose from '../../Prose.astro'
 import type Default from './index.astro'
+import Lookup from './Lookup.astro'
 import { voterTools } from './voter-tools'
 import { prose } from '../../../lib/format'
 
@@ -22,9 +23,10 @@ type Props = ComponentProps<typeof Default>
 
 const { section } = Astro.props
 const vt = voterTools(section)
-const place = !!(vt.kicker || vt.heading || prose(section.copy.body) || vt.polling || vt.earlyVoting || vt.idNote)
+const lookup = !!section.embed
+const place = !!(vt.kicker || vt.heading || prose(section.copy.body) || vt.polling || vt.earlyVoting || vt.idNote || lookup)
 const day = !!(vt.electionDay || vt.register)
-const shown = !!(vt.heading || vt.register || vt.polling || vt.dates.length > 0)
+const shown = !!(vt.heading || vt.register || vt.polling || vt.dates.length > 0 || lookup)
 ---
 {shown && (place || day) && (
   <Band section={section} class="voter-tools vt-polling">
@@ -34,6 +36,7 @@ const shown = !!(vt.heading || vt.register || vt.polling || vt.dates.length > 0)
           {vt.kicker && <p class="kicker">{vt.kicker}</p>}
           {vt.heading && <h2>{vt.heading}</h2>}
           <Prose value={section.copy.body} class="vt-body" />
+          {lookup && <Lookup section={section} />}
           {vt.polling && (
             <p class="actions vt-actions">
               <a class="button" href={vt.polling.href} rel={vt.polling.rel}>{vt.polling.label}</a>
