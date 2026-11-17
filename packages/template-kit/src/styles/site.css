@@ -1430,6 +1430,40 @@ details summary {
   background: var(--page);
 }
 
+/*
+  Contact your legislators is no frame: BackGold's script draws it in the page,
+  in a shadow root on `.bg-embed-mount`, and takes its look from the
+  `--bg-adv-*` variables, which cross into it. They are the colors of the
+  band it sits on, as the frames wear them (ModuleFrame): the band's ink and
+  gray, fields on its surface with the strong line for an edge, the quieter
+  solid button for its calls, the display face for its headings. On a card
+  (`.module-card`) they are the panel band's, the card's own ground. A
+  template with a look of its own for the frames sets these again in its
+  src/styles/template.css.
+*/
+.module .bg-embed-mount {
+  --bg-adv-text: var(--ink);
+  --bg-adv-muted: var(--muted);
+  --bg-adv-link: var(--link);
+  --bg-adv-accent: var(--button-2);
+  --bg-adv-accent-ink: var(--button-2-ink);
+  --bg-adv-card: var(--surface);
+  --bg-adv-input-bg: var(--surface);
+  --bg-adv-border: var(--line-strong);
+  --bg-adv-radius: var(--radius);
+  --bg-adv-font: var(--font);
+  --bg-adv-heading-font: var(--font-display);
+}
+.module-card .bg-embed-mount {
+  --ink: var(--band-panel-ink);
+  --muted: var(--band-panel-muted);
+  --link: var(--band-panel-link);
+  --button-2: var(--band-panel-button-2);
+  --button-2-ink: var(--band-panel-button-2-ink);
+  --surface: var(--band-panel-surface);
+  --line-strong: var(--band-panel-line-strong);
+}
+
 /* ── Cards and listings ── */
 
 /* An entry's card (A1's news, C1's Blog · cards): raised on the band's card colour, the cover over the words. */

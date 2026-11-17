@@ -1201,6 +1201,37 @@ main .bg-section.cta-strip .strip-links a:hover {
   letter-spacing: 0.04em;
 }
 
+/*
+  Contact your legislators, which BackGold's script draws in the page: her
+  look as her frames wear it. What a visitor reads and types in her text face,
+  in mixed case; black fields on the field edge; the white block call in
+  capitals in the display face; headings in capitals; cards as hairline boxes
+  with no glow; square.
+*/
+:root .module .bg-embed-mount {
+  font-family: var(--font);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  --bg-adv-accent: var(--u-ink);
+  --bg-adv-accent-ink: var(--u-ground);
+  --bg-adv-link: var(--u-ink);
+  --bg-adv-card: var(--u-ground);
+  --bg-adv-input-bg: var(--u-ground);
+  --bg-adv-border: var(--u-line-strong);
+  --bg-adv-edge: var(--u-line-strong);
+  --bg-adv-glow: none;
+  --bg-adv-radius: 0;
+  --bg-adv-button-font: var(--font-display);
+  --bg-adv-button-weight: 500;
+  --bg-adv-button-transform: uppercase;
+  --bg-adv-button-spacing: 0.1em;
+  --bg-adv-heading-weight: 500;
+  --bg-adv-heading-transform: uppercase;
+  --bg-adv-heading-spacing: 0.02em;
+  --bg-adv-eyebrow-font: var(--font-meta);
+}
+
 /* Events: the date as a numeral, rows on hairlines, a row inverts on hover. */
 .bg-section[data-type='EventsList'] h3:not(.agenda-heading),
 .bg-section[data-type='Event'] h3 {
