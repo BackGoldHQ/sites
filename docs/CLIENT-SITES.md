@@ -493,6 +493,13 @@ run), and both of the automatic workflows again.
 
 ## Briefing your agent
 
+Converting a site that already exists (built with Astro, Next.js, plain
+HTML, anything) into a BackGold custom site has its own agent skill:
+[`skills/convert-site-to-backgold`](../skills/convert-site-to-backgold/SKILL.md).
+Give the agent that folder; it covers the survey, the content model, the
+section components, what BackGold hosting changes, loading the launch
+content, and the cutover.
+
 Paste this into the agent's first message, below the task:
 
 ```text
