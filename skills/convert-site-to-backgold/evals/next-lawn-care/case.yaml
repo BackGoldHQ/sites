@@ -1,0 +1,15 @@
+schema_version: "1.1"
+name: next-lawn-care
+expected_outcome: |
+  The Next.js site is rebuilt on the BackGold starter (Astro, the Cloudflare
+  adapter, @backgold/astro), keeping its look. Services are a content type
+  with their prices as fields, the business's phone and hours are content,
+  the blog is posts, the header links are the site's menu, and the quote form
+  is a BackGold Form section, with the mail route and its secret removed.
+  The /api/hours route is moved off /api, and the cookie the banner used is
+  gone. A content plan in the repository lists everything to create in
+  BackGold, with exact labels. The project type-checks and builds with a
+  wrangler.json under dist/, and PR.md says what changed, what was checked, what was not, what
+  differs from the old site, and what a person must do before it goes live.
+context:
+  scaffold_script: place-files.sh

@@ -1,0 +1,39 @@
+# Deploys the site to BackGold hosting. A pull request gets a preview named
+# after its number; a push to main becomes the live site. Both need the
+# repository secret BACKGOLD_DEPLOY_TOKEN: a deploy token from the site's
+# Developer page in BackGold (it opens this one site and nothing else).
+# Until the secret is set, the deploy steps are skipped and the checks still run.
+name: Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      BACKGOLD_DEPLOY_TOKEN: ${{ secrets.BACKGOLD_DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Preview on BackGold
+        if: github.event_name == 'pull_request' && env.BACKGOLD_DEPLOY_TOKEN != ''
+        run: npx backgold deploy --no-build --preview "pr-${{ github.event.pull_request.number }}"
+      - name: Deploy to BackGold and make it live
+        if: github.event_name == 'push' && env.BACKGOLD_DEPLOY_TOKEN != ''
+        run: npx backgold deploy --no-build --promote

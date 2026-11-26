@@ -24,6 +24,7 @@ from the public starter, or a site on the party template), read
 | `templates/party` | The party template (`backgold-template-party`, on the kit), deployed as the Worker `template-party`. Its `template.json` is its manifest. |
 | `vendor/backgold-contract` | The Content API contract snapshot (`@backgold/contract`, private, never published). Generated; never edited. |
 | `scripts/` | `starter-e2e.mjs` (the end-to-end check), `check-manifests.mjs` (every `template.json` against the contract's schema), `contract-pull.mjs` (refreshes `vendor/`), `check-packed-imports.mjs` (the publish workflow's check that a packed package imports only names npm's copies of its `@backgold` dependencies export), `sync-starter.sh` (the starter mirror, run only by CI). |
+| `skills/` | Agent skills for people building on BackGold. `convert-site-to-backgold` takes an existing custom-built site onto the starter and BackGold hosting: its `SKILL.md`, references, a survey script and starter assets (a content plan to fill in, the deploy workflow, a `template.json`, a `Faq` section), with a test case under `evals/`. |
 | `docs/` | `CLIENT-SITES.md`, the build-out guide; `HEADLESS-CONTENT-API.md`, the Content API developer guide the `@backgold/content` README links to. |
 
 The templates depend on the packages as `workspace:^`. Keep it that way:

@@ -1,0 +1,35 @@
+{
+  "key": "example-co",
+  "name": "Example Co",
+  "version": 1,
+  "variants": {
+    "Hero": ["centered", "cover"],
+    "About": ["letter", "right", "left"],
+    "Issues": ["cards", "steps", "checklist"],
+    "Faq": ["accordion"],
+    "StatCards": ["row", "archive"],
+    "Cta": ["card", "banner"],
+    "Collection": ["cards", "list"],
+    "FormBlock": ["card", "wide"],
+    "Donate": ["form", "story"]
+  },
+  "areas": {
+    "top_banner": "Under the header",
+    "above_footer": "Just above the footer",
+    "unknown": "after_page"
+  },
+  "entryLayouts": {
+    "post": { "entry": "article", "list": "list" }
+  },
+  "chrome": {
+    "header": ["bar"],
+    "footer": ["columns"],
+    "takeoverBanner": false,
+    "legalLine": true
+  },
+  "starter": {
+    "pages": [],
+    "menus": { "primary": [], "footer": [] },
+    "sections": []
+  }
+}
