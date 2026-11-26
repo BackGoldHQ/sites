@@ -1,6 +1,6 @@
 {
   "name": "@backgold/template-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "What every BackGold Astro template draws the same way: the section, entry and chrome components, the Site layout, the routes, lib and the stylesheets, shipped as source, with the Content API contract names they use.",
   "type": "module",

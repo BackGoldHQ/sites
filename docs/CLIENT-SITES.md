@@ -446,7 +446,13 @@ workspace. Never run `npm publish` by hand, and never commit an `.npmrc`.
    Publish to npm → Run workflow, on `main`) for that package. Its publish job
    follows the pack job by itself. Publish `@backgold/content` first when
    `@backgold/astro` needs its new version: the pack job refuses a dependency
-   npm does not have, and a version already on npm.
+   npm does not have, and a version already on npm. It also refuses a build
+   that imports a name npm's copy of an `@backgold` dependency does not export
+   (`scripts/check-packed-imports.mjs`): a change to a package that another
+   one comes to rely on needs that package's version bumped and published
+   first, even when nothing else about it changed. `@backgold/astro` 0.4.2
+   went out depending on `@backgold/content` `^0.4.0` while importing names
+   only the workspace's copy had; 0.4.3 is that fix.
 3. The version bump also runs the starter sync (`sync-starter.yml`), which
    warns and does nothing until npm has the version the public starter will
    name. After publishing, run that workflow by hand.

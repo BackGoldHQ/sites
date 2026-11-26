@@ -18,9 +18,12 @@
 # `pnpm install` (with dependency install scripts), builds what the package
 # links against, the package's lint, build and test, then `pnpm pack` (which
 # rewrites `workspace:` ranges to real ones). It refuses a version already on
-# npm, a packed manifest that still names a `workspace:` range, and one that
-# depends on an @backgold version npm does not have, so @backgold/astro never
-# ships pointing at an unpublished client. Its only output is the tarball, an
+# npm, a packed manifest that still names a `workspace:` range, one that
+# depends on an @backgold version npm does not have, and a build that imports
+# a name npm's copy of an @backgold dependency does not export
+# (scripts/check-packed-imports.mjs), so @backgold/astro never ships pointing
+# at an unpublished client, or at a published one older than the workspace's
+# under the same version number. Its only output is the tarball, an
 # artifact kept for a day. It never sees the npm token; every read it makes
 # of npm is anonymous.
 #
@@ -178,7 +181,15 @@ jobs:
               echo "templates.json pins ${name}@${version}, on npm"
             done < "$CHECK_DIR/pins.txt"
           fi
-          echo "Packed ${PUBLISH_PACKAGE}@${VERSION} as $(basename "$TARBALL"); the publish job runs next."
+          echo "Packed ${PUBLISH_PACKAGE}@${VERSION} as $(basename "$TARBALL")."
+      # The range resolving on npm is not enough: the workspace's copy of a
+      # dependency can hold more than npm's copy of the same version. This
+      # installs each @backgold dependency from npm at the packed range and
+      # fails when the packed files import a name that copy does not export.
+      - name: The packed imports are names npm's copies export
+        run: |
+          node scripts/check-packed-imports.mjs npm-tarball/*.tgz
+          echo "The publish job runs next."
       - uses: actions/upload-artifact@v4
         with:
           name: npm-tarball

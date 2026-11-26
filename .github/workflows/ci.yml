@@ -176,6 +176,8 @@ jobs:
               - 'templates/*/src/**'
               - 'packages/templates/**'
               - 'scripts/check-manifests.mjs'
+              - 'scripts/check-packed-imports.mjs'
+              - 'scripts/check-packed-imports.test.mjs'
       - name: Templates to check
         id: templates
         env:
@@ -416,6 +418,9 @@ jobs:
       - *install
       - run: node scripts/check-manifests.mjs
       - run: pnpm --filter @backgold/templates lint
+      # The publish workflow's check of a packed package's imports, against
+      # packages the test writes itself (no network).
+      - run: node --test scripts/check-packed-imports.test.mjs
 
   # The single required status check for `main`. Every job above is
   # path-filtered, so on any given PR most of them are SKIPPED, and a skipped
