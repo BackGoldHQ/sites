@@ -118,8 +118,11 @@ Do the two halves close together: the site is unreachable in between.
    Pages → the Worker → Settings → Domains & Routes, remove its custom
    domains). **Do not delete the old site.**
 3. At the DNS provider, add the records BackGold's Domain page asks for. On
-   Cloudflare DNS, set them to **DNS only** (grey cloud): a proxied (orange
-   cloud) record does not work here.
+   Cloudflare DNS, prefer **DNS only** (grey cloud). A proxied (orange
+   cloud) record puts the organization's own Cloudflare zone in front of
+   BackGold: it has been seen to work, but that zone's settings then apply
+   to the site (its managed `robots.txt` is added above the site's own, its
+   cache and rules run first), and it is not a setup BackGold promises.
 4. Back on the Domain page, verify. Wait until it shows the domain connected
    and its certificate issued.
 5. **The other name.** BackGold serves the one address that was connected
@@ -136,7 +139,9 @@ On the real domain:
 
 - the same pages as step 4;
 - `/robots.txt` allows crawling and names the sitemap; `/sitemap.xml` lists
-  the pages;
+  the pages. If `robots.txt` opens with a block marked "Cloudflare Managed
+  content", the organization's own zone is adding it; tell the owner, since
+  it can disallow crawlers the site's own rules allow;
 - the other name (`www`, or the bare one) answers 301 to the same path on
   the connected name;
 - submit one form with clearly marked test words, and confirm in BackGold
