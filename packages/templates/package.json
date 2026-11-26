@@ -1,6 +1,6 @@
 {
   "name": "@backgold/templates",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The source of BackGold's Astro templates, the one `backgold eject` scaffolds a project from",
   "license": "MIT",
   "type": "module",
